@@ -1,0 +1,14 @@
+[programs.localnet]
+incept = "Aw4gPAFKNV9hQpSZB9pdkBnniVDR13uidY3D5NMKKFUi"
+pyth = "4te7G6yemnSx2zByo1GRTWY4uNBrrcwjJc9uKxbPZ4Qe"
+mock_usdc = "4WUT8ZueGtxWSE7WYg8UvJbmMbDW3N8JVYDNNcHEuhVA"
+
+[registry]
+url = "https://anchor.projectserum.com"
+
+[provider]
+cluster = "localnet"
+wallet = "/Users/evandeutsch/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

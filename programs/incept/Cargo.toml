@@ -1,0 +1,25 @@
+[package]
+name = "incept"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "incept"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = "0.20.1"
+anchor-spl = "0.20.1"
+solana-program = "1.9.5"
+bytemuck = "1.7.3"
+pyth-client = "0.2.2"
+thiserror = "1.0.24"
+pyth = { path = "../pyth", version = "0.1.0", features = ["cpi"] }
