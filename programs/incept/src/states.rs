@@ -139,7 +139,7 @@ pub struct Collateral {
 #[account]
 #[derive(Default)]
 pub struct User {
-    // 96
+    // 128
     pub authority: Pubkey,           // 32
     pub comet_positions: Pubkey,     // 32
     pub mint_positions: Pubkey,      // 32
@@ -148,10 +148,10 @@ pub struct User {
 
 #[account(zero_copy)]
 pub struct CometPositions {
-    // 6,585
+    // 39,558
     pub owner: Pubkey,                         // 32
     pub num_positions: u8,                     // 1
-    pub comet_positions: [CometPosition; 255], // 40 * 163 = 6,520
+    pub comet_positions: [CometPosition; 255], // 255 * 155 = 39,525
 }
 
 impl Default for CometPositions {
@@ -177,7 +177,7 @@ impl CometPositions {
 #[zero_copy]
 #[derive(Default)]
 pub struct CometPosition {
-    // 163
+    // 155
     pub authority: Pubkey,                   // 32
     pub collateral_amount: Value,            // 17
     pub pool_index: u8,                      // 1
@@ -201,10 +201,10 @@ pub struct CometLiquidation {
 
 #[account(zero_copy)]
 pub struct LiquidityPositions {
-    // 6,585
+    // 12,783
     pub owner: Pubkey,                                 // 32
     pub num_positions: u8,                             // 1
-    pub liquidity_positions: [LiquidityPosition; 255], // 40 * 163 = 6,520
+    pub liquidity_positions: [LiquidityPosition; 255], // 255 * 50 = 12,750
 }
 
 impl Default for LiquidityPositions {
@@ -231,7 +231,7 @@ impl LiquidityPositions {
 #[zero_copy]
 #[derive(Default)]
 pub struct LiquidityPosition {
-    // 163
+    // 50
     pub authority: Pubkey,            // 32
     pub liquidity_token_value: Value, // 17
     pub pool_index: u8,               // 1
@@ -239,10 +239,10 @@ pub struct LiquidityPosition {
 
 #[account(zero_copy)]
 pub struct MintPositions {
-    // 9,873
+    // 17,373
     pub owner: Pubkey,                       // 32
     pub num_positions: u8,                   // 1
-    pub mint_positions: [MintPosition; 255], // 120 * 82 = 9,840
+    pub mint_positions: [MintPosition; 255], // 255 * 68 = 17,340
 }
 
 impl Default for MintPositions {
@@ -268,7 +268,7 @@ impl MintPositions {
 #[zero_copy]
 #[derive(Default)]
 pub struct MintPosition {
-    // 82
+    // 68
     pub authority: Pubkey,        // 32
     pub collateral_amount: Value, // 17
     pub pool_index: u8,           // 1
