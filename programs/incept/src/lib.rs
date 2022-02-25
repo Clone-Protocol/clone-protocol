@@ -4,8 +4,8 @@ use error::*;
 use instructions::*;
 use pyth::pc::Price;
 use states::{
-    AssetInfo, Collateral, CometLiquidation, CometPosition, LiquidityPosition, MintPosition, Pool,
-    TokenData, Value,
+    AssetInfo, Collateral, CometLiquidation, CometPosition, LiquidityPosition, LiquidityPositions,
+    MintPosition, Pool, TokenData, Value,
 };
 
 mod error;
@@ -51,9 +51,10 @@ pub mod incept {
         _manager_nonce: u8,
         _user_nonce: u8,
     ) -> ProgramResult {
+        msg!(&(8 + std::mem::size_of::<LiquidityPositions>()).to_string()[..]);
         let mut comet_positions = ctx.accounts.comet_positions.load_init()?;
         let mut mint_positions = ctx.accounts.mint_positions.load_init()?;
-        let mut liquidity_positions = ctx.accounts.mint_positions.load_init()?;
+        let mut liquidity_positions = ctx.accounts.liquidity_positions.load_init()?;
 
         // set user data
         ctx.accounts.user_account.authority = *ctx.accounts.user.to_account_info().key;
@@ -574,6 +575,7 @@ pub mod incept {
             liquidity_token_value: liquidity_token_value,
             pool_index: pool_index,
         };
+        liquidity_positions.num_positions += 1;
 
         Ok(())
     }
@@ -757,6 +759,15 @@ pub mod incept {
             .liquidity_token_value
             .sub(liquidity_token_value)
             .unwrap();
+
+        if liquidity_positions.liquidity_positions[liquidity_position_index as usize]
+            .liquidity_token_value
+            .to_u64()
+            == 0
+        {
+            // remove liquidity position from user list
+            liquidity_positions.remove(liquidity_position_index as usize);
+        }
 
         Ok(())
     }

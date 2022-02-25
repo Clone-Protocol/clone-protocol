@@ -43,9 +43,11 @@ describe("incept", async () => {
     inceptProgram.programId
   );
   const cometPositionsAccount = anchor.web3.Keypair.generate();
-  const COMET_POSITIONS_SIZE = 46968;
+  const COMET_POSITIONS_SIZE = 55128;
   const mintPositionsAccount = anchor.web3.Keypair.generate();
   const MINT_POSITIONS_SIZE = 22488;
+  const liquidityPositionsAccount = anchor.web3.Keypair.generate();
+  const LIQUIDITY_POSITIONS_SIZE = 16368;
 
   const priceFeed = anchor.web3.Keypair.generate();
 
@@ -106,6 +108,7 @@ describe("incept", async () => {
         userAccount: userAccount[0],
         cometPositions: cometPositionsAccount.publicKey,
         mintPositions: mintPositionsAccount.publicKey,
+        liquidityPositions: liquidityPositionsAccount.publicKey,
         usdiMint: usdiMint.publicKey,
         rent: RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -114,14 +117,22 @@ describe("incept", async () => {
       instructions: [
         await inceptProgram.account.cometPositions.createInstruction(
           cometPositionsAccount,
-          55128
+          COMET_POSITIONS_SIZE
         ),
         await inceptProgram.account.mintPositions.createInstruction(
           mintPositionsAccount,
-          22488
+          MINT_POSITIONS_SIZE
+        ),
+        await inceptProgram.account.liquidityPositions.createInstruction(
+          liquidityPositionsAccount,
+          LIQUIDITY_POSITIONS_SIZE
         ),
       ],
-      signers: [cometPositionsAccount, mintPositionsAccount],
+      signers: [
+        cometPositionsAccount,
+        mintPositionsAccount,
+        liquidityPositionsAccount,
+      ],
     });
   });
 
@@ -669,6 +680,91 @@ describe("incept", async () => {
     provider.wallet.payer
   );
 
+  it("liquidity position initialized!", async () => {
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    liquidityTokenAccountInfo = await liquidityToken.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+
+    await inceptProgram.rpc.initializeLiquidityPosition(
+      managerAccount[1],
+      new BN(0),
+      new BN(30000000000000),
+      {
+        accounts: {
+          user: walletPubkey,
+          manager: managerAccount[0],
+          tokenData: tokenDataAccount.publicKey,
+          liquidityPositions: liquidityPositionsAccount.publicKey,
+          userUsdiTokenAccount: usdiTokenAccountInfo.address,
+          userIassetTokenAccount: iassetTokenAccountInfo.address,
+          userLiquidityTokenAccount: liquidityTokenAccountInfo.address,
+          ammUsdiTokenAccount: usdiPoolTokenAccount.publicKey,
+          ammIassetTokenAccount: iAssetPoolTokenAccount.publicKey,
+          liquidityTokenMint: liquidityTokenMintAccount.publicKey,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    liquidityTokenAccountInfo = await liquidityToken.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+
+    console.log(
+      "User now has " +
+        Number(usdiTokenAccountInfo.amount / 1000000000000) +
+        " USDI."
+    );
+    console.log(
+      "User now has " +
+        Number(iassetTokenAccountInfo.amount / 1000000000000) +
+        " iAsset."
+    );
+    console.log(
+      "User now has " +
+        Number(liquidityTokenAccountInfo.amount / 1000000000000) +
+        " liquidity tokens."
+    );
+    console.log(
+      "Market 0 now has " +
+        Number(
+          (
+            await connection.getTokenAccountBalance(
+              usdiPoolTokenAccount.publicKey,
+              "confirmed"
+            )
+          ).value!.uiAmount
+        ) +
+        " USDI."
+    );
+    console.log(
+      "Market 0 now has " +
+        Number(
+          (
+            await connection.getTokenAccountBalance(
+              iAssetPoolTokenAccount.publicKey,
+              "confirmed"
+            )
+          ).value!.uiAmount
+        ) +
+        " iAsset."
+    );
+  });
+
   it("liquidity provided!", async () => {
     usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
       walletPubkey
@@ -683,12 +779,13 @@ describe("incept", async () => {
     await inceptProgram.rpc.provideLiquidity(
       managerAccount[1],
       new BN(0),
-      new BN(60000000000000),
+      new BN(30000000000000),
       {
         accounts: {
           user: walletPubkey,
           manager: managerAccount[0],
           tokenData: tokenDataAccount.publicKey,
+          liquidityPositions: liquidityPositionsAccount.publicKey,
           userUsdiTokenAccount: usdiTokenAccountInfo.address,
           userIassetTokenAccount: iassetTokenAccountInfo.address,
           userLiquidityTokenAccount: liquidityTokenAccountInfo.address,
@@ -773,6 +870,7 @@ describe("incept", async () => {
           user: walletPubkey,
           manager: managerAccount[0],
           tokenData: tokenDataAccount.publicKey,
+          liquidityPositions: liquidityPositionsAccount.publicKey,
           userUsdiTokenAccount: usdiTokenAccountInfo.address,
           userIassetTokenAccount: iassetTokenAccountInfo.address,
           userLiquidityTokenAccount: liquidityTokenAccountInfo.address,
