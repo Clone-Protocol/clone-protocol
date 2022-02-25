@@ -1,4 +1,4 @@
-use crate::states::{CometPositions, Manager, MintPositions, TokenData, User};
+use crate::states::{CometPositions, LiquidityPositions, Manager, MintPositions, TokenData, User};
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 
@@ -55,6 +55,8 @@ pub struct InitializeUser<'info> {
     pub comet_positions: AccountLoader<'info, CometPositions>,
     #[account(zero)]
     pub mint_positions: AccountLoader<'info, MintPositions>,
+    #[account(zero)]
+    pub liquidity_positions: AccountLoader<'info, LiquidityPositions>,
     pub usdi_mint: Account<'info, Mint>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
@@ -539,7 +541,7 @@ impl<'a, 'b, 'c, 'info> From<&AddiAssetToMint<'info>>
 
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, pool_index: u8, iasset_amount: u64)]
-pub struct ProvideLiquidity<'info> {
+pub struct InitializeLiquidityPosition<'info> {
     pub user: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
@@ -553,6 +555,11 @@ pub struct ProvideLiquidity<'info> {
         constraint = pool_index < token_data.load()?.num_pools
     )]
     pub token_data: AccountLoader<'info, TokenData>,
+    #[account(
+        mut,
+        constraint = &liquidity_positions.load()?.owner == user.to_account_info().key
+    )]
+    pub liquidity_positions: AccountLoader<'info, LiquidityPositions>,
     #[account(
         mut,
         constraint = user_usdi_token_account.mint == manager.usdi_mint
@@ -586,6 +593,78 @@ pub struct ProvideLiquidity<'info> {
     pub liquidity_token_mint: Box<Account<'info, Mint>>,
     pub token_program: Program<'info, Token>,
 }
+impl<'a, 'b, 'c, 'info> From<&InitializeLiquidityPosition<'info>>
+    for CpiContext<'a, 'b, 'c, 'info, MintTo<'info>>
+{
+    fn from(
+        accounts: &InitializeLiquidityPosition<'info>,
+    ) -> CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
+        let cpi_accounts = MintTo {
+            mint: accounts.liquidity_token_mint.to_account_info().clone(),
+            to: accounts
+                .user_liquidity_token_account
+                .to_account_info()
+                .clone(),
+            authority: accounts.manager.to_account_info().clone(),
+        };
+        let cpi_program = accounts.token_program.to_account_info();
+        CpiContext::new(cpi_program, cpi_accounts)
+    }
+}
+
+#[derive(Accounts)]
+#[instruction(manager_nonce: u8, liquidity_position_index: u8, iasset_amount: u64)]
+pub struct ProvideLiquidity<'info> {
+    pub user: Signer<'info>,
+    #[account(
+        seeds = [b"manager".as_ref()],
+        bump = manager_nonce,
+        has_one = token_data
+    )]
+    pub manager: Box<Account<'info, Manager>>,
+    #[account(
+        mut,
+        has_one = manager,
+    )]
+    pub token_data: AccountLoader<'info, TokenData>,
+    #[account(
+        mut,
+        constraint = &liquidity_positions.load()?.owner == user.to_account_info().key
+    )]
+    pub liquidity_positions: AccountLoader<'info, LiquidityPositions>,
+    #[account(
+        mut,
+        constraint = user_usdi_token_account.mint == manager.usdi_mint
+    )]
+    pub user_usdi_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        constraint = user_iasset_token_account.amount >= iasset_amount,
+        constraint = user_iasset_token_account.mint == token_data.load()?.pools[liquidity_positions.load()?.liquidity_positions[liquidity_position_index as usize].pool_index as usize].asset_info.iasset_mint
+    )]
+    pub user_iasset_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        constraint = &user_liquidity_token_account.mint == liquidity_token_mint.to_account_info().key
+    )]
+    pub user_liquidity_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        address = token_data.load()?.pools[liquidity_positions.load()?.liquidity_positions[liquidity_position_index as usize].pool_index as usize].usdi_token_account
+    )]
+    pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        address = token_data.load()?.pools[liquidity_positions.load()?.liquidity_positions[liquidity_position_index as usize].pool_index as usize].iasset_token_account
+    )]
+    pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        address = token_data.load()?.pools[liquidity_positions.load()?.liquidity_positions[liquidity_position_index as usize].pool_index as usize].liquidity_token_mint
+    )]
+    pub liquidity_token_mint: Box<Account<'info, Mint>>,
+    pub token_program: Program<'info, Token>,
+}
 impl<'a, 'b, 'c, 'info> From<&ProvideLiquidity<'info>>
     for CpiContext<'a, 'b, 'c, 'info, MintTo<'info>>
 {
@@ -604,7 +683,7 @@ impl<'a, 'b, 'c, 'info> From<&ProvideLiquidity<'info>>
 }
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, pool_index: u8, liquidity_token_amount: u64)]
+#[instruction(manager_nonce: u8, liquidity_position_index: u8, liquidity_token_amount: u64)]
 pub struct WithdrawLiquidity<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -616,9 +695,13 @@ pub struct WithdrawLiquidity<'info> {
     #[account(
         mut,
         has_one = manager,
-        constraint = pool_index < token_data.load()?.num_pools
     )]
     pub token_data: AccountLoader<'info, TokenData>,
+    #[account(
+        mut,
+        constraint = &liquidity_positions.load()?.owner == user.to_account_info().key
+    )]
+    pub liquidity_positions: AccountLoader<'info, LiquidityPositions>,
     #[account(
         mut,
         constraint = user_usdi_token_account.mint == manager.usdi_mint
@@ -626,7 +709,7 @@ pub struct WithdrawLiquidity<'info> {
     pub user_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = user_iasset_token_account.mint == token_data.load()?.pools[pool_index as usize].asset_info.iasset_mint
+        constraint = user_iasset_token_account.mint == token_data.load()?.pools[liquidity_positions.load()?.liquidity_positions[liquidity_position_index as usize].pool_index as usize].asset_info.iasset_mint
     )]
     pub user_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -637,19 +720,19 @@ pub struct WithdrawLiquidity<'info> {
     pub user_liquidity_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[pool_index as usize].usdi_token_account,
+        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[liquidity_positions.load()?.liquidity_positions[liquidity_position_index as usize].pool_index as usize].usdi_token_account,
         constraint = amm_usdi_token_account.amount > 0
     )]
     pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[pool_index as usize].iasset_token_account,
+        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[liquidity_positions.load()?.liquidity_positions[liquidity_position_index as usize].pool_index as usize].iasset_token_account,
         constraint = amm_iasset_token_account.amount > 0
     )]
     pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[pool_index as usize].liquidity_token_mint
+        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[liquidity_positions.load()?.liquidity_positions[liquidity_position_index as usize].pool_index as usize].liquidity_token_mint
     )]
     pub liquidity_token_mint: Box<Account<'info, Mint>>,
     pub token_program: Program<'info, Token>,

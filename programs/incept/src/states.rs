@@ -133,16 +133,17 @@ pub struct Collateral {
     pub vault_usdi_supply: Value,  // 17
     pub vault_mint_supply: Value,  // 17
     pub vault_comet_supply: Value, // 17
-    pub stable: u8,              // 1
+    pub stable: u8,                // 1
 }
 
 #[account]
 #[derive(Default)]
 pub struct User {
     // 96
-    pub authority: Pubkey,       // 32
-    pub comet_positions: Pubkey, // 32
-    pub mint_positions: Pubkey,  // 32
+    pub authority: Pubkey,           // 32
+    pub comet_positions: Pubkey,     // 32
+    pub mint_positions: Pubkey,      // 32
+    pub liquidity_positions: Pubkey, // 32
 }
 
 #[account(zero_copy)]
@@ -177,25 +178,63 @@ impl CometPositions {
 #[derive(Default)]
 pub struct CometPosition {
     // 163
-    pub authority: Pubkey,            // 32
-    pub collateral_amount: Value,     // 17
-    pub pool_index: u8,               // 1
-    pub collateral_index: u8,         // 1
-    pub borrowed_usdi: Value,         // 17
-    pub borrowed_iasset: Value,       // 17
-    pub liquidity_token_value: Value, // 17
-    pub lower_price_range: Value,     // 17
-    pub upper_price_range: Value,     // 17
-    pub comet_liquidation: CometLiquidation,     // 19
+    pub authority: Pubkey,                   // 32
+    pub collateral_amount: Value,            // 17
+    pub pool_index: u8,                      // 1
+    pub collateral_index: u8,                // 1
+    pub borrowed_usdi: Value,                // 17
+    pub borrowed_iasset: Value,              // 17
+    pub liquidity_token_value: Value,        // 17
+    pub lower_price_range: Value,            // 17
+    pub upper_price_range: Value,            // 17
+    pub comet_liquidation: CometLiquidation, // 19
 }
 
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct CometLiquidation {
     // 19
-    pub liquidated: bool,            // 1
-    pub excess_token_type_is_usdi: bool,            // 1
-    pub excess_token_amount: Value,            // 17
+    pub liquidated: bool,                // 1
+    pub excess_token_type_is_usdi: bool, // 1
+    pub excess_token_amount: Value,      // 17
+}
+
+#[account(zero_copy)]
+pub struct LiquidityPositions {
+    // 6,585
+    pub owner: Pubkey,                                 // 32
+    pub num_positions: u8,                             // 1
+    pub liquidity_positions: [LiquidityPosition; 255], // 40 * 163 = 6,520
+}
+
+impl Default for LiquidityPositions {
+    fn default() -> Self {
+        return Self {
+            owner: Pubkey::default(),
+            num_positions: 0,
+            liquidity_positions: [LiquidityPosition::default(); 255],
+        };
+    }
+}
+
+impl LiquidityPositions {
+    pub fn remove(&mut self, index: usize) {
+        self.liquidity_positions[index] =
+            self.liquidity_positions[(self.num_positions - 1) as usize];
+        self.liquidity_positions[(self.num_positions - 1) as usize] = LiquidityPosition {
+            ..Default::default()
+        };
+        self.num_positions -= 1;
+    }
+}
+
+#[zero_copy]
+#[derive(Default)]
+pub struct LiquidityPosition {
+    // 163
+    pub authority: Pubkey,            // 32
+    pub liquidity_token_value: Value, // 17
+    pub pool_index: u8,               // 1
 }
 
 #[account(zero_copy)]

@@ -4,7 +4,8 @@ use error::*;
 use instructions::*;
 use pyth::pc::Price;
 use states::{
-    AssetInfo, Collateral, CometLiquidation, CometPosition, MintPosition, Pool, TokenData, Value,
+    AssetInfo, Collateral, CometLiquidation, CometPosition, LiquidityPosition, MintPosition, Pool,
+    TokenData, Value,
 };
 
 mod error;
@@ -52,6 +53,7 @@ pub mod incept {
     ) -> ProgramResult {
         let mut comet_positions = ctx.accounts.comet_positions.load_init()?;
         let mut mint_positions = ctx.accounts.mint_positions.load_init()?;
+        let mut liquidity_positions = ctx.accounts.mint_positions.load_init()?;
 
         // set user data
         ctx.accounts.user_account.authority = *ctx.accounts.user.to_account_info().key;
@@ -59,11 +61,13 @@ pub mod incept {
             *ctx.accounts.comet_positions.to_account_info().key;
         ctx.accounts.user_account.mint_positions =
             *ctx.accounts.mint_positions.to_account_info().key;
+        ctx.accounts.user_account.liquidity_positions =
+            *ctx.accounts.liquidity_positions.to_account_info().key;
 
-
-        // set user as comet and mint positions owner
+        // set user as comet, mint, and liquidity positions owner
         comet_positions.owner = *ctx.accounts.user.to_account_info().key;
         mint_positions.owner = *ctx.accounts.user.to_account_info().key;
+        liquidity_positions.owner = *ctx.accounts.user.to_account_info().key;
 
         Ok(())
     }
@@ -474,8 +478,8 @@ pub mod incept {
         Ok(())
     }
 
-    pub fn provide_liquidity(
-        ctx: Context<ProvideLiquidity>,
+    pub fn initialize_liquidity_position(
+        ctx: Context<InitializeLiquidityPosition>,
         manager_nonce: u8,
         pool_index: u8,
         iasset_amount: u64,
@@ -562,13 +566,113 @@ pub mod incept {
         let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
         token::mint_to(cpi_ctx, liquidity_token_value.to_u64())?;
 
+        // set liquidity position data
+        let mut liquidity_positions = ctx.accounts.liquidity_positions.load_mut()?;
+        let num_positions = liquidity_positions.num_positions;
+        liquidity_positions.liquidity_positions[num_positions as usize] = LiquidityPosition {
+            authority: *ctx.accounts.user.to_account_info().key,
+            liquidity_token_value: liquidity_token_value,
+            pool_index: pool_index,
+        };
+
+        Ok(())
+    }
+
+    pub fn provide_liquidity(
+        ctx: Context<ProvideLiquidity>,
+        manager_nonce: u8,
+        liquidity_position_index: u8,
+        iasset_amount: u64,
+    ) -> ProgramResult {
+        let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+
+        let iasset_liquidity_value = Value::new(iasset_amount.into(), DEVNET_TOKEN_SCALE);
+        let iasset_amm_value = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        let usdi_amm_value = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        let liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        // calculate amount of usdi required as well as amount of liquidity tokens to be received
+        let (usdi_liquidity_value, liquidity_token_value) =
+            calculate_liquidity_provider_values_from_iasset(
+                iasset_liquidity_value,
+                iasset_amm_value,
+                usdi_amm_value,
+                liquidity_token_supply,
+            );
+
+        // transfer iasset from user to amm
+        let cpi_accounts = Transfer {
+            from: ctx
+                .accounts
+                .user_iasset_token_account
+                .to_account_info()
+                .clone(),
+            to: ctx
+                .accounts
+                .amm_iasset_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.user.to_account_info().clone(),
+        };
+        let send_iasset_to_amm_context = CpiContext::new(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+        );
+
+        token::transfer(send_iasset_to_amm_context, iasset_amount)?;
+
+        // transfer usdi from user to amm
+        let cpi_accounts = Transfer {
+            from: ctx
+                .accounts
+                .user_usdi_token_account
+                .to_account_info()
+                .clone(),
+            to: ctx
+                .accounts
+                .amm_usdi_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.user.to_account_info().clone(),
+        };
+        let send_usdi_to_amm_context = CpiContext::new(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+        );
+
+        token::transfer(send_usdi_to_amm_context, usdi_liquidity_value.to_u64())?;
+
+        // mint liquidity tokens to user
+        let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
+        token::mint_to(cpi_ctx, liquidity_token_value.to_u64())?;
+
+        // update liquidity position data
+        let mut liquidity_positions = ctx.accounts.liquidity_positions.load_mut()?;
+        let liquidity_position =
+            liquidity_positions.liquidity_positions[liquidity_position_index as usize];
+        liquidity_positions.liquidity_positions[liquidity_position_index as usize]
+            .liquidity_token_value = liquidity_position
+            .liquidity_token_value
+            .add(liquidity_token_value)
+            .unwrap();
+
         Ok(())
     }
 
     pub fn withdraw_liquidity(
         ctx: Context<WithdrawLiquidity>,
         manager_nonce: u8,
-        _pool_index: u8,
+        liquidity_position_index: u8,
         liquidity_token_amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
@@ -643,6 +747,16 @@ pub mod incept {
         );
 
         token::transfer(send_iasset_to_user_context, iasset_value.to_u64())?;
+
+        // update liquidity position data
+        let mut liquidity_positions = ctx.accounts.liquidity_positions.load_mut()?;
+        let liquidity_position =
+            liquidity_positions.liquidity_positions[liquidity_position_index as usize];
+        liquidity_positions.liquidity_positions[liquidity_position_index as usize]
+            .liquidity_token_value = liquidity_position
+            .liquidity_token_value
+            .sub(liquidity_token_value)
+            .unwrap();
 
         Ok(())
     }
@@ -1920,11 +2034,14 @@ pub mod incept {
 
         if comet_position.comet_liquidation.excess_token_type_is_usdi {
             // need to be able to liquidate when above range
-        }
-        else {
+        } else {
             // send surplus iasset to user
             let cpi_accounts = Transfer {
-                from: ctx.accounts.liquidation_iasset_token_account.to_account_info().clone(),
+                from: ctx
+                    .accounts
+                    .liquidation_iasset_token_account
+                    .to_account_info()
+                    .clone(),
                 to: ctx
                     .accounts
                     .user_iasset_token_account
@@ -1938,7 +2055,13 @@ pub mod incept {
                 seeds,
             );
 
-            token::transfer(send_iasset_context, comet_position.comet_liquidation.excess_token_amount.to_u64())?;
+            token::transfer(
+                send_iasset_context,
+                comet_position
+                    .comet_liquidation
+                    .excess_token_amount
+                    .to_u64(),
+            )?;
         }
 
         // remove comet from user list
