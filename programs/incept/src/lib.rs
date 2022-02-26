@@ -51,7 +51,6 @@ pub mod incept {
         _manager_nonce: u8,
         _user_nonce: u8,
     ) -> ProgramResult {
-        msg!(&(8 + std::mem::size_of::<LiquidityPositions>()).to_string()[..]);
         let mut comet_positions = ctx.accounts.comet_positions.load_init()?;
         let mut mint_positions = ctx.accounts.mint_positions.load_init()?;
         let mut liquidity_positions = ctx.accounts.liquidity_positions.load_init()?;
@@ -974,7 +973,7 @@ pub mod incept {
         let current_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
 
         // calculate comet range
-        let (lower_price_range, _) = calculate_comet_price_barrier(
+        let (lower_price_range, upper_price_range) = calculate_comet_price_barrier(
             usdi_liquidity_value,
             iasset_liquidity_value,
             collateral_value.scale_to(DEVNET_TOKEN_SCALE),
@@ -985,7 +984,9 @@ pub mod incept {
         );
 
         // throw error if the comet is out of range
-        if lower_price_range.gte(current_price).unwrap() {
+        if lower_price_range.gte(current_price).unwrap()
+            || upper_price_range.lte(current_price).unwrap()
+        {
             return Err(InceptError::InvalidCometCollateralRatio.into());
         }
 
@@ -1063,7 +1064,7 @@ pub mod incept {
             borrowed_iasset: iasset_liquidity_value,
             liquidity_token_value: liquidity_token_value,
             lower_price_range: lower_price_range,
-            upper_price_range: lower_price_range,
+            upper_price_range: upper_price_range,
             comet_liquidation: CometLiquidation {
                 ..Default::default()
             },
@@ -1081,11 +1082,11 @@ pub mod incept {
         comet_index: u8,
         collateral_amount: u64,
     ) -> ProgramResult {
-        let token_data = &*ctx.accounts.token_data.load()?;
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
         let mut comet_positions = ctx.accounts.comet_positions.load_mut()?;
         let comet_position = comet_positions.comet_positions[comet_index as usize];
 
-        let mut collateral = token_data.collaterals[comet_position.collateral_index as usize];
+        let collateral = token_data.collaterals[comet_position.collateral_index as usize];
 
         // throw error if the comet is already liquidated
         if comet_position.comet_liquidation.liquidated {
@@ -1098,10 +1099,11 @@ pub mod incept {
         );
 
         // add collateral amount to vault supply
-        collateral.vault_comet_supply = collateral
-            .vault_comet_supply
-            .add(added_collateral_value)
-            .unwrap();
+        token_data.collaterals[comet_position.collateral_index as usize].vault_comet_supply =
+            collateral
+                .vault_comet_supply
+                .add(added_collateral_value)
+                .unwrap();
 
         // add collateral amount to comet position
         comet_positions.comet_positions[comet_index as usize].collateral_amount = comet_position
@@ -1124,10 +1126,10 @@ pub mod incept {
         );
 
         // calculate comet range
-        let (lower_price_range, _) = calculate_comet_price_barrier(
+        let (lower_price_range, upper_price_range) = calculate_comet_price_barrier(
             comet_position.borrowed_usdi,
             comet_position.borrowed_iasset,
-            comet_position
+            comet_positions.comet_positions[comet_index as usize]
                 .collateral_amount
                 .scale_to(DEVNET_TOKEN_SCALE),
             iasset_amm_value,
@@ -1138,6 +1140,7 @@ pub mod incept {
 
         // reset price range
         comet_positions.comet_positions[comet_index as usize].lower_price_range = lower_price_range;
+        comet_positions.comet_positions[comet_index as usize].upper_price_range = upper_price_range;
 
         // send collateral from user to vault
         let cpi_ctx = CpiContext::from(&*ctx.accounts);
@@ -1155,11 +1158,11 @@ pub mod incept {
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 
-        let token_data = &*ctx.accounts.token_data.load()?;
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
         let mut comet_positions = ctx.accounts.comet_positions.load_mut()?;
         let comet_position = comet_positions.comet_positions[comet_index as usize];
 
-        let mut collateral = token_data.collaterals[comet_position.collateral_index as usize];
+        let collateral = token_data.collaterals[comet_position.collateral_index as usize];
 
         let withdrawn_collateral_value = Value::new(
             collateral_amount.into(),
@@ -1172,10 +1175,11 @@ pub mod incept {
         }
 
         // subtract collateral amount from vault supply
-        collateral.vault_comet_supply = collateral
-            .vault_comet_supply
-            .sub(withdrawn_collateral_value)
-            .unwrap();
+        token_data.collaterals[comet_position.collateral_index as usize].vault_comet_supply =
+            collateral
+                .vault_comet_supply
+                .sub(withdrawn_collateral_value)
+                .unwrap();
 
         // subtract collateral amount from comet position
         comet_positions.comet_positions[comet_index as usize].collateral_amount = comet_position
@@ -1201,10 +1205,10 @@ pub mod incept {
         let current_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
 
         // calculate comet price range
-        let (lower_price_range, _) = calculate_comet_price_barrier(
+        let (lower_price_range, upper_price_range) = calculate_comet_price_barrier(
             comet_position.borrowed_usdi,
             comet_position.borrowed_iasset,
-            comet_position
+            comet_positions.comet_positions[comet_index as usize]
                 .collateral_amount
                 .scale_to(DEVNET_TOKEN_SCALE),
             iasset_amm_value,
@@ -1214,12 +1218,15 @@ pub mod incept {
         );
 
         // throw error if the comet is out of range
-        if lower_price_range.gte(current_price).unwrap() {
+        if lower_price_range.gte(current_price).unwrap()
+            || upper_price_range.lte(current_price).unwrap()
+        {
             return Err(InceptError::InvalidCometCollateralRatio.into());
         }
 
         // reset price range
         comet_positions.comet_positions[comet_index as usize].lower_price_range = lower_price_range;
+        comet_positions.comet_positions[comet_index as usize].upper_price_range = upper_price_range;
 
         // send collateral from user to comet
         let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
@@ -1689,7 +1696,7 @@ pub mod incept {
             let new_borrowed_usdi = comet_position.borrowed_usdi.add(usdi_surplus).unwrap();
 
             // calculate recentered comet range
-            let (lower_price_range, _) = calculate_comet_price_barrier(
+            let (lower_price_range, upper_price_range) = calculate_comet_price_barrier(
                 new_borrowed_usdi,
                 new_borrowed_iasset,
                 new_collateral_amount.scale_to(DEVNET_TOKEN_SCALE),
@@ -1699,13 +1706,17 @@ pub mod incept {
                 liquidity_token_supply,
             );
             // throw error if the price is out of range
-            if lower_price_range.gte(current_price).unwrap() {
+            if lower_price_range.gte(current_price).unwrap()
+                || upper_price_range.lte(current_price).unwrap()
+            {
                 return Err(InceptError::InvalidCometCollateralRatio.into());
             }
 
             // update comet data
             comet_positions.comet_positions[comet_index as usize].lower_price_range =
                 lower_price_range;
+            comet_positions.comet_positions[comet_index as usize].upper_price_range =
+                upper_price_range;
             comet_positions.comet_positions[comet_index as usize].collateral_amount =
                 new_collateral_amount;
             comet_positions.comet_positions[comet_index as usize].borrowed_iasset =
@@ -1771,7 +1782,7 @@ pub mod incept {
             let new_borrowed_usdi = comet_position.borrowed_usdi.sub(usdi_debt).unwrap();
 
             // calculate recentered comet range
-            let (lower_price_range, _) = calculate_comet_price_barrier(
+            let (lower_price_range, upper_price_range) = calculate_comet_price_barrier(
                 new_borrowed_usdi,
                 new_borrowed_iasset,
                 comet_position
@@ -1783,13 +1794,17 @@ pub mod incept {
                 liquidity_token_supply,
             );
             // throw error if the price is out of range
-            if lower_price_range.gte(current_price).unwrap() {
+            if lower_price_range.gte(current_price).unwrap()
+                || upper_price_range.lte(current_price).unwrap()
+            {
                 return Err(InceptError::InvalidCometCollateralRatio.into());
             }
 
             // update comet data
             comet_positions.comet_positions[comet_index as usize].lower_price_range =
                 lower_price_range;
+            comet_positions.comet_positions[comet_index as usize].upper_price_range =
+                upper_price_range;
             comet_positions.comet_positions[comet_index as usize].borrowed_iasset =
                 new_borrowed_iasset;
             comet_positions.comet_positions[comet_index as usize].borrowed_usdi = new_borrowed_usdi;

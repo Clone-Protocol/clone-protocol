@@ -130,6 +130,37 @@ impl PowAccuracy<u128> for Value {
         return result;
     }
 }
+
+impl Sqrt<u128> for Value {
+    fn sqrt(self) -> Self {
+        let mut scale: u8 = 0;
+        let mut x = 100;
+        loop {
+            if self.val > x {
+                scale += 1;
+            } else {
+                break;
+            }
+            x = x.checked_mul(100).unwrap();
+        }
+        let mut y = Value::new(u128::pow(10, DEVNET_TOKEN_SCALE.into()), DEVNET_TOKEN_SCALE);
+        loop {
+            if self.val < y.val {
+                scale += 1;
+            } else {
+                break;
+            }
+            y.val = y.val.checked_div(100).unwrap();
+        }
+        return Value::new(
+            ((self.val as f64).sqrt()
+                * f64::powi(10.0, DEVNET_TOKEN_SCALE.checked_sub(scale).unwrap().into()))
+                as u128,
+            DEVNET_TOKEN_SCALE,
+        );
+    }
+}
+
 impl Into<u64> for Value {
     fn into(self) -> u64 {
         self.val.try_into().unwrap()
@@ -186,6 +217,9 @@ pub trait MulUp<T>: Sized {
 }
 pub trait PowAccuracy<T>: Sized {
     fn pow_with_accuracy(self, rhs: T) -> Self;
+}
+pub trait Sqrt<T>: Sized {
+    fn sqrt(self) -> Self;
 }
 pub trait Compare<T>: Sized {
     fn eq(self, rhs: T) -> Result<bool, InceptError>;

@@ -30,7 +30,7 @@ pub mod mock_usdc {
 
         token::mint_to(
             mint_mock_usdc_context,
-            50000000000,
+            10000000000000000000,
         )?;
         
 
