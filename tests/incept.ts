@@ -6,6 +6,7 @@ import { MockUsdc } from "../target/types/mock_usdc";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { assert } from "chai";
 import { TokenData, Collateral } from "../sdk/src/incept";
+import { createPriceFeed, setPrice, getFeedData } from './oracle'
 
 describe("incept", async () => {
   const provider = anchor.Provider.local();
@@ -49,7 +50,7 @@ describe("incept", async () => {
   const liquidityPositionsAccount = anchor.web3.Keypair.generate();
   const LIQUIDITY_POSITIONS_SIZE = 16368;
 
-  const priceFeed = anchor.web3.Keypair.generate();
+  let priceFeed;
 
   const usdiPoolTokenAccount = anchor.web3.Keypair.generate();
   const iassetMint = anchor.web3.Keypair.generate();
@@ -62,6 +63,8 @@ describe("incept", async () => {
   let usdiTokenAccountInfo;
   let iassetTokenAccountInfo;
   let liquidityTokenAccountInfo;
+
+  console.log(provider.wallet);
 
   it("mock usdc initialized!", async () => {
     await mockUSDCProgram.rpc.initialize(mockUSDCAccount[1], {
@@ -137,54 +140,60 @@ describe("incept", async () => {
   });
 
   it("change feed price", async () => {
-    const price = 20;
+    let price = 10;
     const expo = -7;
-
     const conf = new BN((price / 10) * 10 ** -expo);
 
-    await pythProgram.rpc.initialize(new BN(price * 10 ** -expo), expo, conf, {
-      accounts: { price: priceFeed.publicKey },
-      signers: [priceFeed],
-      instructions: [
-        anchor.web3.SystemProgram.createAccount({
-          fromPubkey: inceptProgram.provider.wallet.publicKey,
-          newAccountPubkey: priceFeed.publicKey,
-          space: 3312,
-          lamports: await pythProgram.provider.connection.getMinimumBalanceForRentExemption(
-            3312
-          ),
-          programId: pythProgram.programId,
-        }),
-      ],
-    });
+    priceFeed = await createPriceFeed(pythProgram, price, expo, conf);
+    console.log("Price " + (await getFeedData(pythProgram, priceFeed)).aggregate.price);
 
-    const priceInfo = await pythProgram.provider.connection.getAccountInfo(
-      priceFeed.publicKey
-    );
+    price = 5;
+    await setPrice(pythProgram, price, priceFeed);
+    console.log("Updated Price " + (await getFeedData(pythProgram, priceFeed)).aggregate.price);
 
-    let priceData = priceInfo.data.slice(208, 240);
+    // await pythProgram.rpc.initialize(new BN(price * 10 ** -expo), expo, conf, {
+    //   accounts: { price: priceFeed },
+    //   signers: [priceFeed],
+    //   instructions: [
+    //     anchor.web3.SystemProgram.createAccount({
+    //       fromPubkey: inceptProgram.provider.wallet.publicKey,
+    //       newAccountPubkey: priceFeed,
+    //       space: 3312,
+    //       lamports: await pythProgram.provider.connection.getMinimumBalanceForRentExemption(
+    //         3312
+    //       ),
+    //       programId: pythProgram.programId,
+    //     }),
+    //   ],
+    // });
 
-    const priceComponent = priceData.readBigUInt64LE(0);
-    const onchainPrice = Number(priceComponent) * 10 ** expo;
+    // const priceInfo = await pythProgram.provider.connection.getAccountInfo(
+    //   priceFeed
+    // );
 
-    console.log("Initial Price " + onchainPrice);
+    // let priceData = priceInfo.data.slice(208, 240);
 
-    const newPrice = 5;
+    // const priceComponent = priceData.readBigUInt64LE(0);
+    // const onchainPrice = Number(priceComponent) * 10 ** expo;
 
-    await pythProgram.rpc.setPrice(new BN(newPrice * 10 ** -expo), {
-      accounts: { price: priceFeed.publicKey },
-    });
+    // console.log("Initial Price " + onchainPrice);
 
-    const newPriceInfo = await pythProgram.provider.connection.getAccountInfo(
-      priceFeed.publicKey
-    );
+    // const newPrice = 5;
 
-    let newPriceData = newPriceInfo.data.slice(208, 240);
+    // await pythProgram.rpc.setPrice(new BN(newPrice * 10 ** -expo), {
+    //   accounts: { price: priceFeed },
+    // });
 
-    const newPriceComponent = newPriceData.readBigUInt64LE(0);
-    const newOnchainPrice = Number(newPriceComponent) * 10 ** expo;
+    // const newPriceInfo = await pythProgram.provider.connection.getAccountInfo(
+    //   priceFeed
+    // );
 
-    console.log("Updated Price " + newOnchainPrice);
+    // let newPriceData = newPriceInfo.data.slice(208, 240);
+
+    // const newPriceComponent = newPriceData.readBigUInt64LE(0);
+    // const newOnchainPrice = Number(newPriceComponent) * 10 ** expo;
+
+    // console.log("Updated Price " + newOnchainPrice);
   });
 
   it("mock usdc added as a collateral!", async () => {
@@ -227,7 +236,7 @@ describe("incept", async () => {
             iAssetLiquidationTokenAccount.publicKey,
           liquidityTokenMint: liquidityTokenMintAccount.publicKey,
           cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
-          oracle: priceFeed.publicKey,
+          oracle: priceFeed,
           rent: RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
@@ -247,7 +256,7 @@ describe("incept", async () => {
   it("price updated!", async () => {
     await inceptProgram.rpc.updatePrices(managerAccount[1], {
       remainingAccounts: [
-        { isSigner: false, isWritable: false, pubkey: priceFeed.publicKey },
+        { isSigner: false, isWritable: false, pubkey: priceFeed },
       ],
       accounts: {
         manager: managerAccount[0],
@@ -378,7 +387,7 @@ describe("incept", async () => {
       managerAccount[1],
       {
         remainingAccounts: [
-          { isSigner: false, isWritable: false, pubkey: priceFeed.publicKey },
+          { isSigner: false, isWritable: false, pubkey: priceFeed },
         ],
         accounts: {
           manager: managerAccount[0],
@@ -403,7 +412,7 @@ describe("incept", async () => {
           userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
           iassetMint: iassetMint.publicKey,
           userIassetTokenAccount: iassetTokenAccountInfo.address,
-          oracle: priceFeed.publicKey,
+          oracle: priceFeed,
           rent: RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
@@ -509,7 +518,7 @@ describe("incept", async () => {
       managerAccount[1],
       {
         remainingAccounts: [
-          { isSigner: false, isWritable: false, pubkey: priceFeed.publicKey },
+          { isSigner: false, isWritable: false, pubkey: priceFeed },
         ],
         accounts: {
           manager: managerAccount[0],
@@ -617,7 +626,7 @@ describe("incept", async () => {
   //     managerAccount[1],
   //     {
   //       remainingAccounts: [
-  //         { isSigner: false, isWritable: false, pubkey: priceFeed.publicKey },
+  //         { isSigner: false, isWritable: false, pubkey: priceFeed },
   //       ],
   //       accounts: {
   //         manager: managerAccount[0],
