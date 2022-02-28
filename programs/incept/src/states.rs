@@ -12,10 +12,11 @@ pub struct Value {
 #[account]
 #[derive(Default)]
 pub struct Manager {
-    // 96
+    // 128
     pub usdi_mint: Pubkey,             // 32
     pub liquidated_comet_usdi: Pubkey, // 32
     pub token_data: Pubkey,            // 32
+    pub admin: Pubkey                  // 32
 }
 
 #[account(zero_copy)]

@@ -39,6 +39,7 @@ pub mod incept {
             .liquidated_comet_usdi_token_account
             .to_account_info()
             .key;
+        ctx.accounts.manager.admin = *ctx.accounts.admin.to_account_info().key;
 
         // set manager as token data owner
         token_data.manager = *ctx.accounts.manager.to_account_info().key;

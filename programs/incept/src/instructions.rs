@@ -66,6 +66,7 @@ pub struct InitializeUser<'info> {
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, scale: u8, stable: u8)]
 pub struct AddCollateral<'info> {
+    #[account(address = manager.admin)]
     pub admin: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
@@ -94,6 +95,7 @@ pub struct AddCollateral<'info> {
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, stable_collateral_ratio: u16, crypto_collateral_ratio: u16,)]
 pub struct InitializePool<'info> {
+    #[account(address = manager.admin)]
     pub admin: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
