@@ -204,7 +204,6 @@ describe("incept", async () => {
         tokenData: tokenDataAccount.publicKey,
         collateralMint: mockUSDCMint.publicKey,
         vault: mockUSDCVault.publicKey,
-        usdiMint: usdiMint.publicKey,
         rent: RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SYSTEM_PROGRAM_ID,
@@ -221,8 +220,8 @@ describe("incept", async () => {
   it("pool initialized!", async () => {
     await inceptProgram.rpc.initializePool(
       managerAccount[1],
-      new BN(150),
-      new BN(200),
+      150,
+      200,
       {
         accounts: {
           admin: walletPubkey,
@@ -413,18 +412,17 @@ describe("incept", async () => {
           iassetMint: iassetMint.publicKey,
           userIassetTokenAccount: iassetTokenAccountInfo.address,
           oracle: priceFeed,
-          rent: RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SYSTEM_PROGRAM_ID,
         },
       }
     );
     let tx = new anchor.web3.Transaction()
       .add(priceUpdateIx)
       .add(initializeMintPositionIx);
+      // @ts-ignore
     let signers = [provider.wallet.payer];
     tx.setSigners(...signers.map((s) => s.publicKey));
-    tx.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
+    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
     tx.feePayer = walletPubkey;
     tx.partialSign(...signers);
     let signedTransaction = await connection.sendRawTransaction(tx.serialize());
@@ -548,6 +546,7 @@ describe("incept", async () => {
     let tx = new anchor.web3.Transaction()
       .add(priceUpdateIx)
       .add(removeCollateralFromMintIx);
+    // @ts-ignore
     let signers = [provider.wallet.payer];
     tx.setSigners(...signers.map((s) => s.publicKey));
     tx.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
@@ -1098,7 +1097,6 @@ describe("incept", async () => {
           userAccount: userAccount[0],
           usdiMint: usdiMint.publicKey,
           iassetMint: iassetMint.publicKey,
-          usdcMint: mockUSDCMint.publicKey,
           userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
           cometPositions: cometPositionsAccount.publicKey,
           ammUsdiTokenAccount: usdiPoolTokenAccount.publicKey,
@@ -1457,7 +1455,7 @@ describe("incept", async () => {
     await inceptProgram.rpc.recenterComet(
       managerAccount[1],
       userAccount[1],
-      new BN(0),
+      0,
       {
         accounts: {
           user: walletPubkey,
