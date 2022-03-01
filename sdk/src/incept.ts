@@ -9,18 +9,22 @@ import {
   ConfirmOptions,
   TransactionInstruction,
   Transaction,
-  KeyPair,
+  Keypair,
 } from "@solana/web3.js";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
+
+const TOKEN_DATA_SIZE = 130608;
+const COMET_POSITIONS_SIZE = 55128;
+const MINT_POSITIONS_SIZE = 22488;
+const LIQUIDITY_POSITIONS_SIZE = 16368;
 
 export class Incept {
   connection: Connection;
   network: Network;
   wallet: typeof Wallet;
   programId: PublicKey;
-  exchangeAuthority: PublicKey;
   program: Program<InceptProgram>;
   manager: Manager;
   tokenData: TokenData;
@@ -88,7 +92,7 @@ export class Incept {
         throw new Error("Not supported");
     }
   }
-  public async initializeManager(admin) {
+  public async initializeManager(admin: PublicKey) {
     const managerPubkeyAndBump = await this.getManagerAddress();
     const usdiMint = anchor.web3.Keypair.generate();
     const liquidatedCometUsdiTokenAccount = anchor.web3.Keypair.generate();
@@ -106,6 +110,13 @@ export class Incept {
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SYSTEM_PROGRAM_ID,
       },
+      instructions: [
+        await this.program.account.TokenData.createInstruction(
+          tokenData,
+          TOKEN_DATA_SIZE
+        ),
+      ],
+      signers: [usdiMint, tokenData, liquidatedCometUsdiTokenAccount],
     });
     this.managerAddress = managerPubkeyAndBump;
     this.manager = (await this.program.account.Manager.fetch(
@@ -137,7 +148,7 @@ export class Incept {
 
   public async addPool(admin) {}
 
-  public async updatePrices(signers?: Array<KeyPair>) {
+  public async updatePrices(signers?: Array<Keypair>) {
     const updatePricesIx = await this.updatePricesInstruction();
     await signAndSend(
       new Transaction().add(updatePricesIx),
@@ -204,7 +215,7 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userCollateralTokenAccount: PublicKey,
     collateralIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const mintUsdiIx = await this.mintUsdiInstruction(
       amount,
@@ -254,7 +265,7 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     poolIndex: number,
     collateralIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const updatePricesIx = await this.updatePricesInstruction();
     const initializeMintPositionsIx =
@@ -313,7 +324,7 @@ export class Incept {
     userCollateralTokenAccount: PublicKey,
     collateralAmount: BN,
     collateralIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const addCollateralToMintIx = await this.addCollateralToMintInstruction(
       user,
@@ -361,7 +372,7 @@ export class Incept {
     userCollateralTokenAccount: PublicKey,
     collateralAmount: BN,
     collateralIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const withdrawCollateralFromMintIx =
       await this.withdrawCollateralFromMintInstruction(
@@ -411,7 +422,7 @@ export class Incept {
     iassetAmount: BN,
     poolIndex: number,
     collateralIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const payBackiAssetToMintIx = await this.payBackiAssetToMintInstruction(
       user,
@@ -464,7 +475,7 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     poolIndex: number,
     collateralIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const updatePricesIx = await this.updatePricesInstruction();
     const addiAssetToMintIx = await this.addiAssetToMintInstruction(
@@ -517,7 +528,7 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     userLiquidityTokenAccount: PublicKey,
     poolIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const initializeLiquidityPositionIx =
       await this.initializeLiquidityPositionInstruction(
@@ -574,7 +585,7 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     userLiquidityTokenAccount: PublicKey,
     poolIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const provideLiquidityIx = await this.provideLiquidityInstruction(
       user,
@@ -639,7 +650,7 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     userLiquidityTokenAccount: PublicKey,
     poolIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const withdrawLiquidityIx = await this.withdrawLiquidityInstruction(
       user,
@@ -703,7 +714,7 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     poolIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const buySynthIx = await this.buySynthInstruction(
       user,
@@ -752,7 +763,7 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     poolIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const buySynthIx = await this.buySynthInstruction(
       user,
@@ -802,7 +813,7 @@ export class Incept {
     usdiAmount: BN,
     poolIndex: number,
     collateralIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const initializeCometIx = await this.initializeCometInstruction(
       user,
@@ -864,7 +875,7 @@ export class Incept {
     userCollateralTokenAccount: PublicKey,
     collateralAmount: BN,
     cometIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const addCollateralToCometIx = await this.addCollateralToCometInstruction(
       user,
@@ -926,7 +937,7 @@ export class Incept {
     userCollateralTokenAccount: PublicKey,
     collateralAmount: BN,
     cometIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const withdrawCollateralFromCometIx =
       await this.withdrawCollateralFromCometInstruction(
@@ -990,7 +1001,7 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     userUsdiTokenAccount: PublicKey,
     cometIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const closeCometIx = await this.closeCometInstruction(
       user,
@@ -1058,7 +1069,7 @@ export class Incept {
     user: PublicKey,
     userIassetTokenAccount: PublicKey,
     cometIndex: number,
-    signers?: Array<KeyPair>
+    signers?: Array<Keypair>
   ) {
     const recenterCometIx = await this.recenterCometInstruction(
       user,
