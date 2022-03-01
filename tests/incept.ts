@@ -690,7 +690,9 @@ describe("incept", async () => {
     );
 
     await inceptProgram.rpc.initializeLiquidityPosition(
-      ≈
+      managerAccount[1],
+      new BN(0),
+      new BN(10000000000000),
       {
         accounts: {
           user: walletPubkey,
@@ -1089,7 +1091,6 @@ describe("incept", async () => {
           user: walletPubkey,
           manager: managerAccount[0],
           tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
           usdiMint: usdiMint.publicKey,
           iassetMint: iassetMint.publicKey,
           userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
@@ -1170,7 +1171,6 @@ describe("incept", async () => {
           user: walletPubkey,
           manager: managerAccount[0],
           tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
           cometPositions: cometPositionsAccount.publicKey,
           vault: mockUSDCVault.publicKey,
           userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
@@ -1227,7 +1227,6 @@ describe("incept", async () => {
           user: walletPubkey,
           manager: managerAccount[0],
           tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
           cometPositions: cometPositionsAccount.publicKey,
           vault: mockUSDCVault.publicKey,
           userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
@@ -1355,7 +1354,6 @@ describe("incept", async () => {
   //     managerAccount[1],
   //     userAccount[1],
   //     new BN(0),
-  //     new BN(0),
   //     {
   //       accounts: {
   //         user: walletPubkey,
@@ -1456,7 +1454,6 @@ describe("incept", async () => {
           user: walletPubkey,
           manager: managerAccount[0],
           tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
           usdiMint: usdiMint.publicKey,
           iassetMint: iassetMint.publicKey,
           userIassetTokenAccount: iassetTokenAccountInfo.address,

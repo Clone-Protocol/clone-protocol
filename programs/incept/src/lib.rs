@@ -1239,7 +1239,6 @@ pub mod incept {
         ctx: Context<CloseComet>,
         manager_nonce: u8,
         _user_nonce: u8,
-        _market_index: u8,
         comet_index: u8,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];

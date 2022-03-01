@@ -820,13 +820,6 @@ pub struct InitializeComet<'info> {
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
-        has_one = comet_positions,
-        constraint = pool_index < token_data.load()?.num_pools
-    )]
-    pub user_account: Box<Account<'info, User>>,
-    #[account(
         mut,
         address = manager.usdi_mint
     )]
@@ -905,12 +898,6 @@ pub struct AddCollateralToComet<'info> {
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
-        has_one = comet_positions
-    )]
-    pub user_account: Account<'info, User>,
-    #[account(
         mut,
         constraint = &comet_positions.load()?.owner == user.to_account_info().key,
         constraint = comet_index < comet_positions.load()?.num_positions
@@ -984,12 +971,6 @@ pub struct WithdrawCollateralFromComet<'info> {
         has_one = manager
     )]
     pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
-        has_one = comet_positions
-    )]
-    pub user_account: Account<'info, User>,
     #[account(
         mut,
         constraint = &comet_positions.load()?.owner == user.to_account_info().key,
@@ -1065,12 +1046,6 @@ pub struct CloseComet<'info> {
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
-        has_one = comet_positions
-    )]
-    pub user_account: Box<Account<'info, User>>,
-    #[account(
         mut,
         address = manager.usdi_mint
     )]
@@ -1145,12 +1120,6 @@ pub struct RecenterComet<'info> {
         has_one = manager
     )]
     pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
-        has_one = comet_positions
-    )]
-    pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
         address = manager.usdi_mint

@@ -1006,11 +1006,6 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "usdiMint",
           "isMut": true,
           "isSigner": false
@@ -1113,11 +1108,6 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "cometPositions",
           "isMut": true,
           "isSigner": false
@@ -1193,11 +1183,6 @@ export type Incept = {
         {
           "name": "tokenData",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -1279,11 +1264,6 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "usdiMint",
           "isMut": true,
           "isSigner": false
@@ -1354,10 +1334,6 @@ export type Incept = {
           "type": "u8"
         },
         {
-          "name": "marketIndex",
-          "type": "u8"
-        },
-        {
           "name": "cometIndex",
           "type": "u8"
         }
@@ -1379,11 +1355,6 @@ export type Incept = {
         {
           "name": "tokenData",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -3145,11 +3116,6 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "usdiMint",
           "isMut": true,
           "isSigner": false
@@ -3252,11 +3218,6 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "cometPositions",
           "isMut": true,
           "isSigner": false
@@ -3332,11 +3293,6 @@ export const IDL: Incept = {
         {
           "name": "tokenData",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -3418,11 +3374,6 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "usdiMint",
           "isMut": true,
           "isSigner": false
@@ -3493,10 +3444,6 @@ export const IDL: Incept = {
           "type": "u8"
         },
         {
-          "name": "marketIndex",
-          "type": "u8"
-        },
-        {
           "name": "cometIndex",
           "type": "u8"
         }
@@ -3518,11 +3465,6 @@ export const IDL: Incept = {
         {
           "name": "tokenData",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
           "isSigner": false
         },
         {

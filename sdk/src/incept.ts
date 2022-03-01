@@ -576,15 +576,14 @@ export class Incept {
     poolIndex: number,
     signers?: Array<KeyPair>
   ) {
-    const provideLiquidityIx =
-      await this.provideLiquidityInstruction(
-        user,
-        userUsdiTokenAccount,
-        userIassetTokenAccount,
-        userLiquidityTokenAccount,
-        iassetAmount,
-        poolIndex
-      );
+    const provideLiquidityIx = await this.provideLiquidityInstruction(
+      user,
+      userUsdiTokenAccount,
+      userIassetTokenAccount,
+      userLiquidityTokenAccount,
+      iassetAmount,
+      poolIndex
+    );
     await signAndSend(
       new Transaction().add(provideLiquidityIx),
       signers,
@@ -615,9 +614,18 @@ export class Incept {
           userUsdiTokenAccount: userUsdiTokenAccount,
           userIassetTokenAccount: userIassetTokenAccount,
           userLiquidityTokenAccount: userLiquidityTokenAccount,
-          ammUsdiTokenAccount: tokenData.pools[this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex].usdiTokenAccount,
-          ammIassetTokenAccount: tokenData.pools[this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex].iassetTokenAccount,
-          liquidityTokenMint: tokenData.pools[this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex].liquidityTokenMint,
+          ammUsdiTokenAccount:
+            tokenData.pools[
+              this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex
+            ].usdiTokenAccount,
+          ammIassetTokenAccount:
+            tokenData.pools[
+              this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex
+            ].iassetTokenAccount,
+          liquidityTokenMint:
+            tokenData.pools[
+              this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex
+            ].liquidityTokenMint,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
@@ -633,15 +641,14 @@ export class Incept {
     poolIndex: number,
     signers?: Array<KeyPair>
   ) {
-    const withdrawLiquidityIx =
-      await this.withdrawLiquidityInstruction(
-        user,
-        userUsdiTokenAccount,
-        userIassetTokenAccount,
-        userLiquidityTokenAccount,
-        iassetAmount,
-        poolIndex
-      );
+    const withdrawLiquidityIx = await this.withdrawLiquidityInstruction(
+      user,
+      userUsdiTokenAccount,
+      userIassetTokenAccount,
+      userLiquidityTokenAccount,
+      iassetAmount,
+      poolIndex
+    );
     await signAndSend(
       new Transaction().add(withdrawLiquidityIx),
       signers,
@@ -672,41 +679,445 @@ export class Incept {
           userUsdiTokenAccount: userUsdiTokenAccount,
           userIassetTokenAccount: userIassetTokenAccount,
           userLiquidityTokenAccount: userLiquidityTokenAccount,
-          ammUsdiTokenAccount: tokenData.pools[this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex].usdiTokenAccount,
-          ammIassetTokenAccount: tokenData.pools[this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex].iassetTokenAccount,
-          liquidityTokenMint: tokenData.pools[this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex].liquidityTokenMint,
+          ammUsdiTokenAccount:
+            tokenData.pools[
+              this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex
+            ].usdiTokenAccount,
+          ammIassetTokenAccount:
+            tokenData.pools[
+              this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex
+            ].iassetTokenAccount,
+          liquidityTokenMint:
+            tokenData.pools[
+              this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex
+            ].liquidityTokenMint,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
     )) as TransactionInstruction;
   }
 
-  public async buySynth() {}
-  public async buySynthInstruction() {}
+  public async buySynth(
+    iassetAmount: BN,
+    user: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    poolIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const buySynthIx = await this.buySynthInstruction(
+      user,
+      userUsdiTokenAccount,
+      userIassetTokenAccount,
+      iassetAmount,
+      poolIndex
+    );
+    await signAndSend(
+      new Transaction().add(buySynthIx),
+      signers,
+      this.connection
+    );
+  }
+  public async buySynthInstruction(
+    user: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    iassetAmount: BN,
+    poolIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
 
-  public async sellSynth() {}
-  public async sellSynthInstruction() {}
+    return (await this.program.instruction.buySynth(
+      this.managerAddress[1],
+      poolIndex,
+      iassetAmount,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          userUsdiTokenAccount: userUsdiTokenAccount,
+          userIassetTokenAccount: userIassetTokenAccount,
+          ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
+          ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
 
-  public async initializeComet() {}
-  public async initializeCometInstruction() {}
+  public async sellSynth(
+    iassetAmount: BN,
+    user: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    poolIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const buySynthIx = await this.buySynthInstruction(
+      user,
+      userUsdiTokenAccount,
+      userIassetTokenAccount,
+      iassetAmount,
+      poolIndex
+    );
+    await signAndSend(
+      new Transaction().add(buySynthIx),
+      signers,
+      this.connection
+    );
+  }
+  public async sellSynthInstruction(
+    user: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    iassetAmount: BN,
+    poolIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
 
-  public async addCollateralToComet() {}
-  public async addCollateralToCometInstruction() {}
+    return (await this.program.instruction.sellSynth(
+      this.managerAddress[1],
+      poolIndex,
+      iassetAmount,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          userUsdiTokenAccount: userUsdiTokenAccount,
+          userIassetTokenAccount: userIassetTokenAccount,
+          ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
+          ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
 
-  public async withdrawCollateralFromComet() {}
-  public async withdrawCollateralFromCometInstruction() {}
+  public async initializeComet(
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    collateralAmount: BN,
+    usdiAmount: BN,
+    poolIndex: number,
+    collateralIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const initializeCometIx = await this.initializeCometInstruction(
+      user,
+      userCollateralTokenAccount,
+      collateralAmount,
+      usdiAmount,
+      poolIndex,
+      collateralIndex
+    );
+    await signAndSend(
+      new Transaction().add(initializeCometIx),
+      signers,
+      this.connection
+    );
+  }
+  public async initializeCometInstruction(
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    collateralAmount: BN,
+    usdiAmount: BN,
+    poolIndex: number,
+    collateralIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAddress = await this.getUserAddress(user);
+    let userAccount = await this.getUserAccount(user);
 
-  public async closeComet() {}
-  public async closeCometInstruction() {}
+    return (await this.program.instruction.initializeComet(
+      this.managerAddress[1],
+      userAddress[1],
+      poolIndex,
+      collateralAmount,
+      usdiAmount,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          usdiMint: this.manager.usdiMint,
+          iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
+          userCollateralTokenAccount: userCollateralTokenAccount,
+          cometPositions: userAccount.cometPositions,
+          ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
+          ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
+          liquidityTokenMint: tokenData.pools[poolIndex].liquidityTokenMint,
+          cometLiquidityTokenAccount:
+            tokenData.pools[poolIndex].cometLiquidityTokenAccount,
+          vault: tokenData.collaterals[collateralIndex].vault,
+          rent: RENT_PUBKEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
 
-  public async recenterComet() {}
-  public async recenterCometInstruction() {}
+  public async addCollateralToComet(
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    collateralAmount: BN,
+    cometIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const addCollateralToCometIx = await this.addCollateralToCometInstruction(
+      user,
+      userCollateralTokenAccount,
+      collateralAmount,
+      cometIndex
+    );
+    await signAndSend(
+      new Transaction().add(addCollateralToCometIx),
+      signers,
+      this.connection
+    );
+  }
+  public async addCollateralToCometInstruction(
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    collateralAmount: BN,
+    cometIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAddress = await this.getUserAddress(user);
+    let userAccount = await this.getUserAccount(user);
+
+    return (await this.program.instruction.addCollateralToComet(
+      this.managerAddress[1],
+      userAddress[1],
+      cometIndex,
+      collateralAmount,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          cometPositions: userAccount.cometPositions,
+          vault:
+            tokenData.collaterals[this.getCometPositions(user).collateralIndex]
+              .vault,
+          userCollateralTokenAccount: userCollateralTokenAccount,
+          ammUsdiTokenAccount:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .usdiTokenAccount,
+          ammIassetTokenAccount:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .iassetTokenAccount,
+          liquidityTokenMint:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .liquidityTokenMint,
+          cometLiquidityTokenAccount:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .cometLiquidityTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
+
+  public async withdrawCollateralFromComet(
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    collateralAmount: BN,
+    cometIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const withdrawCollateralFromCometIx =
+      await this.withdrawCollateralFromCometInstruction(
+        user,
+        userCollateralTokenAccount,
+        collateralAmount,
+        cometIndex
+      );
+    await signAndSend(
+      new Transaction().add(withdrawCollateralFromCometIx),
+      signers,
+      this.connection
+    );
+  }
+  public async withdrawCollateralFromCometInstruction(
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    collateralAmount: BN,
+    cometIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAddress = await this.getUserAddress(user);
+    let userAccount = await this.getUserAccount(user);
+
+    return (await this.program.instruction.withdrawCollateralFromComet(
+      this.managerAddress[1],
+      userAddress[1],
+      cometIndex,
+      collateralAmount,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          cometPositions: userAccount.cometPositions,
+          vault:
+            tokenData.collaterals[this.getCometPositions(user).collateralIndex]
+              .vault,
+          userCollateralTokenAccount: userCollateralTokenAccount,
+          ammUsdiTokenAccount:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .usdiTokenAccount,
+          ammIassetTokenAccount:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .iassetTokenAccount,
+          liquidityTokenMint:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .liquidityTokenMint,
+          cometLiquidityTokenAccount:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .cometLiquidityTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
+
+  public async closeComet(
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    cometIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const closeCometIx = await this.closeCometInstruction(
+      user,
+      userCollateralTokenAccount,
+      userIassetTokenAccount,
+      userUsdiTokenAccount,
+      cometIndex
+    );
+    await signAndSend(
+      new Transaction().add(closeCometIx),
+      signers,
+      this.connection
+    );
+  }
+  public async closeCometInstruction(
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    cometIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAddress = await this.getUserAddress(user);
+    let userAccount = await this.getUserAccount(user);
+
+    return (await this.program.instruction.closeComet(
+      this.managerAddress[1],
+      userAddress[1],
+      cometIndex,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          usdiMint: this.manager.usdiMint,
+          iassetMint:
+            tokenData.pools[this.getCometPositions().poolIndex].assetInfo
+              .iassetMint,
+          userCollateralTokenAccount: userCollateralTokenAccount,
+          userIassetTokenAccount: userIassetTokenAccount,
+          userUsdiTokenAccount: userUsdiTokenAccount,
+          cometPositions: userAccount.cometPositions,
+          cometLiquidityTokenAccount:
+            tokenData.pools[this.getCometPositions().poolIndex]
+              .cometLiquidityTokenAccount,
+          ammUsdiTokenAccount:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .usdiTokenAccount,
+          ammIassetTokenAccount:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .iassetTokenAccount,
+          liquidityTokenMint:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .liquidityTokenMint,
+          vault:
+            tokenData.collaterals[this.getCometPositions(user).collateralIndex]
+              .vault,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
+
+  public async recenterComet(
+    user: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    cometIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const recenterCometIx = await this.recenterCometInstruction(
+      user,
+      userIassetTokenAccount,
+      cometIndex
+    );
+    await signAndSend(
+      new Transaction().add(recenterCometIx),
+      signers,
+      this.connection
+    );
+  }
+  public async recenterCometInstruction(
+    user: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    cometIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAddress = await this.getUserAddress(user);
+    let userAccount = await this.getUserAccount(user);
+
+    return (await this.program.instruction.recenterComet(
+      this.managerAddress[1],
+      userAddress[1],
+      cometIndex,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          usdiMint: this.manager.usdiMint,
+          iassetMint:
+            tokenData.pools[this.getCometPositions().poolIndex].assetInfo
+              .iassetMint,
+          userIassetTokenAccount: userIassetTokenAccount,
+          cometPositions: userAccount.cometPositions,
+          ammUsdiTokenAccount:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .usdiTokenAccount,
+          ammIassetTokenAccount:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .iassetTokenAccount,
+          liquidityTokenMint:
+            tokenData.pools[this.getCometPositions(user).poolIndex]
+              .liquidityTokenMint,
+          vault:
+            tokenData.collaterals[this.getCometPositions(user).collateralIndex]
+              .vault,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
 
   public async liquidateComet() {}
   public async liquidateCometInstruction() {}
 
-  public async claimLiquidateComet() {}
-  public async claimLiquidateCometInstruction() {}
+  public async claimLiquidatedComet() {}
+  public async claimLiquidatedCometInstruction() {}
 }
 
 export interface Manager {
