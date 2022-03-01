@@ -289,14 +289,13 @@ export class Incept {
     return (await this.program.instruction.initializeMintPosition(
       this.managerAddress[1],
       userAddress[1],
-      new BN(iassetAmount),
-      new BN(collateralAmount),
+      iassetAmount,
+      collateralAmount,
       {
         accounts: {
           user: user,
           manager: this.managerAddress[0],
           tokenData: this.manager.tokenData,
-          userAccount: userAddress[0],
           mintPositions: userAccount.mintPositions,
           vault: tokenData.collaterals[collateralIndex].vault,
           userCollateralTokenAccount: userCollateralTokenAccount,
@@ -309,26 +308,378 @@ export class Incept {
     )) as TransactionInstruction;
   }
 
-  public async addCollateralToMint() {}
-  public async addCollateralToMintInstruction() {}
+  public async addCollateralToMint(
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    collateralAmount: BN,
+    collateralIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const addCollateralToMintIx = await this.addCollateralToMintInstruction(
+      user,
+      userCollateralTokenAccount,
+      collateralAmount,
+      collateralIndex
+    );
+    await signAndSend(
+      new Transaction().add(addCollateralToMintIx),
+      signers,
+      this.connection
+    );
+  }
+  public async addCollateralToMintInstruction(
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    collateralAmount: BN,
+    collateralIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAddress = await this.getUserAddress(user);
+    let userAccount = await this.getUserAccount(user);
 
-  public async withdrawCollateralFromMint() {}
-  public async withdrawCollateralFromMintInstruction() {}
+    return (await this.program.instruction.addCollateralToMint(
+      this.managerAddress[1],
+      userAddress[1],
+      collateralIndex,
+      collateralAmount,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          mintPositions: userAccount.mintPositions,
+          vault: tokenData.collaterals[collateralIndex].vault,
+          userCollateralTokenAccount: userCollateralTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
 
-  public async payBackiAssetToMint() {}
-  public async payBackiAssetToMintInstruction() {}
+  public async withdrawCollateralFromMint(
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    collateralAmount: BN,
+    collateralIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const withdrawCollateralFromMintIx =
+      await this.withdrawCollateralFromMintInstruction(
+        user,
+        userCollateralTokenAccount,
+        collateralAmount,
+        collateralIndex
+      );
+    await signAndSend(
+      new Transaction().add(withdrawCollateralFromMintIx),
+      signers,
+      this.connection
+    );
+  }
+  public async withdrawCollateralFromMintInstruction(
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    collateralAmount: BN,
+    collateralIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAddress = await this.getUserAddress(user);
+    let userAccount = await this.getUserAccount(user);
 
-  public async addiAssetToMint() {}
-  public async addiAssetToMintInstruction() {}
+    return (await this.program.instruction.withdrawCollateralFromMint(
+      this.managerAddress[1],
+      userAddress[1],
+      collateralIndex,
+      collateralAmount,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          mintPositions: userAccount.mintPositions,
+          vault: tokenData.collaterals[collateralIndex].vault,
+          userCollateralTokenAccount: userCollateralTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
 
-  public async initializeLiquidityPosition() {}
-  public async initializeLiquidityPositionInstruction() {}
+  public async payBackiAssetToMint(
+    user: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    iassetAmount: BN,
+    poolIndex: number,
+    collateralIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const payBackiAssetToMintIx = await this.payBackiAssetToMintInstruction(
+      user,
+      userIassetTokenAccount,
+      iassetAmount,
+      poolIndex,
+      collateralIndex
+    );
+    await signAndSend(
+      new Transaction().add(payBackiAssetToMintIx),
+      signers,
+      this.connection
+    );
+  }
+  public async payBackiAssetToMintInstruction(
+    user: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    iassetAmount: BN,
+    poolIndex: number,
+    collateralIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAddress = await this.getUserAddress(user);
+    let userAccount = await this.getUserAccount(user);
 
-  public async provideLiquidity() {}
-  public async provideLiquidityInstruction() {}
+    return (await this.program.instruction.payBackMint(
+      this.managerAddress[1],
+      userAddress[1],
+      collateralIndex,
+      iassetAmount,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          mintPositions: userAccount.mintPositions,
+          iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
+          userIassetTokenAccount: userIassetTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
 
-  public async withdrawLiquidity() {}
-  public async withdrawLiquidityInstruction() {}
+  public async addiAssetToMint(
+    iassetAmount: BN,
+    collateralAmount: BN,
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    poolIndex: number,
+    collateralIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const updatePricesIx = await this.updatePricesInstruction();
+    const addiAssetToMintIx = await this.addiAssetToMintInstruction(
+      user,
+      userIassetTokenAccount,
+      iassetAmount,
+      poolIndex,
+      collateralIndex
+    );
+    await signAndSend(
+      new Transaction().add(updatePricesIx).add(addiAssetToMintIx),
+      signers,
+      this.connection
+    );
+  }
+  public async addiAssetToMintInstruction(
+    user: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    iassetAmount: BN,
+    poolIndex: number,
+    collateralIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAddress = await this.getUserAddress(user);
+    let userAccount = await this.getUserAccount(user);
+
+    return (await this.program.instruction.addIassetToMint(
+      this.managerAddress[1],
+      userAddress[1],
+      collateralIndex,
+      iassetAmount,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          mintPositions: userAccount.mintPositions,
+          iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
+          userIassetTokenAccount: userIassetTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
+
+  public async initializeLiquidityPosition(
+    iassetAmount: BN,
+    user: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    userLiquidityTokenAccount: PublicKey,
+    poolIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const initializeLiquidityPositionIx =
+      await this.initializeLiquidityPositionInstruction(
+        user,
+        userUsdiTokenAccount,
+        userIassetTokenAccount,
+        userLiquidityTokenAccount,
+        iassetAmount,
+        poolIndex
+      );
+    await signAndSend(
+      new Transaction().add(initializeLiquidityPositionIx),
+      signers,
+      this.connection
+    );
+  }
+  public async initializeLiquidityPositionInstruction(
+    user: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    userLiquidityTokenAccount: PublicKey,
+    iassetAmount: BN,
+    poolIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAccount = await this.getUserAccount(user);
+
+    return (await this.program.instruction.initializeLiquidityPosition(
+      this.managerAddress[1],
+      poolIndex,
+      iassetAmount,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          liquidityPositions: userAccount.liquidityPositions,
+          userUsdiTokenAccount: userUsdiTokenAccount,
+          userIassetTokenAccount: userIassetTokenAccount,
+          userLiquidityTokenAccount: userLiquidityTokenAccount,
+          ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
+          ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
+          liquidityTokenMint: tokenData.pools[poolIndex].liquidityTokenMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
+
+  public async provideLiquidity(
+    iassetAmount: BN,
+    user: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    userLiquidityTokenAccount: PublicKey,
+    poolIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const provideLiquidityIx =
+      await this.provideLiquidityInstruction(
+        user,
+        userUsdiTokenAccount,
+        userIassetTokenAccount,
+        userLiquidityTokenAccount,
+        iassetAmount,
+        poolIndex
+      );
+    await signAndSend(
+      new Transaction().add(provideLiquidityIx),
+      signers,
+      this.connection
+    );
+  }
+  public async provideLiquidityInstruction(
+    user: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    userLiquidityTokenAccount: PublicKey,
+    iassetAmount: BN,
+    liquidityPositionIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAccount = await this.getUserAccount(user);
+
+    return (await this.program.instruction.provideLiquidity(
+      this.managerAddress[1],
+      liquidityPositionIndex,
+      iassetAmount,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          liquidityPositions: userAccount.liquidityPositions,
+          userUsdiTokenAccount: userUsdiTokenAccount,
+          userIassetTokenAccount: userIassetTokenAccount,
+          userLiquidityTokenAccount: userLiquidityTokenAccount,
+          ammUsdiTokenAccount: tokenData.pools[this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex].usdiTokenAccount,
+          ammIassetTokenAccount: tokenData.pools[this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex].iassetTokenAccount,
+          liquidityTokenMint: tokenData.pools[this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex].liquidityTokenMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
+
+  public async withdrawLiquidity(
+    iassetAmount: BN,
+    user: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    userLiquidityTokenAccount: PublicKey,
+    poolIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const withdrawLiquidityIx =
+      await this.withdrawLiquidityInstruction(
+        user,
+        userUsdiTokenAccount,
+        userIassetTokenAccount,
+        userLiquidityTokenAccount,
+        iassetAmount,
+        poolIndex
+      );
+    await signAndSend(
+      new Transaction().add(withdrawLiquidityIx),
+      signers,
+      this.connection
+    );
+  }
+  public async withdrawLiquidityInstruction(
+    user: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    userLiquidityTokenAccount: PublicKey,
+    iassetAmount: BN,
+    liquidityPositionIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAccount = await this.getUserAccount(user);
+
+    return (await this.program.instruction.withdrawLiquidity(
+      this.managerAddress[1],
+      liquidityPositionIndex,
+      iassetAmount,
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          liquidityPositions: userAccount.liquidityPositions,
+          userUsdiTokenAccount: userUsdiTokenAccount,
+          userIassetTokenAccount: userIassetTokenAccount,
+          userLiquidityTokenAccount: userLiquidityTokenAccount,
+          ammUsdiTokenAccount: tokenData.pools[this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex].usdiTokenAccount,
+          ammIassetTokenAccount: tokenData.pools[this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex].iassetTokenAccount,
+          liquidityTokenMint: tokenData.pools[this.getLiquidityPositions(user)[liquidityPositionIndex].poolIndex].liquidityTokenMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
 
   public async buySynth() {}
   public async buySynthInstruction() {}

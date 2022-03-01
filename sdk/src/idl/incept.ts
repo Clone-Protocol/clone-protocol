@@ -361,11 +361,6 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "mintPositions",
           "isMut": true,
           "isSigner": false
@@ -439,11 +434,6 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "mintPositions",
           "isMut": true,
           "isSigner": false
@@ -499,11 +489,6 @@ export type Incept = {
         {
           "name": "tokenData",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -565,11 +550,6 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "userIassetTokenAccount",
           "isMut": true,
           "isSigner": false
@@ -625,11 +605,6 @@ export type Incept = {
         {
           "name": "tokenData",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -2525,11 +2500,6 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "mintPositions",
           "isMut": true,
           "isSigner": false
@@ -2603,11 +2573,6 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "mintPositions",
           "isMut": true,
           "isSigner": false
@@ -2663,11 +2628,6 @@ export const IDL: Incept = {
         {
           "name": "tokenData",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -2729,11 +2689,6 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "userIassetTokenAccount",
           "isMut": true,
           "isSigner": false
@@ -2789,11 +2744,6 @@ export const IDL: Incept = {
         {
           "name": "tokenData",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
           "isSigner": false
         },
         {

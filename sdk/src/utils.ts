@@ -1,10 +1,11 @@
-//import { BN, Program } from "@project-serum/anchor";
+import { Provider } from "@project-serum/anchor";
 import {
   PublicKey,
   Connection,
-  KeyPair,
+  Keypair,
   Transaction,
   ConfirmOptions,
+  sendAndConfirmRawTransaction
 } from "@solana/web3.js";
 
 export const signAndSend = async (
@@ -14,7 +15,7 @@ export const signAndSend = async (
   opts?: ConfirmOptions
 ) => {
   tx.setSigners(...signers.map((s) => s.publicKey))
-  const blockhash = await connection.getRecentBlockhash(
+  const blockhash = await connection.getLatestBlockhash(
     opts?.commitment || Provider.defaultOptions().commitment
   )
   tx.recentBlockhash = blockhash.blockhash

@@ -405,7 +405,6 @@ describe("incept", async () => {
           user: walletPubkey,
           manager: managerAccount[0],
           tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
           mintPositions: mintPositionsAccount.publicKey,
           vault: mockUSDCVault.publicKey,
           userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
@@ -473,7 +472,6 @@ describe("incept", async () => {
           user: walletPubkey,
           manager: managerAccount[0],
           tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
           mintPositions: mintPositionsAccount.publicKey,
           vault: mockUSDCVault.publicKey,
           userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
@@ -535,7 +533,6 @@ describe("incept", async () => {
           user: walletPubkey,
           manager: managerAccount[0],
           tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
           mintPositions: mintPositionsAccount.publicKey,
           vault: mockUSDCVault.publicKey,
           userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
@@ -693,9 +690,7 @@ describe("incept", async () => {
     );
 
     await inceptProgram.rpc.initializeLiquidityPosition(
-      managerAccount[1],
-      new BN(0),
-      new BN(10000000000000),
+      ≈
       {
         accounts: {
           user: walletPubkey,
