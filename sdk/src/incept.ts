@@ -9,7 +9,7 @@ import {
   ConfirmOptions,
   TransactionInstruction,
   Transaction,
-  Account
+  KeyPair,
 } from "@solana/web3.js";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
@@ -137,7 +137,15 @@ export class Incept {
 
   public async addPool(admin) {}
 
-  public async updatePrices() {
+  public async updatePrices(signers?: Array<KeyPair>) {
+    const updatePricesIx = await this.updatePricesInstruction();
+    await signAndSend(
+      new Transaction().add(updatePricesIx),
+      signers,
+      this.connection
+    );
+  }
+  public async updatePricesInstruction() {
     const tokenData = await this.getTokenData();
     const priceFeeds = tokenData.pools
       .filter(
@@ -150,13 +158,13 @@ export class Incept {
           isSigner: false,
         };
       });
-    return await this.program.rpc.updatePrices({
+    return (await this.program.instruction.updatePrices({
       remainingAccounts: priceFeeds,
       accounts: {
         manager: this.managerAddress[0],
         tokenData: this.manager.tokenData,
       },
-    });
+    })) as TransactionInstruction;
   }
 
   public async getTokenData() {
@@ -196,7 +204,7 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userCollateralTokenAccount: PublicKey,
     collateralIndex: number,
-    signers?: Array<Account>
+    signers?: Array<KeyPair>
   ) {
     const mintUsdiIx = await this.mintUsdiInstruction(
       amount,
@@ -238,15 +246,41 @@ export class Incept {
     )) as TransactionInstruction;
   }
 
-  public async initializeMintPositions() {}
+  public async initializeMintPositions(
+    iassetAmount: BN,
+    collateralAmount: BN,
+    user: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    poolIndex: number,
+    collateralIndex: number,
+    signers?: Array<KeyPair>
+  ) {
+    const updatePricesIx = await this.updatePricesInstruction();
+    const initializeMintPositionsIx =
+      await this.initializeMintPositionsInstruction(
+        user,
+        userCollateralTokenAccount,
+        userIassetTokenAccount,
+        iassetAmount,
+        collateralAmount,
+        poolIndex,
+        collateralIndex
+      );
+    await signAndSend(
+      new Transaction().add(updatePricesIx).add(initializeMintPositionsIx),
+      signers,
+      this.connection
+    );
+  }
   public async initializeMintPositionsInstruction(
     user: PublicKey,
-    collateralVault: PublicKey,
     userCollateralTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     iassetAmount: BN,
     collateralAmount: BN,
-    poolIndex: number
+    poolIndex: number,
+    collateralIndex: number
   ) {
     let tokenData = await this.getTokenData();
     let userAddress = await this.getUserAddress(user);
@@ -264,7 +298,7 @@ export class Incept {
           tokenData: this.manager.tokenData,
           userAccount: userAddress[0],
           mintPositions: userAccount.mintPositions,
-          vault: collateralVault,
+          vault: tokenData.collaterals[collateralIndex].vault,
           userCollateralTokenAccount: userCollateralTokenAccount,
           iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
           userIassetTokenAccount: userIassetTokenAccount,
