@@ -8,6 +8,8 @@ import {
   Network,
   Wallet,
   ConfirmOptions,
+  TransactionInstruction,
+  Transaction,
 } from "@solana/web3.js";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
@@ -23,7 +25,7 @@ export class Incept {
   manager: Manager;
   tokenData: TokenData;
   opts?: ConfirmOptions;
-  managerPubkey: PublicKey;
+  managerAddress: [PublicKey, number];
 
   private constructor(
     connection: Connection,
@@ -33,7 +35,7 @@ export class Incept {
     programId = PublicKey.default,
     opts?: ConfirmOptions
   ) {
-    this.managerPubkey = PublicKey.default;
+    this.managerAddress = [PublicKey.default, 0];
     this.manager = {} as Manager;
     this.tokenData = {} as TokenData;
     this.connection = connection;
@@ -70,20 +72,16 @@ export class Incept {
         throw new Error("Not supported");
     }
   }
-
   public async initializeManager(admin) {
-    const [managerPubkey, bump] = await PublicKey.findProgramAddress(
-      [Buffer.from("manager")],
-      this.program.programId
-    );
+    const managerPubkeyAndBump = this.getManagerAddress();
     const usdiMint = anchor.web3.Keypair.generate();
     const liquidatedCometUsdiTokenAccount = anchor.web3.Keypair.generate();
     const tokenData = anchor.web3.Keypair.generate();
 
-    await this.program.rpc.initializeManager(bump, {
+    await this.program.rpc.initializeManager(managerPubkeyAndBump[1], {
       accounts: {
         admin: admin,
-        manager: managerPubkey,
+        manager: managerPubkeyAndBump[0],
         usdiMint: usdiMint.publicKey,
         liquidatedCometUsdiTokenAccount:
           liquidatedCometUSDITokenAccount.publicKey,
@@ -94,7 +92,10 @@ export class Incept {
         systemProgram: SYSTEM_PROGRAM_ID,
       },
     });
-    this.managerPubkey = managerPubkey;
+    this.managerAddress = managerPubkeyAndBump;
+    this.manager = (await this.program.account.manager.fetch(
+      this.managerAddress[0]
+    )) as Manager;
   }
 
   public onManagerAccountChange(fn: (state: Manager) => void) {
@@ -144,20 +145,128 @@ export class Incept {
   public async getTokenData() {}
 
   public async getManagerAddress() {
-    const [managerPubkey, bump] = await PublicKey.findProgramAddress(
+    return await PublicKey.findProgramAddress(
       [Buffer.from(utils.bytes.utf8.encode("manager"))],
       this.program.programId
     );
-    return { managerPubkey, bump };
   }
 
-  public async getUserAddress(userWalletAddress) {
+  public async getManagerAccount() {
+    return (await this.program.account.manager.fetch(
+      this.managerAddress[0]
+    )) as Manager;
+  }
+
+  public async getUserAddress(userWalletAddress: PublicKey) {
     const [userPubkey, bump] = await PublicKey.findProgramAddress(
       [Buffer.from("user"), userWalletAddress.toBuffer()],
       this.program.programId
     );
     return { userPubkey, bump };
   }
+
+  public async getUserAccount(userWalletAddress: PublicKey) {
+    return (await this.program.account.manager.fetch(
+      this.getUserAddress(userWalletAddress)[0]
+    )) as User;
+  }
+
+  public async mintUsdi(
+    amount: BN,
+    user: PublicKey,
+    collateralVault: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    userCollateralTokenAccount: PublicKey
+  ) {
+    const mintUsdiIx = await this.mintUsdiInstruction({
+      amount,
+      user,
+      collateralVault,
+      userUsdiTokenAccount,
+      userCollateralTokenAccount,
+    });
+    await signAndSend(
+      new Transaction().add(mintUsdiIx),
+      signers,
+      this.connection
+    );
+  }
+
+  public async mintUsdiInstruction(
+    amount: BN,
+    user: PublicKey,
+    collateralVault: PublicKey,
+    userUsdiTokenAccount: PublicKey,
+    userCollateralTokenAccount: PublicKey
+  ) {
+    return (await inceptProgram.rpc.mintUsdi(
+      this.managerAddress[1],
+      new BN(amount),
+      {
+        accounts: {
+          user: user,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          vault: collateralVault.publicKey,
+          usdiMint: this.manager.usdiMint,
+          userUsdiTokenAccount: userUsdiTokenAccount,
+          userCollateralTokenAccount: userCollateralTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
+
+  public async initializeMintPositions() {}
+  public async initializeMintPositionsInstruction() {}
+
+  public async addCollateralToMint() {}
+  public async addCollateralToMintInstruction() {}
+
+  public async withdrawCollateralFromMint() {}
+  public async withdrawCollateralFromMintInstruction() {}
+
+  public async payBackiAssetToMint() {}
+  public async payBackiAssetToMintInstruction() {}
+
+  public async addiAssetToMint() {}
+  public async addiAssetToMintInstruction() {}
+
+  public async initializeLiquidityPosition() {}
+  public async initializeLiquidityPositionInstruction() {}
+
+  public async provideLiquidity() {}
+  public async provideLiquidityInstruction() {}
+
+  public async withdrawLiquidity() {}
+  public async withdrawLiquidityInstruction() {}
+
+  public async buySynth() {}
+  public async buySynthInstruction() {}
+
+  public async sellSynth() {}
+  public async sellSynthInstruction() {}
+
+  public async initializeComet() {}
+  public async initializeCometInstruction() {}
+
+  public async addCollateralToComet() {}
+  public async addCollateralToCometInstruction() {}
+
+  public async withdrawCollateralFromComet() {}
+  public async withdrawCollateralFromCometInstruction() {}
+
+  public async closeComet() {}
+  public async closeCometInstruction() {}
+
+  public async recenterComet() {}
+  public async recenterCometInstruction() {}
+
+  public async liquidateComet() {}
+  public async liquidateCometInstruction() {}
+
+  public async claimLiquidateComet() {}
+  public async claimLiquidateCometInstruction() {}
 }
 
 export interface Manager {
@@ -165,6 +274,13 @@ export interface Manager {
   liquidatedCometUsdi: PublicKey;
   tokenData: PublicKey;
   admin: PublicKey;
+}
+
+export interface User {
+  authority: PublicKey;
+  comet_positions: PublicKey;
+  mint_positions: PublicKey;
+  liquidity_positions: PublicKey;
 }
 
 export interface TokenData {
