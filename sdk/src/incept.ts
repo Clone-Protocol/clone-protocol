@@ -146,7 +146,39 @@ export class Incept {
 
   public async addCollateral(admin) {}
 
+  public async getCollateral(collateralIndex: number) {
+    const tokenData = await this.getTokenData();
+    return tokenData[collateralIndex];
+  }
+
   public async addPool(admin) {}
+
+  public async getPool(poolIndex: number) {
+    const tokenData = await this.getTokenData();
+    return tokenData[poolIndex];
+  }
+
+  public async getPoolBalances(poolIndex: number) {
+    let pool = await this.getPool(poolIndex);
+    let iasset = (
+      await this.connection.getTokenAccountBalance(
+        pool.iassetTokenAccount,
+        "confirmed"
+      )
+    ).value!.amount
+    let usdi = (
+      await this.connection.getTokenAccountBalance(
+        pool.usdiTokenAccount,
+        "confirmed"
+      )
+    ).value!.amount
+    return [iasset, usdi]
+  }
+
+  public async getAssetInfo(poolIndex) {
+    const tokenData = await this.getTokenData();
+    return tokenData[poolIndex].assetInfo;
+  }
 
   public async updatePrices(signers?: Array<Keypair>) {
     const updatePricesIx = await this.updatePricesInstruction();
@@ -180,6 +212,27 @@ export class Incept {
 
   public async getTokenData() {
     return {} as TokenData;
+  }
+
+  public async getLiquidityPositions(userWalletAddress: PublicKey) {
+    return {} as LiquidityPositions;
+  }
+  public async getLiquidityPosition(userWalletAddress: PublicKey, liquidityIndex: number) {
+    return (await this.getLiquidityPositions(userWalletAddress)).liquidityPositions[liquidityIndex];
+  }
+
+  public async getMintPositions(userWalletAddress: PublicKey) {
+    return {} as MintPositions;
+  }
+  public async getMintPosition(userWalletAddress: PublicKey, mintIndex: number) {
+    return (await this.getMintPositions(userWalletAddress)).mintPositions[mintIndex];
+  }
+
+  public async getCometPositions(userWalletAddress: PublicKey) {
+    return {} as CometPositions;
+  }
+  public async getCometPosition(userWalletAddress: PublicKey, cometIndex: number) {
+    return (await this.getCometPositions(userWalletAddress)).cometPositions[cometIndex];
   }
 
   public async getManagerAddress() {
@@ -1151,6 +1204,51 @@ export interface TokenData {
   numCollaterals: number;
   pools: Array<Pool>;
   collaterals: Array<Collateral>;
+}
+
+export interface LiquidityPositions {
+  owner: PublicKey;
+  numPositions: number;
+  liquidityPositions: Array<LiquidityPosition>;
+}
+
+export interface LiquidityPosition {
+  authority: PublicKey;
+  liquidityTokenValue: Value;
+  poolIndex: number;
+}
+
+export interface MintPositions {
+  owner: PublicKey;
+  numPositions: number;
+  mintPositions: Array<MintPosition>;
+}
+
+export interface MintPosition {
+  authority: PublicKey;
+  collateralAmount: Value;
+  poolIndex: number;
+  collateralIndex: number;
+  borrowedIasset: Value;
+}
+
+export interface CometPositions {
+  owner: PublicKey;
+  numPositions: number;
+  cometPositions: Array<CometPosition>;
+}
+
+export interface CometPosition {
+  authority: PublicKey;
+  collateralAmount: Value;
+  poolIndex: number;
+  collateralIndex: number;
+  borrowedUsdi: Value;
+  borrowedIasset: Value;
+  liquidityTokenValue: Value;
+  lowerPriceRange: Value;
+  upperPriceRange: Value;
+  cometLiquidation: Value;
 }
 
 export interface Value {
