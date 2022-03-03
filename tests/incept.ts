@@ -1,12 +1,15 @@
 import * as anchor from "@project-serum/anchor";
 import { Program, BN } from "@project-serum/anchor";
-import { Incept } from "../target/types/incept";
-import { Pyth } from "../target/types/pyth";
-import { MockUsdc } from "../target/types/mock_usdc";
+import { Incept } from "../sdk/src/idl/incept";
+import { Pyth } from "../sdk/src/idl/pyth";
+import { MockUsdc } from "../sdk/src/idl/mock_usdc";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { assert } from "chai";
-import { TokenData, Collateral } from "../sdk/src/incept";
+import { Incept as InceptConnection, TokenData, User, CometPositions, MintPositions, LiquidityPositions } from "../sdk/src/incept";
 import { createPriceFeed, setPrice, getFeedData } from './oracle'
+import { Network } from "../sdk/src/network";
+import { INCEPT_EXCHANGE_SEED } from "./utils";
+
 
 describe("incept", async () => {
   const provider = anchor.Provider.local();
@@ -66,6 +69,15 @@ describe("incept", async () => {
 
   console.log(provider.wallet);
 
+  const [_exchangeAuthority, _nonce] = await anchor.web3.PublicKey.findProgramAddress(
+    [INCEPT_EXCHANGE_SEED],
+    inceptProgram.programId
+  )
+  // @ts-expect-error
+  let inceptClient = new InceptConnection(
+    connection, Network.LOCAL, inceptProgram.provider.wallet, _exchangeAuthority, inceptProgram.programId
+  ) as InceptConnection;
+
   it("mock usdc initialized!", async () => {
     await mockUSDCProgram.rpc.initialize(mockUSDCAccount[1], {
       accounts: {
@@ -81,62 +93,77 @@ describe("incept", async () => {
   });
 
   it("manager initialized!", async () => {
-    await inceptProgram.rpc.initializeManager(managerAccount[1], {
-      accounts: {
-        admin: walletPubkey,
-        manager: managerAccount[0],
-        usdiMint: usdiMint.publicKey,
-        liquidatedCometUsdiTokenAccount:
-          liquidatedCometUSDITokenAccount.publicKey,
-        tokenData: tokenDataAccount.publicKey,
-        rent: RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SYSTEM_PROGRAM_ID,
-      },
-      instructions: [
-        await inceptProgram.account.tokenData.createInstruction(
-          tokenDataAccount,
-          TOKEN_DATA_SIZE
-        ),
-      ],
-      signers: [usdiMint, tokenDataAccount, liquidatedCometUSDITokenAccount],
-    });
+    await inceptClient.initializeManager(walletPubkey);
   });
 
   it("user initialized!", async () => {
-    await inceptProgram.rpc.initializeUser(managerAccount[1], userAccount[1], {
-      accounts: {
-        user: walletPubkey,
-        manager: managerAccount[0],
-        userAccount: userAccount[0],
-        cometPositions: cometPositionsAccount.publicKey,
-        mintPositions: mintPositionsAccount.publicKey,
-        liquidityPositions: liquidityPositionsAccount.publicKey,
-        usdiMint: usdiMint.publicKey,
-        rent: RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SYSTEM_PROGRAM_ID,
-      },
-      instructions: [
-        await inceptProgram.account.cometPositions.createInstruction(
-          cometPositionsAccount,
-          COMET_POSITIONS_SIZE
-        ),
-        await inceptProgram.account.mintPositions.createInstruction(
-          mintPositionsAccount,
-          MINT_POSITIONS_SIZE
-        ),
-        await inceptProgram.account.liquidityPositions.createInstruction(
-          liquidityPositionsAccount,
-          LIQUIDITY_POSITIONS_SIZE
-        ),
-      ],
-      signers: [
-        cometPositionsAccount,
-        mintPositionsAccount,
-        liquidityPositionsAccount,
-      ],
-    });
+    await inceptClient.initializeUser(walletPubkey);
+    // await inceptProgram.rpc.initializeUser(managerAccount[1], userAccount[1], {
+    //   accounts: {
+    //     user: walletPubkey,
+    //     manager: managerAccount[0],
+    //     userAccount: userAccount[0],
+    //     cometPositions: cometPositionsAccount.publicKey,
+    //     mintPositions: mintPositionsAccount.publicKey,
+    //     liquidityPositions: liquidityPositionsAccount.publicKey,
+    //     usdiMint: usdiMint.publicKey,
+    //     rent: RENT_PUBKEY,
+    //     tokenProgram: TOKEN_PROGRAM_ID,
+    //     systemProgram: SYSTEM_PROGRAM_ID,
+    //   },
+    //   instructions: [
+    //     await inceptProgram.account.cometPositions.createInstruction(
+    //       cometPositionsAccount,
+    //       COMET_POSITIONS_SIZE
+    //     ),
+    //     await inceptProgram.account.mintPositions.createInstruction(
+    //       mintPositionsAccount,
+    //       MINT_POSITIONS_SIZE
+    //     ),
+    //     await inceptProgram.account.liquidityPositions.createInstruction(
+    //       liquidityPositionsAccount,
+    //       LIQUIDITY_POSITIONS_SIZE
+    //     ),
+    //   ],
+    //   signers: [
+    //     cometPositionsAccount,
+    //     mintPositionsAccount,
+    //     liquidityPositionsAccount,
+    //   ],
+    // });
+    // TEST USER ACCOUNT DATA.
+    const userAccountdata = await inceptProgram.account.user.fetch(
+      userAccount[0]
+    ) as User;
+
+    console.log("TESTING USER ACCCOUNT")
+    console.log(`AUTHORITY: ${userAccountdata.authority.toString()} vs ${walletPubkey.toString()}`);
+    console.log(`COMET POSITIONS: ${userAccountdata.cometPositions.toString()} vs ${cometPositionsAccount.publicKey.toString()}`);
+    console.log(`MINT POSITIONS: ${userAccountdata.mintPositions.toString()} vs ${mintPositionsAccount.publicKey.toString()}`);
+    console.log(`LIQUIDITY POSITIONS: ${userAccountdata.liquidityPositions.toString()} vs ${liquidityPositionsAccount.publicKey.toString()}`);
+
+    const cometPositions = await inceptProgram.account.cometPositions.fetch(
+      userAccountdata.cometPositions
+    ) as CometPositions;
+    console.log("COMET POSITIONS:");
+    console.log(`OWNER: ${cometPositions.owner.toString()} POSITIONS: ${cometPositions.numPositions}`)
+    console.log(cometPositions.cometPositions[0]);
+
+    const mintPositions = await inceptProgram.account.mintPositions.fetch(
+      userAccountdata.mintPositions
+    ) as MintPositions;
+    console.log("MINT POSITIONS:");
+    console.log(`OWNER: ${mintPositions.owner.toString()} POSITIONS: ${mintPositions.numPositions}`)
+    console.log(mintPositions.mintPositions[0]);
+
+    const liquidityPositions = await inceptProgram.account.liquidityPositions.fetch(
+      userAccountdata.liquidityPositions
+    ) as LiquidityPositions;
+    console.log("LIQUIDITY POSITIONS:");
+    console.log(`OWNER: ${liquidityPositions.owner.toString()} POSITIONS: ${liquidityPositions.numPositions}`)
+    console.log(liquidityPositions.liquidityPositions[0]);
+
+    await inceptClient.initializeUser(walletPubkey);
   });
 
   it("change feed price", async () => {
@@ -197,84 +224,73 @@ describe("incept", async () => {
   });
 
   it("mock usdc added as a collateral!", async () => {
-    await inceptProgram.rpc.addCollateral(managerAccount[1], 7, 1, {
-      accounts: {
-        admin: walletPubkey,
-        manager: managerAccount[0],
-        tokenData: tokenDataAccount.publicKey,
-        collateralMint: mockUSDCMint.publicKey,
-        vault: mockUSDCVault.publicKey,
-        rent: RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SYSTEM_PROGRAM_ID,
-      },
-      signers: [mockUSDCVault],
-    });
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    const currentTokenData = await connection.getAccountInfo(
-      tokenDataAccount.publicKey
+    // @ts-ignore
+    let tokenData = await inceptClient.program.account.tokenData.fetch(
+      inceptClient.manager.tokenData
+    ) as unknown as TokenData;
+    console.log("BEFORE ADD COLLATERAL:");
+    console.log(`${tokenData.manager} ${tokenData.numCollaterals} ${tokenData.numPools}`);
+    console.log("FIRST COLLATERAL");
+    console.log(tokenData.collaterals[0])
+
+    // ADD COLLATERAL
+    await inceptClient.addCollateral(
+      walletPubkey, 7, 1, mockUSDCMint.publicKey
     );
-    console.log(currentTokenData);
+
+
+    const managerAccount = await inceptClient.getManagerAccount();
+    
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    // @ts-ignore
+    tokenData = await inceptClient.program.account.tokenData.fetch(
+      inceptClient.manager.tokenData
+    ) as unknown as TokenData;
+
+    console.log("AFTER ADD COLLATERAL:");
+    console.log(`${tokenData.manager} ${tokenData.numCollaterals} ${tokenData.numPools}`);
+    console.log("FIRST COLLATERAL");
+    console.log(tokenData.collaterals[0])
+    console.log("FIRST POOL");
+    console.log(tokenData.pools[0])
+    // const currentTokenData = await connection.getAccountInfo(
+    //   managerAccount.tokenData
+    // ) as unknown as TokenData;
+    // console.log(`TOKEN DATA: ${currentTokenData}`);
   });
 
   it("pool initialized!", async () => {
-    await inceptProgram.rpc.initializePool(
-      managerAccount[1],
-      150,
-      200,
-      {
-        accounts: {
-          admin: walletPubkey,
-          manager: managerAccount[0],
-          tokenData: tokenDataAccount.publicKey,
-          usdiMint: usdiMint.publicKey,
-          usdiTokenAccount: usdiPoolTokenAccount.publicKey,
-          iassetMint: iassetMint.publicKey,
-          iassetTokenAccount: iAssetPoolTokenAccount.publicKey,
-          liquidationIassetTokenAccount:
-            iAssetLiquidationTokenAccount.publicKey,
-          liquidityTokenMint: liquidityTokenMintAccount.publicKey,
-          cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
-          oracle: priceFeed,
-          rent: RENT_PUBKEY,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SYSTEM_PROGRAM_ID,
-        },
-        signers: [
-          usdiPoolTokenAccount,
-          iassetMint,
-          iAssetPoolTokenAccount,
-          liquidityTokenMintAccount,
-          iAssetLiquidationTokenAccount,
-          cometLiquidityTokenAccount,
-        ],
-      }
+    await inceptClient.initializePool(
+      walletPubkey, 150, 200, priceFeed
     );
     const tokenData = await inceptProgram.account.tokenData.fetch(
       tokenDataAccount.publicKey
-    );
+    ) as TokenData;
 
-    console.log(`MANAGER ADDRESS: ${tokenData.manager.toString()} vs ${managerAccount[0].toString()}`);
+    console.log(`MANAGER ADDRESS: ${tokenData.manager.toString()} vs ${inceptClient.managerAddress.toString()}`);
     console.log(`NUM POOLS: ${tokenData.numPools}`);
     console.log(`NUM COLLATERALS: ${tokenData.numCollaterals}`);
-    console.log(tokenData.pools[0]);
+    console.log(`iassetTokenAccount: ${tokenData.pools[0].iassetTokenAccount.toString()}`)
+    console.log(`usdiTokenAccount: ${tokenData.pools[0].usdiTokenAccount.toString()}`)
+    console.log(`liquidityTokenMint: ${tokenData.pools[0].liquidityTokenMint.toString()}`)
+    console.log(`liquidationIassetTokenAccount: ${tokenData.pools[0].liquidationIassetTokenAccount.toString()}`)
+    console.log(`cometLiquidityTokenAccount: ${tokenData.pools[0].cometLiquidityTokenAccount.toString()}`)
+    
+    const assetInfo = tokenData.pools[0].assetInfo;
+    var valueToDecimal = function(value): Number {
+      return Number(value.val) * 10 **(-Number(value.scale))
+    };
+    console.log(`stable collateral ratio: ${valueToDecimal(assetInfo.stableCollateralRatio)}`);
+    console.log(`crypto collateral ratio: ${valueToDecimal(assetInfo.cryptoCollateralRatio)}`);
+
+    console.log(`mint: ${tokenData.collaterals[0].mint.toString()}`);
+    console.log(`vault: ${tokenData.collaterals[0].vault.toString()}`);
     console.log(tokenData.collaterals[0]);
   });
 
   it("price updated!", async () => {
-    await inceptProgram.rpc.updatePrices(managerAccount[1], {
-      remainingAccounts: [
-        { isSigner: false, isWritable: false, pubkey: priceFeed },
-      ],
-      accounts: {
-        manager: managerAccount[0],
-        tokenData: tokenDataAccount.publicKey,
-      },
-    });
+    await inceptClient.updatePrices([]);
     await new Promise((resolve) => setTimeout(resolve, 200));
-    const tokenData = await inceptProgram.account.tokenData.fetch(
-      tokenDataAccount.publicKey
-    );
   });
 
   const mockUSDC = new Token(
@@ -1219,6 +1235,40 @@ describe("incept", async () => {
         ) +
         " USDC locked."
     );
+
+    // TEST USER ACCOUNT DATA.
+    const userAccountdata = await inceptProgram.account.user.fetch(
+      userAccount[0]
+    ) as User;
+
+    console.log("TESTING USER ACCCOUNT AFTER COMET")
+    console.log(`AUTHORITY: ${userAccountdata.authority.toString()} vs ${walletPubkey.toString()}`);
+    console.log(`COMET POSITIONS: ${userAccountdata.cometPositions.toString()} vs ${cometPositionsAccount.publicKey.toString()}`);
+    console.log(`MINT POSITIONS: ${userAccountdata.mintPositions.toString()} vs ${mintPositionsAccount.publicKey.toString()}`);
+    console.log(`LIQUIDITY POSITIONS: ${userAccountdata.liquidityPositions.toString()} vs ${liquidityPositionsAccount.publicKey.toString()}`);
+
+    const cometPositions = await inceptProgram.account.cometPositions.fetch(
+      userAccountdata.cometPositions
+    ) as CometPositions;
+    console.log("COMET POSITIONS:");
+    console.log(`OWNER: ${cometPositions.owner.toString()} POSITIONS: ${cometPositions.numPositions}`)
+    console.log(cometPositions.cometPositions[0]);
+
+    const mintPositions = await inceptProgram.account.mintPositions.fetch(
+      userAccountdata.mintPositions
+    ) as MintPositions;
+    console.log("MINT POSITIONS:");
+    console.log(`OWNER: ${mintPositions.owner.toString()} POSITIONS: ${mintPositions.numPositions}`)
+    console.log(mintPositions.mintPositions[0]);
+
+    const liquidityPositions = await inceptProgram.account.liquidityPositions.fetch(
+      userAccountdata.liquidityPositions
+    ) as LiquidityPositions;
+    console.log("LIQUIDITY POSITIONS:");
+    console.log(`OWNER: ${liquidityPositions.owner.toString()} POSITIONS: ${liquidityPositions.numPositions}`)
+    console.log(liquidityPositions.liquidityPositions[0]);
+
+  
   });
 
   it("comet collateral withdrawn!", async () => {

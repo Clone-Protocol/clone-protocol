@@ -95,11 +95,8 @@ export type Pyth = {
         ]
       }
     }
-  ],
-  "metadata": {
-    "address": "4te7G6yemnSx2zByo1GRTWY4uNBrrcwjJc9uKxbPZ4Qe"
-  }
-}
+  ]
+};
 
 export const IDL: Pyth = {
   "version": "0.1.0",
@@ -198,8 +195,5 @@ export const IDL: Pyth = {
         ]
       }
     }
-  ],
-  "metadata": {
-    "address": "4te7G6yemnSx2zByo1GRTWY4uNBrrcwjJc9uKxbPZ4Qe"
-  }
-}
+  ]
+};
