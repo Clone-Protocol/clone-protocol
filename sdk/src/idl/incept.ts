@@ -1594,7 +1594,7 @@ export type Incept = {
   ],
   "accounts": [
     {
-      "name": "Manager",
+      "name": "manager",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1614,7 +1614,7 @@ export type Incept = {
       }
     },
     {
-      "name": "TokenData",
+      "name": "tokenData",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1624,11 +1624,11 @@ export type Incept = {
           },
           {
             "name": "numPools",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "numCollaterals",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "pools",
@@ -1656,7 +1656,7 @@ export type Incept = {
       }
     },
     {
-      "name": "User",
+      "name": "user",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1680,7 +1680,7 @@ export type Incept = {
       }
     },
     {
-      "name": "CometPositions",
+      "name": "cometPositions",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1690,7 +1690,7 @@ export type Incept = {
           },
           {
             "name": "numPositions",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "cometPositions",
@@ -1707,7 +1707,7 @@ export type Incept = {
       }
     },
     {
-      "name": "LiquidityPositions",
+      "name": "liquidityPositions",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1717,7 +1717,7 @@ export type Incept = {
           },
           {
             "name": "numPositions",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "liquidityPositions",
@@ -1734,7 +1734,7 @@ export type Incept = {
       }
     },
     {
-      "name": "MintPositions",
+      "name": "mintPositions",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1744,7 +1744,7 @@ export type Incept = {
           },
           {
             "name": "numPositions",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "mintPositions",
@@ -1773,7 +1773,7 @@ export type Incept = {
           },
           {
             "name": "scale",
-            "type": "u8"
+            "type": "u64"
           }
         ]
       }
@@ -1811,7 +1811,7 @@ export type Incept = {
           },
           {
             "name": "status",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "lastUpdate",
@@ -1873,7 +1873,7 @@ export type Incept = {
         "fields": [
           {
             "name": "poolIndex",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "mint",
@@ -1903,7 +1903,7 @@ export type Incept = {
           },
           {
             "name": "stable",
-            "type": "u8"
+            "type": "u64"
           }
         ]
       }
@@ -1925,11 +1925,11 @@ export type Incept = {
           },
           {
             "name": "poolIndex",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "collateralIndex",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "borrowedUsdi",
@@ -1977,11 +1977,11 @@ export type Incept = {
         "fields": [
           {
             "name": "liquidated",
-            "type": "bool"
+            "type": "u64"
           },
           {
             "name": "excessTokenTypeIsUsdi",
-            "type": "bool"
+            "type": "u64"
           },
           {
             "name": "excessTokenAmount",
@@ -2009,7 +2009,7 @@ export type Incept = {
           },
           {
             "name": "poolIndex",
-            "type": "u8"
+            "type": "u64"
           }
         ]
       }
@@ -2031,11 +2031,11 @@ export type Incept = {
           },
           {
             "name": "poolIndex",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "collateralIndex",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "borrowedIasset",
@@ -2102,11 +2102,8 @@ export type Incept = {
         ]
       }
     }
-  ],
-  "metadata": {
-    "address": "Aw4gPAFKNV9hQpSZB9pdkBnniVDR13uidY3D5NMKKFUi"
-  }
-}
+  ]
+};
 
 export const IDL: Incept = {
   "version": "0.1.0",
@@ -3704,7 +3701,7 @@ export const IDL: Incept = {
   ],
   "accounts": [
     {
-      "name": "Manager",
+      "name": "manager",
       "type": {
         "kind": "struct",
         "fields": [
@@ -3724,7 +3721,7 @@ export const IDL: Incept = {
       }
     },
     {
-      "name": "TokenData",
+      "name": "tokenData",
       "type": {
         "kind": "struct",
         "fields": [
@@ -3734,11 +3731,11 @@ export const IDL: Incept = {
           },
           {
             "name": "numPools",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "numCollaterals",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "pools",
@@ -3766,7 +3763,7 @@ export const IDL: Incept = {
       }
     },
     {
-      "name": "User",
+      "name": "user",
       "type": {
         "kind": "struct",
         "fields": [
@@ -3790,7 +3787,7 @@ export const IDL: Incept = {
       }
     },
     {
-      "name": "CometPositions",
+      "name": "cometPositions",
       "type": {
         "kind": "struct",
         "fields": [
@@ -3800,7 +3797,7 @@ export const IDL: Incept = {
           },
           {
             "name": "numPositions",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "cometPositions",
@@ -3817,7 +3814,7 @@ export const IDL: Incept = {
       }
     },
     {
-      "name": "LiquidityPositions",
+      "name": "liquidityPositions",
       "type": {
         "kind": "struct",
         "fields": [
@@ -3827,7 +3824,7 @@ export const IDL: Incept = {
           },
           {
             "name": "numPositions",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "liquidityPositions",
@@ -3844,7 +3841,7 @@ export const IDL: Incept = {
       }
     },
     {
-      "name": "MintPositions",
+      "name": "mintPositions",
       "type": {
         "kind": "struct",
         "fields": [
@@ -3854,7 +3851,7 @@ export const IDL: Incept = {
           },
           {
             "name": "numPositions",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "mintPositions",
@@ -3883,7 +3880,7 @@ export const IDL: Incept = {
           },
           {
             "name": "scale",
-            "type": "u8"
+            "type": "u64"
           }
         ]
       }
@@ -3921,7 +3918,7 @@ export const IDL: Incept = {
           },
           {
             "name": "status",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "lastUpdate",
@@ -3983,7 +3980,7 @@ export const IDL: Incept = {
         "fields": [
           {
             "name": "poolIndex",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "mint",
@@ -4013,7 +4010,7 @@ export const IDL: Incept = {
           },
           {
             "name": "stable",
-            "type": "u8"
+            "type": "u64"
           }
         ]
       }
@@ -4035,11 +4032,11 @@ export const IDL: Incept = {
           },
           {
             "name": "poolIndex",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "collateralIndex",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "borrowedUsdi",
@@ -4087,11 +4084,11 @@ export const IDL: Incept = {
         "fields": [
           {
             "name": "liquidated",
-            "type": "bool"
+            "type": "u64"
           },
           {
             "name": "excessTokenTypeIsUsdi",
-            "type": "bool"
+            "type": "u64"
           },
           {
             "name": "excessTokenAmount",
@@ -4119,7 +4116,7 @@ export const IDL: Incept = {
           },
           {
             "name": "poolIndex",
-            "type": "u8"
+            "type": "u64"
           }
         ]
       }
@@ -4141,11 +4138,11 @@ export const IDL: Incept = {
           },
           {
             "name": "poolIndex",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "collateralIndex",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "borrowedIasset",
@@ -4212,8 +4209,5 @@ export const IDL: Incept = {
         ]
       }
     }
-  ],
-  "metadata": {
-    "address": "Aw4gPAFKNV9hQpSZB9pdkBnniVDR13uidY3D5NMKKFUi"
-  }
-}
+  ]
+};
