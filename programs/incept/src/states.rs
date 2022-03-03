@@ -4,9 +4,9 @@ use anchor_lang::prelude::*;
 #[zero_copy]
 #[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct Value {
-    // 17
+    // 24
     pub val: u128, // 16
-    pub scale: u8, // 1
+    pub scale: u64, // 8
 }
 
 #[account]
@@ -20,12 +20,12 @@ pub struct Manager {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 110,959
+    // 130,608
     pub manager: Pubkey,                // 32
-    pub num_pools: u8,                  // 1
-    pub num_collaterals: u8,            // 1
-    pub pools: [Pool; 255],             // 255 * 318 = 81,090
-    pub collaterals: [Collateral; 255], // 255 * 117 = 29,835
+    pub num_pools: u64,                 // 8
+    pub num_collaterals: u64,           // 8
+    pub pools: [Pool; 255],             // 255 * 360 = 91,800
+    pub collaterals: [Collateral; 255], // 255 * 152 = 38,760
 }
 
 impl Default for TokenData {
@@ -99,41 +99,41 @@ impl TokenData {
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct AssetInfo {
-    // 158
+    // 200
     pub iasset_mint: Pubkey,            // 32
     pub price_feed_address: Pubkey,     // 32
-    pub price: Value,                   // 17
-    pub twap: Value,                    // 17
-    pub confidence: Value,              // 17
-    pub status: u8,                     // 1
+    pub price: Value,                   // 24
+    pub twap: Value,                    // 24
+    pub confidence: Value,              // 24
+    pub status: u64,                    // 8
     pub last_update: u64,               // 8
-    pub stable_collateral_ratio: Value, // 17
-    pub crypto_collateral_ratio: Value, // 17
+    pub stable_collateral_ratio: Value, // 24
+    pub crypto_collateral_ratio: Value, // 24
 }
 
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct Pool {
-    // 318
+    // 360
     pub iasset_token_account: Pubkey,             // 32
     pub usdi_token_account: Pubkey,               // 32
     pub liquidity_token_mint: Pubkey,             // 32
     pub liquidation_iasset_token_account: Pubkey, // 32
     pub comet_liquidity_token_account: Pubkey,    // 32
-    pub asset_info: AssetInfo,                    //158
+    pub asset_info: AssetInfo,                    // 200
 }
 
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct Collateral {
-    // 117
-    pub pool_index: u8,            // 1
+    // 152
+    pub pool_index: u64,           // 8
     pub mint: Pubkey,              // 32
     pub vault: Pubkey,             // 32
-    pub vault_usdi_supply: Value,  // 17
-    pub vault_mint_supply: Value,  // 17
-    pub vault_comet_supply: Value, // 17
-    pub stable: u8,                // 1
+    pub vault_usdi_supply: Value,  // 24
+    pub vault_mint_supply: Value,  // 24
+    pub vault_comet_supply: Value, // 24
+    pub stable: u64                // 8
 }
 
 #[account]
@@ -148,10 +148,10 @@ pub struct User {
 
 #[account(zero_copy)]
 pub struct CometPositions {
-    // 39,558
+    // 59200
     pub owner: Pubkey,                         // 32
-    pub num_positions: u8,                     // 1
-    pub comet_positions: [CometPosition; 255], // 255 * 155 = 39,525
+    pub num_positions: u64,                    // 8
+    pub comet_positions: [CometPosition; 255], // 255 * 232 = 59160
 }
 
 impl Default for CometPositions {
@@ -177,34 +177,34 @@ impl CometPositions {
 #[zero_copy]
 #[derive(Default)]
 pub struct CometPosition {
-    // 155
+    // 232
     pub authority: Pubkey,                   // 32
-    pub collateral_amount: Value,            // 17
-    pub pool_index: u8,                      // 1
-    pub collateral_index: u8,                // 1
-    pub borrowed_usdi: Value,                // 17
-    pub borrowed_iasset: Value,              // 17
-    pub liquidity_token_value: Value,        // 17
-    pub lower_price_range: Value,            // 17
-    pub upper_price_range: Value,            // 17
-    pub comet_liquidation: CometLiquidation, // 19
+    pub collateral_amount: Value,            // 24
+    pub pool_index: u64,                     // 8
+    pub collateral_index: u64,               // 8
+    pub borrowed_usdi: Value,                // 24
+    pub borrowed_iasset: Value,              // 24
+    pub liquidity_token_value: Value,        // 24
+    pub lower_price_range: Value,            // 24
+    pub upper_price_range: Value,            // 24
+    pub comet_liquidation: CometLiquidation, // 40
 }
 
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct CometLiquidation {
-    // 19
-    pub liquidated: bool,                // 1
-    pub excess_token_type_is_usdi: bool, // 1
-    pub excess_token_amount: Value,      // 17
+    // 40
+    pub liquidated: u64,                // 8
+    pub excess_token_type_is_usdi: u64, // 8
+    pub excess_token_amount: Value,     // 24
 }
 
 #[account(zero_copy)]
 pub struct LiquidityPositions {
-    // 12,783
+    // 16,360
     pub owner: Pubkey,                                 // 32
-    pub num_positions: u8,                             // 1
-    pub liquidity_positions: [LiquidityPosition; 255], // 255 * 50 = 12,750
+    pub num_positions: u64,                            // 8
+    pub liquidity_positions: [LiquidityPosition; 255], // 255 * 64 = 16,320
 }
 
 impl Default for LiquidityPositions {
@@ -231,18 +231,18 @@ impl LiquidityPositions {
 #[zero_copy]
 #[derive(Default)]
 pub struct LiquidityPosition {
-    // 50
+    // 64
     pub authority: Pubkey,            // 32
-    pub liquidity_token_value: Value, // 17
-    pub pool_index: u8,               // 1
+    pub liquidity_token_value: Value, // 24
+    pub pool_index: u64,              // 8
 }
 
 #[account(zero_copy)]
 pub struct MintPositions {
-    // 17,373
+    // 24,520
     pub owner: Pubkey,                       // 32
-    pub num_positions: u8,                   // 1
-    pub mint_positions: [MintPosition; 255], // 255 * 68 = 17,340
+    pub num_positions: u64,                  // 8
+    pub mint_positions: [MintPosition; 255], // 255 * 96 = 24,480
 }
 
 impl Default for MintPositions {
@@ -268,10 +268,10 @@ impl MintPositions {
 #[zero_copy]
 #[derive(Default)]
 pub struct MintPosition {
-    // 68
+    // 96
     pub authority: Pubkey,        // 32
-    pub collateral_amount: Value, // 17
-    pub pool_index: u8,           // 1
-    pub collateral_index: u8,     // 1
-    pub borrowed_iasset: Value,   // 17
+    pub collateral_amount: Value, // 24
+    pub pool_index: u64,          // 8
+    pub collateral_index: u64,    // 8
+    pub borrowed_iasset: Value,   // 24
 }

@@ -325,7 +325,7 @@ pub struct AddCollateralToMint<'info> {
     #[account(
         mut,
         constraint = &mint_positions.load()?.owner == user.to_account_info().key,
-        constraint = mint_index < mint_positions.load()?.num_positions
+        constraint = (mint_index as u64) < mint_positions.load()?.num_positions
     )]
     pub mint_positions: AccountLoader<'info, MintPositions>,
     #[account(
@@ -378,7 +378,7 @@ pub struct WithdrawCollateralFromMint<'info> {
     #[account(
         mut,
         constraint = &mint_positions.load()?.owner == user.to_account_info().key,
-        constraint = mint_index < mint_positions.load()?.num_positions
+        constraint = (mint_index as u64) < mint_positions.load()?.num_positions
     )]
     pub mint_positions: AccountLoader<'info, MintPositions>,
     #[account(
@@ -437,7 +437,7 @@ pub struct PayBackiAssetToMint<'info> {
     #[account(
         mut,
         constraint = &mint_positions.load()?.owner == user.to_account_info().key,
-        constraint = mint_index < mint_positions.load()?.num_positions,
+        constraint = (mint_index as u64) < mint_positions.load()?.num_positions,
         constraint = mint_positions.load()?.mint_positions[mint_index as usize].borrowed_iasset.to_u64() >= amount
     )]
     pub mint_positions: AccountLoader<'info, MintPositions>,
@@ -485,7 +485,7 @@ pub struct AddiAssetToMint<'info> {
     #[account(
         mut,
         constraint = &mint_positions.load()?.owner == user.to_account_info().key,
-        constraint = mint_index < mint_positions.load()?.num_positions
+        constraint = (mint_index as u64) < mint_positions.load()?.num_positions
     )]
     pub mint_positions: AccountLoader<'info, MintPositions>,
     #[account(
@@ -522,7 +522,7 @@ pub struct InitializeLiquidityPosition<'info> {
     #[account(
         mut,
         has_one = manager,
-        constraint = pool_index < token_data.load()?.num_pools
+        constraint = (pool_index as u64) < token_data.load()?.num_pools
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -737,7 +737,7 @@ pub struct BuySynth<'info> {
     #[account(
         mut,
         has_one = manager,
-        constraint = pool_index < token_data.load()?.num_pools
+        constraint = (pool_index as u64) < token_data.load()?.num_pools
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -776,7 +776,7 @@ pub struct SellSynth<'info> {
     #[account(
         mut,
         has_one = manager,
-        constraint = pool_index < token_data.load()?.num_pools
+        constraint = (pool_index as u64) < token_data.load()?.num_pools
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -900,7 +900,7 @@ pub struct AddCollateralToComet<'info> {
     #[account(
         mut,
         constraint = &comet_positions.load()?.owner == user.to_account_info().key,
-        constraint = comet_index < comet_positions.load()?.num_positions
+        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
     )]
     pub comet_positions: AccountLoader<'info, CometPositions>,
     #[account(
@@ -974,7 +974,7 @@ pub struct WithdrawCollateralFromComet<'info> {
     #[account(
         mut,
         constraint = &comet_positions.load()?.owner == user.to_account_info().key,
-        constraint = comet_index < comet_positions.load()?.num_positions
+        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
     )]
     pub comet_positions: AccountLoader<'info, CometPositions>,
     #[account(
@@ -1073,7 +1073,7 @@ pub struct CloseComet<'info> {
     #[account(
         mut,
         constraint = &comet_positions.load()?.owner == user.to_account_info().key,
-        constraint = comet_index < comet_positions.load()?.num_positions
+        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
     )]
     pub comet_positions: AccountLoader<'info, CometPositions>,
     #[account(
@@ -1138,7 +1138,7 @@ pub struct RecenterComet<'info> {
     #[account(
         mut,
         constraint = &comet_positions.load()?.owner == user.to_account_info().key,
-        constraint = comet_index < comet_positions.load()?.num_positions
+        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
     )]
     pub comet_positions: AccountLoader<'info, CometPositions>,
     #[account(
@@ -1195,7 +1195,7 @@ pub struct LiquidateComet<'info> {
     pub iasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        constraint = comet_index < comet_positions.load()?.num_positions
+        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
     )]
     pub comet_positions: AccountLoader<'info, CometPositions>,
     #[account(
@@ -1273,7 +1273,7 @@ pub struct ClaimLiquidatedComet<'info> {
     #[account(
         mut,
         constraint = &comet_positions.load()?.owner == user.to_account_info().key,
-        constraint = comet_index < comet_positions.load()?.num_positions
+        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
     )]
     pub comet_positions: AccountLoader<'info, CometPositions>,
     #[account(
