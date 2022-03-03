@@ -267,14 +267,14 @@ describe("incept", async () => {
       tokenDataAccount.publicKey
     ) as TokenData;
 
-    console.log(`MANAGER ADDRESS: ${tokenData.manager.toString()} vs ${managerAccount[0].toString()}`);
+    console.log(`MANAGER ADDRESS: ${tokenData.manager.toString()} vs ${inceptClient.managerAddress.toString()}`);
     console.log(`NUM POOLS: ${tokenData.numPools}`);
     console.log(`NUM COLLATERALS: ${tokenData.numCollaterals}`);
-    console.log(`iassetTokenAccount: ${tokenData.pools[0].iassetTokenAccount.toString()} vs ${iAssetPoolTokenAccount.publicKey.toString()}`)
-    console.log(`usdiTokenAccount: ${tokenData.pools[0].usdiTokenAccount.toString()} vs ${usdiPoolTokenAccount.publicKey.toString()}`)
-    console.log(`liquidityTokenMint: ${tokenData.pools[0].liquidityTokenMint.toString()} vs ${liquidityTokenMintAccount.publicKey.toString()}`)
-    console.log(`liquidationIassetTokenAccount: ${tokenData.pools[0].liquidationIassetTokenAccount.toString()} vs ${iAssetLiquidationTokenAccount.publicKey.toString()}`)
-    console.log(`cometLiquidityTokenAccount: ${tokenData.pools[0].cometLiquidityTokenAccount.toString()} vs ${cometLiquidityTokenAccount.publicKey.toString()}`)
+    console.log(`iassetTokenAccount: ${tokenData.pools[0].iassetTokenAccount.toString()}`)
+    console.log(`usdiTokenAccount: ${tokenData.pools[0].usdiTokenAccount.toString()}`)
+    console.log(`liquidityTokenMint: ${tokenData.pools[0].liquidityTokenMint.toString()}`)
+    console.log(`liquidationIassetTokenAccount: ${tokenData.pools[0].liquidationIassetTokenAccount.toString()}`)
+    console.log(`cometLiquidityTokenAccount: ${tokenData.pools[0].cometLiquidityTokenAccount.toString()}`)
     
     const assetInfo = tokenData.pools[0].assetInfo;
     var valueToDecimal = function(value): Number {
@@ -283,29 +283,14 @@ describe("incept", async () => {
     console.log(`stable collateral ratio: ${valueToDecimal(assetInfo.stableCollateralRatio)}`);
     console.log(`crypto collateral ratio: ${valueToDecimal(assetInfo.cryptoCollateralRatio)}`);
 
-    console.log(`mint: ${tokenData.collaterals[0].mint.toString()} vs ${mockUSDCMint.publicKey.toString()}`);
-    console.log(`vault: ${tokenData.collaterals[0].vault.toString()} vs ${mockUSDCVault.publicKey.toString()}`);
+    console.log(`mint: ${tokenData.collaterals[0].mint.toString()}`);
+    console.log(`vault: ${tokenData.collaterals[0].vault.toString()}`);
     console.log(tokenData.collaterals[0]);
   });
 
   it("price updated!", async () => {
     await inceptClient.updatePrices([]);
-    // const [managerPubkey, managerBump] = await inceptClient.getManagerAddress();
-
-    // await inceptProgram.rpc.updatePrices(managerBump, {
-    //   remainingAccounts: [
-    //     { isSigner: false, isWritable: false, pubkey: priceFeed },
-    //   ],
-    //   accounts: {
-    //     manager: managerPubkey,//managerAccount[0],
-    //     tokenData: inceptClient.manager.tokenData//tokenDataAccount.publicKey,
-    //   },
-    // });
     await new Promise((resolve) => setTimeout(resolve, 200));
-    const tokenData = await inceptProgram.account.tokenData.fetch(
-      inceptClient.manager.tokenData//tokenDataAccount.publicKey
-    );
-    console.log(tokenData);
   });
 
   const mockUSDC = new Token(
