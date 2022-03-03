@@ -108,7 +108,7 @@ pub mod incept {
             vault_usdi_supply: Value::new(0, scale),
             vault_mint_supply: Value::new(0, scale),
             vault_comet_supply: Value::new(0, scale),
-            stable: stable,
+            stable: stable as u64,
         });
 
         Ok(())
@@ -179,7 +179,7 @@ pub mod incept {
                 Value::new(price_feed.twap.try_into().unwrap(), expo_u8);
             token_data.pools[pool_index].asset_info.confidence =
                 Value::new(price_feed.agg.conf.try_into().unwrap(), expo_u8);
-            token_data.pools[pool_index].asset_info.status = price_feed.agg.status.into();
+            token_data.pools[pool_index].asset_info.status = price_feed.agg.status as u64;
             token_data.pools[pool_index].asset_info.last_update = Clock::get()?.slot;
         }
 
@@ -199,7 +199,7 @@ pub mod incept {
         let usdi_value = Value::new(amount.into(), DEVNET_TOKEN_SCALE);
         let collateral_value = Value::new(
             ctx.accounts.user_collateral_token_account.amount.into(),
-            collateral_scale,
+            collateral_scale.try_into().unwrap(),
         );
 
         // check to see if the collateral used to mint usdi is stable
@@ -216,7 +216,7 @@ pub mod incept {
 
         // check if their is sufficient collateral to mint
         if usdi_value
-            .scale_to(collateral_scale)
+            .scale_to(collateral_scale.try_into().unwrap())
             .gt(collateral_value)
             .unwrap()
         {
@@ -231,7 +231,7 @@ pub mod incept {
         let cpi_ctx_transfer: CpiContext<Transfer> = CpiContext::from(&*ctx.accounts);
         token::transfer(
             cpi_ctx_transfer,
-            usdi_value.scale_to(collateral_scale).to_u64(),
+            usdi_value.scale_to(collateral_scale.try_into().unwrap()).to_u64(),
         )?;
 
         // mint usdi to user
@@ -265,7 +265,7 @@ pub mod incept {
         .unwrap();
 
         let collateral_amount_value =
-            Value::new(collateral_amount.into(), collateral.vault_mint_supply.scale);
+            Value::new(collateral_amount.into(), collateral.vault_mint_supply.scale.try_into().unwrap());
         let iasset_amount_value = Value::new(iasset_amount.into(), DEVNET_TOKEN_SCALE);
 
         // check to see if collateral is stable
@@ -337,7 +337,7 @@ pub mod incept {
             [mint_positions.mint_positions[mint_index as usize].collateral_index as usize];
         let mint_position = mint_positions.mint_positions[mint_index as usize];
 
-        let amount_value = Value::new(amount.into(), collateral.vault_mint_supply.scale);
+        let amount_value = Value::new(amount.into(), collateral.vault_mint_supply.scale.try_into().unwrap());
 
         // add collateral amount to vault supply
         token_data.collaterals
@@ -374,7 +374,7 @@ pub mod incept {
             [mint_positions.mint_positions[mint_index as usize].collateral_index as usize];
         let mint_position = mint_positions.mint_positions[mint_index as usize];
 
-        let amount_value = Value::new(amount.into(), collateral.vault_mint_supply.scale);
+        let amount_value = Value::new(amount.into(), collateral.vault_mint_supply.scale.try_into().unwrap());
 
         // subtract collateral amount from vault supply
         token_data.collaterals
@@ -572,7 +572,7 @@ pub mod incept {
         liquidity_positions.liquidity_positions[num_positions as usize] = LiquidityPosition {
             authority: *ctx.accounts.user.to_account_info().key,
             liquidity_token_value: liquidity_token_value,
-            pool_index: pool_index,
+            pool_index: pool_index.try_into().unwrap(),
         };
         liquidity_positions.num_positions += 1;
 
@@ -938,7 +938,7 @@ pub mod incept {
 
         let collateral_value = Value::new(
             collateral_amount.into(),
-            collateral.vault_comet_supply.scale,
+            collateral.vault_comet_supply.scale.try_into().unwrap(),
         );
 
         // add collateral amount to vault supply
@@ -1058,7 +1058,7 @@ pub mod incept {
         comet_positions.comet_positions[num_positions as usize] = CometPosition {
             authority: *ctx.accounts.user.to_account_info().key,
             collateral_amount: collateral_value,
-            pool_index: pool_index,
+            pool_index: pool_index as u64,
             collateral_index: collateral_index.try_into().unwrap(),
             borrowed_usdi: usdi_liquidity_value,
             borrowed_iasset: iasset_liquidity_value,
@@ -1089,13 +1089,13 @@ pub mod incept {
         let collateral = token_data.collaterals[comet_position.collateral_index as usize];
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.liquidated {
+        if comet_position.comet_liquidation.liquidated != 0 {
             return Err(InceptError::CometAlreadyLiquidated.into());
         }
 
         let added_collateral_value = Value::new(
             collateral_amount.into(),
-            collateral.vault_comet_supply.scale,
+            collateral.vault_comet_supply.scale.try_into().unwrap(),
         );
 
         // add collateral amount to vault supply
@@ -1166,11 +1166,11 @@ pub mod incept {
 
         let withdrawn_collateral_value = Value::new(
             collateral_amount.into(),
-            collateral.vault_comet_supply.scale,
+            collateral.vault_comet_supply.scale.try_into().unwrap(),
         );
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.liquidated {
+        if comet_position.comet_liquidation.liquidated != 0 {
             return Err(InceptError::CometAlreadyLiquidated.into());
         }
 
@@ -1262,7 +1262,7 @@ pub mod incept {
         );
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.liquidated {
+        if comet_position.comet_liquidation.liquidated != 0 {
             return Err(InceptError::CometAlreadyLiquidated.into());
         }
 
@@ -1635,7 +1635,7 @@ pub mod incept {
         );
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.liquidated {
+        if comet_position.comet_liquidation.liquidated != 0 {
             return Err(InceptError::CometAlreadyLiquidated.into());
         }
 
@@ -1680,7 +1680,7 @@ pub mod incept {
             let collateral_recentering_fee = usdi_amount
                 .sub(usdi_surplus)
                 .unwrap()
-                .scale_to(comet_position.collateral_amount.scale);
+                .scale_to(comet_position.collateral_amount.scale.try_into().unwrap());
 
             // recalculate the amount of collateral claimable by the comet
             let new_collateral_amount = comet_position
@@ -1772,7 +1772,7 @@ pub mod incept {
             let collateral_recentering_fee = iasset_amount
                 .sub(iasset_surplus)
                 .unwrap()
-                .scale_to(comet_position.collateral_amount.scale);
+                .scale_to(comet_position.collateral_amount.scale.try_into().unwrap());
 
             // recalculate amount of iasset the comet has borrowed
             let new_borrowed_iasset = comet_position.borrowed_iasset.add(iasset_surplus).unwrap();
@@ -1892,7 +1892,7 @@ pub mod incept {
         );
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.liquidated {
+        if comet_position.comet_liquidation.liquidated != 0 {
             return Err(InceptError::CometAlreadyLiquidated.into());
         }
 
@@ -2030,10 +2030,10 @@ pub mod incept {
             // update comet data
             comet_positions.comet_positions[comet_index as usize]
                 .comet_liquidation
-                .liquidated = true;
+                .liquidated = 1;
             comet_positions.comet_positions[comet_index as usize]
                 .comet_liquidation
-                .excess_token_type_is_usdi = false;
+                .excess_token_type_is_usdi = 0;
             comet_positions.comet_positions[comet_index as usize]
                 .comet_liquidation
                 .excess_token_amount = iasset_value.sub(comet_position.borrowed_iasset).unwrap();
@@ -2053,11 +2053,11 @@ pub mod incept {
         let comet_position = comet_positions.comet_positions[comet_index as usize];
 
         // throw error if the comet is not yet liquidated
-        if !comet_position.comet_liquidation.liquidated {
+        if comet_position.comet_liquidation.liquidated == 0 {
             return Err(InceptError::CometNotYetLiquidated.into());
         }
 
-        if comet_position.comet_liquidation.excess_token_type_is_usdi {
+        if comet_position.comet_liquidation.excess_token_type_is_usdi != 0 {
             // need to be able to liquidate when above range
         } else {
             // send surplus iasset to user

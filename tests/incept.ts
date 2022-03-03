@@ -34,7 +34,7 @@ describe("incept", async () => {
     inceptProgram.programId
   );
   const tokenDataAccount = anchor.web3.Keypair.generate();
-  const TOKEN_DATA_SIZE = 130608;
+  const TOKEN_DATA_SIZE = 130608 + 8;//130608;
 
   const liquidatedCometUSDITokenAccount = anchor.web3.Keypair.generate();
   const usdiMint = anchor.web3.Keypair.generate();
@@ -44,11 +44,11 @@ describe("incept", async () => {
     inceptProgram.programId
   );
   const cometPositionsAccount = anchor.web3.Keypair.generate();
-  const COMET_POSITIONS_SIZE = 55128;
+  const COMET_POSITIONS_SIZE = 59200 + 8;// 55128;
   const mintPositionsAccount = anchor.web3.Keypair.generate();
-  const MINT_POSITIONS_SIZE = 22488;
+  const MINT_POSITIONS_SIZE = 24520 + 8;// 22488;
   const liquidityPositionsAccount = anchor.web3.Keypair.generate();
-  const LIQUIDITY_POSITIONS_SIZE = 16368;
+  const LIQUIDITY_POSITIONS_SIZE = 16360 + 8;//16368;
 
   let priceFeed;
 
@@ -250,6 +250,15 @@ describe("incept", async () => {
         ],
       }
     );
+    const tokenData = await inceptProgram.account.tokenData.fetch(
+      tokenDataAccount.publicKey
+    );
+
+    console.log(`MANAGER ADDRESS: ${tokenData.manager.toString()} vs ${managerAccount[0].toString()}`);
+    console.log(`NUM POOLS: ${tokenData.numPools}`);
+    console.log(`NUM COLLATERALS: ${tokenData.numCollaterals}`);
+    console.log(tokenData.pools[0]);
+    console.log(tokenData.collaterals[0]);
   });
 
   it("price updated!", async () => {

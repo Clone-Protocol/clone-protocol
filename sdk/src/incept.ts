@@ -1263,7 +1263,7 @@ export interface AssetInfo {
   twap: Value;
   confidence: Value;
   status: number;
-  lastUpdate: BN;
+  lastUpdate: number;
   stableCollateralRatio: Value;
   cryptoCollateralRatio: Value;
 }
