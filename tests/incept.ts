@@ -5,7 +5,7 @@ import { Pyth } from "../target/types/pyth";
 import { MockUsdc } from "../target/types/mock_usdc";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { assert } from "chai";
-import { TokenData, Collateral } from "../sdk/src/incept";
+import { TokenData, Collateral, User, CometPositions, MintPositions, LiquidityPositions } from "../sdk/src/incept";
 import { createPriceFeed, setPrice, getFeedData } from './oracle'
 
 describe("incept", async () => {
@@ -137,6 +137,38 @@ describe("incept", async () => {
         liquidityPositionsAccount,
       ],
     });
+    // TEST USER ACCOUNT DATA.
+    const userAccountdata = await inceptProgram.account.user.fetch(
+      userAccount[0]
+    ) as User;
+
+    console.log("TESTING USER ACCCOUNT")
+    console.log(`AUTHORITY: ${userAccountdata.authority.toString()} vs ${walletPubkey.toString()}`);
+    console.log(`COMET POSITIONS: ${userAccountdata.cometPositions.toString()} vs ${cometPositionsAccount.publicKey.toString()}`);
+    console.log(`MINT POSITIONS: ${userAccountdata.mintPositions.toString()} vs ${mintPositionsAccount.publicKey.toString()}`);
+    console.log(`LIQUIDITY POSITIONS: ${userAccountdata.liquidityPositions.toString()} vs ${liquidityPositionsAccount.publicKey.toString()}`);
+
+    const cometPositions = await inceptProgram.account.cometPositions.fetch(
+      userAccountdata.cometPositions
+    ) as CometPositions;
+    console.log("COMET POSITIONS:");
+    console.log(`OWNER: ${cometPositions.owner.toString()} POSITIONS: ${cometPositions.numPositions}`)
+    console.log(cometPositions.cometPositions[0]);
+
+    const mintPositions = await inceptProgram.account.mintPositions.fetch(
+      userAccountdata.mintPositions
+    ) as MintPositions;
+    console.log("MINT POSITIONS:");
+    console.log(`OWNER: ${mintPositions.owner.toString()} POSITIONS: ${mintPositions.numPositions}`)
+    console.log(mintPositions.mintPositions[0]);
+
+    const liquidityPositions = await inceptProgram.account.liquidityPositions.fetch(
+      userAccountdata.liquidityPositions
+    ) as LiquidityPositions;
+    console.log("LIQUIDITY POSITIONS:");
+    console.log(`OWNER: ${liquidityPositions.owner.toString()} POSITIONS: ${liquidityPositions.numPositions}`)
+    console.log(liquidityPositions.liquidityPositions[0]);
+
   });
 
   it("change feed price", async () => {
@@ -252,12 +284,26 @@ describe("incept", async () => {
     );
     const tokenData = await inceptProgram.account.tokenData.fetch(
       tokenDataAccount.publicKey
-    );
+    ) as TokenData;
 
     console.log(`MANAGER ADDRESS: ${tokenData.manager.toString()} vs ${managerAccount[0].toString()}`);
     console.log(`NUM POOLS: ${tokenData.numPools}`);
     console.log(`NUM COLLATERALS: ${tokenData.numCollaterals}`);
-    console.log(tokenData.pools[0]);
+    console.log(`iassetTokenAccount: ${tokenData.pools[0].iassetTokenAccount.toString()} vs ${iAssetPoolTokenAccount.publicKey.toString()}`)
+    console.log(`usdiTokenAccount: ${tokenData.pools[0].usdiTokenAccount.toString()} vs ${usdiPoolTokenAccount.publicKey.toString()}`)
+    console.log(`liquidityTokenMint: ${tokenData.pools[0].liquidityTokenMint.toString()} vs ${liquidityTokenMintAccount.publicKey.toString()}`)
+    console.log(`liquidationIassetTokenAccount: ${tokenData.pools[0].liquidationIassetTokenAccount.toString()} vs ${iAssetLiquidationTokenAccount.publicKey.toString()}`)
+    console.log(`cometLiquidityTokenAccount: ${tokenData.pools[0].cometLiquidityTokenAccount.toString()} vs ${cometLiquidityTokenAccount.publicKey.toString()}`)
+    
+    const assetInfo = tokenData.pools[0].assetInfo;
+    var valueToDecimal = function(value): Number {
+      return Number(value.val) * 10 **(-Number(value.scale))
+    };
+    console.log(`stable collateral ratio: ${valueToDecimal(assetInfo.stableCollateralRatio)}`);
+    console.log(`crypto collateral ratio: ${valueToDecimal(assetInfo.cryptoCollateralRatio)}`);
+
+    console.log(`mint: ${tokenData.collaterals[0].mint.toString()} vs ${mockUSDCMint.publicKey.toString()}`);
+    console.log(`vault: ${tokenData.collaterals[0].vault.toString()} vs ${mockUSDCVault.publicKey.toString()}`);
     console.log(tokenData.collaterals[0]);
   });
 
@@ -272,9 +318,6 @@ describe("incept", async () => {
       },
     });
     await new Promise((resolve) => setTimeout(resolve, 200));
-    const tokenData = await inceptProgram.account.tokenData.fetch(
-      tokenDataAccount.publicKey
-    );
   });
 
   const mockUSDC = new Token(
@@ -1219,6 +1262,40 @@ describe("incept", async () => {
         ) +
         " USDC locked."
     );
+
+    // TEST USER ACCOUNT DATA.
+    const userAccountdata = await inceptProgram.account.user.fetch(
+      userAccount[0]
+    ) as User;
+
+    console.log("TESTING USER ACCCOUNT AFTER COMET")
+    console.log(`AUTHORITY: ${userAccountdata.authority.toString()} vs ${walletPubkey.toString()}`);
+    console.log(`COMET POSITIONS: ${userAccountdata.cometPositions.toString()} vs ${cometPositionsAccount.publicKey.toString()}`);
+    console.log(`MINT POSITIONS: ${userAccountdata.mintPositions.toString()} vs ${mintPositionsAccount.publicKey.toString()}`);
+    console.log(`LIQUIDITY POSITIONS: ${userAccountdata.liquidityPositions.toString()} vs ${liquidityPositionsAccount.publicKey.toString()}`);
+
+    const cometPositions = await inceptProgram.account.cometPositions.fetch(
+      userAccountdata.cometPositions
+    ) as CometPositions;
+    console.log("COMET POSITIONS:");
+    console.log(`OWNER: ${cometPositions.owner.toString()} POSITIONS: ${cometPositions.numPositions}`)
+    console.log(cometPositions.cometPositions[0]);
+
+    const mintPositions = await inceptProgram.account.mintPositions.fetch(
+      userAccountdata.mintPositions
+    ) as MintPositions;
+    console.log("MINT POSITIONS:");
+    console.log(`OWNER: ${mintPositions.owner.toString()} POSITIONS: ${mintPositions.numPositions}`)
+    console.log(mintPositions.mintPositions[0]);
+
+    const liquidityPositions = await inceptProgram.account.liquidityPositions.fetch(
+      userAccountdata.liquidityPositions
+    ) as LiquidityPositions;
+    console.log("LIQUIDITY POSITIONS:");
+    console.log(`OWNER: ${liquidityPositions.owner.toString()} POSITIONS: ${liquidityPositions.numPositions}`)
+    console.log(liquidityPositions.liquidityPositions[0]);
+
+  
   });
 
   it("comet collateral withdrawn!", async () => {
