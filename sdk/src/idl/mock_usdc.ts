@@ -77,7 +77,7 @@ export type MockUsdc = {
   ],
   "accounts": [
     {
-      "name": "MockUsdc",
+      "name": "mockUsdc",
       "type": {
         "kind": "struct",
         "fields": [
@@ -88,11 +88,8 @@ export type MockUsdc = {
         ]
       }
     }
-  ],
-  "metadata": {
-    "address": "4WUT8ZueGtxWSE7WYg8UvJbmMbDW3N8JVYDNNcHEuhVA"
-  }
-}
+  ]
+};
 
 export const IDL: MockUsdc = {
   "version": "0.1.0",
@@ -173,7 +170,7 @@ export const IDL: MockUsdc = {
   ],
   "accounts": [
     {
-      "name": "MockUsdc",
+      "name": "mockUsdc",
       "type": {
         "kind": "struct",
         "fields": [
@@ -184,8 +181,5 @@ export const IDL: MockUsdc = {
         ]
       }
     }
-  ],
-  "metadata": {
-    "address": "4WUT8ZueGtxWSE7WYg8UvJbmMbDW3N8JVYDNNcHEuhVA"
-  }
-}
+  ]
+};
