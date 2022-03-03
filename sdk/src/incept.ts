@@ -125,7 +125,7 @@ export class Incept {
   }
 
   public onManagerAccountChange(fn: (state: Manager) => void) {
-    this.program.account.Manager.subscribe(this.managerAddress[0]).on(
+    this.program.account.manager.subscribe(this.managerAddress[0]).on(
       "change",
       (state: Manager) => {
         fn(state);
@@ -134,7 +134,7 @@ export class Incept {
   }
 
   public onTokenDataChange(fn: (state: TokenData) => void) {
-    this.program.account.TokenData.subscribe(this.manager.tokenData).on(
+    this.program.account.tokenData.subscribe(this.manager.tokenData).on(
       "change",
       (state: TokenData) => {
         fn(state);
@@ -382,7 +382,7 @@ export class Incept {
   }
 
   public async getUserAccount(userWalletAddress: PublicKey) {
-    return (await this.program.account.Manager.fetch(
+    return (await this.program.account.manager.fetch(
       this.getUserAddress(userWalletAddress)[0]
     )) as User;
   }
