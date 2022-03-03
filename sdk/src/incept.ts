@@ -1200,15 +1200,15 @@ export interface User {
 
 export interface TokenData {
   manager: PublicKey;
-  numPools: number;
-  numCollaterals: number;
+  numPools: BN;
+  numCollaterals: BN;
   pools: Array<Pool>;
   collaterals: Array<Collateral>;
 }
 
 export interface LiquidityPositions {
   owner: PublicKey;
-  numPositions: number;
+  numPositions: BN;
   liquidityPositions: Array<LiquidityPosition>;
 }
 
@@ -1220,7 +1220,7 @@ export interface LiquidityPosition {
 
 export interface MintPositions {
   owner: PublicKey;
-  numPositions: number;
+  numPositions: BN;
   mintPositions: Array<MintPosition>;
 }
 
@@ -1234,7 +1234,7 @@ export interface MintPosition {
 
 export interface CometPositions {
   owner: PublicKey;
-  numPositions: number;
+  numPositions: BN;
   cometPositions: Array<CometPosition>;
 }
 
@@ -1248,7 +1248,13 @@ export interface CometPosition {
   liquidityTokenValue: Value;
   lowerPriceRange: Value;
   upperPriceRange: Value;
-  cometLiquidation: Value;
+  cometLiquidation: CometLiquidation;
+}
+
+export interface CometLiquidation {
+  liquidated: number;
+  excess_token_type_is_usdi: number;
+  excess_token_amount: Value;
 }
 
 export interface Value {
