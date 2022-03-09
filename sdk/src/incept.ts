@@ -125,7 +125,7 @@ export class Incept {
   }
 
   public onManagerAccountChange(fn: (state: Manager) => void) {
-    this.program.account.Manager.subscribe(this.managerAddress[0]).on(
+    this.program.account.manager.subscribe(this.managerAddress[0]).on(
       "change",
       (state: Manager) => {
         fn(state);
@@ -134,7 +134,7 @@ export class Incept {
   }
 
   public onTokenDataChange(fn: (state: TokenData) => void) {
-    this.program.account.TokenData.subscribe(this.manager.tokenData).on(
+    this.program.account.tokenData.subscribe(this.manager.tokenData).on(
       "change",
       (state: TokenData) => {
         fn(state);
@@ -298,12 +298,11 @@ export class Incept {
     );
   }
   public async updatePricesInstruction() {
+
     const tokenData = await this.getTokenData();
-    
+  
     const priceFeeds = tokenData.pools
-      .filter(
-        (pool) => !pool.assetInfo.priceFeedAddress.equals(PublicKey.default)
-      )
+      .slice(0, Number(tokenData.numPools))
       .map((pool) => {
         return {
           pubkey: pool.assetInfo.priceFeedAddress,
@@ -311,9 +310,8 @@ export class Incept {
           isSigner: false,
         };
       });
-    console.log(`TOKEN DATA POOLS:`);
-    console.log(priceFeeds[0].pubkey);
-    return (await this.program.instruction.updatePrices({
+
+    return (await this.program.instruction.updatePrices(this.managerAddress[1], {
       remainingAccounts: priceFeeds,
       accounts: {
         manager: this.managerAddress[0],
@@ -350,13 +348,15 @@ export class Incept {
   }
 
   public async getCometPositions(userWalletAddress: PublicKey) {
+    const userAccountData = await this.getUserAccount(userWalletAddress) as User;
     // @ts-ignore
     return await this.program.account.cometPositions.fetch(
-      userWalletAddress
+      userAccountData.cometPositions
     ) as CometPositions;
   }
   public async getCometPosition(userWalletAddress: PublicKey, cometIndex: number) {
-    return (await this.getCometPositions(userWalletAddress)).cometPositions[cometIndex];
+    const cometPositions = await this.getCometPositions(userWalletAddress) as CometPositions;
+    return cometPositions.cometPositions[cometIndex] as CometPosition;
   }
 
   public async getManagerAddress() {
@@ -382,9 +382,10 @@ export class Incept {
   }
 
   public async getUserAccount(userWalletAddress: PublicKey) {
-    return (await this.program.account.Manager.fetch(
-      this.getUserAddress(userWalletAddress)[0]
-    )) as User;
+    const {userPubkey, bump} = await this.getUserAddress(userWalletAddress);
+    return await this.program.account.user.fetch(
+      userPubkey
+    ) as User;
   }
 
   public async mintUsdi(
@@ -401,7 +402,8 @@ export class Incept {
       userUsdiTokenAccount,
       userCollateralTokenAccount,
       collateralIndex
-    );
+    ) as TransactionInstruction;
+    // TODO: Figure out sign and send.
     await signAndSend(
       new Transaction().add(mintUsdiIx),
       signers,
@@ -430,7 +432,7 @@ export class Incept {
           userUsdiTokenAccount: userUsdiTokenAccount,
           userCollateralTokenAccount: userCollateralTokenAccount,
           tokenProgram: TOKEN_PROGRAM_ID,
-        },
+        }
       }
     )) as TransactionInstruction;
   }
@@ -553,6 +555,8 @@ export class Incept {
     collateralIndex: number,
     signers?: Array<Keypair>
   ) {
+
+    const updatePricesIx = await this.updatePricesInstruction();
     const withdrawCollateralFromMintIx =
       await this.withdrawCollateralFromMintInstruction(
         user,
@@ -561,11 +565,12 @@ export class Incept {
         collateralIndex
       );
     await signAndSend(
-      new Transaction().add(withdrawCollateralFromMintIx),
+      new Transaction().add(updatePricesIx).add(withdrawCollateralFromMintIx),
       signers,
       this.connection
     );
   }
+  
   public async withdrawCollateralFromMintInstruction(
     user: PublicKey,
     userCollateralTokenAccount: PublicKey,
@@ -1075,13 +1080,13 @@ export class Incept {
     cometIndex: number
   ) {
     let tokenData = await this.getTokenData();
-    let userAddress = await this.getUserAddress(user);
+    let {userPubkey, bump} = await this.getUserAddress(user);
     let userAccount = await this.getUserAccount(user);
     let cometPosition = await this.getCometPosition(user, cometIndex);
 
     return (await this.program.instruction.addCollateralToComet(
       this.managerAddress[1],
-      userAddress[1],
+      bump,
       cometIndex,
       collateralAmount,
       {
