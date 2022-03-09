@@ -14,7 +14,7 @@ mod math;
 mod states;
 mod value;
 
-declare_id!("Aw4gPAFKNV9hQpSZB9pdkBnniVDR13uidY3D5NMKKFUi");
+declare_id!("EwZEhz1NLbzSKLQ6jhu2kk6784Ly2EWJo4BK3HTmFvEv");
 
 #[program]
 pub mod incept {
@@ -2091,6 +2091,17 @@ pub mod incept {
 
         // remove comet from user list
         comet_positions.remove(comet_index as usize);
+
+        Ok(())
+    }
+
+    pub fn mint_usdi_hackathon(ctx: Context<MintUSDIHackathon>, manager_nonce: u8, amount: u64) -> ProgramResult {
+        //This instruction is for hackathon use ONLY!!!!
+        let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+
+        // mint usdi to user
+        let cpi_ctx_mint: CpiContext<MintTo> = CpiContext::from(&*ctx.accounts).with_signer(seeds);
+        token::mint_to(cpi_ctx_mint, amount)?;
 
         Ok(())
     }
