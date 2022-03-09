@@ -32,6 +32,7 @@ export class Incept {
   tokenData: TokenData;
   opts?: ConfirmOptions;
   managerAddress: [PublicKey, number];
+  provider: Provider
 
   private constructor(
     connection: Connection,
@@ -48,7 +49,7 @@ export class Incept {
     this.network = network;
     this.wallet = wallet;
     this.opts = opts;
-    const provider = new Provider(
+    this.provider = new Provider(
       connection,
       wallet,
       opts || Provider.defaultOptions()
@@ -59,7 +60,7 @@ export class Incept {
         this.program = new Program<InceptProgram>(
           IDL,
           this.programId,
-          provider
+          this.provider
         );
         break;
       case Network.TEST:
@@ -67,7 +68,7 @@ export class Incept {
         this.program = new Program<InceptProgram>(
           IDL,
           this.programId,
-          provider
+          this.provider
         );
         break;
       case Network.DEV:
@@ -75,7 +76,7 @@ export class Incept {
         this.program = new Program<InceptProgram>(
           IDL,
           this.programId,
-          provider
+          this.provider
         );
         break;
       case Network.MAIN:
@@ -83,7 +84,7 @@ export class Incept {
         this.program = new Program<InceptProgram>(
           IDL,
           this.programId,
-          provider
+          this.provider
         );
         break;
       default:
@@ -1310,6 +1311,48 @@ export class Incept {
         },
       }
     )) as TransactionInstruction;
+  }
+
+  // Hackathon ONLY!
+
+  public async hackathonMintUsdiInstruction(userUsdiTokenAccount: PublicKey, amount: number) {
+
+    const [managerPubkey, managerBump] = await this.getManagerAddress();
+    const tokenData = await this.getTokenData();
+
+    const vault = tokenData.collaterals[0].vault;
+  
+    return (
+      this.program.instruction.mintUsdiHackathon(
+        managerBump,
+        new BN(amount),
+        {
+          accounts: {
+            user: this.provider.wallet.publicKey,
+            manager: managerPubkey,
+            tokenData: this.manager.tokenData,
+            vault: vault,
+            usdiMint: this.manager.usdiMint,
+            userUsdiTokenAccount: userUsdiTokenAccount,
+            tokenProgram: TOKEN_PROGRAM_ID
+          }
+        }
+      )
+    )
+  }
+
+  public async hackathonMintUsdi(userUsdiTokenAccount: PublicKey, amount: number) {
+
+    const mintUsdiTx = await this.hackathonMintUsdiInstruction(
+      userUsdiTokenAccount,
+      amount
+    );
+    await signAndSend(
+      new Transaction().add(mintUsdiTx),
+      // @ts-ignore
+      [this.provider.wallet.payer],
+      this.connection
+    );    
   }
 
   public async liquidateComet() {}

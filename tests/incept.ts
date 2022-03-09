@@ -1318,4 +1318,29 @@ describe("incept", async () => {
   //       " iAsset."
   //   );
   });
+
+  it("hackathon USDI mint", async () => {
+
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+
+    const currentUSDI = usdiTokenAccountInfo.amount / 1000000000000;
+
+    await inceptClient.hackathonMintUsdi(
+      usdiTokenAccountInfo.address,
+      50000000000000,
+      // @ts-ignore
+      [provider.wallet.payer]
+    )
+
+    await sleep(200);
+
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+
+    assert.equal(usdiTokenAccountInfo.amount / 1000000000000, currentUSDI + 50, "usdi not minted properly!");
+
+  });
 });
