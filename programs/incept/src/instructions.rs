@@ -234,7 +234,6 @@ impl<'a, 'b, 'c, 'info> From<&MintUSDI<'info>> for CpiContext<'a, 'b, 'c, 'info,
         CpiContext::new(cpi_program, cpi_accounts)
     }
 }
-
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, user_nonce: u8, iasset_amount: u64, collateral_amount: u64)]
 pub struct InitializeMintPosition<'info> {
@@ -1292,4 +1291,46 @@ pub struct ClaimLiquidatedComet<'info> {
     )]
     pub liquidation_iasset_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+#[instruction(manager_nonce: u8, amount: u64)]
+pub struct MintUSDIHackathon<'info> {
+    pub user: Signer<'info>,
+    #[account(
+        seeds = [b"manager".as_ref()],
+        bump = manager_nonce,
+        has_one = usdi_mint,
+        has_one = token_data
+    )]
+    pub manager: Account<'info, Manager>,
+    #[account(
+        mut,
+        has_one = manager
+    )]
+    pub token_data: AccountLoader<'info, TokenData>,
+    #[account(mut)]
+    pub vault: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        address = manager.usdi_mint
+    )]
+    pub usdi_mint: Account<'info, Mint>,
+    #[account(
+        mut,
+        constraint = &user_usdi_token_account.mint == usdi_mint.to_account_info().key
+    )]
+    pub user_usdi_token_account: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+}
+impl<'a, 'b, 'c, 'info> From<&MintUSDIHackathon<'info>> for CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
+    fn from(accounts: &MintUSDIHackathon<'info>) -> CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
+        let cpi_accounts = MintTo {
+            mint: accounts.usdi_mint.to_account_info().clone(),
+            to: accounts.user_usdi_token_account.to_account_info().clone(),
+            authority: accounts.manager.to_account_info().clone(),
+        };
+        let cpi_program = accounts.token_program.to_account_info();
+        CpiContext::new(cpi_program, cpi_accounts)
+    }
 }
