@@ -1610,11 +1610,6 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "usdiMint",
           "isMut": true,
           "isSigner": false
@@ -3763,11 +3758,6 @@ export const IDL: Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vault",
           "isMut": true,
           "isSigner": false
         },

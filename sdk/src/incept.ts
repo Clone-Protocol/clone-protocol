@@ -1318,7 +1318,6 @@ export class Incept {
   public async hackathonMintUsdiInstruction(userUsdiTokenAccount: PublicKey, amount: number) {
 
     const [managerPubkey, managerBump] = await this.getManagerAddress();
-    const tokenData = await this.getTokenData();
   
     return (
       this.program.instruction.mintUsdiHackathon(
