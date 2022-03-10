@@ -38,13 +38,10 @@ describe("incept", async () => {
   let iassetTokenAccountInfo;
   let liquidityTokenAccountInfo;
 
-  const [_exchangeAuthority, _nonce] = await anchor.web3.PublicKey.findProgramAddress(
-    [INCEPT_EXCHANGE_SEED],
-    inceptProgram.programId
-  )
+
   // @ts-expect-error
   let inceptClient = new InceptConnection(
-    connection, Network.LOCAL, inceptProgram.provider.wallet, _exchangeAuthority, inceptProgram.programId
+    connection, Network.LOCAL, inceptProgram.provider.wallet, inceptProgram.programId
   ) as InceptConnection;
 
   it("mock usdc initialized!", async () => {
@@ -62,13 +59,13 @@ describe("incept", async () => {
   });
 
   it("manager initialized!", async () => {
-    await inceptClient.initializeManager(walletPubkey);
+    await inceptClient.initializeManager();
   });
 
   it("user initialized!", async () => {
-    await inceptClient.initializeUser(walletPubkey);
+    await inceptClient.initializeUser();
 
-    const userAccountData = await inceptClient.getUserAccount(walletPubkey);
+    const userAccountData = await inceptClient.getUserAccount();
 
     assert(!userAccountData.authority.equals(anchor.web3.PublicKey.default), "check authority address");
     assert(!userAccountData.cometPositions.equals(anchor.web3.PublicKey.default), "check comet position address");
@@ -260,7 +257,6 @@ describe("incept", async () => {
 
     await inceptClient.mintUsdi(
       new BN(100000000000000),
-      walletPubkey, 
       usdiTokenAccountInfo.address,
       mockUSDCTokenAccountInfo.address,
       0,
@@ -317,7 +313,6 @@ describe("incept", async () => {
     await inceptClient.initializeMintPositions(
       new BN(20000000000000),
       new BN(200000000000000),
-      walletPubkey,
       mockUSDCTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       0,
@@ -351,7 +346,6 @@ describe("incept", async () => {
     ) as AccountInfo;
 
     await inceptClient.addCollateralToMint(
-      walletPubkey,
       mockUSDCTokenAccountInfo.address,
       new BN(1000000000),
       0,
@@ -388,7 +382,6 @@ describe("incept", async () => {
     );
 
     await inceptClient.withdrawCollateralFromMint(
-      walletPubkey,
       mockUSDCTokenAccountInfo.address,
       new BN(1000000000),
       0,
@@ -545,7 +538,6 @@ describe("incept", async () => {
 
     await inceptClient.initializeLiquidityPosition(
       new BN(10000000000000),
-      walletPubkey,
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       liquidityTokenAccountInfo.address,
@@ -899,7 +891,6 @@ describe("incept", async () => {
     const signers = [provider.wallet.payer];
 
     await inceptClient.initializeComet(
-      walletPubkey,
       mockUSDCTokenAccountInfo.address,
       new BN(25000000),
       new BN(5000000000000),
@@ -953,7 +944,6 @@ describe("incept", async () => {
     const signers = [provider.wallet.payer];
 
     await inceptClient.addCollateralToComet(
-      walletPubkey,
       mockUSDCTokenAccountInfo.address,
       new BN(5000000),
       0,
@@ -1004,7 +994,6 @@ describe("incept", async () => {
     );
 
     await inceptClient.withdrawCollateralFromComet(
-      walletPubkey,
       mockUSDCTokenAccountInfo.address,
       new BN(5000000),
       0,
@@ -1226,7 +1215,6 @@ describe("incept", async () => {
     const signers = [provider.wallet.payer];
 
     await inceptClient.recenterComet(
-      walletPubkey,
       iassetTokenAccountInfo.address,
       0,
       signers
