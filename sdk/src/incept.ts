@@ -1319,8 +1319,6 @@ export class Incept {
 
     const [managerPubkey, managerBump] = await this.getManagerAddress();
     const tokenData = await this.getTokenData();
-
-    const vault = tokenData.collaterals[0].vault;
   
     return (
       this.program.instruction.mintUsdiHackathon(
@@ -1331,7 +1329,6 @@ export class Incept {
             user: this.provider.wallet.publicKey,
             manager: managerPubkey,
             tokenData: this.manager.tokenData,
-            vault: vault,
             usdiMint: this.manager.usdiMint,
             userUsdiTokenAccount: userUsdiTokenAccount,
             tokenProgram: TOKEN_PROGRAM_ID
