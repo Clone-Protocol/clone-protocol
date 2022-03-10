@@ -1309,8 +1309,6 @@ pub struct MintUSDIHackathon<'info> {
         has_one = manager
     )]
     pub token_data: AccountLoader<'info, TokenData>,
-    #[account(mut)]
-    pub vault: Account<'info, TokenAccount>,
     #[account(
         mut,
         address = manager.usdi_mint
