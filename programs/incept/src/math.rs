@@ -356,6 +356,7 @@ pub fn check_mint_collateral_sufficient(
     check_feed_update(asset_info, slot).unwrap();
     if asset_info
         .price
+        .scale_to(collateral_amount.scale as u8)
         .mul(asset_amount_borrowed)
         .mul(collateral_ratio)
         .gte(collateral_amount)
