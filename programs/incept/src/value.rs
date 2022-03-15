@@ -3,7 +3,7 @@ use std::convert::TryInto;
 
 use crate::*;
 
-pub const DEVNET_TOKEN_SCALE: u8 = 12;
+pub const DEVNET_TOKEN_SCALE: u8 = 8;
 pub const PERCENT_SCALE: u8 = 2;
 
 impl Value {
