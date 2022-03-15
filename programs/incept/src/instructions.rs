@@ -15,7 +15,7 @@ pub struct InitializeManager<'info> {
     pub manager: Account<'info, Manager>,
     #[account(
         init,
-        mint::decimals = 12,
+        mint::decimals = 8,
         mint::authority = manager,
         payer = admin
     )]
@@ -119,7 +119,7 @@ pub struct InitializePool<'info> {
     pub usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
-        mint::decimals = 12,
+        mint::decimals = 8,
         mint::authority = manager,
         payer = admin
     )]
@@ -140,7 +140,7 @@ pub struct InitializePool<'info> {
     pub liquidation_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
-        mint::decimals = 12,
+        mint::decimals = 8,
         mint::authority = manager,
         payer = admin
     )]
