@@ -4,8 +4,8 @@ use error::*;
 use instructions::*;
 use pyth::pc::Price;
 use states::{
-    AssetInfo, Collateral, CometLiquidation, CometPosition, LiquidityPosition,
-    MintPosition, Pool, TokenData, Value,
+    AssetInfo, Collateral, CometLiquidation, CometPosition, LiquidityPosition, MintPosition, Pool,
+    TokenData, Value,
 };
 
 mod error;
@@ -231,7 +231,9 @@ pub mod incept {
         let cpi_ctx_transfer: CpiContext<Transfer> = CpiContext::from(&*ctx.accounts);
         token::transfer(
             cpi_ctx_transfer,
-            usdi_value.scale_to(collateral_scale.try_into().unwrap()).to_u64(),
+            usdi_value
+                .scale_to(collateral_scale.try_into().unwrap())
+                .to_u64(),
         )?;
 
         // mint usdi to user
@@ -264,8 +266,10 @@ pub mod incept {
         )
         .unwrap();
 
-        let collateral_amount_value =
-            Value::new(collateral_amount.into(), collateral.vault_mint_supply.scale.try_into().unwrap());
+        let collateral_amount_value = Value::new(
+            collateral_amount.into(),
+            collateral.vault_mint_supply.scale.try_into().unwrap(),
+        );
         let iasset_amount_value = Value::new(iasset_amount.into(), DEVNET_TOKEN_SCALE);
 
         // check to see if collateral is stable
@@ -337,7 +341,10 @@ pub mod incept {
             [mint_positions.mint_positions[mint_index as usize].collateral_index as usize];
         let mint_position = mint_positions.mint_positions[mint_index as usize];
 
-        let amount_value = Value::new(amount.into(), collateral.vault_mint_supply.scale.try_into().unwrap());
+        let amount_value = Value::new(
+            amount.into(),
+            collateral.vault_mint_supply.scale.try_into().unwrap(),
+        );
 
         // add collateral amount to vault supply
         token_data.collaterals
@@ -374,7 +381,10 @@ pub mod incept {
             [mint_positions.mint_positions[mint_index as usize].collateral_index as usize];
         let mint_position = mint_positions.mint_positions[mint_index as usize];
 
-        let amount_value = Value::new(amount.into(), collateral.vault_mint_supply.scale.try_into().unwrap());
+        let amount_value = Value::new(
+            amount.into(),
+            collateral.vault_mint_supply.scale.try_into().unwrap(),
+        );
 
         // subtract collateral amount from vault supply
         token_data.collaterals
@@ -941,6 +951,7 @@ pub mod incept {
             collateral.vault_comet_supply.scale.try_into().unwrap(),
         );
 
+
         // add collateral amount to vault supply
         token_data.collaterals[collateral_index].vault_comet_supply =
             collateral.vault_comet_supply.add(collateral_value).unwrap();
@@ -950,6 +961,7 @@ pub mod incept {
             ctx.accounts.amm_iasset_token_account.amount.into(),
             DEVNET_TOKEN_SCALE,
         );
+        
         let usdi_amm_value = Value::new(
             ctx.accounts.amm_usdi_token_account.amount.into(),
             DEVNET_TOKEN_SCALE,
@@ -959,6 +971,7 @@ pub mod incept {
             ctx.accounts.liquidity_token_mint.supply.into(),
             DEVNET_TOKEN_SCALE,
         );
+        
 
         // calculate iasset liquidity value as well as liquidity token value for comet
         let (iasset_liquidity_value, liquidity_token_value) =
@@ -972,6 +985,7 @@ pub mod incept {
         // generate current pool price
         let current_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
 
+
         // calculate comet range
         let (lower_price_range, upper_price_range) = calculate_comet_price_barrier(
             usdi_liquidity_value,
@@ -982,6 +996,7 @@ pub mod incept {
             liquidity_token_value,
             liquidity_token_supply,
         );
+        
 
         // throw error if the comet is out of range
         if lower_price_range.gte(current_price).unwrap()
@@ -989,6 +1004,7 @@ pub mod incept {
         {
             return Err(InceptError::InvalidCometCollateralRatio.into());
         }
+        
 
         // lock collateral in vault
         let cpi_ctx: CpiContext<Transfer> = CpiContext::from(&*ctx.accounts);
@@ -2095,7 +2111,11 @@ pub mod incept {
         Ok(())
     }
 
-    pub fn mint_usdi_hackathon(ctx: Context<MintUSDIHackathon>, manager_nonce: u8, amount: u64) -> ProgramResult {
+    pub fn mint_usdi_hackathon(
+        ctx: Context<MintUSDIHackathon>,
+        manager_nonce: u8,
+        amount: u64,
+    ) -> ProgramResult {
         //This instruction is for hackathon use ONLY!!!!
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 

@@ -23,6 +23,9 @@ impl Value {
             .try_into()
             .unwrap()
     }
+    pub fn to_scaled_f64(self) -> f64 {
+        (self.val as f64) / (f64::powf(10.0, self.scale as f64))
+    }
     pub fn from_percent(percent: u16) -> Self {
         Value::new(percent.into(), PERCENT_SCALE)
     }
