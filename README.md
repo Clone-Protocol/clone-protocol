@@ -5,6 +5,6 @@ This repository contains the on-chain programs for the Incept Protocol:
 - `pyth` a substitute program only used for testing, allows you to change oracle prices at will, used for scenario testing.
 
 ## How to Run
-Incept is built using [Anchor](https://project-serum.github.io/anchor/getting-started/installation.html#install-rust) and requires it's installation.
+Incept is built using [Anchor](https://project-serum.github.io/anchor/getting-started/installation.html#install-rust) and requires its installation.
 
 After installing you can test, build and deploy using `anchor test`, `anchor build` and `anchor deploy`.
