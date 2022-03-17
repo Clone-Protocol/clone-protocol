@@ -3,46 +3,57 @@ use std::convert::TryInto;
 
 use crate::*;
 
-pub const DEVNET_TOKEN_SCALE: u8 = 12;
+pub const DEVNET_TOKEN_SCALE: u8 = 8;
 pub const PERCENT_SCALE: u8 = 2;
 
 impl Value {
     pub fn new(value: u128, scale: u8) -> Self {
-        Self { val: value, scale }
+        Self {
+            val: value,
+            scale: scale.try_into().unwrap(),
+        }
     }
     pub fn denominator(self) -> u128 {
-        10u128.pow(self.scale.into())
+        10u128.pow(self.scale.try_into().unwrap())
     }
     pub fn to_u64(self) -> u64 {
         self.val.try_into().unwrap()
     }
     pub fn to_scaled_u64(self) -> u64 {
         self.val
-            .checked_div(u128::pow(10, self.scale.into()))
+            .checked_div(u128::pow(10, self.scale.try_into().unwrap()))
             .unwrap()
             .try_into()
             .unwrap()
+    }
+    pub fn to_scaled_f64(self) -> f64 {
+        (self.val as f64) / (f64::powf(10.0, self.scale as f64))
     }
     pub fn from_percent(percent: u16) -> Self {
         Value::new(percent.into(), PERCENT_SCALE)
     }
     pub fn scale_to(self, new_scale: u8) -> Self {
-        if new_scale > self.scale {
+        if new_scale > self.scale.try_into().unwrap() {
             return Value::new(
                 self.val
                     .checked_mul(u128::pow(
                         10,
-                        new_scale.checked_sub(self.scale).unwrap().into(),
+                        new_scale
+                            .checked_sub(self.scale.try_into().unwrap())
+                            .unwrap()
+                            .into(),
                     ))
                     .unwrap(),
                 new_scale,
             );
-        } else if self.scale > new_scale {
+        } else if self.scale > new_scale.try_into().unwrap() {
             return Value::new(
                 self.val
                     .checked_div(u128::pow(
                         10,
-                        self.scale.checked_sub(new_scale).unwrap().into(),
+                        self.scale
+                            .checked_sub(new_scale.try_into().unwrap())
+                            .unwrap() as u32,
                     ))
                     .unwrap(),
                 new_scale,
@@ -130,6 +141,37 @@ impl PowAccuracy<u128> for Value {
         return result;
     }
 }
+
+impl Sqrt<u128> for Value {
+    fn sqrt(self) -> Self {
+        let mut scale: u8 = 0;
+        let mut x = 100;
+        loop {
+            if self.val > x {
+                scale += 1;
+            } else {
+                break;
+            }
+            x = x.checked_mul(100).unwrap();
+        }
+        let mut y = Value::new(u128::pow(10, DEVNET_TOKEN_SCALE.into()), DEVNET_TOKEN_SCALE);
+        loop {
+            if self.val < y.val {
+                scale += 1;
+            } else {
+                break;
+            }
+            y.val = y.val.checked_div(100).unwrap();
+        }
+        return Value::new(
+            ((self.val as f64).sqrt()
+                * f64::powi(10.0, DEVNET_TOKEN_SCALE.checked_sub(scale).unwrap().into()))
+                as u128,
+            DEVNET_TOKEN_SCALE,
+        );
+    }
+}
+
 impl Into<u64> for Value {
     fn into(self) -> u64 {
         self.val.try_into().unwrap()
@@ -186,6 +228,9 @@ pub trait MulUp<T>: Sized {
 }
 pub trait PowAccuracy<T>: Sized {
     fn pow_with_accuracy(self, rhs: T) -> Self;
+}
+pub trait Sqrt<T>: Sized {
+    fn sqrt(self) -> Self;
 }
 pub trait Compare<T>: Sized {
     fn eq(self, rhs: T) -> Result<bool, InceptError>;

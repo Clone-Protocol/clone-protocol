@@ -1,6 +1,6 @@
+use crate::states::MockUsdc;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
-use crate::states::MockUsdc;
 
 #[derive(Accounts)]
 #[instruction(mock_usdc_nonce: u8)]
@@ -12,7 +12,7 @@ pub struct Initialize<'info> {
         bump = mock_usdc_nonce,
         payer = admin
     )]
-    pub mock_usdc_account:  Account<'info, MockUsdc>,
+    pub mock_usdc_account: Account<'info, MockUsdc>,
     #[account(
         init,
         mint::decimals = 7,

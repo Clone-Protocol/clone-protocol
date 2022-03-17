@@ -135,14 +135,17 @@ pub fn calculate_liquidity_proportion_from_usdi(
 
 pub fn calculate_comet_price_barrier(
     usdi_liquidity_value: Value,
-    _iasset_liquidity_value: Value,
+    iasset_liquidity_value: Value,
     collateral_value: Value,
     iasset_amm_value: Value,
     usdi_amm_value: Value,
     comet_liquidity_token_value: Value,
     liquidity_token_supply: Value,
 ) -> (Value, Value) {
-    let invariant = calculate_invariant(iasset_amm_value, usdi_amm_value);
+    let invariant = calculate_invariant(
+        iasset_amm_value.add(iasset_liquidity_value).unwrap(),
+        usdi_amm_value.add(usdi_liquidity_value).unwrap(),
+    );
 
     let lower_price_barrier = calculate_lower_comet_price_barrier(
         usdi_liquidity_value,
@@ -152,12 +155,18 @@ pub fn calculate_comet_price_barrier(
         invariant,
     );
 
-    // Calculation of upper requires quadratic solution
+    let upper_price_barrier = calculate_upper_comet_price_barrier(
+        iasset_liquidity_value,
+        collateral_value,
+        comet_liquidity_token_value,
+        liquidity_token_supply,
+        invariant,
+    );
 
-    return (lower_price_barrier, lower_price_barrier);
+    return (lower_price_barrier, upper_price_barrier);
 }
 
-pub fn calculate_undercollateralized_usdi_barrier(
+pub fn calculate_undercollateralized_lower_usdi_barrier(
     usdi_liquidity_value: Value,
     collateral_value: Value,
     comet_liquidity_token_value: Value,
@@ -174,6 +183,37 @@ pub fn calculate_undercollateralized_usdi_barrier(
         .div(comet_liquidity_token_value);
 }
 
+pub fn calculate_undercollateralized_upper_usdi_barrier(
+    iasset_liquidity_value: Value,
+    collateral_value: Value,
+    comet_liquidity_token_value: Value,
+    liquidity_token_supply: Value,
+    invariant: Value,
+) -> Value {
+    let a = collateral_value.to_scaled_f64() / invariant.to_scaled_f64();
+    let b = calculate_liquidity_proportion_from_liquidity_tokens(
+        comet_liquidity_token_value,
+        liquidity_token_supply
+            .add(comet_liquidity_token_value)
+            .unwrap(),
+    )
+    .to_scaled_f64();
+    let c = iasset_liquidity_value.to_scaled_f64();
+    return Value::new(
+        (((f64::sqrt(f64::powf(b, 2.0) + (4.0 * a * c)) - b) / (2.0 * a)) * f64::powf(10.0, 8.0))
+            as u128,
+        8,
+    );
+    // return b
+    //     .pow_with_accuracy(2)
+    //     .add(a.mul(c).mul(4))
+    //     .unwrap()
+    //     .sqrt()
+    //     .sub(b)
+    //     .unwrap()
+    //     .div(a.mul(2));
+}
+
 pub fn calculate_undercollateralized_iasset_barrier_from_usdi_barrier(
     invariant: Value,
     lower_undercollateralized_usdi_barrier: Value,
@@ -188,7 +228,7 @@ pub fn calculate_lower_comet_price_barrier(
     liquidity_token_supply: Value,
     invariant: Value,
 ) -> Value {
-    let lower_undercollateralized_usdi_barrier = calculate_undercollateralized_usdi_barrier(
+    let lower_undercollateralized_usdi_barrier = calculate_undercollateralized_lower_usdi_barrier(
         usdi_liquidity_value,
         collateral_value,
         comet_liquidity_token_value,
@@ -203,6 +243,40 @@ pub fn calculate_lower_comet_price_barrier(
         lower_undercollateralized_usdi_barrier.div(lower_undercollateralized_iasset_barrier);
     let lower_comet_price_barrier = lower_undercollateralized_price_barrier.mul(2);
     return lower_comet_price_barrier;
+}
+
+pub fn calculate_upper_comet_price_barrier(
+    iasset_liquidity_value: Value,
+    collateral_value: Value,
+    comet_liquidity_token_value: Value,
+    liquidity_token_supply: Value,
+    invariant: Value,
+) -> Value {
+    let upper_undercollateralized_usdi_barrier = calculate_undercollateralized_upper_usdi_barrier(
+        iasset_liquidity_value,
+        collateral_value,
+        comet_liquidity_token_value,
+        liquidity_token_supply,
+        invariant,
+    );
+
+    let upper_undercollateralized_iasset_barrier =
+        calculate_undercollateralized_iasset_barrier_from_usdi_barrier(
+            invariant,
+            upper_undercollateralized_usdi_barrier,
+        );
+
+    let upper_undercollateralized_price_barrier =
+        upper_undercollateralized_iasset_barrier.div(upper_undercollateralized_usdi_barrier);
+
+    let upper_comet_price_barrier = upper_undercollateralized_price_barrier
+        .mul(2)
+        .div(Value::new(
+            3 * u128::pow(10, DEVNET_TOKEN_SCALE.into()),
+            DEVNET_TOKEN_SCALE,
+        ));
+
+    return upper_comet_price_barrier;
 }
 
 pub fn calculate_recentering_values_with_usdi_surplus(
@@ -291,6 +365,7 @@ pub fn check_mint_collateral_sufficient(
     check_feed_update(asset_info, slot).unwrap();
     if asset_info
         .price
+        .scale_to(collateral_amount.scale as u8)
         .mul(asset_amount_borrowed)
         .mul(collateral_ratio)
         .gte(collateral_amount)
