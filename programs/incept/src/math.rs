@@ -1,4 +1,4 @@
-use crate::value::{Add, Compare, Div, Mul,  Sub, DEVNET_TOKEN_SCALE};
+use crate::value::{Add, Compare, Div, Mul, Sub, DEVNET_TOKEN_SCALE};
 use crate::*;
 
 pub fn check_feed_update(asset_info: AssetInfo, slot: u64) -> ProgramResult {
@@ -275,7 +275,7 @@ pub fn calculate_upper_comet_price_barrier(
             3 * u128::pow(10, DEVNET_TOKEN_SCALE.into()),
             DEVNET_TOKEN_SCALE,
         ));
-        
+
     return upper_comet_price_barrier;
 }
 

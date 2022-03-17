@@ -1321,7 +1321,9 @@ pub struct MintUSDIHackathon<'info> {
     pub user_usdi_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
-impl<'a, 'b, 'c, 'info> From<&MintUSDIHackathon<'info>> for CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
+impl<'a, 'b, 'c, 'info> From<&MintUSDIHackathon<'info>>
+    for CpiContext<'a, 'b, 'c, 'info, MintTo<'info>>
+{
     fn from(accounts: &MintUSDIHackathon<'info>) -> CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
         let cpi_accounts = MintTo {
             mint: accounts.usdi_mint.to_account_info().clone(),

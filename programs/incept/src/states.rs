@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 #[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct Value {
     // 24
-    pub val: u128, // 16
+    pub val: u128,  // 16
     pub scale: u64, // 8
 }
 
@@ -133,7 +133,7 @@ pub struct Collateral {
     pub vault_usdi_supply: Value,  // 24
     pub vault_mint_supply: Value,  // 24
     pub vault_comet_supply: Value, // 24
-    pub stable: u64                // 8
+    pub stable: u64,               // 8
 }
 
 #[account]
