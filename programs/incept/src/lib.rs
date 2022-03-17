@@ -147,9 +147,9 @@ pub mod incept {
         token_data.pools[index as usize]
             .asset_info
             .price_feed_address = *ctx.accounts.oracle.to_account_info().key;
-        token_data.pools[0].asset_info.stable_collateral_ratio =
+        token_data.pools[index as usize].asset_info.stable_collateral_ratio =
             Value::from_percent(stable_collateral_ratio);
-        token_data.pools[0].asset_info.crypto_collateral_ratio =
+        token_data.pools[index as usize].asset_info.crypto_collateral_ratio =
             Value::from_percent(crypto_collateral_ratio);
 
         Ok(())
