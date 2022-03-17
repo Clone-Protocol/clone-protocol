@@ -24,7 +24,7 @@ pub mod pyth {
         price_oracle.twap = price;
         price_oracle.expo = expo;
         price_oracle.ptype = pc::PriceType::Price;
-        
+
         Ok(())
     }
 

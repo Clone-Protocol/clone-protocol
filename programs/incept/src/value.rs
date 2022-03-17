@@ -8,7 +8,10 @@ pub const PERCENT_SCALE: u8 = 2;
 
 impl Value {
     pub fn new(value: u128, scale: u8) -> Self {
-        Self { val: value, scale: scale.try_into().unwrap()}
+        Self {
+            val: value,
+            scale: scale.try_into().unwrap(),
+        }
     }
     pub fn denominator(self) -> u128 {
         10u128.pow(self.scale.try_into().unwrap())
@@ -35,7 +38,10 @@ impl Value {
                 self.val
                     .checked_mul(u128::pow(
                         10,
-                        new_scale.checked_sub(self.scale.try_into().unwrap()).unwrap().into(),
+                        new_scale
+                            .checked_sub(self.scale.try_into().unwrap())
+                            .unwrap()
+                            .into(),
                     ))
                     .unwrap(),
                 new_scale,
@@ -45,7 +51,9 @@ impl Value {
                 self.val
                     .checked_div(u128::pow(
                         10,
-                        self.scale.checked_sub(new_scale.try_into().unwrap()).unwrap() as u32,
+                        self.scale
+                            .checked_sub(new_scale.try_into().unwrap())
+                            .unwrap() as u32,
                     ))
                     .unwrap(),
                 new_scale,

@@ -147,10 +147,12 @@ pub mod incept {
         token_data.pools[index as usize]
             .asset_info
             .price_feed_address = *ctx.accounts.oracle.to_account_info().key;
-        token_data.pools[index as usize].asset_info.stable_collateral_ratio =
-            Value::from_percent(stable_collateral_ratio);
-        token_data.pools[index as usize].asset_info.crypto_collateral_ratio =
-            Value::from_percent(crypto_collateral_ratio);
+        token_data.pools[index as usize]
+            .asset_info
+            .stable_collateral_ratio = Value::from_percent(stable_collateral_ratio);
+        token_data.pools[index as usize]
+            .asset_info
+            .crypto_collateral_ratio = Value::from_percent(crypto_collateral_ratio);
 
         Ok(())
     }
@@ -951,7 +953,6 @@ pub mod incept {
             collateral.vault_comet_supply.scale.try_into().unwrap(),
         );
 
-
         // add collateral amount to vault supply
         token_data.collaterals[collateral_index].vault_comet_supply =
             collateral.vault_comet_supply.add(collateral_value).unwrap();
@@ -961,7 +962,7 @@ pub mod incept {
             ctx.accounts.amm_iasset_token_account.amount.into(),
             DEVNET_TOKEN_SCALE,
         );
-        
+
         let usdi_amm_value = Value::new(
             ctx.accounts.amm_usdi_token_account.amount.into(),
             DEVNET_TOKEN_SCALE,
@@ -971,7 +972,6 @@ pub mod incept {
             ctx.accounts.liquidity_token_mint.supply.into(),
             DEVNET_TOKEN_SCALE,
         );
-        
 
         // calculate iasset liquidity value as well as liquidity token value for comet
         let (iasset_liquidity_value, liquidity_token_value) =
@@ -985,7 +985,6 @@ pub mod incept {
         // generate current pool price
         let current_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
 
-
         // calculate comet range
         let (lower_price_range, upper_price_range) = calculate_comet_price_barrier(
             usdi_liquidity_value,
@@ -996,7 +995,6 @@ pub mod incept {
             liquidity_token_value,
             liquidity_token_supply,
         );
-        
 
         // throw error if the comet is out of range
         if lower_price_range.gte(current_price).unwrap()
@@ -1004,7 +1002,6 @@ pub mod incept {
         {
             return Err(InceptError::InvalidCometCollateralRatio.into());
         }
-        
 
         // lock collateral in vault
         let cpi_ctx: CpiContext<Transfer> = CpiContext::from(&*ctx.accounts);
