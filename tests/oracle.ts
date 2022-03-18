@@ -18,9 +18,10 @@ export const createPriceFeed = async (
         fromPubkey: pythProgram.provider.wallet.publicKey,
         newAccountPubkey: priceFeed.publicKey,
         space: 3312,
-        lamports: await pythProgram.provider.connection.getMinimumBalanceForRentExemption(
-          3312
-        ),
+        lamports:
+          await pythProgram.provider.connection.getMinimumBalanceForRentExemption(
+            3312
+          ),
         programId: pythProgram.programId,
       }),
     ],
