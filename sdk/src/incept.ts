@@ -2,8 +2,6 @@ import * as anchor from "@project-serum/anchor";
 import { BN, Program, Provider, Wallet } from "@project-serum/anchor";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Incept as InceptProgram, IDL } from "./idl/incept";
-import { signAndSend, sleep } from "./utils";
-import { Network, TEST_NET, DEV_NET, MAIN_NET } from "./network";
 import {
   PublicKey,
   Connection,
@@ -23,8 +21,6 @@ const LIQUIDITY_POSITIONS_SIZE = 16368;
 
 export class Incept {
   connection: Connection;
-  network: Network;
-  wallet: typeof Wallet;
   programId: PublicKey;
   program: Program<InceptProgram>;
   manager: Manager;
@@ -34,60 +30,18 @@ export class Incept {
   provider: Provider;
 
   private constructor(
-    connection: Connection,
-    network: Network,
-    wallet: typeof Wallet,
-    programId = PublicKey.default,
+    programId: PublicKey,
+    provider: Provider,
     opts?: ConfirmOptions
   ) {
     this.managerAddress = [PublicKey.default, 0];
     this.manager = {} as Manager;
     this.tokenData = {} as TokenData;
-    this.connection = connection;
-    this.network = network;
-    this.wallet = wallet;
+    this.connection = provider.connection;
+    this.programId = programId;
+    this.provider = provider;
     this.opts = opts;
-    this.provider = new Provider(
-      connection,
-      wallet,
-      opts || Provider.defaultOptions()
-    );
-    switch (network) {
-      case Network.LOCAL:
-        this.programId = programId;
-        this.program = new Program<InceptProgram>(
-          IDL,
-          this.programId,
-          this.provider
-        );
-        break;
-      case Network.TEST:
-        this.programId = TEST_NET.exchange;
-        this.program = new Program<InceptProgram>(
-          IDL,
-          this.programId,
-          this.provider
-        );
-        break;
-      case Network.DEV:
-        this.programId = DEV_NET.exchange;
-        this.program = new Program<InceptProgram>(
-          IDL,
-          this.programId,
-          this.provider
-        );
-        break;
-      case Network.MAIN:
-        this.programId = MAIN_NET.exchange;
-        this.program = new Program<InceptProgram>(
-          IDL,
-          this.programId,
-          this.provider
-        );
-        break;
-      default:
-        throw new Error("Not supported");
-    }
+    this.program = new Program<InceptProgram>(IDL, this.programId, provider);
   }
   public async initializeManager() {
     const managerPubkeyAndBump = await this.getManagerAddress();
@@ -289,16 +243,12 @@ export class Incept {
 
   public async getAssetInfo(poolIndex: number) {
     const tokenData = (await this.getTokenData()) as TokenData;
-    return tokenData[poolIndex].assetInfo;
+    return tokenData.pools[poolIndex].assetInfo as AssetInfo;
   }
 
   public async updatePrices(signers?: Array<Keypair>) {
     const updatePricesIx = await this.updatePricesInstruction();
-    await signAndSend(
-      new Transaction().add(updatePricesIx),
-      signers,
-      this.connection
-    );
+    await this.provider.send(new Transaction().add(updatePricesIx), signers);
   }
   public async updatePricesInstruction() {
     const tokenData = await this.getTokenData();
@@ -407,11 +357,7 @@ export class Incept {
       collateralIndex
     )) as TransactionInstruction;
     // TODO: Figure out sign and send.
-    await signAndSend(
-      new Transaction().add(mintUsdiIx),
-      signers,
-      this.connection
-    );
+    await this.provider.send(new Transaction().add(mintUsdiIx), signers);
   }
 
   public async mintUsdiInstruction(
@@ -458,10 +404,9 @@ export class Incept {
         poolIndex,
         collateralIndex
       );
-    await signAndSend(
+    await this.provider.send(
       new Transaction().add(updatePricesIx).add(initializeMintPositionsIx),
-      signers,
-      this.connection
+      signers
     );
   }
   public async initializeMintPositionsInstruction(
@@ -509,10 +454,9 @@ export class Incept {
       collateralAmount,
       collateralIndex
     );
-    await signAndSend(
+    await this.provider.send(
       new Transaction().add(addCollateralToMintIx),
-      signers,
-      this.connection
+      signers
     );
   }
 
@@ -558,10 +502,9 @@ export class Incept {
         collateralAmount,
         collateralIndex
       );
-    await signAndSend(
+    await this.provider.send(
       new Transaction().add(updatePricesIx).add(withdrawCollateralFromMintIx),
-      signers,
-      this.connection
+      signers
     );
   }
 
@@ -607,10 +550,9 @@ export class Incept {
       poolIndex,
       collateralIndex
     );
-    await signAndSend(
+    await this.provider.send(
       new Transaction().add(payBackiAssetToMintIx),
-      signers,
-      this.connection
+      signers
     );
   }
   public async payBackiAssetToMintInstruction(
@@ -656,10 +598,9 @@ export class Incept {
       poolIndex,
       collateralIndex
     );
-    await signAndSend(
+    await this.provider.send(
       new Transaction().add(updatePricesIx).add(addiAssetToMintIx),
-      signers,
-      this.connection
+      signers
     );
   }
   public async addiAssetToMintInstruction(
@@ -707,10 +648,9 @@ export class Incept {
         iassetAmount,
         poolIndex
       );
-    await signAndSend(
+    await this.provider.send(
       new Transaction().add(initializeLiquidityPositionIx),
-      signers,
-      this.connection
+      signers
     );
   }
   public async initializeLiquidityPositionInstruction(
@@ -760,10 +700,9 @@ export class Incept {
       iassetAmount,
       poolIndex
     );
-    await signAndSend(
+    await this.provider.send(
       new Transaction().add(provideLiquidityIx),
-      signers,
-      this.connection
+      signers
     );
   }
   public async provideLiquidityInstruction(
@@ -771,14 +710,17 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     userLiquidityTokenAccount: PublicKey,
     iassetAmount: BN,
-    liquidityPositionIndex: number
+    poolIndex: number
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
+    let pool = tokenData.pools[poolIndex];
+
+    //let userLiquidityPosition = await this.getLiquidityPosition(poolIndex);
 
     return (await this.program.instruction.provideLiquidity(
       this.managerAddress[1],
-      liquidityPositionIndex,
+      poolIndex,
       iassetAmount,
       {
         accounts: {
@@ -789,18 +731,9 @@ export class Incept {
           userUsdiTokenAccount: userUsdiTokenAccount,
           userIassetTokenAccount: userIassetTokenAccount,
           userLiquidityTokenAccount: userLiquidityTokenAccount,
-          ammUsdiTokenAccount:
-            tokenData.pools[
-              this.getLiquidityPositions()[liquidityPositionIndex].poolIndex
-            ].usdiTokenAccount,
-          ammIassetTokenAccount:
-            tokenData.pools[
-              this.getLiquidityPositions()[liquidityPositionIndex].poolIndex
-            ].iassetTokenAccount,
-          liquidityTokenMint:
-            tokenData.pools[
-              this.getLiquidityPositions()[liquidityPositionIndex].poolIndex
-            ].liquidityTokenMint,
+          ammUsdiTokenAccount: pool.usdiTokenAccount,
+          ammIassetTokenAccount: pool.iassetTokenAccount,
+          liquidityTokenMint: pool.liquidityTokenMint,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
@@ -822,10 +755,9 @@ export class Incept {
       iassetAmount,
       poolIndex
     );
-    await signAndSend(
+    await this.provider.send(
       new Transaction().add(withdrawLiquidityIx),
-      signers,
-      this.connection
+      signers
     );
   }
   public async withdrawLiquidityInstruction(
@@ -833,14 +765,16 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     userLiquidityTokenAccount: PublicKey,
     iassetAmount: BN,
-    liquidityPositionIndex: number
+    poolIndex: number
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
 
+    let pool = tokenData.pools[poolIndex];
+
     return (await this.program.instruction.withdrawLiquidity(
       this.managerAddress[1],
-      liquidityPositionIndex,
+      poolIndex,
       iassetAmount,
       {
         accounts: {
@@ -851,18 +785,9 @@ export class Incept {
           userUsdiTokenAccount: userUsdiTokenAccount,
           userIassetTokenAccount: userIassetTokenAccount,
           userLiquidityTokenAccount: userLiquidityTokenAccount,
-          ammUsdiTokenAccount:
-            tokenData.pools[
-              this.getLiquidityPositions()[liquidityPositionIndex].poolIndex
-            ].usdiTokenAccount,
-          ammIassetTokenAccount:
-            tokenData.pools[
-              this.getLiquidityPositions()[liquidityPositionIndex].poolIndex
-            ].iassetTokenAccount,
-          liquidityTokenMint:
-            tokenData.pools[
-              this.getLiquidityPositions()[liquidityPositionIndex].poolIndex
-            ].liquidityTokenMint,
+          ammUsdiTokenAccount: pool.usdiTokenAccount,
+          ammIassetTokenAccount: pool.iassetTokenAccount,
+          liquidityTokenMint: pool.liquidityTokenMint,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
@@ -882,11 +807,7 @@ export class Incept {
       iassetAmount,
       poolIndex
     );
-    await signAndSend(
-      new Transaction().add(buySynthIx),
-      signers,
-      this.connection
-    );
+    await this.provider.send(new Transaction().add(buySynthIx), signers);
   }
   public async buySynthInstruction(
     userUsdiTokenAccount: PublicKey,
@@ -928,11 +849,7 @@ export class Incept {
       iassetAmount,
       poolIndex
     );
-    await signAndSend(
-      new Transaction().add(buySynthIx),
-      signers,
-      this.connection
-    );
+    await this.provider.send(new Transaction().add(buySynthIx), signers);
   }
   public async sellSynthInstruction(
     userUsdiTokenAccount: PublicKey,
@@ -976,11 +893,7 @@ export class Incept {
       poolIndex,
       collateralIndex
     );
-    await signAndSend(
-      new Transaction().add(initializeCometIx),
-      signers,
-      this.connection
-    );
+    await this.provider.send(new Transaction().add(initializeCometIx), signers);
   }
   public async initializeCometInstruction(
     userCollateralTokenAccount: PublicKey,
@@ -1033,10 +946,9 @@ export class Incept {
       collateralAmount,
       cometIndex
     );
-    await signAndSend(
+    await this.provider.send(
       new Transaction().add(addCollateralToCometIx),
-      signers,
-      this.connection
+      signers
     );
   }
   public async addCollateralToCometInstruction(
@@ -1088,10 +1000,9 @@ export class Incept {
         collateralAmount,
         cometIndex
       );
-    await signAndSend(
+    await this.provider.send(
       new Transaction().add(withdrawCollateralFromCometIx),
-      signers,
-      this.connection
+      signers
     );
   }
   public async withdrawCollateralFromCometInstruction(
@@ -1144,11 +1055,7 @@ export class Incept {
       userUsdiTokenAccount,
       cometIndex
     );
-    await signAndSend(
-      new Transaction().add(closeCometIx),
-      signers,
-      this.connection
-    );
+    await this.provider.send(new Transaction().add(closeCometIx), signers);
   }
   public async closeCometInstruction(
     userCollateralTokenAccount: PublicKey,
@@ -1201,11 +1108,7 @@ export class Incept {
       userIassetTokenAccount,
       cometIndex
     );
-    await signAndSend(
-      new Transaction().add(recenterCometIx),
-      signers,
-      this.connection
-    );
+    await this.provider.send(new Transaction().add(recenterCometIx), signers);
   }
   public async recenterCometInstruction(
     userIassetTokenAccount: PublicKey,
@@ -1244,7 +1147,6 @@ export class Incept {
   }
 
   // Hackathon ONLY!
-
   public async hackathonMintUsdiInstruction(
     userUsdiTokenAccount: PublicKey,
     amount: number
@@ -1275,12 +1177,7 @@ export class Incept {
       userUsdiTokenAccount,
       amount
     );
-    await signAndSend(
-      new Transaction().add(mintUsdiTx),
-      // @ts-ignore
-      [this.provider.wallet.payer],
-      this.connection
-    );
+    await this.provider.send(new Transaction().add(mintUsdiTx));
   }
 
   public async liquidateComet() {}
