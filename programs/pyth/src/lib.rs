@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 pub mod pc;
 use pc::Price;
 
-declare_id!("4te7G6yemnSx2zByo1GRTWY4uNBrrcwjJc9uKxbPZ4Qe");
+declare_id!("E3rBE4T1wdGnaSNgoav2rWMFW25xQvdUSbKC8Zx68oUL");
 
 #[program]
 pub mod pyth {
@@ -24,7 +24,7 @@ pub mod pyth {
         price_oracle.twap = price;
         price_oracle.expo = expo;
         price_oracle.ptype = pc::PriceType::Price;
-        
+
         Ok(())
     }
 

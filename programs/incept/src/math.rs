@@ -1,4 +1,4 @@
-use crate::value::{Add, Compare, Div, Mul, PowAccuracy, Sqrt, Sub, DEVNET_TOKEN_SCALE};
+use crate::value::{Add, Compare, Div, Mul, Sub, DEVNET_TOKEN_SCALE};
 use crate::*;
 
 pub fn check_feed_update(asset_info: AssetInfo, slot: u64) -> ProgramResult {
@@ -190,23 +190,28 @@ pub fn calculate_undercollateralized_upper_usdi_barrier(
     liquidity_token_supply: Value,
     invariant: Value,
 ) -> Value {
-    let a = collateral_value.div(invariant);
+    let a = collateral_value.to_scaled_f64() / invariant.to_scaled_f64();
     let b = calculate_liquidity_proportion_from_liquidity_tokens(
         comet_liquidity_token_value,
         liquidity_token_supply
             .add(comet_liquidity_token_value)
             .unwrap(),
+    )
+    .to_scaled_f64();
+    let c = iasset_liquidity_value.to_scaled_f64();
+    return Value::new(
+        (((f64::sqrt(f64::powf(b, 2.0) + (4.0 * a * c)) - b) / (2.0 * a)) * f64::powf(10.0, 8.0))
+            as u128,
+        8,
     );
-    let c = iasset_liquidity_value;
-
-    return b
-        .pow_with_accuracy(2)
-        .add(a.mul(c).mul(4))
-        .unwrap()
-        .sqrt()
-        .sub(b)
-        .unwrap()
-        .div(a.mul(2));
+    // return b
+    //     .pow_with_accuracy(2)
+    //     .add(a.mul(c).mul(4))
+    //     .unwrap()
+    //     .sqrt()
+    //     .sub(b)
+    //     .unwrap()
+    //     .div(a.mul(2));
 }
 
 pub fn calculate_undercollateralized_iasset_barrier_from_usdi_barrier(
@@ -254,19 +259,23 @@ pub fn calculate_upper_comet_price_barrier(
         liquidity_token_supply,
         invariant,
     );
+
     let upper_undercollateralized_iasset_barrier =
         calculate_undercollateralized_iasset_barrier_from_usdi_barrier(
             invariant,
             upper_undercollateralized_usdi_barrier,
         );
+
     let upper_undercollateralized_price_barrier =
         upper_undercollateralized_iasset_barrier.div(upper_undercollateralized_usdi_barrier);
+
     let upper_comet_price_barrier = upper_undercollateralized_price_barrier
         .mul(2)
         .div(Value::new(
             3 * u128::pow(10, DEVNET_TOKEN_SCALE.into()),
             DEVNET_TOKEN_SCALE,
         ));
+
     return upper_comet_price_barrier;
 }
 
@@ -356,6 +365,7 @@ pub fn check_mint_collateral_sufficient(
     check_feed_update(asset_info, slot).unwrap();
     if asset_info
         .price
+        .scale_to(collateral_amount.scale as u8)
         .mul(asset_amount_borrowed)
         .mul(collateral_ratio)
         .gte(collateral_amount)

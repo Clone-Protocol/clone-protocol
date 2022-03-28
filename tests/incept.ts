@@ -1,24 +1,35 @@
 import * as anchor from "@project-serum/anchor";
 import { Program, BN } from "@project-serum/anchor";
-import { Incept } from "../target/types/incept";
-import { Pyth } from "../target/types/pyth";
-import { MockUsdc } from "../target/types/mock_usdc";
-import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
+import { Incept } from "../sdk/src/idl/incept";
+import { Pyth } from "../sdk/src/idl/pyth";
+import { MockUsdc } from "../sdk/src/idl/mock_usdc";
+import { TOKEN_PROGRAM_ID, Token, AccountInfo } from "@solana/spl-token";
 import { assert } from "chai";
-import { TokenData, Collateral } from "../sdk/src/incept";
+import {
+  Incept as InceptConnection,
+  TokenData,
+  User,
+  CometPositions,
+  MintPositions,
+  LiquidityPositions,
+  Manager,
+  Pool,
+} from "../sdk/src/incept";
+import { createPriceFeed, setPrice, getFeedData } from "./oracle";
+import { Network } from "../sdk/src/network";
+import { INCEPT_EXCHANGE_SEED } from "./utils";
+import { sleep } from "../sdk/src/utils";
+
+const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
+const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 
 describe("incept", async () => {
   const provider = anchor.Provider.local();
   anchor.setProvider(provider);
-  const connection = provider.connection;
 
   const inceptProgram = anchor.workspace.Incept as Program<Incept>;
   const pythProgram = anchor.workspace.Pyth as Program<Pyth>;
   const mockUSDCProgram = anchor.workspace.MockUsdc as Program<MockUsdc>;
-
-  const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
-  const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
-
   const walletPubkey = inceptProgram.provider.wallet.publicKey;
 
   const mockUSDCMint = anchor.web3.Keypair.generate();
@@ -26,42 +37,18 @@ describe("incept", async () => {
     [Buffer.from("mock_usdc")],
     mockUSDCProgram.programId
   );
-  const mockUSDCVault = anchor.web3.Keypair.generate();
 
-  const managerAccount = await anchor.web3.PublicKey.findProgramAddress(
-    [Buffer.from("manager")],
-    inceptProgram.programId
-  );
-  const tokenDataAccount = anchor.web3.Keypair.generate();
-  const TOKEN_DATA_SIZE = 130608;
-
-  const liquidatedCometUSDITokenAccount = anchor.web3.Keypair.generate();
-  const usdiMint = anchor.web3.Keypair.generate();
-
-  const userAccount = await anchor.web3.PublicKey.findProgramAddress(
-    [Buffer.from("user"), walletPubkey.toBuffer()],
-    inceptProgram.programId
-  );
-  const cometPositionsAccount = anchor.web3.Keypair.generate();
-  const COMET_POSITIONS_SIZE = 55128;
-  const mintPositionsAccount = anchor.web3.Keypair.generate();
-  const MINT_POSITIONS_SIZE = 22488;
-  const liquidityPositionsAccount = anchor.web3.Keypair.generate();
-  const LIQUIDITY_POSITIONS_SIZE = 16368;
-
-  const priceFeed = anchor.web3.Keypair.generate();
-
-  const usdiPoolTokenAccount = anchor.web3.Keypair.generate();
-  const iassetMint = anchor.web3.Keypair.generate();
-  const iAssetPoolTokenAccount = anchor.web3.Keypair.generate();
-  const iAssetLiquidationTokenAccount = anchor.web3.Keypair.generate();
-  const liquidityTokenMintAccount = anchor.web3.Keypair.generate();
-  const cometLiquidityTokenAccount = anchor.web3.Keypair.generate();
-
+  let priceFeed;
   let mockUSDCTokenAccountInfo;
   let usdiTokenAccountInfo;
   let iassetTokenAccountInfo;
   let liquidityTokenAccountInfo;
+
+  // @ts-expect-error
+  let inceptClient = new InceptConnection(
+    inceptProgram.programId,
+    provider
+  ) as InceptConnection;
 
   it("mock usdc initialized!", async () => {
     await mockUSDCProgram.rpc.initialize(mockUSDCAccount[1], {
@@ -78,190 +65,177 @@ describe("incept", async () => {
   });
 
   it("manager initialized!", async () => {
-    await inceptProgram.rpc.initializeManager(managerAccount[1], {
-      accounts: {
-        admin: walletPubkey,
-        manager: managerAccount[0],
-        usdiMint: usdiMint.publicKey,
-        liquidatedCometUsdiTokenAccount:
-          liquidatedCometUSDITokenAccount.publicKey,
-        tokenData: tokenDataAccount.publicKey,
-        rent: RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SYSTEM_PROGRAM_ID,
-      },
-      instructions: [
-        await inceptProgram.account.tokenData.createInstruction(
-          tokenDataAccount,
-          TOKEN_DATA_SIZE
-        ),
-      ],
-      signers: [usdiMint, tokenDataAccount, liquidatedCometUSDITokenAccount],
-    });
+    await inceptClient.initializeManager();
   });
 
   it("user initialized!", async () => {
-    await inceptProgram.rpc.initializeUser(managerAccount[1], userAccount[1], {
-      accounts: {
-        user: walletPubkey,
-        manager: managerAccount[0],
-        userAccount: userAccount[0],
-        cometPositions: cometPositionsAccount.publicKey,
-        mintPositions: mintPositionsAccount.publicKey,
-        liquidityPositions: liquidityPositionsAccount.publicKey,
-        usdiMint: usdiMint.publicKey,
-        rent: RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SYSTEM_PROGRAM_ID,
-      },
-      instructions: [
-        await inceptProgram.account.cometPositions.createInstruction(
-          cometPositionsAccount,
-          COMET_POSITIONS_SIZE
-        ),
-        await inceptProgram.account.mintPositions.createInstruction(
-          mintPositionsAccount,
-          MINT_POSITIONS_SIZE
-        ),
-        await inceptProgram.account.liquidityPositions.createInstruction(
-          liquidityPositionsAccount,
-          LIQUIDITY_POSITIONS_SIZE
-        ),
-      ],
-      signers: [
-        cometPositionsAccount,
-        mintPositionsAccount,
-        liquidityPositionsAccount,
-      ],
-    });
+    await inceptClient.initializeUser();
+
+    let userAccountData = await inceptClient.getUserAccount();
+
+    assert(
+      !userAccountData.authority.equals(anchor.web3.PublicKey.default),
+      "check authority address"
+    );
+    assert(
+      !userAccountData.cometPositions.equals(anchor.web3.PublicKey.default),
+      "check comet position address"
+    );
+    assert(
+      !userAccountData.mintPositions.equals(anchor.web3.PublicKey.default),
+      "check mint position address"
+    );
+    assert(
+      !userAccountData.liquidityPositions.equals(anchor.web3.PublicKey.default),
+      "check liquidity position address"
+    );
+
+    const cometPositions = (await inceptProgram.account.cometPositions.fetch(
+      userAccountData.cometPositions
+    )) as CometPositions;
+
+    assert(
+      !cometPositions.owner.equals(anchor.web3.PublicKey.default),
+      "check comet positions owner"
+    );
+    assert(
+      cometPositions.numPositions.eq(new BN(0)),
+      "check num comet positions"
+    );
+
+    const mintPositions = (await inceptProgram.account.mintPositions.fetch(
+      userAccountData.mintPositions
+    )) as MintPositions;
+
+    assert(
+      !mintPositions.owner.equals(anchor.web3.PublicKey.default),
+      "check mint positions owner"
+    );
+    assert(
+      mintPositions.numPositions.eq(new BN(0)),
+      "check num mint positions"
+    );
+
+    const liquidityPositions =
+      (await inceptProgram.account.liquidityPositions.fetch(
+        userAccountData.liquidityPositions
+      )) as LiquidityPositions;
+
+    assert(
+      !liquidityPositions.owner.equals(anchor.web3.PublicKey.default),
+      "check liquidity positions owner"
+    );
+    assert(
+      liquidityPositions.numPositions.eq(new BN(0)),
+      "check num liquidity positions"
+    );
   });
 
   it("change feed price", async () => {
-    const price = 20;
+    let price = 10;
     const expo = -7;
-
     const conf = new BN((price / 10) * 10 ** -expo);
 
-    await pythProgram.rpc.initialize(new BN(price * 10 ** -expo), expo, conf, {
-      accounts: { price: priceFeed.publicKey },
-      signers: [priceFeed],
-      instructions: [
-        anchor.web3.SystemProgram.createAccount({
-          fromPubkey: inceptProgram.provider.wallet.publicKey,
-          newAccountPubkey: priceFeed.publicKey,
-          space: 3312,
-          lamports: await pythProgram.provider.connection.getMinimumBalanceForRentExemption(
-            3312
-          ),
-          programId: pythProgram.programId,
-        }),
-      ],
-    });
+    priceFeed = await createPriceFeed(pythProgram, price, expo, conf);
+    let currentPrice = (await getFeedData(pythProgram, priceFeed)).aggregate
+      .price;
+    assert.equal(currentPrice, price, "check initial price");
 
-    const priceInfo = await pythProgram.provider.connection.getAccountInfo(
-      priceFeed.publicKey
-    );
-
-    let priceData = priceInfo.data.slice(208, 240);
-
-    const priceComponent = priceData.readBigUInt64LE(0);
-    const onchainPrice = Number(priceComponent) * 10 ** expo;
-
-    console.log("Initial Price " + onchainPrice);
-
-    const newPrice = 5;
-
-    await pythProgram.rpc.setPrice(new BN(newPrice * 10 ** -expo), {
-      accounts: { price: priceFeed.publicKey },
-    });
-
-    const newPriceInfo = await pythProgram.provider.connection.getAccountInfo(
-      priceFeed.publicKey
-    );
-
-    let newPriceData = newPriceInfo.data.slice(208, 240);
-
-    const newPriceComponent = newPriceData.readBigUInt64LE(0);
-    const newOnchainPrice = Number(newPriceComponent) * 10 ** expo;
-
-    console.log("Updated Price " + newOnchainPrice);
+    price = 5;
+    await setPrice(pythProgram, price, priceFeed);
+    let updatedPrice = (await getFeedData(pythProgram, priceFeed)).aggregate
+      .price;
+    assert.equal(updatedPrice, price, "check updated price");
   });
 
   it("mock usdc added as a collateral!", async () => {
-    await inceptProgram.rpc.addCollateral(managerAccount[1], 7, 1, {
-      accounts: {
-        admin: walletPubkey,
-        manager: managerAccount[0],
-        tokenData: tokenDataAccount.publicKey,
-        collateralMint: mockUSDCMint.publicKey,
-        vault: mockUSDCVault.publicKey,
-        usdiMint: usdiMint.publicKey,
-        rent: RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SYSTEM_PROGRAM_ID,
-      },
-      signers: [mockUSDCVault],
-    });
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    const currentTokenData = await connection.getAccountInfo(
-      tokenDataAccount.publicKey
+    await inceptClient.addCollateral(
+      walletPubkey,
+      7,
+      1,
+      mockUSDCMint.publicKey
     );
-    console.log(currentTokenData);
+    await sleep(200);
   });
 
   it("pool initialized!", async () => {
-    await inceptProgram.rpc.initializePool(
-      managerAccount[1],
-      new BN(150),
-      new BN(200),
-      {
-        accounts: {
-          admin: walletPubkey,
-          manager: managerAccount[0],
-          tokenData: tokenDataAccount.publicKey,
-          usdiMint: usdiMint.publicKey,
-          usdiTokenAccount: usdiPoolTokenAccount.publicKey,
-          iassetMint: iassetMint.publicKey,
-          iassetTokenAccount: iAssetPoolTokenAccount.publicKey,
-          liquidationIassetTokenAccount:
-            iAssetLiquidationTokenAccount.publicKey,
-          liquidityTokenMint: liquidityTokenMintAccount.publicKey,
-          cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
-          oracle: priceFeed.publicKey,
-          rent: RENT_PUBKEY,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SYSTEM_PROGRAM_ID,
-        },
-        signers: [
-          usdiPoolTokenAccount,
-          iassetMint,
-          iAssetPoolTokenAccount,
-          liquidityTokenMintAccount,
-          iAssetLiquidationTokenAccount,
-          cometLiquidityTokenAccount,
-        ],
-      }
+    await inceptClient.initializePool(walletPubkey, 150, 200, priceFeed);
+  });
+
+  it("token data initialization check", async () => {
+    const tokenData = (await inceptProgram.account.tokenData.fetch(
+      inceptClient.manager.tokenData
+    )) as TokenData;
+
+    assert(
+      tokenData.manager.equals(inceptClient.managerAddress[0]),
+      "wrong manager!"
     );
+    assert(tokenData.numPools.eq(new BN(1)), "num pools incorrect");
+    assert(tokenData.numCollaterals.eq(new BN(1)), "num collaterals incorrect");
+
+    const first_pool = tokenData.pools[0];
+    assert(
+      !first_pool.iassetTokenAccount.equals(anchor.web3.PublicKey.default),
+      "check iassetTokenAccount"
+    );
+    assert(
+      !first_pool.usdiTokenAccount.equals(anchor.web3.PublicKey.default),
+      "check iassetTokenAccount"
+    );
+    assert(
+      !first_pool.liquidityTokenMint.equals(anchor.web3.PublicKey.default),
+      "check iassetTokenAccount"
+    );
+    assert(
+      !first_pool.liquidationIassetTokenAccount.equals(
+        anchor.web3.PublicKey.default
+      ),
+      "check iassetTokenAccount"
+    );
+    assert(
+      !first_pool.cometLiquidityTokenAccount.equals(
+        anchor.web3.PublicKey.default
+      ),
+      "check iassetTokenAccount"
+    );
+
+    const assetInfo = first_pool.assetInfo;
+
+    var valueToDecimal = function (value): Number {
+      return Number(value.val) * 10 ** -Number(value.scale);
+    };
+
+    assert(assetInfo.priceFeedAddress.equals(priceFeed), "check price feed");
+    assert.equal(
+      valueToDecimal(assetInfo.stableCollateralRatio),
+      1.5,
+      "stable collateral ratio incorrect"
+    );
+    assert.equal(
+      valueToDecimal(assetInfo.cryptoCollateralRatio),
+      2,
+      "crypto collateral ratio incorrect"
+    );
+
+    const first_collateral = tokenData.collaterals[0];
+    assert(
+      !first_collateral.mint.equals(anchor.web3.PublicKey.default),
+      "check mint address"
+    );
+    assert(!first_collateral.vault.equals(anchor.web3.PublicKey.default)),
+      "check vault address";
   });
 
   it("price updated!", async () => {
-    await inceptProgram.rpc.updatePrices(managerAccount[1], {
-      remainingAccounts: [
-        { isSigner: false, isWritable: false, pubkey: priceFeed.publicKey },
-      ],
-      accounts: {
-        manager: managerAccount[0],
-        tokenData: tokenDataAccount.publicKey,
-      },
-    });
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    const tokenData = await inceptProgram.account.tokenData.fetch(
-      tokenDataAccount.publicKey
-    );
+    // @ts-ignore
+    let signers: Array<Signer> = [provider.wallet.payer];
+    await inceptClient.updatePrices(signers);
+    await sleep(200);
   });
 
   const mockUSDC = new Token(
-    connection,
+    inceptClient.connection,
     mockUSDCMint.publicKey,
     TOKEN_PROGRAM_ID,
     // @ts-ignore
@@ -286,47 +260,43 @@ describe("incept", async () => {
     mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
       walletPubkey
     );
-    console.log(
-      "User now has " +
-        Number(mockUSDCTokenAccountInfo.amount / 10000000) +
-        " USDC minted."
+    assert.equal(
+      mockUSDCTokenAccountInfo.amount / 10000000,
+      1000000000000,
+      "check USDC amount"
     );
   });
 
-  const usdi = new Token(
-    connection,
-    usdiMint.publicKey,
-    TOKEN_PROGRAM_ID,
-    // @ts-ignore
-    provider.wallet.payer
-  );
+  let usdi: Token;
 
   it("usdi minted!", async () => {
-    mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
-      walletPubkey
-    );
-    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
-      walletPubkey
+    usdi = new Token(
+      inceptClient.connection,
+      inceptClient.manager.usdiMint,
+      TOKEN_PROGRAM_ID,
+      // @ts-ignore
+      provider.wallet.payer
     );
 
-    await inceptProgram.rpc.mintUsdi(
-      managerAccount[1],
+    usdiTokenAccountInfo = (await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    )) as AccountInfo;
+
+    mockUSDCTokenAccountInfo = (await mockUSDC.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    )) as AccountInfo;
+    // @ts-ignore
+    let signers: Array<Signer> = [provider.wallet.payer];
+
+    await inceptClient.mintUsdi(
       new BN(100000000000000),
-      {
-        accounts: {
-          user: walletPubkey,
-          manager: managerAccount[0],
-          tokenData: tokenDataAccount.publicKey,
-          vault: mockUSDCVault.publicKey,
-          usdiMint: usdiMint.publicKey,
-          userUsdiTokenAccount: usdiTokenAccountInfo.address,
-          userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        },
-      }
+      usdiTokenAccountInfo.address,
+      mockUSDCTokenAccountInfo.address,
+      0,
+      signers
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await sleep(200);
 
     mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
       walletPubkey
@@ -334,378 +304,281 @@ describe("incept", async () => {
     usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
       walletPubkey
     );
-    console.log(
-      "User has just minted " +
-        Number(usdiTokenAccountInfo.amount / 1000000000000) +
-        " USDI."
+
+    assert.equal(
+      usdiTokenAccountInfo.amount / 1000000000000,
+      100,
+      "check iasset token amount"
     );
-    console.log(
-      "User has " +
-        Number(mockUSDCTokenAccountInfo.amount / 10000000) +
-        " USDC remaining."
+    assert.equal(
+      mockUSDCTokenAccountInfo.amount / 10000000,
+      999999000000,
+      "check USDC amount"
     );
-    console.log(
-      "Mock USDC collateral vault now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              mockUSDCVault.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " USDC."
+
+    const tokenData = (await inceptProgram.account.tokenData.fetch(
+      inceptClient.manager.tokenData
+    )) as TokenData;
+
+    const vault = await inceptClient.connection.getTokenAccountBalance(
+      tokenData.collaterals[0].vault,
+      "confirmed"
     );
+    assert.equal(vault.value!.uiAmount, 1000000, "check usdc vault amount");
   });
 
-  const iasset = new Token(
-    connection,
-    iassetMint.publicKey,
-    TOKEN_PROGRAM_ID,
-    // @ts-ignore
-    provider.wallet.payer
-  );
+  let iasset;
 
   it("iasset minted!", async () => {
-    mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
-      walletPubkey
-    );
-    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-      walletPubkey
+    const tokenData = (await inceptProgram.account.tokenData.fetch(
+      inceptClient.manager.tokenData
+    )) as TokenData;
+    const pool = tokenData.pools[0];
+
+    iasset = new Token(
+      inceptClient.connection,
+      pool.assetInfo.iassetMint,
+      TOKEN_PROGRAM_ID,
+      // @ts-ignore
+      provider.wallet.payer
     );
 
-    let priceUpdateIx = inceptProgram.instruction.updatePrices(
-      managerAccount[1],
-      {
-        remainingAccounts: [
-          { isSigner: false, isWritable: false, pubkey: priceFeed.publicKey },
-        ],
-        accounts: {
-          manager: managerAccount[0],
-          tokenData: tokenDataAccount.publicKey,
-        },
-      }
-    );
+    mockUSDCTokenAccountInfo = (await mockUSDC.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    )) as AccountInfo;
+    iassetTokenAccountInfo = (await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    )) as AccountInfo;
 
-    let initializeMintPositionIx = inceptProgram.instruction.initializeMintPosition(
-      managerAccount[1],
-      userAccount[1],
+    // @ts-ignore
+    let signers: Array<Signer> = [provider.wallet.payer];
+
+    await inceptClient.initializeMintPositions(
       new BN(20000000000000),
       new BN(200000000000000),
-      {
-        accounts: {
-          user: walletPubkey,
-          manager: managerAccount[0],
-          tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
-          mintPositions: mintPositionsAccount.publicKey,
-          vault: mockUSDCVault.publicKey,
-          userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
-          iassetMint: iassetMint.publicKey,
-          userIassetTokenAccount: iassetTokenAccountInfo.address,
-          oracle: priceFeed.publicKey,
-          rent: RENT_PUBKEY,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SYSTEM_PROGRAM_ID,
-        },
-      }
+      mockUSDCTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      0,
+      0,
+      signers
     );
-    let tx = new anchor.web3.Transaction()
-      .add(priceUpdateIx)
-      .add(initializeMintPositionIx);
-    let signers = [provider.wallet.payer];
-    tx.setSigners(...signers.map((s) => s.publicKey));
-    tx.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
-    tx.feePayer = walletPubkey;
-    tx.partialSign(...signers);
-    let signedTransaction = await connection.sendRawTransaction(tx.serialize());
-    await connection.confirmTransaction(signedTransaction);
 
-    mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
+    await sleep(200);
+
+    mockUSDCTokenAccountInfo = (await mockUSDC.getOrCreateAssociatedAccountInfo(
       walletPubkey
-    );
-    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+    )) as AccountInfo;
+    iassetTokenAccountInfo = (await iasset.getOrCreateAssociatedAccountInfo(
       walletPubkey
+    )) as AccountInfo;
+
+    assert.equal(
+      iassetTokenAccountInfo.amount / 1000000000000,
+      20,
+      "check iasset token amount"
     );
-    console.log(
-      "User now has " +
-        Number(iassetTokenAccountInfo.amount / 1000000000000) +
-        " iAsset."
+    assert.equal(
+      mockUSDCTokenAccountInfo.amount / 10000000,
+      999979000000,
+      "check USDC amount"
     );
-    console.log(
-      "User has " +
-        Number(mockUSDCTokenAccountInfo.amount / 10000000) +
-        " USDC remaining."
+
+    const vault = await inceptClient.connection.getTokenAccountBalance(
+      tokenData.collaterals[0].vault,
+      "confirmed"
     );
-    console.log(
-      "Mock USDC collateral vault now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              mockUSDCVault.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " USDC locked."
-    );
+    assert.equal(vault.value!.uiAmount, 21000000, "check usdc vault amount");
   });
 
   it("mint collateral added!", async () => {
-    mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
-      walletPubkey
-    );
+    // @ts-ignore
+    let signers: Array<Signer> = [provider.wallet.payer];
 
-    await inceptProgram.rpc.addCollateralToMint(
-      managerAccount[1],
-      userAccount[1],
-      new BN(0),
+    mockUSDCTokenAccountInfo = (await mockUSDC.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    )) as AccountInfo;
+
+    await inceptClient.addCollateralToMint(
+      mockUSDCTokenAccountInfo.address,
       new BN(1000000000),
-      {
-        accounts: {
-          user: walletPubkey,
-          manager: managerAccount[0],
-          tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
-          mintPositions: mintPositionsAccount.publicKey,
-          vault: mockUSDCVault.publicKey,
-          userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        },
-      }
+      0,
+      signers
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await sleep(200);
 
-    mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
+    mockUSDCTokenAccountInfo = (await mockUSDC.getOrCreateAssociatedAccountInfo(
       walletPubkey
+    )) as AccountInfo;
+    iassetTokenAccountInfo = (await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    )) as AccountInfo;
+
+    assert.equal(
+      iassetTokenAccountInfo.amount / 1000000000000,
+      20,
+      "check iasset token amount"
+    );
+    assert.equal(
+      mockUSDCTokenAccountInfo.amount / 10000000,
+      999978999900,
+      "check USDC amount"
     );
 
-    console.log(
-      "User has " +
-        Number(mockUSDCTokenAccountInfo.amount / 10000000) +
-        " USDC remaining."
+    const tokenData = (await inceptProgram.account.tokenData.fetch(
+      inceptClient.manager.tokenData
+    )) as TokenData;
+
+    const vault = await inceptClient.connection.getTokenAccountBalance(
+      tokenData.collaterals[0].vault,
+      "confirmed"
     );
-    console.log(
-      "Mock USDC collateral vault now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              mockUSDCVault.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " USDC locked."
-    );
+    assert.equal(vault.value!.uiAmount, 21000100, "check usdc vault amount");
   });
 
   it("mint collateral removed!", async () => {
+    // @ts-ignore
+    let signers: Array<Signer> = [provider.wallet.payer];
+
     mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
       walletPubkey
     );
 
-    let priceUpdateIx = inceptProgram.instruction.updatePrices(
-      managerAccount[1],
-      {
-        remainingAccounts: [
-          { isSigner: false, isWritable: false, pubkey: priceFeed.publicKey },
-        ],
-        accounts: {
-          manager: managerAccount[0],
-          tokenData: tokenDataAccount.publicKey,
-        },
-      }
+    await inceptClient.withdrawCollateralFromMint(
+      mockUSDCTokenAccountInfo.address,
+      new BN(1000000000),
+      0,
+      signers
     );
 
-    let removeCollateralFromMintIx = inceptProgram.instruction.withdrawCollateralFromMint(
-      managerAccount[1],
-      userAccount[1],
+    await sleep(200);
+
+    mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = (await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    )) as AccountInfo;
+
+    assert.equal(
+      iassetTokenAccountInfo.amount / 1000000000000,
+      20,
+      "check iasset token amount"
+    );
+    assert.equal(
+      mockUSDCTokenAccountInfo.amount / 10000000,
+      999979000000,
+      "check USDC amount"
+    );
+
+    const tokenData = (await inceptProgram.account.tokenData.fetch(
+      inceptClient.manager.tokenData
+    )) as TokenData;
+
+    const vault = await inceptClient.connection.getTokenAccountBalance(
+      tokenData.collaterals[0].vault,
+      "confirmed"
+    );
+    assert.equal(vault.value!.uiAmount, 21000000, "check usdc vault amount");
+  });
+
+  it("iasset burned!", async () => {
+    mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+
+    let userAccountData = await inceptClient.getUserAccount();
+    let { userPubkey, bump } = await inceptClient.getUserAddress();
+    let assetInfo = await inceptClient.getAssetInfo(0);
+
+    await inceptProgram.rpc.payBackMint(
+      inceptClient.managerAddress[1],
+      bump,
       new BN(0),
-      new BN(1000000000),
+      new BN(5000000),
       {
         accounts: {
           user: walletPubkey,
-          manager: managerAccount[0],
-          tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
-          mintPositions: mintPositionsAccount.publicKey,
-          vault: mockUSDCVault.publicKey,
-          userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
+          manager: inceptClient.managerAddress[0],
+          tokenData: inceptClient.manager.tokenData,
+          userIassetTokenAccount: iassetTokenAccountInfo.address,
+          mintPositions: userAccountData.mintPositions,
+          iassetMint: assetInfo.iassetMint,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
     );
-    let tx = new anchor.web3.Transaction()
-      .add(priceUpdateIx)
-      .add(removeCollateralFromMintIx);
-    let signers = [provider.wallet.payer];
-    tx.setSigners(...signers.map((s) => s.publicKey));
-    tx.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
-    tx.feePayer = walletPubkey;
-    tx.partialSign(...signers);
-    let signedTransaction = await connection.sendRawTransaction(tx.serialize());
-    await connection.confirmTransaction(signedTransaction);
 
-    mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
       walletPubkey
     );
 
-    console.log(
-      "User has " +
-        Number(mockUSDCTokenAccountInfo.amount / 10000000) +
-        " USDC remaining."
-    );
-    console.log(
-      "Mock USDC collateral vault now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              mockUSDCVault.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " USDC locked."
+    assert.equal(
+      Number(iassetTokenAccountInfo.amount / 1000000000000),
+      19.999995,
+      "check user iasset balance."
     );
   });
 
-  // it("iasset burned!", async () => {
-  //   mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
+  it("iasset reminted!", async () => {
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
 
-  //   await inceptProgram.rpc.payBackMint(
-  //     managerAccount[1],
-  //     userAccount[1],
-  //     new BN(0),
-  //     new BN(5000000),
-  //     {
-  //       accounts: {
-  //         user: walletPubkey,
-  //         manager: managerAccount[0],
-  //         tokenData: tokenDataAccount.publicKey,
-  //         userAccount: userAccount[0],
-  //         userIassetTokenAccount: iassetTokenAccountInfo.address,
-  //         mintPositions: mintPositionsAccount.publicKey,
-  //         iassetMint: iassetMint.publicKey,
-  //         tokenProgram: TOKEN_PROGRAM_ID,
-  //       },
-  //     }
-  //   );
+    await inceptClient.addiAssetToMint(
+      new BN(5000000),
+      iassetTokenAccountInfo.address,
+      0,
+      0
+    );
 
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
 
-  //   console.log(
-  //     "User now has " +
-  //       Number(iassetTokenAccountInfo.amount / 1000000000000) +
-  //       " iAsset."
-  //   );
-  // });
+    assert.equal(
+      Number(iassetTokenAccountInfo.amount / 1000000000000),
+      20,
+      "check user iasset balance"
+    );
+  });
 
-  // it("iasset reminted!", async () => {
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-
-  //   let priceUpdateIx = inceptProgram.instruction.updatePrices(
-  //     managerAccount[1],
-  //     {
-  //       remainingAccounts: [
-  //         { isSigner: false, isWritable: false, pubkey: priceFeed.publicKey },
-  //       ],
-  //       accounts: {
-  //         manager: managerAccount[0],
-  //         tokenData: tokenDataAccount.publicKey,
-  //       },
-  //     }
-  //   );
-
-  //   let addIassetToMintIx = inceptProgram.instruction.addIassetToMint(
-  //     managerAccount[1],
-  //     userAccount[1],
-  //     new BN(0),
-  //     new BN(5000000),
-  //     {
-  //       accounts: {
-  //         user: walletPubkey,
-  //         manager: managerAccount[0],
-  //         tokenData: tokenDataAccount.publicKey,
-  //         userAccount: userAccount[0],
-  //         userIassetTokenAccount: iassetTokenAccountInfo.address,
-  //         mintPositions: mintPositionsAccount.publicKey,
-  //         iassetMint: iassetMint.publicKey,
-  //         tokenProgram: TOKEN_PROGRAM_ID,
-  //       },
-  //     }
-  //   );
-  //   let tx = new anchor.web3.Transaction()
-  //     .add(priceUpdateIx)
-  //     .add(addIassetToMintIx);
-  //   let signers = [provider.wallet.payer];
-  //   tx.setSigners(...signers.map((s) => s.publicKey));
-  //   tx.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
-  //   tx.feePayer = walletPubkey;
-  //   tx.partialSign(...signers);
-  //   let signedTransaction = await connection.sendRawTransaction(tx.serialize());
-  //   await connection.confirmTransaction(signedTransaction);
-
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   console.log(
-  //     "User now has " +
-  //       Number(iassetTokenAccountInfo.amount / 1000000000000) +
-  //       " iAsset."
-  //   );
-  // });
-
-  const liquidityToken = new Token(
-    connection,
-    liquidityTokenMintAccount.publicKey,
-    TOKEN_PROGRAM_ID,
-    // @ts-ignore
-    provider.wallet.payer
-  );
+  let liquidityToken;
 
   it("liquidity position initialized!", async () => {
+    const tokenData = await inceptClient.getTokenData();
+
+    const firstPool = tokenData.pools[0];
+
+    liquidityToken = new Token(
+      inceptClient.connection,
+      firstPool.liquidityTokenMint,
+      TOKEN_PROGRAM_ID,
+      // @ts-ignore
+      provider.wallet.payer
+    );
+
     usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
       walletPubkey
     );
     iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
       walletPubkey
     );
-    liquidityTokenAccountInfo = await liquidityToken.getOrCreateAssociatedAccountInfo(
-      walletPubkey
-    );
+    liquidityTokenAccountInfo =
+      await liquidityToken.getOrCreateAssociatedAccountInfo(walletPubkey);
 
-    await inceptProgram.rpc.initializeLiquidityPosition(
-      managerAccount[1],
-      new BN(0),
+    await inceptClient.initializeLiquidityPosition(
       new BN(10000000000000),
-      {
-        accounts: {
-          user: walletPubkey,
-          manager: managerAccount[0],
-          tokenData: tokenDataAccount.publicKey,
-          liquidityPositions: liquidityPositionsAccount.publicKey,
-          userUsdiTokenAccount: usdiTokenAccountInfo.address,
-          userIassetTokenAccount: iassetTokenAccountInfo.address,
-          userLiquidityTokenAccount: liquidityTokenAccountInfo.address,
-          ammUsdiTokenAccount: usdiPoolTokenAccount.publicKey,
-          ammIassetTokenAccount: iAssetPoolTokenAccount.publicKey,
-          liquidityTokenMint: liquidityTokenMintAccount.publicKey,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        },
-      }
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      liquidityTokenAccountInfo.address,
+      0
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await sleep(200);
 
     usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
       walletPubkey
@@ -713,444 +586,380 @@ describe("incept", async () => {
     iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
       walletPubkey
     );
-    liquidityTokenAccountInfo = await liquidityToken.getOrCreateAssociatedAccountInfo(
-      walletPubkey
+    liquidityTokenAccountInfo =
+      await liquidityToken.getOrCreateAssociatedAccountInfo(walletPubkey);
+
+    assert.equal(usdiTokenAccountInfo.amount / 1000000000000, 50, "check usdi");
+    assert.equal(
+      iassetTokenAccountInfo.amount / 1000000000000,
+      10,
+      "check iasset"
+    );
+    assert.equal(
+      liquidityTokenAccountInfo.amount / 1000000000000,
+      500,
+      "check liquidity tokens"
     );
 
-    console.log(
-      "User now has " +
-        Number(usdiTokenAccountInfo.amount / 1000000000000) +
-        " USDI."
+    const usdiAccountBalance =
+      await inceptClient.connection.getTokenAccountBalance(
+        firstPool.usdiTokenAccount,
+        "confirmed"
+      );
+    assert.equal(
+      usdiAccountBalance.value!.uiAmount,
+      500000,
+      "check usdi account balance"
     );
-    console.log(
-      "User now has " +
-        Number(iassetTokenAccountInfo.amount / 1000000000000) +
-        " iAsset."
-    );
-    console.log(
-      "User now has " +
-        Number(liquidityTokenAccountInfo.amount / 1000000000000) +
-        " liquidity tokens."
-    );
-    console.log(
-      "Market 0 now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              usdiPoolTokenAccount.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " USDI."
-    );
-    console.log(
-      "Market 0 now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              iAssetPoolTokenAccount.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " iAsset."
+
+    const iassetAccountBalance =
+      await inceptClient.connection.getTokenAccountBalance(
+        firstPool.iassetTokenAccount,
+        "confirmed"
+      );
+    assert.equal(
+      iassetAccountBalance.value!.uiAmount,
+      100000,
+      "check iasset account balance"
     );
   });
 
-  // it("liquidity provided!", async () => {
-  //   usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   liquidityTokenAccountInfo = await liquidityToken.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
+  it("liquidity provided!", async () => {
+    const tokenData = await inceptClient.getTokenData();
+    const poolIndex = 0;
+    let pool = tokenData.pools[poolIndex];
 
-  //   await inceptProgram.rpc.provideLiquidity(
-  //     managerAccount[1],
-  //     new BN(0),
-  //     new BN(100000000),
-  //     {
-  //       accounts: {
-  //         user: walletPubkey,
-  //         manager: managerAccount[0],
-  //         tokenData: tokenDataAccount.publicKey,
-  //         liquidityPositions: liquidityPositionsAccount.publicKey,
-  //         userUsdiTokenAccount: usdiTokenAccountInfo.address,
-  //         userIassetTokenAccount: iassetTokenAccountInfo.address,
-  //         userLiquidityTokenAccount: liquidityTokenAccountInfo.address,
-  //         ammUsdiTokenAccount: usdiPoolTokenAccount.publicKey,
-  //         ammIassetTokenAccount: iAssetPoolTokenAccount.publicKey,
-  //         liquidityTokenMint: liquidityTokenMintAccount.publicKey,
-  //         tokenProgram: TOKEN_PROGRAM_ID,
-  //       },
-  //     }
-  //   );
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    liquidityTokenAccountInfo =
+      await liquidityToken.getOrCreateAssociatedAccountInfo(walletPubkey);
 
-  //   await new Promise((resolve) => setTimeout(resolve, 200));
+    await inceptClient.provideLiquidity(
+      new BN(100000000),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      liquidityTokenAccountInfo.address,
+      poolIndex
+    );
 
-  //   usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   liquidityTokenAccountInfo = await liquidityToken.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
+    await sleep(200);
 
-  //   console.log(
-  //     "User now has " +
-  //       Number(usdiTokenAccountInfo.amount / 1000000000000) +
-  //       " USDI."
-  //   );
-  //   console.log(
-  //     "User now has " +
-  //       Number(iassetTokenAccountInfo.amount / 1000000000000) +
-  //       " iAsset."
-  //   );
-  //   console.log(
-  //     "User now has " +
-  //       Number(liquidityTokenAccountInfo.amount / 1000000000000) +
-  //       " liquidity tokens."
-  //   );
-  //   console.log(
-  //     "Market 0 now has " +
-  //       Number(
-  //         (
-  //           await connection.getTokenAccountBalance(
-  //             usdiPoolTokenAccount.publicKey,
-  //             "confirmed"
-  //           )
-  //         ).value!.uiAmount
-  //       ) +
-  //       " USDI."
-  //   );
-  //   console.log(
-  //     "Market 0 now has " +
-  //       Number(
-  //         (
-  //           await connection.getTokenAccountBalance(
-  //             iAssetPoolTokenAccount.publicKey,
-  //             "confirmed"
-  //           )
-  //         ).value!.uiAmount
-  //       ) +
-  //       " iAsset."
-  //   );
-  // });
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    liquidityTokenAccountInfo =
+      await liquidityToken.getOrCreateAssociatedAccountInfo(walletPubkey);
 
-  // it("liquidity withdrawn!", async () => {
-  //   usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   liquidityTokenAccountInfo = await liquidityToken.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
+    assert.equal(
+      Number(usdiTokenAccountInfo.amount / 1000000000000),
+      49.9995,
+      "check user usdi balance"
+    );
+    assert.equal(
+      Number(iassetTokenAccountInfo.amount / 1000000000000),
+      9.9999,
+      "check user iAsset balance"
+    );
+    assert.equal(
+      Number(liquidityTokenAccountInfo.amount / 1000000000000),
+      500.004995,
+      "check liquidity token balance"
+    );
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            pool.usdiTokenAccount,
+            "recent"
+          )
+        ).value!.uiAmount
+      ),
+      500005,
+      "check USDi pool balance"
+    );
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            pool.iassetTokenAccount,
+            "recent"
+          )
+        ).value!.uiAmount
+      ),
+      100001,
+      "check iAsset pool balance"
+    );
+  });
 
-  //   await inceptProgram.rpc.withdrawLiquidity(
-  //     managerAccount[1],
-  //     new BN(0),
-  //     new BN(45453545454500),
-  //     {
-  //       accounts: {
-  //         user: walletPubkey,
-  //         manager: managerAccount[0],
-  //         tokenData: tokenDataAccount.publicKey,
-  //         liquidityPositions: liquidityPositionsAccount.publicKey,
-  //         userUsdiTokenAccount: usdiTokenAccountInfo.address,
-  //         userIassetTokenAccount: iassetTokenAccountInfo.address,
-  //         userLiquidityTokenAccount: liquidityTokenAccountInfo.address,
-  //         ammUsdiTokenAccount: usdiPoolTokenAccount.publicKey,
-  //         ammIassetTokenAccount: iAssetPoolTokenAccount.publicKey,
-  //         liquidityTokenMint: liquidityTokenMintAccount.publicKey,
-  //         tokenProgram: TOKEN_PROGRAM_ID,
-  //       },
-  //     }
-  //   );
+  it("liquidity withdrawn!", async () => {
+    const tokenData = await inceptClient.getTokenData();
+    const poolIndex = 0;
+    const pool = tokenData.pools[poolIndex];
 
-  //   await new Promise((resolve) => setTimeout(resolve, 200));
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    liquidityTokenAccountInfo =
+      await liquidityToken.getOrCreateAssociatedAccountInfo(walletPubkey);
 
-  //   usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   liquidityTokenAccountInfo = await liquidityToken.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
+    await inceptClient.withdrawLiquidity(
+      new BN(45453545454500),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      liquidityTokenAccountInfo.address,
+      poolIndex
+    );
 
-  //   console.log(
-  //     "User now has " +
-  //       Number(usdiTokenAccountInfo.amount / 1000000000000) +
-  //       " USDI."
-  //   );
-  //   console.log(
-  //     "User now has " +
-  //       Number(iassetTokenAccountInfo.amount / 1000000000000) +
-  //       " iAsset."
-  //   );
-  //   console.log(
-  //     "User now has " +
-  //       Number(liquidityTokenAccountInfo.amount / 1000000000000) +
-  //       " liquidity tokens."
-  //   );
-  //   console.log(
-  //     "Market 0 now has " +
-  //       Number(
-  //         (
-  //           await connection.getTokenAccountBalance(
-  //             usdiPoolTokenAccount.publicKey,
-  //             "confirmed"
-  //           )
-  //         ).value!.uiAmount
-  //       ) +
-  //       " USDI."
-  //   );
-  //   console.log(
-  //     "Market 0 now has " +
-  //       Number(
-  //         (
-  //           await connection.getTokenAccountBalance(
-  //             iAssetPoolTokenAccount.publicKey,
-  //             "confirmed"
-  //           )
-  //         ).value!.uiAmount
-  //       ) +
-  //       " iAsset."
-  //   );
-  // });
+    await sleep(200);
 
-  // it("iasset bought!", async () => {
-  //   usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    liquidityTokenAccountInfo =
+      await liquidityToken.getOrCreateAssociatedAccountInfo(walletPubkey);
 
-  //   await inceptProgram.rpc.buySynth(
-  //     managerAccount[1],
-  //     new BN(0),
-  //     new BN(50000000),
-  //     {
-  //       accounts: {
-  //         user: walletPubkey,
-  //         manager: managerAccount[0],
-  //         tokenData: tokenDataAccount.publicKey,
-  //         userUsdiTokenAccount: usdiTokenAccountInfo.address,
-  //         userIassetTokenAccount: iassetTokenAccountInfo.address,
-  //         ammUsdiTokenAccount: usdiPoolTokenAccount.publicKey,
-  //         ammIassetTokenAccount: iAssetPoolTokenAccount.publicKey,
-  //         tokenProgram: TOKEN_PROGRAM_ID,
-  //       },
-  //     }
-  //   );
+    assert.equal(
+      Number(usdiTokenAccountInfo.amount / 1000000000000),
+      54.54485445309,
+      "check user usdi balance"
+    );
+    assert.equal(
+      Number(iassetTokenAccountInfo.amount / 1000000000000),
+      10.908970890618,
+      "check user iAsset balance"
+    );
+    assert.equal(
+      Number(liquidityTokenAccountInfo.amount / 1000000000000),
+      454.5514495455,
+      "check user liquidity token balance"
+    );
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            pool.usdiTokenAccount,
+            "recent"
+          )
+        ).value!.uiAmount
+      ),
+      454551.4554691,
+      "check pool usdi balance."
+    );
 
-  //   await new Promise((resolve) => setTimeout(resolve, 200));
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            pool.iassetTokenAccount,
+            "recent"
+          )
+        ).value!.uiAmount
+      ),
+      90910.29109382,
+      "check pool iAsset balance."
+    );
+  });
 
-  //   usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
+  it("iasset bought!", async () => {
+    const tokenData = await inceptClient.getTokenData();
+    const poolIndex = 0;
+    const pool = tokenData.pools[poolIndex];
 
-  //   console.log(
-  //     "User now has " +
-  //       Number(usdiTokenAccountInfo.amount / 1000000000000) +
-  //       " USDI."
-  //   );
-  //   console.log(
-  //     "User now has " +
-  //       Number(iassetTokenAccountInfo.amount / 1000000000000) +
-  //       " iAsset."
-  //   );
-  //   console.log(
-  //     "Market 0 now has " +
-  //       Number(
-  //         (
-  //           await connection.getTokenAccountBalance(
-  //             usdiPoolTokenAccount.publicKey,
-  //             "confirmed"
-  //           )
-  //         ).value!.uiAmount
-  //       ) +
-  //       " USDI."
-  //   );
-  //   console.log(
-  //     "Market 0 now has " +
-  //       Number(
-  //         (
-  //           await connection.getTokenAccountBalance(
-  //             iAssetPoolTokenAccount.publicKey,
-  //             "confirmed"
-  //           )
-  //         ).value!.uiAmount
-  //       ) +
-  //       " iAsset."
-  //   );
-  // });
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
 
-  // it("iasset sold!", async () => {
-  //   usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
+    await inceptClient.buySynth(
+      new BN(1000000000000),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      poolIndex
+    );
 
-  //   await inceptProgram.rpc.sellSynth(
-  //     managerAccount[1],
-  //     new BN(0),
-  //     new BN(50000000),
-  //     {
-  //       accounts: {
-  //         user: walletPubkey,
-  //         manager: managerAccount[0],
-  //         tokenData: tokenDataAccount.publicKey,
-  //         userUsdiTokenAccount: usdiTokenAccountInfo.address,
-  //         userIassetTokenAccount: iassetTokenAccountInfo.address,
-  //         ammUsdiTokenAccount: usdiPoolTokenAccount.publicKey,
-  //         ammIassetTokenAccount: iAssetPoolTokenAccount.publicKey,
-  //         tokenProgram: TOKEN_PROGRAM_ID,
-  //       },
-  //     }
-  //   );
+    await sleep(200);
 
-  //   await new Promise((resolve) => setTimeout(resolve, 200));
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
 
-  //   usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
+    assert.equal(
+      Number(usdiTokenAccountInfo.amount / 1000000000000),
+      48.926886091785,
+      "check user usdi balance"
+    );
+    assert.equal(
+      Number(iassetTokenAccountInfo.amount / 1000000000000),
+      11.908970890618,
+      "check user iAsset balance"
+    );
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            pool.usdiTokenAccount,
+            "confirmed"
+          )
+        ).value!.uiAmount
+      ),
+      510731.13908215,
+      "check pool usdi balance"
+    );
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            pool.iassetTokenAccount,
+            "confirmed"
+          )
+        ).value!.uiAmount
+      ),
+      80910.29109382,
+      "check pool iAsset balance"
+    );
+  });
 
-  //   console.log(
-  //     "User now has " +
-  //       Number(usdiTokenAccountInfo.amount / 1000000000000) +
-  //       " USDI."
-  //   );
-  //   console.log(
-  //     "User now has " +
-  //       Number(iassetTokenAccountInfo.amount / 1000000000000) +
-  //       " iAsset."
-  //   );
-  //   console.log(
-  //     "Market 0 now has " +
-  //       Number(
-  //         (
-  //           await connection.getTokenAccountBalance(
-  //             usdiPoolTokenAccount.publicKey,
-  //             "confirmed"
-  //           )
-  //         ).value!.uiAmount
-  //       ) +
-  //       " USDI."
-  //   );
-  //   console.log(
-  //     "Market 0 now has " +
-  //       Number(
-  //         (
-  //           await connection.getTokenAccountBalance(
-  //             iAssetPoolTokenAccount.publicKey,
-  //             "confirmed"
-  //           )
-  //         ).value!.uiAmount
-  //       ) +
-  //       " iAsset."
-  //   );
-  // });
+  it("iasset sold!", async () => {
+    const tokenData = await inceptClient.getTokenData();
+    const poolIndex = 0;
+    const pool = tokenData.pools[poolIndex];
+
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+
+    await inceptClient.sellSynth(
+      new BN(1000000000000),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      poolIndex
+    );
+
+    await sleep(200);
+
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+
+    assert.equal(
+      Number(usdiTokenAccountInfo.amount / 1000000000000),
+      54.544854453091,
+      "check user usdi balance"
+    );
+    assert.equal(
+      Number(iassetTokenAccountInfo.amount / 1000000000000),
+      10.908970890618,
+      "check user iAsset balance"
+    );
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            pool.usdiTokenAccount,
+            "confirmed"
+          )
+        ).value!.uiAmount
+      ),
+      454551.45546909,
+      "check pool usdi balance"
+    );
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            pool.iassetTokenAccount,
+            "confirmed"
+          )
+        ).value!.uiAmount
+      ),
+      90910.29109382,
+      "check pool iAsset balance"
+    );
+  });
 
   it("comet initialized!", async () => {
     mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
       walletPubkey
     );
 
-    await inceptProgram.rpc.initializeComet(
-      managerAccount[1],
-      userAccount[1],
-      new BN(0),
-      new BN(25000000),
-      new BN(5000000000000),
-      {
-        accounts: {
-          user: walletPubkey,
-          manager: managerAccount[0],
-          tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
-          usdiMint: usdiMint.publicKey,
-          iassetMint: iassetMint.publicKey,
-          usdcMint: mockUSDCMint.publicKey,
-          userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
-          cometPositions: cometPositionsAccount.publicKey,
-          ammUsdiTokenAccount: usdiPoolTokenAccount.publicKey,
-          ammIassetTokenAccount: iAssetPoolTokenAccount.publicKey,
-          liquidityTokenMint: liquidityTokenMintAccount.publicKey,
-          cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
-          vault: mockUSDCVault.publicKey,
-          rent: RENT_PUBKEY,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SYSTEM_PROGRAM_ID,
-        },
-      }
+    await inceptClient.initializeComet(
+      mockUSDCTokenAccountInfo.address,
+      new BN(2500000000),
+      new BN(50000000000),
+      0,
+      0
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await sleep(200);
+
+    const tokenData = await inceptClient.getTokenData();
+    const firstPool = tokenData.pools[0];
+    const firstCollateral = tokenData.collaterals[0];
 
     mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
       walletPubkey
     );
 
-    console.log(
-      "User now has " +
-        Number(mockUSDCTokenAccountInfo.amount / 10000000) +
-        " USDC."
+    assert.equal(
+      mockUSDCTokenAccountInfo.amount / 10000000,
+      999978999750,
+      "check user USDI"
     );
-    console.log(
-      "Market 0 now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              usdiPoolTokenAccount.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " USDI."
+
+    const usdiAccountBalance =
+      await inceptClient.connection.getTokenAccountBalance(
+        firstPool.usdiTokenAccount,
+        "confirmed"
+      );
+
+    assert.equal(
+      usdiAccountBalance.value!.uiAmount,
+      455051.45546909,
+      "check usdi pool balance"
     );
-    console.log(
-      "Market 0 now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              iAssetPoolTokenAccount.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " iAsset."
+
+    const iassetTokenBalance =
+      await inceptClient.connection.getTokenAccountBalance(
+        firstPool.iassetTokenAccount,
+        "confirmed"
+      );
+
+    assert.equal(
+      iassetTokenBalance.value!.uiAmount,
+      91010.29109402,
+      "check iasset pool balance"
     );
-    console.log(
-      "Mock USDC vault now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              mockUSDCVault.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " USDC locked."
+
+    const vault = await inceptClient.connection.getTokenAccountBalance(
+      firstCollateral.vault,
+      "confirmed"
     );
+
+    assert.equal(vault.value!.uiAmount, 21000250, "check vault balance");
   });
 
   it("comet collateral added!", async () => {
@@ -1158,56 +967,57 @@ describe("incept", async () => {
       walletPubkey
     );
 
-    await inceptProgram.rpc.addCollateralToComet(
-      managerAccount[1],
-      userAccount[1],
-      new BN(0),
-      new BN(5000000),
-      {
-        accounts: {
-          user: walletPubkey,
-          manager: managerAccount[0],
-          tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
-          cometPositions: cometPositionsAccount.publicKey,
-          vault: mockUSDCVault.publicKey,
-          userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
-          ammUsdiTokenAccount: usdiPoolTokenAccount.publicKey,
-          ammIassetTokenAccount: iAssetPoolTokenAccount.publicKey,
-          liquidityTokenMint: liquidityTokenMintAccount.publicKey,
-          cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        },
-      }
+    await inceptClient.addCollateralToComet(
+      mockUSDCTokenAccountInfo.address,
+      new BN(50000000),
+      0
     );
+
+    await sleep(200);
+
+    const tokenData = await inceptClient.getTokenData();
+    const firstPool = tokenData.pools[0];
+    const firstCollateral = tokenData.collaterals[0];
 
     mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
       walletPubkey
     );
-
-    await new Promise((resolve) => setTimeout(resolve, 200));
-
-    mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
-      walletPubkey
+    assert.equal(
+      mockUSDCTokenAccountInfo.amount / 10000000,
+      999978999745,
+      "check user USDI"
     );
 
-    console.log(
-      "User now has " +
-        Number(mockUSDCTokenAccountInfo.amount / 10000000) +
-        " USDC."
+    const usdiAccountBalance =
+      await inceptClient.connection.getTokenAccountBalance(
+        firstPool.usdiTokenAccount,
+        "recent"
+      );
+
+    assert.equal(
+      usdiAccountBalance.value!.uiAmount,
+      455051.45546909,
+      "check usdi pool balance"
     );
-    console.log(
-      "Mock USDC vault now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              mockUSDCVault.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " USDC locked."
+
+    const iassetTokenBalance =
+      await inceptClient.connection.getTokenAccountBalance(
+        firstPool.iassetTokenAccount,
+        "recent"
+      );
+
+    assert.equal(
+      iassetTokenBalance.value!.uiAmount,
+      91010.29109402,
+      "check iasset pool balance"
     );
+
+    const vault = await inceptClient.connection.getTokenAccountBalance(
+      firstCollateral.vault,
+      "recent"
+    );
+
+    assert.equal(vault.value!.uiAmount, 21000255, "check vault balance");
   });
 
   it("comet collateral withdrawn!", async () => {
@@ -1215,224 +1025,121 @@ describe("incept", async () => {
       walletPubkey
     );
 
-    await inceptProgram.rpc.withdrawCollateralFromComet(
-      managerAccount[1],
-      userAccount[1],
-      new BN(0),
-      new BN(5000000),
-      {
-        accounts: {
-          user: walletPubkey,
-          manager: managerAccount[0],
-          tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
-          cometPositions: cometPositionsAccount.publicKey,
-          vault: mockUSDCVault.publicKey,
-          userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
-          ammUsdiTokenAccount: usdiPoolTokenAccount.publicKey,
-          ammIassetTokenAccount: iAssetPoolTokenAccount.publicKey,
-          liquidityTokenMint: liquidityTokenMintAccount.publicKey,
-          cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        },
-      }
+    await inceptClient.withdrawCollateralFromComet(
+      mockUSDCTokenAccountInfo.address,
+      new BN(50000000),
+      0
     );
+
+    await sleep(200);
+
+    const tokenData = await inceptClient.getTokenData();
+    const firstPool = tokenData.pools[0];
+    const firstCollateral = tokenData.collaterals[0];
 
     mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
       walletPubkey
     );
-
-    await new Promise((resolve) => setTimeout(resolve, 200));
-
-    mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
-      walletPubkey
+    assert.equal(
+      mockUSDCTokenAccountInfo.amount / 10000000,
+      999978999750,
+      "check user USDI"
     );
 
-    console.log(
-      "User now has " +
-        Number(mockUSDCTokenAccountInfo.amount / 10000000) +
-        " USDC."
+    const usdiAccountBalance =
+      await inceptClient.connection.getTokenAccountBalance(
+        firstPool.usdiTokenAccount,
+        "recent"
+      );
+
+    assert.equal(
+      usdiAccountBalance.value!.uiAmount,
+      455051.45546909,
+      "check usdi pool balance"
     );
-    console.log(
-      "Mock USDC vault now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              mockUSDCVault.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " USDC locked."
+
+    const iassetTokenBalance =
+      await inceptClient.connection.getTokenAccountBalance(
+        firstPool.iassetTokenAccount,
+        "recent"
+      );
+
+    assert.equal(
+      iassetTokenBalance.value!.uiAmount,
+      91010.29109402,
+      "check iasset pool balance"
     );
+
+    const vault = await inceptClient.connection.getTokenAccountBalance(
+      firstCollateral.vault,
+      "recent"
+    );
+
+    assert.equal(vault.value!.uiAmount, 21000250, "check vault balance");
   });
 
-  // it("iasset bought!", async () => {
-  //   usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
+  it("iasset bought!", async () => {
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    let poolIndex = 0;
+    const tokenData = await inceptClient.getTokenData();
+    const pool = tokenData.pools[poolIndex];
 
-  //   await inceptProgram.rpc.buySynth(
-  //     managerAccount[1],
-  //     new BN(0),
-  //     new BN(20000000000000),
-  //     {
-  //       accounts: {
-  //         user: walletPubkey,
-  //         manager: managerAccount[0],
-  //         tokenData: tokenDataAccount.publicKey,
-  //         userUsdiTokenAccount: usdiTokenAccountInfo.address,
-  //         userIassetTokenAccount: iassetTokenAccountInfo.address,
-  //         ammUsdiTokenAccount: usdiPoolTokenAccount.publicKey,
-  //         ammIassetTokenAccount: iAssetPoolTokenAccount.publicKey,
-  //         tokenProgram: TOKEN_PROGRAM_ID,
-  //       },
-  //     }
-  //   );
+    await inceptClient.buySynth(
+      new BN(1000000000000),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      poolIndex
+    );
 
-  //   await new Promise((resolve) => setTimeout(resolve, 200));
+    await sleep(200);
 
-  //   usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
 
-  //   console.log(
-  //     "User now has " +
-  //       Number(usdiTokenAccountInfo.amount / 1000000000000) +
-  //       " USDI."
-  //   );
-  //   console.log(
-  //     "User now has " +
-  //       Number(iassetTokenAccountInfo.amount / 1000000000000) +
-  //       " iAsset."
-  //   );
-  //   console.log(
-  //     "Market 0 now has " +
-  //       Number(
-  //         (
-  //           await connection.getTokenAccountBalance(
-  //             usdiPoolTokenAccount.publicKey,
-  //             "confirmed"
-  //           )
-  //         ).value!.uiAmount
-  //       ) +
-  //       " USDI."
-  //   );
-  //   console.log(
-  //     "Market 0 now has " +
-  //       Number(
-  //         (
-  //           await connection.getTokenAccountBalance(
-  //             iAssetPoolTokenAccount.publicKey,
-  //             "confirmed"
-  //           )
-  //         ).value!.uiAmount
-  //       ) +
-  //       " iAsset."
-  //   );
-  // });
-
-  // it("comet closed!", async () => {
-  //   mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-
-  //   await inceptProgram.rpc.closeComet(
-  //     managerAccount[1],
-  //     userAccount[1],
-  //     new BN(0),
-  //     new BN(0),
-  //     {
-  //       accounts: {
-  //         user: walletPubkey,
-  //         manager: managerAccount[0],
-  //         tokenData: tokenDataAccount.publicKey,
-  //         userAccount: userAccount[0],
-  //         usdiMint: usdiMint.publicKey,
-  //         iassetMint: iassetMint.publicKey,
-  //         userCollateralTokenAccount: mockUSDCTokenAccountInfo.address,
-  //         userIassetTokenAccount: iassetTokenAccountInfo.address,
-  //         userUsdiTokenAccount: usdiTokenAccountInfo.address,
-  //         cometPositions: cometPositionsAccount.publicKey,
-  //         cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
-  //         ammUsdiTokenAccount: usdiPoolTokenAccount.publicKey,
-  //         ammIassetTokenAccount: iAssetPoolTokenAccount.publicKey,
-  //         liquidityTokenMint: liquidityTokenMintAccount.publicKey,
-  //         vault: mockUSDCVault.publicKey,
-  //         tokenProgram: TOKEN_PROGRAM_ID,
-  //       },
-  //     }
-  //   );
-
-  //   await new Promise((resolve) => setTimeout(resolve, 200));
-
-  //   mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-  //   iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
-  //     walletPubkey
-  //   );
-
-  //   console.log(
-  //     "User now has " +
-  //       Number(mockUSDCTokenAccountInfo.amount / 10000000) +
-  //       " USDC."
-  //   );
-  //   console.log(
-  //     "User now has " +
-  //       Number(usdiTokenAccountInfo.amount / 1000000000000) +
-  //       " USDi."
-  //   );
-  //   console.log(
-  //     "User now has " +
-  //       Number(iassetTokenAccountInfo.amount / 1000000000000) +
-  //       " iAsset."
-  //   );
-  //   console.log(
-  //     "Market 0 now has " +
-  //       Number(
-  //         (
-  //           await connection.getTokenAccountBalance(
-  //             usdiPoolTokenAccount.publicKey,
-  //             "confirmed"
-  //           )
-  //         ).value!.uiAmount
-  //       ) +
-  //       " USDI."
-  //   );
-  //   console.log(
-  //     "Market 0 now has " +
-  //       Number(
-  //         (
-  //           await connection.getTokenAccountBalance(
-  //             iAssetPoolTokenAccount.publicKey,
-  //             "confirmed"
-  //           )
-  //         ).value!.uiAmount
-  //       ) +
-  //       " iAsset."
-  //   );
-  //   const cometPositions = await inceptProgram.account.cometPositions.fetch(
-  //     cometPositionsAccount.publicKey
-  //   );
-  //   console.log("comet Position");
-  //   console.log(cometPositions.cometPositions[0]);
-  // });
+    assert.equal(
+      Number(usdiTokenAccountInfo.amount / 1000000000000),
+      48.927648918785,
+      "check user usdi balance."
+    );
+    assert.equal(
+      Number(iassetTokenAccountInfo.amount / 1000000000000),
+      11.908970890618,
+      "check user iAsset balance."
+    );
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            pool.usdiTokenAccount,
+            "recent"
+          )
+        ).value!.uiAmount
+      ),
+      511223.51081215,
+      "check pool usdi"
+    );
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            pool.iassetTokenAccount,
+            "recent"
+          )
+        ).value!.uiAmount
+      ),
+      81010.29109402,
+      "check pool iAsset"
+    );
+  });
 
   it("comet recentered!", async () => {
     mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
@@ -1445,30 +1152,13 @@ describe("incept", async () => {
       walletPubkey
     );
 
-    await inceptProgram.rpc.recenterComet(
-      managerAccount[1],
-      userAccount[1],
-      new BN(0),
-      {
-        accounts: {
-          user: walletPubkey,
-          manager: managerAccount[0],
-          tokenData: tokenDataAccount.publicKey,
-          userAccount: userAccount[0],
-          usdiMint: usdiMint.publicKey,
-          iassetMint: iassetMint.publicKey,
-          userIassetTokenAccount: iassetTokenAccountInfo.address,
-          cometPositions: cometPositionsAccount.publicKey,
-          ammUsdiTokenAccount: usdiPoolTokenAccount.publicKey,
-          ammIassetTokenAccount: iAssetPoolTokenAccount.publicKey,
-          liquidityTokenMint: liquidityTokenMintAccount.publicKey,
-          vault: mockUSDCVault.publicKey,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        },
-      }
-    );
+    await inceptClient.recenterComet(iassetTokenAccountInfo.address, 0);
 
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await sleep(200);
+
+    const tokenData = await inceptClient.getTokenData();
+    const firstPool = tokenData.pools[0];
+    const firstCollateral = tokenData.collaterals[0];
 
     mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
       walletPubkey
@@ -1480,56 +1170,166 @@ describe("incept", async () => {
       walletPubkey
     );
 
-    console.log(
-      "Mock USDC collateral vault now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              mockUSDCVault.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " USDC."
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            firstCollateral.vault,
+            "confirmed"
+          )
+        ).value!.uiAmount
+      ),
+      21000250,
+      "check usdc collateral vault"
     );
-    console.log(
-      "User now has " +
-        Number(mockUSDCTokenAccountInfo.amount / 10000000) +
-        " USDC."
+
+    assert.equal(
+      Number(mockUSDCTokenAccountInfo.amount / 10000000),
+      999978999750,
+      "check user usdc balance"
     );
-    console.log(
-      "User now has " +
-        Number(usdiTokenAccountInfo.amount / 1000000000000) +
-        " USDi."
+    assert.equal(
+      Number(usdiTokenAccountInfo.amount / 1000000000000),
+      48.927648918785,
+      "check user usdi balance"
     );
-    console.log(
-      "User now has " +
-        Number(iassetTokenAccountInfo.amount / 1000000000000) +
-        " iAsset."
+    assert.equal(
+      Number(iassetTokenAccountInfo.amount / 1000000000000),
+      11.908970890618,
+      "check user iAsset balance"
     );
-    console.log(
-      "Market 0 now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              usdiPoolTokenAccount.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " USDI."
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            firstPool.usdiTokenAccount,
+            "recent"
+          )
+        ).value!.uiAmount
+      ),
+      511292.94453873,
+      "check pool usdi"
     );
-    console.log(
-      "Market 0 now has " +
-        Number(
-          (
-            await connection.getTokenAccountBalance(
-              iAssetPoolTokenAccount.publicKey,
-              "confirmed"
-            )
-          ).value!.uiAmount
-        ) +
-        " iAsset."
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            firstPool.iassetTokenAccount,
+            "recent"
+          )
+        ).value!.uiAmount
+      ),
+      80999.28987356,
+      "check pool iAsset"
+    );
+  });
+
+  it("comet closed!", async () => {
+    mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+
+    await inceptClient.closeComet(
+      mockUSDCTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      usdiTokenAccountInfo.address,
+      0
+    );
+
+    await sleep(200);
+
+    mockUSDCTokenAccountInfo = await mockUSDC.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+    iassetTokenAccountInfo = await iasset.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+
+    const tokenData = await inceptClient.getTokenData();
+    const firstPool = tokenData.pools[0];
+    const firstCollateral = tokenData.collaterals[0];
+
+    assert.equal(
+      Number(mockUSDCTokenAccountInfo.amount / 10000000),
+      999978999992.3546,
+      "check user usdc balance"
+    );
+    assert.equal(
+      Number(usdiTokenAccountInfo.amount / 1000000000000),
+      48.927648918785,
+      "check user usdi balance"
+    );
+    assert.equal(
+      Number(iassetTokenAccountInfo.amount / 1000000000000),
+      11.908970890618,
+      "check user iAsset balance"
+    );
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            firstPool.usdiTokenAccount,
+            "recent"
+          )
+        ).value!.uiAmount
+      ),
+      510731.15630299,
+      "check pool usdi"
+    );
+    assert.equal(
+      Number(
+        (
+          await inceptClient.connection.getTokenAccountBalance(
+            firstPool.iassetTokenAccount,
+            "recent"
+          )
+        ).value!.uiAmount
+      ),
+      80910.29109382,
+      "check pool iAsset"
+    );
+
+    const cometPosition = await inceptClient.getCometPosition(0);
+    assert.equal(
+      Number(cometPosition.collateralAmount.val),
+      0,
+      "check comet position"
+    );
+  });
+
+  it("hackathon USDI mint", async () => {
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+
+    const currentUSDI = usdiTokenAccountInfo.amount / 1000000000000;
+
+    await inceptClient.hackathonMintUsdi(
+      usdiTokenAccountInfo.address,
+      50000000000000,
+      // @ts-ignore
+      [provider.wallet.payer]
+    );
+
+    await sleep(200);
+
+    usdiTokenAccountInfo = await usdi.getOrCreateAssociatedAccountInfo(
+      walletPubkey
+    );
+
+    assert.equal(
+      usdiTokenAccountInfo.amount / 1000000000000,
+      currentUSDI + 50,
+      "usdi not minted properly!"
     );
   });
 });
