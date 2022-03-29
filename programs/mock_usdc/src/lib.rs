@@ -5,14 +5,14 @@ use instructions::*;
 mod instructions;
 mod states;
 
-declare_id!("4WUT8ZueGtxWSE7WYg8UvJbmMbDW3N8JVYDNNcHEuhVA");
+declare_id!("12cbP7YbpN1SxCcEdGYJmdecAyCYZUbA4r6tzBwKJaoo");
 
 #[program]
 pub mod mock_usdc {
     use super::*;
     pub fn initialize(ctx: Context<Initialize>, _mock_usdc_nonce: u8) -> ProgramResult {
-
-        ctx.accounts.mock_usdc_account.mock_usdc_mint = *ctx.accounts.mock_usdc_mint.to_account_info().key;
+        ctx.accounts.mock_usdc_account.mock_usdc_mint =
+            *ctx.accounts.mock_usdc_mint.to_account_info().key;
 
         Ok(())
     }
@@ -22,19 +22,21 @@ pub mod mock_usdc {
 
         let cpi_accounts = MintTo {
             mint: ctx.accounts.mock_usdc_mint.to_account_info().clone(),
-            to: ctx.accounts.mock_usdc_token_account.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .mock_usdc_token_account
+                .to_account_info()
+                .clone(),
             authority: ctx.accounts.mock_usdc_account.to_account_info().clone(),
         };
-        let mint_mock_usdc_context = CpiContext::new_with_signer(ctx.accounts.token_program.to_account_info().clone(), cpi_accounts, seeds);
+        let mint_mock_usdc_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
 
-
-        token::mint_to(
-            mint_mock_usdc_context,
-            10000000000000000000,
-        )?;
-        
+        token::mint_to(mint_mock_usdc_context, 10000000000000000000)?;
 
         Ok(())
     }
 }
-

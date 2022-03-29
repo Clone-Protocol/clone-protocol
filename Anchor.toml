@@ -1,14 +1,15 @@
 [programs.localnet]
-incept = "Aw4gPAFKNV9hQpSZB9pdkBnniVDR13uidY3D5NMKKFUi"
-pyth = "4te7G6yemnSx2zByo1GRTWY4uNBrrcwjJc9uKxbPZ4Qe"
-mock_usdc = "4WUT8ZueGtxWSE7WYg8UvJbmMbDW3N8JVYDNNcHEuhVA"
+incept = "EwZEhz1NLbzSKLQ6jhu2kk6784Ly2EWJo4BK3HTmFvEv"
+pyth = "E3rBE4T1wdGnaSNgoav2rWMFW25xQvdUSbKC8Zx68oUL"
+mock_usdc = "12cbP7YbpN1SxCcEdGYJmdecAyCYZUbA4r6tzBwKJaoo"
 
 [registry]
 url = "https://anchor.projectserum.com"
 
 [provider]
 cluster = "localnet"
-wallet = "/Users/evandeutsch/.config/solana/id.json"
+wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/incept.ts"
+test_liquidation = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/liquidation.ts"
