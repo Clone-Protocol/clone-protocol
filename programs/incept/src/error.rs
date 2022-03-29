@@ -67,6 +67,10 @@ pub enum InceptError {
     /// Comet Not Yet Liquidated
     #[error("Comet Not Yet Liquidated")]
     CometNotYetLiquidated,
+
+    /// Comet Unable To Liquidate
+    #[error("Comet Unable to Liquidate")]
+    CometUnableToLiquidate,
 }
 
 impl From<InceptError> for ProgramError {
