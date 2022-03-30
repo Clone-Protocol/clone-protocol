@@ -263,19 +263,28 @@ describe('liquidation testing', function () {
             iassetTokenAccountInfo.address,
             "recent"
         );
+        let beforeLiquidationCollateral = await inceptClient.connection.getTokenAccountBalance(
+            mockUSDCTokenAccountInfo.address,
+            "recent"
+        );
         // call liquidation.
         await inceptClient.liquidateMintPosition(
             userPubkey, 0
         );
-        
+
         await sleep(200);
 
         let afterLiquidationIasset = await inceptClient.connection.getTokenAccountBalance(
             iassetTokenAccountInfo.address,
             "recent"
         );
+        let afterLiquidationCollateral = await inceptClient.connection.getTokenAccountBalance(
+            mockUSDCTokenAccountInfo.address,
+            "recent"
+        );
 
         assert.equal(beforeLiquidationIasset.value.uiAmount - afterLiquidationIasset.value.uiAmount, 200000, 'check liquidated amount');
+        assert.equal(afterLiquidationCollateral.value.uiAmount - beforeLiquidationCollateral.value.uiAmount, 20000000, 'check collateral received');
     });
 
 });
