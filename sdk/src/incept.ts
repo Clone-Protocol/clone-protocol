@@ -232,7 +232,7 @@ export class Incept {
 
   public async getPool(poolIndex: number) {
     const tokenData = (await this.getTokenData()) as TokenData;
-    return tokenData[poolIndex];
+    return tokenData.pools[poolIndex];
   }
 
   public async getPoolBalances(poolIndex: number) {
@@ -306,9 +306,10 @@ export class Incept {
   }
 
   public async getMintPositions() {
+    const userAccountData = (await this.getUserAccount()) as User;
     // @ts-ignore
     return (await this.program.account.mintPositions.fetch(
-      this.provider.wallet.publicKey
+      userAccountData.mintPositions
     )) as MintPositions;
   }
   public async getMintPosition(mintIndex: number) {
@@ -354,8 +355,12 @@ export class Incept {
   }
 
   public async getUserAccount(address?: PublicKey) {
-    const { userPubkey, bump } = await this.getUserAddress(address);
-    return (await this.program.account.user.fetch(userPubkey)) as User;
+    if (!address) {
+      const { userPubkey, bump } = await this.getUserAddress();
+      address = userPubkey;
+    } 
+    
+    return (await this.program.account.user.fetch(address)) as User;
   }
 
   public async mintUsdi(
@@ -1259,7 +1264,7 @@ export class Incept {
   ) {
     const [managerPubkey, managerBump] = await this.getManagerAddress();
     const { userPubkey, bump } = await this.getUserAddress();
-    const userAccount = await this.getUserAccount();
+    const userAccount = await this.getUserAccount(liquidateAccount);
     const tokenData = await this.getTokenData();
 
     const cometPosition = await this.getCometPosition(cometIndex);
@@ -1348,6 +1353,60 @@ export class Incept {
       }
     );
   }
+
+  public async liquidateMintPosition(
+    liquidateAccount: PublicKey,
+    mintIndex: number
+  ) {
+    const updatePricesIx = await this.updatePricesInstruction();
+    const liquidateMintTx = await this.liquidateMintPositionInstruction(
+      liquidateAccount,
+      mintIndex
+    );
+    await this.provider.send(
+      new Transaction().add(updatePricesIx).add(liquidateMintTx)
+    );
+  }
+
+  public async liquidateMintPositionInstruction(
+    liquidateAccount: PublicKey,
+    mintIndex: number
+  ) {
+    const [managerPubkey, managerBump] = await this.getManagerAddress();
+    const userAccount = await this.getUserAccount(liquidateAccount);
+    const tokenData = await this.getTokenData();
+
+    const mintPosition = await this.getMintPosition(mintIndex);
+    const pool = tokenData.pools[mintPosition.poolIndex];
+    const collateral = tokenData.collaterals[mintPosition.collateralIndex];
+
+    const liquidatorCollateralTokenAccount = await this.fetchOrCreateAssociatedTokenAccount(
+      collateral.mint
+    );
+    const liquidatoriAssetTokenAccount =
+      await this.fetchOrCreateAssociatedTokenAccount(pool.assetInfo.iassetMint);
+
+    return this.program.instruction.liquidateMintPosition(
+      managerBump, mintIndex,
+      {
+        accounts: {
+          liquidator: this.provider.wallet.publicKey,
+          manager: managerPubkey,
+          tokenData: this.manager.tokenData,
+          userAccount: liquidateAccount,
+          iassetMint: pool.assetInfo.iassetMint,
+          mintPositions: userAccount.mintPositions,
+          vault: collateral.vault,
+          ammUsdiTokenAccount: pool.usdiTokenAccount,
+          ammIassetTokenAccount: pool.iassetTokenAccount,
+          liquidatorCollateralTokenAccount: liquidatorCollateralTokenAccount.address,
+          liquidatorIassetTokenAccount: liquidatoriAssetTokenAccount.address,
+          tokenProgram: TOKEN_PROGRAM_ID
+        }
+      }
+    )
+  }
+
 }
 
 export interface Manager {

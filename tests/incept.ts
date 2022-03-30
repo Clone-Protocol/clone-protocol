@@ -22,7 +22,6 @@ const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 
 describe("incept", async () => {
-  return
   const provider = anchor.Provider.local();
   anchor.setProvider(provider);
 
@@ -1290,9 +1289,7 @@ describe("incept", async () => {
 
     await inceptClient.hackathonMintUsdi(
       usdiTokenAccountInfo.address,
-      50000000000000,
-      // @ts-ignore
-      [provider.wallet.payer]
+      50000000000000
     );
 
     await sleep(200);
