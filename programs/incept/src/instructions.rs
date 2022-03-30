@@ -1354,3 +1354,59 @@ impl<'a, 'b, 'c, 'info> From<&MintUSDIHackathon<'info>>
         CpiContext::new(cpi_program, cpi_accounts)
     }
 }
+
+#[derive(Accounts)]
+#[instruction(manager_nonce: u8, mint_index: u8)]
+pub struct LiquidateMintPosition<'info> {
+    pub liquidator: Signer<'info>,
+    #[account(
+        seeds = [b"manager".as_ref()],
+        bump = manager_nonce,
+        has_one = token_data
+    )]
+    pub manager: Box<Account<'info, Manager>>,
+    #[account(
+        mut,
+        has_one = manager
+    )]
+    pub token_data: AccountLoader<'info, TokenData>,
+    #[account(has_one = mint_positions)]
+    pub user_account: Box<Account<'info, User>>,
+    #[account(
+        mut,
+        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[mint_positions.load()?.mint_positions[mint_index as usize].pool_index as usize].asset_info.iasset_mint,
+    )]
+    pub iasset_mint: Box<Account<'info, Mint>>,
+    #[account(
+        mut,
+        constraint = (mint_index as u64) < mint_positions.load()?.num_positions
+    )]
+    pub mint_positions: AccountLoader<'info, MintPositions>,
+    #[account(
+        mut,
+        address = token_data.load()?.collaterals[mint_positions.load()?.mint_positions[mint_index as usize].collateral_index as usize].vault,
+        constraint = &vault.mint == &token_data.load()?.collaterals[mint_positions.load()?.mint_positions[mint_index as usize].collateral_index as usize].mint
+   )]
+    pub vault: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[mint_positions.load()?.mint_positions[mint_index as usize].pool_index as usize].usdi_token_account,
+    )]
+    pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[mint_positions.load()?.mint_positions[mint_index as usize].pool_index as usize].iasset_token_account,
+    )]
+    pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        constraint = liquidator_collateral_token_account.mint == vault.mint
+   )]
+    pub liquidator_collateral_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        constraint = &liquidator_iasset_token_account.mint == iasset_mint.to_account_info().key
+    )]
+    pub liquidator_iasset_token_account: Box<Account<'info, TokenAccount>>,
+    pub token_program: Program<'info, Token>,
+}
