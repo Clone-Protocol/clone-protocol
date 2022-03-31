@@ -71,6 +71,14 @@ pub enum InceptError {
     /// Comet Unable To Liquidate
     #[error("Comet Unable to Liquidate")]
     CometUnableToLiquidate,
+
+    /// Non Stables not Supported
+    #[error("Non-stables Not Supported")]
+    NonStablesNotSupported,
+
+    /// Mint Position Unable To Liquidate
+    #[error("Mint Position Unable to Liquidate")]
+    MintPositionUnableToLiquidate,
 }
 
 impl From<InceptError> for ProgramError {

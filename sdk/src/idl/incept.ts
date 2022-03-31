@@ -1650,6 +1650,81 @@ export type Incept = {
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "liquidateMintPosition",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mintPositions",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorCollateralTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "mintIndex",
+          "type": "u8"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -2169,6 +2244,12 @@ export type Incept = {
           },
           {
             "name": "CometUnableToLiquidate"
+          },
+          {
+            "name": "NonStablesNotSupported"
+          },
+          {
+            "name": "MintPositionUnableToLiquidate"
           }
         ]
       }
@@ -3828,6 +3909,81 @@ export const IDL: Incept = {
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "liquidateMintPosition",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mintPositions",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorCollateralTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "mintIndex",
+          "type": "u8"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -4347,6 +4503,12 @@ export const IDL: Incept = {
           },
           {
             "name": "CometUnableToLiquidate"
+          },
+          {
+            "name": "NonStablesNotSupported"
+          },
+          {
+            "name": "MintPositionUnableToLiquidate"
           }
         ]
       }

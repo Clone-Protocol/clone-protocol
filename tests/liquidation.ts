@@ -32,13 +32,14 @@ describe('liquidation testing', function () {
     let iassetTokenAccountInfo;
     let liquidityTokenAccountInfo;
     let mockUSDCMint;
+    let pythProgram;
 
     before('setup incept client', async () => {
         const provider = anchor.Provider.local();
         anchor.setProvider(provider);
 
         const inceptProgram = anchor.workspace.Incept as Program<Incept>;
-        const pythProgram = anchor.workspace.Pyth as Program<Pyth>;
+        pythProgram = anchor.workspace.Pyth as Program<Pyth>;
         const mockUSDCProgram = anchor.workspace.MockUsdc as Program<MockUsdc>;
 
         mockUSDCMint = anchor.web3.Keypair.generate();
@@ -221,6 +222,69 @@ describe('liquidation testing', function () {
         cometPositions = await inceptClient.getCometPositions();
 
         assert.equal(Number(cometPositions.numPositions), 0, 'check comet was closed/liquidated');
+    });
+
+    it("mint position liquidation", async () => {
+
+        // Add more concentrated liquidity to the pool.
+        await inceptClient.initializeComet(
+            mockUSDCTokenAccountInfo.address,
+            new BN(250000000000),
+            new BN(5000000000000),
+            0,
+            0
+          );
+
+        usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
+            inceptClient.manager.usdiMint
+        );
+
+        await inceptClient.hackathonMintUsdi(
+            usdiTokenAccountInfo.address,
+            5000000000000000,
+        );
+
+        await sleep(200)
+
+        // buy to burn
+        await inceptClient.buySynth(
+            new BN(10_350_000_000_000),
+            usdiTokenAccountInfo.address,
+            iassetTokenAccountInfo.address,
+            0
+        );
+        await sleep(200);
+
+        await setPrice(pythProgram, 70, priceFeed);
+
+        const {userPubkey, _bump} = await inceptClient.getUserAddress();
+
+        let beforeLiquidationIasset = await inceptClient.connection.getTokenAccountBalance(
+            iassetTokenAccountInfo.address,
+            "recent"
+        );
+        let beforeLiquidationCollateral = await inceptClient.connection.getTokenAccountBalance(
+            mockUSDCTokenAccountInfo.address,
+            "recent"
+        );
+        // call liquidation.
+        await inceptClient.liquidateMintPosition(
+            userPubkey, 0
+        );
+
+        await sleep(200);
+
+        let afterLiquidationIasset = await inceptClient.connection.getTokenAccountBalance(
+            iassetTokenAccountInfo.address,
+            "recent"
+        );
+        let afterLiquidationCollateral = await inceptClient.connection.getTokenAccountBalance(
+            mockUSDCTokenAccountInfo.address,
+            "recent"
+        );
+
+        assert.equal(beforeLiquidationIasset.value.uiAmount - afterLiquidationIasset.value.uiAmount, 200000, 'check liquidated amount');
+        assert.equal(afterLiquidationCollateral.value.uiAmount - beforeLiquidationCollateral.value.uiAmount, 20000000, 'check collateral received');
     });
 
 });
