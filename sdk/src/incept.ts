@@ -316,8 +316,8 @@ export class Incept {
     return (await this.getMintPositions()).mintPositions[mintIndex];
   }
 
-  public async getCometPositions() {
-    const userAccountData = (await this.getUserAccount()) as User;
+  public async getCometPositions(address?: PublicKey) {
+    const userAccountData = (await this.getUserAccount(address)) as User;
     // @ts-ignore
     return (await this.program.account.cometPositions.fetch(
       userAccountData.cometPositions
@@ -358,8 +358,8 @@ export class Incept {
     if (!address) {
       const { userPubkey, bump } = await this.getUserAddress();
       address = userPubkey;
-    } 
-    
+    }
+
     return (await this.program.account.user.fetch(address)) as User;
   }
 
@@ -1380,14 +1380,14 @@ export class Incept {
     const pool = tokenData.pools[mintPosition.poolIndex];
     const collateral = tokenData.collaterals[mintPosition.collateralIndex];
 
-    const liquidatorCollateralTokenAccount = await this.fetchOrCreateAssociatedTokenAccount(
-      collateral.mint
-    );
+    const liquidatorCollateralTokenAccount =
+      await this.fetchOrCreateAssociatedTokenAccount(collateral.mint);
     const liquidatoriAssetTokenAccount =
       await this.fetchOrCreateAssociatedTokenAccount(pool.assetInfo.iassetMint);
 
     return this.program.instruction.liquidateMintPosition(
-      managerBump, mintIndex,
+      managerBump,
+      mintIndex,
       {
         accounts: {
           liquidator: this.provider.wallet.publicKey,
@@ -1399,14 +1399,65 @@ export class Incept {
           vault: collateral.vault,
           ammUsdiTokenAccount: pool.usdiTokenAccount,
           ammIassetTokenAccount: pool.iassetTokenAccount,
-          liquidatorCollateralTokenAccount: liquidatorCollateralTokenAccount.address,
+          liquidatorCollateralTokenAccount:
+            liquidatorCollateralTokenAccount.address,
           liquidatorIassetTokenAccount: liquidatoriAssetTokenAccount.address,
-          tokenProgram: TOKEN_PROGRAM_ID
-        }
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
       }
-    )
+    );
   }
 
+  public async partialCometLiquidation(
+    liquidateAccount: PublicKey,
+    liquidateiAssetTokenAccount: PublicKey,
+    cometIndex: number
+  ) {
+    let partialLiquidationTx = await this.partialCometLiquidationInstruction(
+      liquidateAccount,
+      liquidateiAssetTokenAccount,
+      cometIndex
+    );
+    await this.provider.send(new Transaction().add(partialLiquidationTx));
+  }
+
+  public async partialCometLiquidationInstruction(
+    liquidateAccount: PublicKey,
+    liquidateiAssetTokenAccount: PublicKey,
+    cometIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAccount = await this.getUserAccount(liquidateAccount);
+    let cometPositions = await this.getCometPositions(liquidateAccount);
+    let cometPosition = cometPositions.cometPositions[cometIndex];
+    let pool = tokenData.pools[cometPosition.poolIndex];
+
+    let liquidatorIassetTokenAccount =
+      await this.fetchOrCreateAssociatedTokenAccount(pool.assetInfo.iassetMint);
+
+    return (await this.program.instruction.partialCometLiquidation(
+      this.managerAddress[1],
+      cometIndex,
+      {
+        accounts: {
+          liquidator: this.provider.wallet.publicKey,
+          userAccount: liquidateAccount,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          usdiMint: this.manager.usdiMint,
+          iassetMint: pool.assetInfo.iassetMint,
+          userIassetTokenAccount: liquidateiAssetTokenAccount,
+          liquidatorIassetTokenAccount: liquidatorIassetTokenAccount.address,
+          cometPositions: userAccount.cometPositions,
+          ammUsdiTokenAccount: pool.usdiTokenAccount,
+          ammIassetTokenAccount: pool.iassetTokenAccount,
+          liquidityTokenMint: pool.liquidityTokenMint,
+          vault: tokenData.collaterals[cometPosition.collateralIndex].vault,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
 }
 
 export interface Manager {
