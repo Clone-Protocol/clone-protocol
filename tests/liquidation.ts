@@ -23,6 +23,7 @@ import { sleep } from "../sdk/src/utils";
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 
+
 describe('liquidation testing', function () {
     let inceptClient;
     let walletPubkey;
@@ -224,6 +225,54 @@ describe('liquidation testing', function () {
         assert.equal(Number(cometPositions.numPositions), 0, 'check comet was closed/liquidated');
     });
 
+    it("partial comet liquidation", async () => {
+
+        await sleep(200);
+
+        // Initialize a comet
+        await inceptClient.initializeComet(
+            mockUSDCTokenAccountInfo.address,
+            new BN(2500000000),
+            new BN(50000000000),
+            0,
+            0
+          );
+
+        // // Make a trade to trigger the price
+        await inceptClient.sellSynth(
+            new BN(500000000000),
+            usdiTokenAccountInfo.address,
+            iassetTokenAccountInfo.address,
+            0
+        );
+
+        const {userPubkey, _bump} = await inceptClient.getUserAddress();
+        let tokenData: TokenData = await inceptClient.getTokenData();
+        let cometPositions = await inceptClient.getCometPositions();
+
+        let pool: Pool = tokenData.pools[cometPositions.cometPositions[0].poolIndex];
+
+        let liquidatorIassetTokenAccount = await inceptClient.fetchOrCreateAssociatedTokenAccount(
+            pool.assetInfo.iassetMint
+        )
+
+        let initialCometPosition = cometPositions.cometPositions[0]
+
+        await inceptClient.partialCometLiquidation(
+            userPubkey, liquidatorIassetTokenAccount.address, 0
+        )
+
+        await sleep(200);
+        cometPositions = await inceptClient.getCometPositions();
+        assert.equal(Number(cometPositions.numPositions), 1, 'check comet was not completely liquidated');
+
+        let finalCometPosition = cometPositions.cometPositions[0]
+
+        assert(Number(initialCometPosition.lowerPriceRange.val) > Number(finalCometPosition.lowerPriceRange.val), 'check lower price range')
+        assert(Number(initialCometPosition.upperPriceRange.val) > Number(finalCometPosition.upperPriceRange.val), 'check upper price range')
+
+    })
+
     it("mint position liquidation", async () => {
 
         // Add more concentrated liquidity to the pool.
@@ -248,14 +297,15 @@ describe('liquidation testing', function () {
 
         // buy to burn
         await inceptClient.buySynth(
-            new BN(10_350_000_000_000),
+            new BN(20_350_000_000_000),
             usdiTokenAccountInfo.address,
             iassetTokenAccountInfo.address,
             0
         );
+
         await sleep(200);
 
-        await setPrice(pythProgram, 70, priceFeed);
+        await setPrice(pythProgram, 67, priceFeed);
 
         const {userPubkey, _bump} = await inceptClient.getUserAddress();
 
@@ -267,6 +317,7 @@ describe('liquidation testing', function () {
             mockUSDCTokenAccountInfo.address,
             "recent"
         );
+
         // call liquidation.
         await inceptClient.liquidateMintPosition(
             userPubkey, 0
