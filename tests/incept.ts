@@ -1048,6 +1048,86 @@ describe("incept", async () => {
     assert.equal(vault.value!.uiAmount, 21000250, "check vault balance");
   });
 
+  it("comet liquidity added!", async () => {
+    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
+      mockUSDCMint.publicKey
+    );
+
+    await inceptClient.addLiquidityToComet(
+      new BN(1000000000),
+      0
+    );
+
+    await sleep(200);
+
+    const tokenData = await inceptClient.getTokenData();
+    const pool = tokenData.pools[0];
+
+    const usdiAccountBalance =
+      await inceptClient.connection.getTokenAccountBalance(
+        pool.usdiTokenAccount,
+        "recent"
+      );
+
+    assert.equal(
+      usdiAccountBalance.value!.uiAmount,
+      455061.45546909,
+      "check usdi pool balance"
+    );
+
+    const iassetTokenBalance =
+      await inceptClient.connection.getTokenAccountBalance(
+        pool.iassetTokenAccount,
+        "recent"
+      );
+
+    assert.equal(
+      iassetTokenBalance.value!.uiAmount,
+      91012.29109402,
+      "check iasset pool balance"
+    );
+  });
+
+  it("comet liquidity subtracted!", async () => {
+    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
+      mockUSDCMint.publicKey
+    );
+
+    await inceptClient.subtractLiquidityFromComet(
+      new BN(1000000000),
+      0
+    );
+
+    await sleep(200);
+
+    const tokenData = await inceptClient.getTokenData();
+    const pool = tokenData.pools[0];
+
+    const usdiAccountBalance =
+      await inceptClient.connection.getTokenAccountBalance(
+        pool.usdiTokenAccount,
+        "recent"
+      );
+
+    assert.equal(
+      usdiAccountBalance.value!.uiAmount,
+      455051.45546909,
+      "check usdi pool balance"
+    );
+
+    const iassetTokenBalance =
+      await inceptClient.connection.getTokenAccountBalance(
+        pool.iassetTokenAccount,
+        "recent"
+      );
+
+    assert.equal(
+      iassetTokenBalance.value!.uiAmount,
+      91010.29109402,
+      "check iasset pool balance"
+    );
+  });
+
   it("iasset bought!", async () => {
     let poolIndex = 0;
     const tokenData = await inceptClient.getTokenData();

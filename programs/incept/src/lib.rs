@@ -998,8 +998,6 @@ pub mod incept {
             collateral_value.scale_to(DEVNET_TOKEN_SCALE),
             iasset_amm_value,
             usdi_amm_value,
-            liquidity_token_value,
-            liquidity_token_supply,
         );
 
         // throw error if the comet is out of range
@@ -1139,11 +1137,6 @@ pub mod incept {
             DEVNET_TOKEN_SCALE,
         );
 
-        let liquidity_token_supply = Value::new(
-            ctx.accounts.liquidity_token_mint.supply.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-
         // calculate comet range
         let (lower_price_range, upper_price_range) = calculate_comet_price_barrier(
             comet_position.borrowed_usdi,
@@ -1153,8 +1146,6 @@ pub mod incept {
                 .scale_to(DEVNET_TOKEN_SCALE),
             iasset_amm_value,
             usdi_amm_value,
-            comet_position.liquidity_token_value,
-            liquidity_token_supply,
         );
 
         // reset price range
@@ -1215,11 +1206,6 @@ pub mod incept {
             DEVNET_TOKEN_SCALE,
         );
 
-        let liquidity_token_supply = Value::new(
-            ctx.accounts.liquidity_token_mint.supply.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-
         // calculate current pool price
         let current_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
 
@@ -1232,8 +1218,6 @@ pub mod incept {
                 .scale_to(DEVNET_TOKEN_SCALE),
             iasset_amm_value,
             usdi_amm_value,
-            comet_position.liquidity_token_value,
-            liquidity_token_supply,
         );
 
         // throw error if the comet is out of range
@@ -1250,6 +1234,280 @@ pub mod incept {
         // send collateral from user to comet
         let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
         token::transfer(cpi_ctx, collateral_amount)?;
+
+        Ok(())
+    }
+
+    pub fn add_liquidity_to_comet(
+        ctx: Context<AddLiquidityToComet>,
+        manager_nonce: u8,
+        _user_nonce: u8,
+        comet_index: u8,
+        usdi_amount: u64,
+    ) -> ProgramResult {
+        let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+
+        let mut comet_positions = ctx.accounts.comet_positions.load_mut()?;
+        let comet_position = comet_positions.comet_positions[comet_index as usize];
+
+        let collateral_value = comet_position.collateral_amount;
+
+        let usdi_liquidity_value = Value::new(usdi_amount.into(), DEVNET_TOKEN_SCALE);
+        let iasset_amm_value = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        let usdi_amm_value = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        let liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        // calculate iasset liquidity value as well as liquidity token value for comet
+        let (iasset_liquidity_value, liquidity_token_value) =
+            calculate_liquidity_provider_values_from_usdi(
+                usdi_liquidity_value,
+                iasset_amm_value,
+                usdi_amm_value,
+                liquidity_token_supply,
+            );
+
+        // generate current pool price
+        let current_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
+
+        // calculate comet range
+        let (lower_price_range, upper_price_range) = calculate_comet_price_barrier(
+            comet_position
+                .borrowed_usdi
+                .add(usdi_liquidity_value)
+                .unwrap(),
+            comet_position
+                .borrowed_iasset
+                .add(iasset_liquidity_value)
+                .unwrap(),
+            collateral_value.scale_to(DEVNET_TOKEN_SCALE),
+            iasset_amm_value,
+            usdi_amm_value,
+        );
+
+        // throw error if the comet is out of range
+        if lower_price_range.gte(current_price).unwrap()
+            || upper_price_range.lte(current_price).unwrap()
+        {
+            return Err(InceptError::InvalidCometCollateralRatio.into());
+        }
+
+        // throw error if the comet is already liquidated
+        if comet_position.comet_liquidation.liquidated != 0 {
+            return Err(InceptError::CometAlreadyLiquidated.into());
+        }
+
+        // update comet position data
+        comet_positions.comet_positions[comet_index as usize].borrowed_usdi = comet_position
+            .borrowed_usdi
+            .add(usdi_liquidity_value)
+            .unwrap();
+        comet_positions.comet_positions[comet_index as usize].borrowed_iasset = comet_position
+            .borrowed_iasset
+            .add(iasset_liquidity_value)
+            .unwrap();
+        comet_positions.comet_positions[comet_index as usize].liquidity_token_value =
+            comet_position
+                .liquidity_token_value
+                .add(liquidity_token_value)
+                .unwrap();
+        comet_positions.comet_positions[comet_index as usize].lower_price_range = lower_price_range;
+        comet_positions.comet_positions[comet_index as usize].upper_price_range = upper_price_range;
+
+        // mint liquidity into amm
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .amm_usdi_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let mint_usdi_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
+        token::mint_to(mint_usdi_context, usdi_amount)?;
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .amm_iasset_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let mint_iasset_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
+        token::mint_to(mint_iasset_context, iasset_liquidity_value.to_u64())?;
+
+        // mint liquidity tokens to comet
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .comet_liquidity_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let mint_liquidity_tokens_to_comet_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
+
+        token::mint_to(
+            mint_liquidity_tokens_to_comet_context,
+            liquidity_token_value.to_u64(),
+        )?;
+
+        Ok(())
+    }
+
+    pub fn subtract_liquidity_from_comet(
+        ctx: Context<AddLiquidityToComet>,
+        manager_nonce: u8,
+        _user_nonce: u8,
+        comet_index: u8,
+        usdi_amount: u64,
+    ) -> ProgramResult {
+        let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+
+        let mut comet_positions = ctx.accounts.comet_positions.load_mut()?;
+        let comet_position = comet_positions.comet_positions[comet_index as usize];
+
+        let collateral_value = comet_position.collateral_amount;
+
+        let usdi_liquidity_value = Value::new(usdi_amount.into(), DEVNET_TOKEN_SCALE);
+        let iasset_amm_value = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        let usdi_amm_value = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        let liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        // calculate iasset liquidity value as well as liquidity token value for comet
+        let (iasset_liquidity_value, liquidity_token_value) =
+            calculate_liquidity_provider_values_from_usdi(
+                usdi_liquidity_value,
+                iasset_amm_value,
+                usdi_amm_value,
+                liquidity_token_supply,
+            );
+
+        // calculate comet range
+        let (lower_price_range, upper_price_range) = calculate_comet_price_barrier(
+            comet_position
+                .borrowed_usdi
+                .sub(usdi_liquidity_value)
+                .unwrap(),
+            comet_position
+                .borrowed_iasset
+                .sub(iasset_liquidity_value)
+                .unwrap(),
+            collateral_value.scale_to(DEVNET_TOKEN_SCALE),
+            iasset_amm_value,
+            usdi_amm_value,
+        );
+
+        // throw error if the comet is already liquidated
+        if comet_position.comet_liquidation.liquidated != 0 {
+            return Err(InceptError::CometAlreadyLiquidated.into());
+        }
+
+        // update comet position data
+        comet_positions.comet_positions[comet_index as usize].borrowed_usdi = comet_position
+            .borrowed_usdi
+            .sub(usdi_liquidity_value)
+            .unwrap();
+        comet_positions.comet_positions[comet_index as usize].borrowed_iasset = comet_position
+            .borrowed_iasset
+            .sub(iasset_liquidity_value)
+            .unwrap();
+        comet_positions.comet_positions[comet_index as usize].liquidity_token_value =
+            comet_position
+                .liquidity_token_value
+                .sub(liquidity_token_value)
+                .unwrap();
+        comet_positions.comet_positions[comet_index as usize].lower_price_range = lower_price_range;
+        comet_positions.comet_positions[comet_index as usize].upper_price_range = upper_price_range;
+
+        // burn liquidity from amm
+        let cpi_accounts = Burn {
+            mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .amm_usdi_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let burn_usdi_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
+        token::burn(burn_usdi_context, usdi_amount)?;
+        let cpi_accounts = Burn {
+            mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .amm_iasset_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let burn_iasset_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
+        token::burn(burn_iasset_context, iasset_liquidity_value.to_u64())?;
+
+        // burn liquidity tokens from comet
+        let cpi_accounts = Burn {
+            mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .comet_liquidity_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let burn_liquidity_tokens_to_comet_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
+
+        token::burn(
+            burn_liquidity_tokens_to_comet_context,
+            liquidity_token_value.to_u64(),
+        )?;
 
         Ok(())
     }
@@ -1694,7 +1952,6 @@ pub mod incept {
                     comet_position.liquidity_token_value,
                     liquidity_token_supply,
                 );
-
             // calculate the amount of additional usdi, otherwise known as the recentering fee, in order to recenter the position
             let collateral_recentering_fee = usdi_amount
                 .sub(usdi_surplus)
@@ -1720,9 +1977,8 @@ pub mod incept {
                 new_collateral_amount.scale_to(DEVNET_TOKEN_SCALE),
                 iasset_amm_value,
                 usdi_amm_value,
-                comet_position.liquidity_token_value,
-                liquidity_token_supply,
             );
+            msg!("hi");
             // throw error if the price is out of range
             if lower_price_range.gte(current_price).unwrap()
                 || upper_price_range.lte(current_price).unwrap()
@@ -1808,8 +2064,6 @@ pub mod incept {
                     .scale_to(DEVNET_TOKEN_SCALE),
                 iasset_amm_value,
                 usdi_amm_value,
-                comet_position.liquidity_token_value,
-                liquidity_token_supply,
             );
             // throw error if the price is out of range
             if lower_price_range.gte(current_price).unwrap()
@@ -2412,8 +2666,6 @@ pub mod incept {
                 new_collateral_amount.scale_to(DEVNET_TOKEN_SCALE),
                 iasset_amm_value,
                 usdi_amm_value,
-                comet_position.liquidity_token_value,
-                liquidity_token_supply,
             );
             // throw error if the price is out of range
             // if lower_price_range.gte(current_price).unwrap()
@@ -2500,8 +2752,6 @@ pub mod incept {
                     .scale_to(DEVNET_TOKEN_SCALE),
                 iasset_amm_value,
                 usdi_amm_value,
-                comet_position.liquidity_token_value,
-                liquidity_token_supply,
             );
             // throw error if the price is out of range
             // if lower_price_range.gte(current_price).unwrap()

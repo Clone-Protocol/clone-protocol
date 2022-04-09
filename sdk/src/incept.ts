@@ -997,10 +997,6 @@ export class Incept {
             tokenData.pools[cometPosition.poolIndex].usdiTokenAccount,
           ammIassetTokenAccount:
             tokenData.pools[cometPosition.poolIndex].iassetTokenAccount,
-          liquidityTokenMint:
-            tokenData.pools[cometPosition.poolIndex].liquidityTokenMint,
-          cometLiquidityTokenAccount:
-            tokenData.pools[cometPosition.poolIndex].cometLiquidityTokenAccount,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
@@ -1051,8 +1047,100 @@ export class Incept {
             tokenData.pools[cometPosition.poolIndex].usdiTokenAccount,
           ammIassetTokenAccount:
             tokenData.pools[cometPosition.poolIndex].iassetTokenAccount,
-          liquidityTokenMint:
-            tokenData.pools[cometPosition.poolIndex].liquidityTokenMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
+
+  public async addLiquidityToComet(
+    usdiAmount: BN,
+    cometIndex: number,
+    signers?: Array<Keypair>
+  ) {
+    const withdrawCollateralFromCometIx =
+      await this.addLiquidityToCometInstruction(usdiAmount, cometIndex);
+    await this.provider.send(
+      new Transaction().add(withdrawCollateralFromCometIx),
+      signers
+    );
+  }
+  public async addLiquidityToCometInstruction(
+    usdiAmount: BN,
+    cometIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAddress = await this.getUserAddress();
+    let userAccount = await this.getUserAccount();
+    let cometPosition = await this.getCometPosition(cometIndex);
+
+    return (await this.program.instruction.addLiquidityToComet(
+      this.managerAddress[1],
+      userAddress[1],
+      cometIndex,
+      usdiAmount,
+      {
+        accounts: {
+          user: this.provider.wallet.publicKey,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          usdiMint: this.manager.usdiMint,
+          iassetMint:
+            tokenData.pools[cometPosition.poolIndex].assetInfo.iassetMint,
+          cometPositions: userAccount.cometPositions,
+          ammUsdiTokenAccount:
+            tokenData.pools[cometPosition.poolIndex].usdiTokenAccount,
+          ammIassetTokenAccount:
+            tokenData.pools[cometPosition.poolIndex].iassetTokenAccount,
+          liquidityTokenMint: tokenData.pools[cometPosition.poolIndex].liquidityTokenMint,
+          cometLiquidityTokenAccount:
+            tokenData.pools[cometPosition.poolIndex].cometLiquidityTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
+
+  public async subtractLiquidityFromComet(
+    usdiAmount: BN,
+    cometIndex: number,
+    signers?: Array<Keypair>
+  ) {
+    const withdrawCollateralFromCometIx =
+      await this.subtractLiquidityFromCometInstruction(usdiAmount, cometIndex);
+    await this.provider.send(
+      new Transaction().add(withdrawCollateralFromCometIx),
+      signers
+    );
+  }
+  public async subtractLiquidityFromCometInstruction(
+    usdiAmount: BN,
+    cometIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAddress = await this.getUserAddress();
+    let userAccount = await this.getUserAccount();
+    let cometPosition = await this.getCometPosition(cometIndex);
+
+    return (await this.program.instruction.subtractLiquidityFromComet(
+      this.managerAddress[1],
+      userAddress[1],
+      cometIndex,
+      usdiAmount,
+      {
+        accounts: {
+          user: this.provider.wallet.publicKey,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          usdiMint: this.manager.usdiMint,
+          iassetMint:
+            tokenData.pools[cometPosition.poolIndex].assetInfo.iassetMint,
+          cometPositions: userAccount.cometPositions,
+          ammUsdiTokenAccount:
+            tokenData.pools[cometPosition.poolIndex].usdiTokenAccount,
+          ammIassetTokenAccount:
+            tokenData.pools[cometPosition.poolIndex].iassetTokenAccount,
+          liquidityTokenMint: tokenData.pools[cometPosition.poolIndex].liquidityTokenMint,
           cometLiquidityTokenAccount:
             tokenData.pools[cometPosition.poolIndex].cometLiquidityTokenAccount,
           tokenProgram: TOKEN_PROGRAM_ID,
@@ -1297,7 +1385,7 @@ export class Incept {
           cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
           liquidatedCometUsdiTokenAccount: this.manager.liquidatedCometUsdi,
           liquidationIassetTokenAccount: pool.liquidationIassetTokenAccount,
-          liquidationUsdiTokenAccount: pool.liquidationUsdiTokenAccount,
+          liquidationUsdiTokenAccount: this.manager.liquidatedCometUsdi,
           ammUsdiTokenAccount: pool.usdiTokenAccount,
           ammIassetTokenAccount: pool.iassetTokenAccount,
           liquidatorCollateralTokenAccount:
@@ -1347,7 +1435,7 @@ export class Incept {
           userIassetTokenAccount: useriAssetTokenAccount.address,
           userUsdiTokenAccount: userUsdiTokenAccount.address,
           liquidationIassetTokenAccount: pool.liquidationIassetTokenAccount,
-          liquidationUsdiTokenAccount: pool.liquidationUsdiTokenAccount,
+          liquidationUsdiTokenAccount: this.manager.liquidatedCometUsdi,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
