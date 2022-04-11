@@ -22,7 +22,7 @@ import { sleep } from "./utils";
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 
-const TOKEN_DATA_SIZE = 138776;
+const TOKEN_DATA_SIZE = 130616;
 const COMET_POSITIONS_SIZE = 59208;
 const MINT_POSITIONS_SIZE = 24528;
 const LIQUIDITY_POSITIONS_SIZE = 16368;
@@ -190,7 +190,6 @@ export class Incept {
     const iassetMintAccount = anchor.web3.Keypair.generate();
     const iassetTokenAccount = anchor.web3.Keypair.generate();
     const liquidationIassetTokenAccount = anchor.web3.Keypair.generate();
-    const liquidationUsdiTokenAccount = anchor.web3.Keypair.generate();
     const liquidityTokenMintAccount = anchor.web3.Keypair.generate();
     const cometLiquidityTokenAccount = anchor.web3.Keypair.generate();
 
@@ -209,7 +208,6 @@ export class Incept {
           iassetTokenAccount: iassetTokenAccount.publicKey,
           liquidationIassetTokenAccount:
             liquidationIassetTokenAccount.publicKey,
-          liquidationUsdiTokenAccount: liquidationUsdiTokenAccount.publicKey,
           liquidityTokenMint: liquidityTokenMintAccount.publicKey,
           cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
           oracle: oracle,
@@ -222,7 +220,6 @@ export class Incept {
           iassetMintAccount,
           iassetTokenAccount,
           liquidationIassetTokenAccount,
-          liquidationUsdiTokenAccount,
           liquidityTokenMintAccount,
           cometLiquidityTokenAccount,
         ],
@@ -1385,7 +1382,7 @@ export class Incept {
           cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
           liquidatedCometUsdiTokenAccount: this.manager.liquidatedCometUsdi,
           liquidationIassetTokenAccount: pool.liquidationIassetTokenAccount,
-          liquidationUsdiTokenAccount: this.manager.liquidatedCometUsdi,
+          liquidatedCometUsdi: this.manager.liquidatedCometUsdi,
           ammUsdiTokenAccount: pool.usdiTokenAccount,
           ammIassetTokenAccount: pool.iassetTokenAccount,
           liquidatorCollateralTokenAccount:
@@ -1433,9 +1430,9 @@ export class Incept {
           userAccount: userPubkey,
           cometPositions: userAccount.cometPositions,
           userIassetTokenAccount: useriAssetTokenAccount.address,
+          liquidatedCometUsdi: this.manager.liquidatedCometUsdi,
           userUsdiTokenAccount: userUsdiTokenAccount.address,
           liquidationIassetTokenAccount: pool.liquidationIassetTokenAccount,
-          liquidationUsdiTokenAccount: this.manager.liquidatedCometUsdi,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }

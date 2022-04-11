@@ -142,13 +142,6 @@ pub struct InitializePool<'info> {
     pub liquidation_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
-        token::mint = usdi_mint,
-        token::authority = manager,
-        payer = admin
-    )]
-    pub liquidation_usdi_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        init,
         mint::decimals = 8,
         mint::authority = manager,
         payer = admin
@@ -1314,9 +1307,9 @@ pub struct LiquidateComet<'info> {
     pub liquidation_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].liquidation_usdi_token_account
+        address = manager.liquidated_comet_usdi
     )]
-    pub liquidation_usdi_token_account: Box<Account<'info, TokenAccount>>,
+    pub liquidated_comet_usdi: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].usdi_token_account,
@@ -1394,9 +1387,9 @@ pub struct ClaimLiquidatedComet<'info> {
     pub liquidation_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].liquidation_usdi_token_account
+        address = manager.liquidated_comet_usdi
     )]
-    pub liquidation_usdi_token_account: Box<Account<'info, TokenAccount>>,
+    pub liquidated_comet_usdi: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 

@@ -21,11 +21,11 @@ pub struct Manager {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 138,768
+    // 130,608
     pub manager: Pubkey,                // 32
     pub num_pools: u64,                 // 8
     pub num_collaterals: u64,           // 8
-    pub pools: [Pool; 255],             // 255 * 392 = 99,960
+    pub pools: [Pool; 255],             // 255 * 360 = 91,800
     pub collaterals: [Collateral; 255], // 255 * 152 = 38,760
 }
 
@@ -115,12 +115,11 @@ pub struct AssetInfo {
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct Pool {
-    // 392
+    // 360
     pub iasset_token_account: Pubkey,             // 32
     pub usdi_token_account: Pubkey,               // 32
     pub liquidity_token_mint: Pubkey,             // 32
     pub liquidation_iasset_token_account: Pubkey, // 32
-    pub liquidation_usdi_token_account: Pubkey,   // 32
     pub comet_liquidity_token_account: Pubkey,    // 32
     pub asset_info: AssetInfo,                    // 200
 }

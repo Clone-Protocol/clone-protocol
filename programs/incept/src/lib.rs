@@ -133,11 +133,6 @@ pub mod incept {
                 .liquidation_iasset_token_account
                 .to_account_info()
                 .key,
-            liquidation_usdi_token_account: *ctx
-                .accounts
-                .liquidation_usdi_token_account
-                .to_account_info()
-                .key,
             comet_liquidity_token_account: *ctx
                 .accounts
                 .comet_liquidity_token_account
@@ -1978,7 +1973,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
             );
-            msg!("hi");
+
             // throw error if the price is out of range
             if lower_price_range.gte(current_price).unwrap()
                 || upper_price_range.lte(current_price).unwrap()
@@ -2336,7 +2331,7 @@ pub mod incept {
                     .clone(),
                 to: ctx
                     .accounts
-                    .liquidation_usdi_token_account
+                    .liquidated_comet_usdi
                     .to_account_info()
                     .clone(),
                 authority: ctx.accounts.manager.to_account_info().clone(),
@@ -2448,7 +2443,7 @@ pub mod incept {
             let cpi_accounts = Transfer {
                 from: ctx
                     .accounts
-                    .liquidation_usdi_token_account
+                    .liquidated_comet_usdi
                     .to_account_info()
                     .clone(),
                 to: ctx

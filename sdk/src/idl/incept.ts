@@ -221,11 +221,6 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "liquidationUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
           "name": "liquidityTokenMint",
           "isMut": true,
           "isSigner": true
@@ -1618,7 +1613,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "liquidationUsdiTokenAccount",
+          "name": "liquidatedCometUsdi",
           "isMut": true,
           "isSigner": false
         },
@@ -1717,7 +1712,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "liquidationUsdiTokenAccount",
+          "name": "liquidatedCometUsdi",
           "isMut": true,
           "isSigner": false
         },
@@ -2211,10 +2206,6 @@ export type Incept = {
           },
           {
             "name": "liquidationIassetTokenAccount",
-            "type": "publicKey"
-          },
-          {
-            "name": "liquidationUsdiTokenAccount",
             "type": "publicKey"
           },
           {
@@ -2701,11 +2692,6 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "liquidationUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
           "name": "liquidityTokenMint",
           "isMut": true,
           "isSigner": true
@@ -4098,7 +4084,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "liquidationUsdiTokenAccount",
+          "name": "liquidatedCometUsdi",
           "isMut": true,
           "isSigner": false
         },
@@ -4197,7 +4183,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "liquidationUsdiTokenAccount",
+          "name": "liquidatedCometUsdi",
           "isMut": true,
           "isSigner": false
         },
@@ -4691,10 +4677,6 @@ export const IDL: Incept = {
           },
           {
             "name": "liquidationIassetTokenAccount",
-            "type": "publicKey"
-          },
-          {
-            "name": "liquidationUsdiTokenAccount",
             "type": "publicKey"
           },
           {
