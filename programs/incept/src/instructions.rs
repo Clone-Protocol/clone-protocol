@@ -154,7 +154,8 @@ pub struct InitializePool<'info> {
         payer = admin
     )]
     pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
-    pub oracle: AccountInfo<'info>,
+    pub pyth_oracle: AccountInfo<'info>,
+    pub chainlink_oracle: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -174,6 +175,10 @@ pub struct UpdatePrices<'info> {
         has_one = manager
     )]
     pub token_data: AccountLoader<'info, TokenData>,
+    #[account(
+        address = token_data.load()?.chainlink_program
+    )]
+    pub chainlink_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
