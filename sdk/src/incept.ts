@@ -51,7 +51,7 @@ export class Incept {
     this.opts = opts;
     this.program = new Program<InceptProgram>(IDL, this.programId, provider);
   }
-  public async initializeManager() {
+  public async initializeManager(chainlinkProgram: PublicKey) {
     const managerPubkeyAndBump = await this.getManagerAddress();
     const usdiMint = anchor.web3.Keypair.generate();
     const liquidatedCometUsdiTokenAccount = anchor.web3.Keypair.generate();
@@ -66,6 +66,7 @@ export class Incept {
           liquidatedCometUsdiTokenAccount.publicKey,
         tokenData: tokenData.publicKey,
         rent: RENT_PUBKEY,
+        chainlinkProgram: chainlinkProgram,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SYSTEM_PROGRAM_ID,
       },
