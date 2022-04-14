@@ -2400,13 +2400,13 @@ pub mod incept {
                 .clone(),
             authority: ctx.accounts.manager.to_account_info().clone(),
         };
-        let send_usdc_context = CpiContext::new_with_signer(
+        let send_collateral_context = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info().clone(),
             cpi_accounts,
             seeds,
         );
 
-        token::transfer(send_usdc_context, comet_position.collateral_amount.to_u64())?;
+        token::transfer(send_collateral_context, comet_position.collateral_amount.to_u64())?;
 
         // update comet data
         comet_positions.comet_positions[comet_index as usize]

@@ -176,6 +176,67 @@ impl CometPositions {
     }
 }
 
+#[account(zero_copy)]
+pub struct ManagerCometPosition {
+    // 55128
+    pub owner: Pubkey,                                  // 32
+    pub num_positions: u64,                             // 8
+    pub num_collaterals: u64,                           // 8
+    pub comet_positions: [MultiPoolCometPosition; 255], // 255 * 144 = 38760
+    pub collaterals: [MultiPoolCometCollateral; 255],   // 255 * 64 = 16320
+}
+
+impl Default for ManagerCometPosition {
+    fn default() -> Self {
+        return Self {
+            owner: Pubkey::default(),
+            num_positions: 0,
+            num_collaterals: 0,
+            comet_positions: [MultiPoolCometPosition::default(); 255],
+            collaterals: [MultiPoolCometCollateral::default(); 255],
+        };
+    }
+}
+
+impl ManagerCometPosition {
+    pub fn remove_position(&mut self, index: usize) {
+        self.comet_positions[index] = self.comet_positions[(self.num_positions - 1) as usize];
+        self.comet_positions[(self.num_positions - 1) as usize] = CometPosition {
+            ..Default::default()
+        };
+        self.num_positions -= 1;
+    }
+
+    pub fn remove_collateral(&mut self, index: usize) {
+        self.collaterals[index] = self.collaterals[(self.num_collaterals - 1) as usize];
+        self.collaterals[(self.num_collaterals - 1) as usize] = CometPosition {
+            ..Default::default()
+        };
+        self.num_collaterals -= 1;
+    }
+}
+
+#[zero_copy]
+#[derive(Default)]
+pub struct MultiPoolCometPosition {
+    // 152
+    pub authority: Pubkey,                   // 32
+    pub pool_index: u64,                     // 8
+    pub borrowed_usdi: Value,                // 24
+    pub borrowed_iasset: Value,              // 24
+    pub liquidity_token_value: Value,        // 24
+    pub comet_liquidation: CometLiquidation, // 40
+}
+
+#[zero_copy]
+#[derive(Default)]
+pub struct MultiPoolCometCollateral {
+    // 64
+    pub authority: Pubkey,        // 32
+    pub collateral_amount: Value, // 24
+    pub collateral_index: u64,    // 8
+}
+
 #[zero_copy]
 #[derive(Default)]
 pub struct CometPosition {
