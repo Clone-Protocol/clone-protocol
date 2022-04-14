@@ -1,0 +1,6 @@
+{
+  "name": "@incept/sdk",
+  "version": "0.0.0",
+  "description": "SDK for Incept Protocol",
+  "main": "src/index.ts"
+}
