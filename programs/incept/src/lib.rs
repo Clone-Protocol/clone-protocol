@@ -46,6 +46,7 @@ pub mod incept {
 
         // set manager as token data owner
         token_data.manager = *ctx.accounts.manager.to_account_info().key;
+        token_data.chainlink_program = *ctx.accounts.chainlink_program.to_account_info().key;
 
         Ok(())
     }
@@ -173,9 +174,8 @@ pub mod incept {
     ) -> ProgramResult {
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
         let chainlink_program = &ctx.accounts.chainlink_program;
-
         let n_accounts = ctx.remaining_accounts.iter().len();
-        // loop through each oracle entered into the instrction
+        // loop through each oracle entered into the instruction
         for i in 0..n_accounts {
             if i % 2 != 0 {
                 continue;

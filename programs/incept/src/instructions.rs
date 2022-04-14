@@ -31,6 +31,7 @@ pub struct InitializeManager<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
+    pub chainlink_program: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
 
