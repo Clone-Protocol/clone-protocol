@@ -41,6 +41,11 @@ export type Incept = {
           "isSigner": false
         },
         {
+          "name": "chainlinkProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -231,7 +236,12 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "oracle",
+          "name": "pythOracle",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "chainlinkOracle",
           "isMut": false,
           "isSigner": false
         },
@@ -277,6 +287,11 @@ export type Incept = {
         {
           "name": "tokenData",
           "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "chainlinkProgram",
+          "isMut": false,
           "isSigner": false
         }
       ],
@@ -2006,6 +2021,10 @@ export type Incept = {
                 255
               ]
             }
+          },
+          {
+            "name": "chainlinkProgram",
+            "type": "publicKey"
           }
         ]
       }
@@ -2143,8 +2162,13 @@ export type Incept = {
             "type": "publicKey"
           },
           {
-            "name": "priceFeedAddress",
-            "type": "publicKey"
+            "name": "priceFeedAddresses",
+            "type": {
+              "array": [
+                "publicKey",
+                2
+              ]
+            }
           },
           {
             "name": "price",
@@ -2512,6 +2536,11 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
+          "name": "chainlinkProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -2702,7 +2731,12 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "oracle",
+          "name": "pythOracle",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "chainlinkOracle",
           "isMut": false,
           "isSigner": false
         },
@@ -2748,6 +2782,11 @@ export const IDL: Incept = {
         {
           "name": "tokenData",
           "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "chainlinkProgram",
+          "isMut": false,
           "isSigner": false
         }
       ],
@@ -4477,6 +4516,10 @@ export const IDL: Incept = {
                 255
               ]
             }
+          },
+          {
+            "name": "chainlinkProgram",
+            "type": "publicKey"
           }
         ]
       }
@@ -4614,8 +4657,13 @@ export const IDL: Incept = {
             "type": "publicKey"
           },
           {
-            "name": "priceFeedAddress",
-            "type": "publicKey"
+            "name": "priceFeedAddresses",
+            "type": {
+              "array": [
+                "publicKey",
+                2
+              ]
+            }
           },
           {
             "name": "price",

@@ -22,7 +22,7 @@ import { sleep } from "./utils";
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 
-const TOKEN_DATA_SIZE = 130616;
+const TOKEN_DATA_SIZE = 138808;
 const COMET_POSITIONS_SIZE = 59208;
 const MINT_POSITIONS_SIZE = 24528;
 const LIQUIDITY_POSITIONS_SIZE = 16368;
@@ -51,7 +51,7 @@ export class Incept {
     this.opts = opts;
     this.program = new Program<InceptProgram>(IDL, this.programId, provider);
   }
-  public async initializeManager() {
+  public async initializeManager(chainlinkProgram: PublicKey) {
     const managerPubkeyAndBump = await this.getManagerAddress();
     const usdiMint = anchor.web3.Keypair.generate();
     const liquidatedCometUsdiTokenAccount = anchor.web3.Keypair.generate();
@@ -66,6 +66,7 @@ export class Incept {
           liquidatedCometUsdiTokenAccount.publicKey,
         tokenData: tokenData.publicKey,
         rent: RENT_PUBKEY,
+        chainlinkProgram: chainlinkProgram,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SYSTEM_PROGRAM_ID,
       },
@@ -182,7 +183,9 @@ export class Incept {
     admin: PublicKey,
     stableCollateralRatio: number,
     cryptoCollateralRatio: number,
-    oracle: PublicKey
+    pythOracle: PublicKey,
+    chainlinkOracle: PublicKey
+
   ) {
     const [managerPubkey, managerBump] = await this.getManagerAddress();
     const managerAccount = await this.getManagerAccount();
@@ -210,7 +213,8 @@ export class Incept {
             liquidationIassetTokenAccount.publicKey,
           liquidityTokenMint: liquidityTokenMintAccount.publicKey,
           cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
-          oracle: oracle,
+          pythOracle: pythOracle,
+          chainlinkOracle: chainlinkOracle,
           rent: RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
@@ -261,14 +265,24 @@ export class Incept {
   public async updatePricesInstruction() {
     const tokenData = await this.getTokenData();
 
-    const priceFeeds = tokenData.pools
+    let priceFeeds = [];
+    tokenData.pools
       .slice(0, Number(tokenData.numPools))
-      .map((pool) => {
-        return {
-          pubkey: pool.assetInfo.priceFeedAddress,
-          isWritable: false,
-          isSigner: false,
-        };
+      .forEach((pool) => {
+        priceFeeds.push(
+          {
+            pubkey: pool.assetInfo.priceFeedAddresses[0],
+            isWritable: false,
+            isSigner: false,
+          }
+        )
+        priceFeeds.push(
+          {
+            pubkey: pool.assetInfo.priceFeedAddresses[1],
+            isWritable: false,
+            isSigner: false,
+          }
+        )
       });
 
     return (await this.program.instruction.updatePrices(
@@ -278,6 +292,7 @@ export class Incept {
         accounts: {
           manager: this.managerAddress[0],
           tokenData: this.manager.tokenData,
+          chainlinkProgram: tokenData.chainlinkProgram
         },
       }
     )) as TransactionInstruction;
@@ -452,7 +467,7 @@ export class Incept {
           userCollateralTokenAccount: userCollateralTokenAccount,
           iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
           userIassetTokenAccount: userIassetTokenAccount,
-          oracle: tokenData.pools[poolIndex].assetInfo.priceFeedAddress,
+          oracle: tokenData.pools[poolIndex].assetInfo.priceFeedAddresses[0],
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
@@ -1565,6 +1580,7 @@ export interface TokenData {
   numCollaterals: BN;
   pools: Array<Pool>;
   collaterals: Array<Collateral>;
+  chainlinkProgram: PublicKey
 }
 
 export interface LiquidityPositions {
@@ -1625,7 +1641,7 @@ export interface Value {
 
 export interface AssetInfo {
   iassetMint: PublicKey;
-  priceFeedAddress: PublicKey;
+  priceFeedAddresses: Array<PublicKey>;
   price: Value;
   twap: Value;
   confidence: Value;

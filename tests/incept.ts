@@ -3,6 +3,7 @@ import { Program, BN } from "@project-serum/anchor";
 import { Incept } from "../sdk/src/idl/incept";
 import { Pyth } from "../sdk/src/idl/pyth";
 import { MockUsdc } from "../sdk/src/idl/mock_usdc";
+import { Store } from "../sdk/src/idl/store";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { assert } from "chai";
 import {
@@ -15,7 +16,12 @@ import {
   Manager,
   Pool,
 } from "../sdk/src/incept";
-import { createPriceFeed, setPrice, getFeedData } from "./oracle";
+import {
+  createPriceFeed,
+  setPrice,
+  getFeedData,
+  ChainLinkOracle,
+} from "./oracle";
 import { sleep } from "../sdk/src/utils";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
@@ -25,10 +31,13 @@ describe("incept", async () => {
   const provider = anchor.Provider.local();
   anchor.setProvider(provider);
 
-  const inceptProgram = anchor.workspace.Incept as Program<Incept>;
-  const pythProgram = anchor.workspace.Pyth as Program<Pyth>;
-  const mockUSDCProgram = anchor.workspace.MockUsdc as Program<MockUsdc>;
-  const walletPubkey = inceptProgram.provider.wallet.publicKey;
+  let inceptProgram = anchor.workspace.Incept as Program<Incept>;
+  let pythProgram = anchor.workspace.Pyth as Program<Pyth>;
+  let mockUSDCProgram = anchor.workspace.MockUsdc as Program<MockUsdc>;
+  let walletPubkey = inceptProgram.provider.wallet.publicKey;
+  let storeProgram = anchor.workspace.Store as Program<Store>;
+
+  let chainlink; //= new ChainLinkOracle(storeProgram);
 
   const mockUSDCMint = anchor.web3.Keypair.generate();
   const mockUSDCAccount = await anchor.web3.PublicKey.findProgramAddress(
@@ -63,7 +72,7 @@ describe("incept", async () => {
   });
 
   it("manager initialized!", async () => {
-    await inceptClient.initializeManager();
+    await inceptClient.initializeManager(storeProgram.programId);
   });
 
   it("user initialized!", async () => {
@@ -144,6 +153,18 @@ describe("incept", async () => {
     let updatedPrice = (await getFeedData(pythProgram, priceFeed)).aggregate
       .price;
     assert.equal(updatedPrice, price, "check updated price");
+
+    chainlink = new ChainLinkOracle(storeProgram);
+
+    await chainlink.createChainlinkFeed(1, 2);
+
+    await chainlink.submitAnswer(new BN(1649943158), new BN(500000000));
+
+    await sleep(200);
+
+    // let r = await chainlink.fetchAnswer();
+
+    // console.log(r);
   });
 
   it("mock usdc added as a collateral!", async () => {
@@ -157,7 +178,13 @@ describe("incept", async () => {
   });
 
   it("pool initialized!", async () => {
-    await inceptClient.initializePool(walletPubkey, 150, 200, priceFeed);
+    await inceptClient.initializePool(
+      walletPubkey,
+      150,
+      200,
+      priceFeed,
+      chainlink.priceFeedPubkey()
+    );
   });
 
   it("token data initialization check", async () => {
@@ -204,7 +231,11 @@ describe("incept", async () => {
       return Number(value.val) * 10 ** -Number(value.scale);
     };
 
-    assert(assetInfo.priceFeedAddress.equals(priceFeed), "check price feed");
+    assert(
+      assetInfo.priceFeedAddresses[0].equals(priceFeed),
+      "check price feed"
+    );
+
     assert.equal(
       valueToDecimal(assetInfo.stableCollateralRatio),
       1.5,
@@ -232,11 +263,11 @@ describe("incept", async () => {
     await sleep(200);
   });
 
-
   it("mock usdc minted!", async () => {
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
     for (let i = 0; i < 1; i++) {
       await mockUSDCProgram.rpc.mintMockUsdc(mockUSDCAccount[1], {
         accounts: {
@@ -248,9 +279,10 @@ describe("incept", async () => {
         signers: [],
       });
     }
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
     assert.equal(
       Number(mockUSDCTokenAccountInfo.amount) / 10000000,
       1000000000000,
@@ -259,13 +291,14 @@ describe("incept", async () => {
   });
 
   it("usdi minted!", async () => {
-
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
     // @ts-ignore
     let signers: Array<Signer> = [provider.wallet.payer];
 
@@ -279,12 +312,14 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 1000000000000,
@@ -314,12 +349,14 @@ describe("incept", async () => {
     )) as TokenData;
     const pool = tokenData.pools[0];
 
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
 
     // @ts-ignore
     let signers: Array<Signer> = [provider.wallet.payer];
@@ -336,12 +373,14 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
 
     assert.equal(
       Number(iassetTokenAccountInfo.amount) / 1000000000000,
@@ -365,10 +404,10 @@ describe("incept", async () => {
     // @ts-ignore
     let signers: Array<Signer> = [provider.wallet.payer];
 
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
-
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
 
     await inceptClient.addCollateralToMint(
       mockUSDCTokenAccountInfo.address,
@@ -384,12 +423,14 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     assert.equal(
       Number(iassetTokenAccountInfo.amount) / 1000000000000,
@@ -413,9 +454,10 @@ describe("incept", async () => {
     // @ts-ignore
     let signers: Array<Signer> = [provider.wallet.payer];
 
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
 
     await inceptClient.withdrawCollateralFromMint(
       mockUSDCTokenAccountInfo.address,
@@ -431,12 +473,14 @@ describe("incept", async () => {
 
     const pool = tokenData.pools[0];
 
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     assert.equal(
       Number(iassetTokenAccountInfo.amount) / 1000000000000,
@@ -462,12 +506,14 @@ describe("incept", async () => {
     )) as TokenData;
 
     const pool = tokenData.pools[0];
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     let userAccountData = await inceptClient.getUserAccount();
     let { userPubkey, bump } = await inceptClient.getUserAddress();
@@ -491,9 +537,10 @@ describe("incept", async () => {
       }
     );
 
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     assert.equal(
       Number(iassetTokenAccountInfo.amount) / 1000000000000,
@@ -508,9 +555,10 @@ describe("incept", async () => {
     )) as TokenData;
 
     const pool = tokenData.pools[0];
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     await inceptClient.addiAssetToMint(
       new BN(5000000),
@@ -519,9 +567,10 @@ describe("incept", async () => {
       0
     );
 
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     assert.equal(
       Number(iassetTokenAccountInfo.amount) / 1000000000000,
@@ -530,20 +579,23 @@ describe("incept", async () => {
     );
   });
 
-
   it("liquidity position initialized!", async () => {
     const tokenData = await inceptClient.getTokenData();
 
     const pool = tokenData.pools[0];
 
-
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
-    liquidityTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(pool.liquidityTokenMint);
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
+    liquidityTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.liquidityTokenMint
+      );
 
     await inceptClient.initializeLiquidityPosition(
       new BN(10000000000000),
@@ -555,15 +607,24 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
-    liquidityTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(pool.liquidityTokenMint);
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
+    liquidityTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.liquidityTokenMint
+      );
 
-    assert.equal(Number(usdiTokenAccountInfo.amount) / 1000000000000, 50, "check usdi");
+    assert.equal(
+      Number(usdiTokenAccountInfo.amount) / 1000000000000,
+      50,
+      "check usdi"
+    );
     assert.equal(
       Number(iassetTokenAccountInfo.amount) / 1000000000000,
       10,
@@ -603,13 +664,18 @@ describe("incept", async () => {
     const poolIndex = 0;
     let pool = tokenData.pools[poolIndex];
 
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
-    liquidityTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(pool.liquidityTokenMint);
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
+    liquidityTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.liquidityTokenMint
+      );
 
     await inceptClient.provideLiquidity(
       new BN(100000000),
@@ -621,13 +687,18 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
-    liquidityTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(pool.liquidityTokenMint);
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
+    liquidityTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.liquidityTokenMint
+      );
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 1000000000000,
@@ -675,13 +746,18 @@ describe("incept", async () => {
     const poolIndex = 0;
     const pool = tokenData.pools[poolIndex];
 
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
-    liquidityTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(pool.liquidityTokenMint);
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
+    liquidityTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.liquidityTokenMint
+      );
 
     await inceptClient.withdrawLiquidity(
       new BN(45453545454500),
@@ -693,13 +769,18 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
-    liquidityTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(pool.liquidityTokenMint);
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
+    liquidityTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.liquidityTokenMint
+      );
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 1000000000000,
@@ -748,12 +829,14 @@ describe("incept", async () => {
     const poolIndex = 0;
     const pool = tokenData.pools[poolIndex];
 
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     await inceptClient.buySynth(
       new BN(1000000000000),
@@ -764,12 +847,14 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 1000000000000,
@@ -812,12 +897,14 @@ describe("incept", async () => {
     const poolIndex = 0;
     const pool = tokenData.pools[poolIndex];
 
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     await inceptClient.sellSynth(
       new BN(1000000000000),
@@ -828,12 +915,14 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 1000000000000,
@@ -872,9 +961,10 @@ describe("incept", async () => {
   });
 
   it("comet initialized!", async () => {
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
 
     await inceptClient.initializeComet(
       mockUSDCTokenAccountInfo.address,
@@ -890,9 +980,10 @@ describe("incept", async () => {
     const pool = tokenData.pools[0];
     const collateral = tokenData.collaterals[0];
 
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
 
     assert.equal(
       Number(mockUSDCTokenAccountInfo.amount) / 10000000,
@@ -933,9 +1024,10 @@ describe("incept", async () => {
   });
 
   it("comet collateral added!", async () => {
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
 
     await inceptClient.addCollateralToComet(
       mockUSDCTokenAccountInfo.address,
@@ -949,9 +1041,10 @@ describe("incept", async () => {
     const pool = tokenData.pools[0];
     const collateral = tokenData.collaterals[0];
 
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
     assert.equal(
       Number(mockUSDCTokenAccountInfo.amount) / 10000000,
       999978999745,
@@ -991,9 +1084,10 @@ describe("incept", async () => {
   });
 
   it("comet collateral withdrawn!", async () => {
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
 
     await inceptClient.withdrawCollateralFromComet(
       mockUSDCTokenAccountInfo.address,
@@ -1007,9 +1101,10 @@ describe("incept", async () => {
     const pool = tokenData.pools[0];
     const collateral = tokenData.collaterals[0];
 
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
     assert.equal(
       Number(mockUSDCTokenAccountInfo.amount) / 10000000,
       999978999750,
@@ -1049,14 +1144,12 @@ describe("incept", async () => {
   });
 
   it("comet liquidity added!", async () => {
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
 
-    await inceptClient.addLiquidityToComet(
-      new BN(1000000000),
-      0
-    );
+    await inceptClient.addLiquidityToComet(new BN(1000000000), 0);
 
     await sleep(200);
 
@@ -1089,14 +1182,12 @@ describe("incept", async () => {
   });
 
   it("comet liquidity subtracted!", async () => {
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
 
-    await inceptClient.subtractLiquidityFromComet(
-      new BN(1000000000),
-      0
-    );
+    await inceptClient.subtractLiquidityFromComet(new BN(1000000000), 0);
 
     await sleep(200);
 
@@ -1132,14 +1223,15 @@ describe("incept", async () => {
     let poolIndex = 0;
     const tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[poolIndex];
-  
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
 
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     await inceptClient.buySynth(
       new BN(1000000000000),
@@ -1150,12 +1242,14 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 1000000000000,
@@ -1199,29 +1293,35 @@ describe("incept", async () => {
     const pool = tokenData.pools[poolIndex];
     const collateral = tokenData.collaterals[0];
 
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     await inceptClient.recenterComet(iassetTokenAccountInfo.address, 0);
 
     await sleep(200);
 
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     assert.equal(
       Number(
@@ -1283,15 +1383,18 @@ describe("incept", async () => {
     const pool = tokenData.pools[poolIndex];
     const collateral = tokenData.collaterals[0];
 
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     await inceptClient.closeComet(
       mockUSDCTokenAccountInfo.address,
@@ -1302,28 +1405,31 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      mockUSDCMint.publicKey
-    );
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
-    iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      pool.assetInfo.iassetMint
-    );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
+    iassetTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
 
     assert.equal(
-      (Number(mockUSDCTokenAccountInfo.amount) / 10000000),
+      Number(mockUSDCTokenAccountInfo.amount) / 10000000,
       999978999992.3546,
       "check user usdc balance"
     );
     assert.equal(
-      (Number(usdiTokenAccountInfo.amount) / 1000000000000),
+      Number(usdiTokenAccountInfo.amount) / 1000000000000,
       48.927648918785,
       "check user usdi balance"
     );
     assert.equal(
-      (Number(iassetTokenAccountInfo.amount) / 1000000000000),
+      Number(iassetTokenAccountInfo.amount) / 1000000000000,
       11.908970890618,
       "check user iAsset balance"
     );
@@ -1361,9 +1467,10 @@ describe("incept", async () => {
   });
 
   it("hackathon USDI mint", async () => {
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
 
     const currentUSDI = Number(usdiTokenAccountInfo.amount) / 1000000000000;
 
@@ -1374,9 +1481,10 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
-    );
+    usdiTokenAccountInfo =
+      await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        inceptClient.manager.usdiMint
+      );
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 1000000000000,

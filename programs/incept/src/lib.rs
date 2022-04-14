@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, MintTo, Transfer};
+use chainlink_solana as chainlink;
 use error::*;
 use instructions::*;
 use pyth::pc::Price;
@@ -13,6 +14,8 @@ mod instructions;
 mod math;
 mod states;
 mod value;
+
+use crate::value::Div;
 
 declare_id!("EwZEhz1NLbzSKLQ6jhu2kk6784Ly2EWJo4BK3HTmFvEv");
 
@@ -43,6 +46,7 @@ pub mod incept {
 
         // set manager as token data owner
         token_data.manager = *ctx.accounts.manager.to_account_info().key;
+        token_data.chainlink_program = *ctx.accounts.chainlink_program.to_account_info().key;
 
         Ok(())
     }
@@ -93,7 +97,10 @@ pub mod incept {
         if !(is_stable.unwrap()) {
             pool_index = TokenData::get_pool_tuple_from_oracle(
                 token_data,
-                *ctx.remaining_accounts[0].to_account_info().key,
+                [
+                    &ctx.remaining_accounts[0].to_account_info().key,
+                    &ctx.remaining_accounts[1].to_account_info().key,
+                ],
             )
             .unwrap()
             .1
@@ -147,7 +154,10 @@ pub mod incept {
             *ctx.accounts.iasset_mint.to_account_info().key;
         token_data.pools[index as usize]
             .asset_info
-            .price_feed_address = *ctx.accounts.oracle.to_account_info().key;
+            .price_feed_addresses = [
+            *ctx.accounts.pyth_oracle.to_account_info().key,
+            *ctx.accounts.chainlink_oracle.to_account_info().key,
+        ];
         token_data.pools[index as usize]
             .asset_info
             .stable_collateral_ratio = Value::from_percent(stable_collateral_ratio);
@@ -158,26 +168,58 @@ pub mod incept {
         Ok(())
     }
 
-    pub fn update_prices(ctx: Context<UpdatePrices>, _manager_nonce: u8) -> ProgramResult {
+    pub fn update_prices<'info>(
+        ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
+        _manager_nonce: u8,
+    ) -> ProgramResult {
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
-
-        // loop through each oracle entered into the instrction
-        for oracle_account in ctx.remaining_accounts {
-            // generate data from oracle
-            let price_feed = Price::load(oracle_account)?;
+        let chainlink_program = &ctx.accounts.chainlink_program;
+        let n_accounts = ctx.remaining_accounts.iter().len();
+        // loop through each oracle entered into the instruction
+        for i in 0..n_accounts {
+            if i % 2 != 0 {
+                continue;
+            }
+            let pyth_oracle = &ctx.remaining_accounts[i];
+            let chainlink_oracle = &ctx.remaining_accounts[i + 1];
+            // generate data from pyth oracle
+            let price_feed = Price::load(pyth_oracle)?;
             let expo_u8: u8 = price_feed.expo.abs().try_into().unwrap();
             let (_, pool_index) = TokenData::get_pool_tuple_from_oracle(
                 token_data,
-                *oracle_account.to_account_info().key,
+                [
+                    pyth_oracle.to_account_info().key,
+                    chainlink_oracle.to_account_info().key,
+                ],
             )
             .unwrap();
-            let price = Value::new(price_feed.agg.price.try_into().unwrap(), expo_u8);
+            let pyth_price = Value::new(price_feed.agg.price.try_into().unwrap(), expo_u8);
             let confidence = Value::new(price_feed.agg.conf.try_into().unwrap(), expo_u8);
             // ensure prices have proper confidence
-            check_price_confidence(price, confidence).unwrap();
+            check_price_confidence(pyth_price, confidence).unwrap();
+
+            // Generate data from Chainlink oracle
+            let round = chainlink::latest_round_data(
+                chainlink_program.to_account_info(),
+                chainlink_oracle.to_account_info(),
+            )?;
+
+            let decimals = chainlink::decimals(
+                chainlink_program.to_account_info(),
+                chainlink_oracle.to_account_info(),
+            )?;
+
+            let chainlink_price =
+                Value::new(round.answer.try_into().unwrap(), decimals).scale_to(DEVNET_TOKEN_SCALE);
+
+            // take an average to use as the oracle price.
+            let average_price = chainlink_price
+                .add(pyth_price.scale_to(DEVNET_TOKEN_SCALE))
+                .unwrap()
+                .div(Value::new(2, 0).scale_to(DEVNET_TOKEN_SCALE));
 
             // update price data
-            token_data.pools[pool_index].asset_info.price = price;
+            token_data.pools[pool_index].asset_info.price = average_price;
             token_data.pools[pool_index].asset_info.twap =
                 Value::new(price_feed.twap.try_into().unwrap(), expo_u8);
             token_data.pools[pool_index].asset_info.confidence =
@@ -2329,11 +2371,7 @@ pub mod incept {
                     .amm_usdi_token_account
                     .to_account_info()
                     .clone(),
-                to: ctx
-                    .accounts
-                    .liquidated_comet_usdi
-                    .to_account_info()
-                    .clone(),
+                to: ctx.accounts.liquidated_comet_usdi.to_account_info().clone(),
                 authority: ctx.accounts.manager.to_account_info().clone(),
             };
             let send_iasset_context = CpiContext::new_with_signer(
@@ -2441,11 +2479,7 @@ pub mod incept {
         } else {
             // send surplus usdi to user
             let cpi_accounts = Transfer {
-                from: ctx
-                    .accounts
-                    .liquidated_comet_usdi
-                    .to_account_info()
-                    .clone(),
+                from: ctx.accounts.liquidated_comet_usdi.to_account_info().clone(),
                 to: ctx
                     .accounts
                     .user_usdi_token_account

@@ -21,12 +21,13 @@ pub struct Manager {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 130,608
+    // 138,800
     pub manager: Pubkey,                // 32
     pub num_pools: u64,                 // 8
     pub num_collaterals: u64,           // 8
-    pub pools: [Pool; 255],             // 255 * 360 = 91,800
+    pub pools: [Pool; 255],             // 255 * 392 = 99,960
     pub collaterals: [Collateral; 255], // 255 * 152 = 38,760
+    pub chainlink_program: Pubkey,      // 32
 }
 
 impl Default for TokenData {
@@ -37,6 +38,7 @@ impl Default for TokenData {
             num_collaterals: 0,
             pools: [Pool::default(); 255],
             collaterals: [Collateral::default(); 255],
+            chainlink_program: Pubkey::default(),
         };
     }
 }
@@ -82,13 +84,12 @@ impl TokenData {
     }
     pub fn get_pool_tuple_from_oracle(
         &self,
-        price_feed_address: Pubkey,
+        price_feed_addresses: [&Pubkey; 2],
     ) -> Result<(Pool, usize), InceptError> {
-        let (pool, index) = match self
-            .pools
-            .iter()
-            .position(|x| x.asset_info.price_feed_address == price_feed_address)
-        {
+        let (pool, index) = match self.pools.iter().position(|x| {
+            x.asset_info.price_feed_addresses[0] == *price_feed_addresses[0]
+                && x.asset_info.price_feed_addresses[1] == *price_feed_addresses[1]
+        }) {
             Some(i) => (self.pools[i], i),
             None => return Err(InceptError::PoolNotFound.into()),
         };
@@ -100,28 +101,28 @@ impl TokenData {
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct AssetInfo {
-    // 200
-    pub iasset_mint: Pubkey,            // 32
-    pub price_feed_address: Pubkey,     // 32
-    pub price: Value,                   // 24
-    pub twap: Value,                    // 24
-    pub confidence: Value,              // 24
-    pub status: u64,                    // 8
-    pub last_update: u64,               // 8
-    pub stable_collateral_ratio: Value, // 24
-    pub crypto_collateral_ratio: Value, // 24
+    // 232
+    pub iasset_mint: Pubkey,               // 32
+    pub price_feed_addresses: [Pubkey; 2], // 64
+    pub price: Value,                      // 24
+    pub twap: Value,                       // 24
+    pub confidence: Value,                 // 24
+    pub status: u64,                       // 8
+    pub last_update: u64,                  // 8
+    pub stable_collateral_ratio: Value,    // 24
+    pub crypto_collateral_ratio: Value,    // 24
 }
 
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct Pool {
-    // 360
+    // 392
     pub iasset_token_account: Pubkey,             // 32
     pub usdi_token_account: Pubkey,               // 32
     pub liquidity_token_mint: Pubkey,             // 32
     pub liquidation_iasset_token_account: Pubkey, // 32
     pub comet_liquidity_token_account: Pubkey,    // 32
-    pub asset_info: AssetInfo,                    // 200
+    pub asset_info: AssetInfo,                    // 232
 }
 
 #[zero_copy]
