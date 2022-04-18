@@ -5,8 +5,8 @@ use error::*;
 use instructions::*;
 use pyth::pc::Price;
 use states::{
-    AssetInfo, Collateral, CometLiquidation, CometPosition, LiquidityPosition, MintPosition, Pool,
-    TokenData, Value,
+    AssetInfo, Collateral, CometLiquidation, CometPosition, LiquidityPosition, MintPosition,
+    MultiPoolCometCollateral, Pool, TokenData, Value,
 };
 
 mod error;
@@ -59,6 +59,7 @@ pub mod incept {
         let mut comet_positions = ctx.accounts.comet_positions.load_init()?;
         let mut mint_positions = ctx.accounts.mint_positions.load_init()?;
         let mut liquidity_positions = ctx.accounts.liquidity_positions.load_init()?;
+        let mut comet_manager_position = ctx.accounts.comet_manager_position.load_init()?;
 
         // set user data
         ctx.accounts.user_account.authority = *ctx.accounts.user.to_account_info().key;
@@ -68,11 +69,14 @@ pub mod incept {
             *ctx.accounts.mint_positions.to_account_info().key;
         ctx.accounts.user_account.liquidity_positions =
             *ctx.accounts.liquidity_positions.to_account_info().key;
+        ctx.accounts.user_account.comet_manager_position =
+            *ctx.accounts.comet_manager_position.to_account_info().key;
 
         // set user as comet, mint, and liquidity positions owner
         comet_positions.owner = *ctx.accounts.user.to_account_info().key;
         mint_positions.owner = *ctx.accounts.user.to_account_info().key;
         liquidity_positions.owner = *ctx.accounts.user.to_account_info().key;
+        comet_manager_position.owner = *ctx.accounts.user.to_account_info().key;
 
         Ok(())
     }
@@ -145,6 +149,9 @@ pub mod incept {
                 .comet_liquidity_token_account
                 .to_account_info()
                 .key,
+            iasset_amount: Value::new(0, DEVNET_TOKEN_SCALE),
+            usdi_amount: Value::new(0, DEVNET_TOKEN_SCALE),
+            liquidity_token_supply: Value::new(0, DEVNET_TOKEN_SCALE),
             asset_info: AssetInfo {
                 ..Default::default()
             },
@@ -233,7 +240,6 @@ pub mod incept {
 
     pub fn mint_usdi(ctx: Context<MintUSDI>, manager_nonce: u8, amount: u64) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
-
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
         let (collateral, collateral_index) =
@@ -291,12 +297,10 @@ pub mod incept {
     pub fn initialize_mint_position(
         ctx: Context<InitializeMintPosition>,
         manager_nonce: u8,
-        _user_nonce: u8,
         iasset_amount: u64,
         collateral_amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
-
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
         let (collateral, collateral_index) = TokenData::get_collateral_tuple(
@@ -375,7 +379,6 @@ pub mod incept {
     pub fn add_collateral_to_mint(
         ctx: Context<AddCollateralToMint>,
         _manager_nonce: u8,
-        _user_nonce: u8,
         mint_index: u8,
         amount: u64,
     ) -> ProgramResult {
@@ -410,12 +413,10 @@ pub mod incept {
     pub fn withdraw_collateral_from_mint(
         ctx: Context<WithdrawCollateralFromMint>,
         manager_nonce: u8,
-        _user_nonce: u8,
         mint_index: u8,
         amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
-
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
         let mint_positions = &mut ctx.accounts.mint_positions.load_mut()?;
 
@@ -462,7 +463,6 @@ pub mod incept {
     pub fn pay_back_mint(
         ctx: Context<PayBackiAssetToMint>,
         _manager_nonce: u8,
-        _user_nonce: u8,
         mint_index: u8,
         amount: u64,
     ) -> ProgramResult {
@@ -494,13 +494,12 @@ pub mod incept {
     pub fn add_iasset_to_mint(
         ctx: Context<AddiAssetToMint>,
         manager_nonce: u8,
-        _user_nonce: u8,
         mint_index: u8,
         amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 
-        let token_data = &mut ctx.accounts.token_data.load_mut()?;
+        let token_data = ctx.accounts.token_data.load_mut()?;
         let mint_positions = &mut ctx.accounts.mint_positions.load_mut()?;
 
         let amount_value = Value::new(amount.into(), DEVNET_TOKEN_SCALE);
@@ -540,8 +539,7 @@ pub mod incept {
         iasset_amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
-
-        let token_data = ctx.accounts.token_data.load()?;
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
         let iasset_liquidity_value = Value::new(iasset_amount.into(), DEVNET_TOKEN_SCALE);
         let iasset_amm_value = Value::new(
@@ -631,6 +629,20 @@ pub mod incept {
         };
         liquidity_positions.num_positions += 1;
 
+        // update pool data
+        token_data.pools[pool_index as usize].iasset_amount = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[pool_index as usize].usdi_amount = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[pool_index as usize].liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
         Ok(())
     }
 
@@ -641,6 +653,7 @@ pub mod incept {
         iasset_amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
         let iasset_liquidity_value = Value::new(iasset_amount.into(), DEVNET_TOKEN_SCALE);
         let iasset_amm_value = Value::new(
@@ -722,6 +735,21 @@ pub mod incept {
             .add(liquidity_token_value)
             .unwrap();
 
+        // update pool data
+        token_data.pools[liquidity_position.pool_index as usize].iasset_amount = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[liquidity_position.pool_index as usize].usdi_amount = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[liquidity_position.pool_index as usize].liquidity_token_supply =
+            Value::new(
+                ctx.accounts.liquidity_token_mint.supply.into(),
+                DEVNET_TOKEN_SCALE,
+            );
+
         Ok(())
     }
 
@@ -732,6 +760,7 @@ pub mod incept {
         liquidity_token_amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
         let liquidity_token_value = Value::new(liquidity_token_amount.into(), DEVNET_TOKEN_SCALE);
         let iasset_amm_value = Value::new(
@@ -823,16 +852,32 @@ pub mod incept {
             liquidity_positions.remove(liquidity_position_index as usize);
         }
 
+        // update pool data
+        token_data.pools[liquidity_position.pool_index as usize].iasset_amount = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[liquidity_position.pool_index as usize].usdi_amount = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[liquidity_position.pool_index as usize].liquidity_token_supply =
+            Value::new(
+                ctx.accounts.liquidity_token_mint.supply.into(),
+                DEVNET_TOKEN_SCALE,
+            );
+
         Ok(())
     }
 
     pub fn buy_synth(
         ctx: Context<BuySynth>,
         manager_nonce: u8,
-        _pool_index: u8,
+        pool_index: u8,
         amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
         let iasset_amount_value = Value::new(amount.into(), DEVNET_TOKEN_SCALE);
         let iasset_amm_value = Value::new(
@@ -900,16 +945,27 @@ pub mod incept {
 
         token::transfer(send_iasset_to_user_context, amount)?;
 
+        // update pool data
+        token_data.pools[pool_index as usize].iasset_amount = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[pool_index as usize].usdi_amount = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
         Ok(())
     }
 
     pub fn sell_synth(
         ctx: Context<SellSynth>,
         manager_nonce: u8,
-        _pool_index: u8,
+        pool_index: u8,
         amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
         let iasset_amount_value = Value::new(amount.into(), DEVNET_TOKEN_SCALE);
         let iasset_amm_value = Value::new(
@@ -972,20 +1028,28 @@ pub mod incept {
 
         token::transfer(send_usdi_to_user_context, usdi_amount_value.to_u64())?;
 
+        // update pool data
+        token_data.pools[pool_index as usize].iasset_amount = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[pool_index as usize].usdi_amount = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
         Ok(())
     }
 
     pub fn initialize_comet(
         ctx: Context<InitializeComet>,
         manager_nonce: u8,
-        _user_nonce: u8,
         pool_index: u8,
         collateral_amount: u64,
         usdi_amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
-
-        let token_data = &mut ctx.accounts.token_data.load_mut()?;
+        let token_data = &mut &mut ctx.accounts.token_data.load_mut()?;
 
         let (collateral, collateral_index) =
             TokenData::get_collateral_tuple(token_data, *ctx.accounts.vault.to_account_info().key)
@@ -1126,13 +1190,26 @@ pub mod incept {
 
         comet_positions.num_positions += 1;
 
+        // update pool data
+        token_data.pools[pool_index as usize].iasset_amount = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[pool_index as usize].usdi_amount = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[pool_index as usize].liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
         Ok(())
     }
 
     pub fn add_collateral_to_comet(
         ctx: Context<AddCollateralToComet>,
         _manager_nonce: u8,
-        _user_nonce: u8,
         comet_index: u8,
         collateral_amount: u64,
     ) -> ProgramResult {
@@ -1199,13 +1276,12 @@ pub mod incept {
     pub fn withdraw_collateral_from_comet(
         ctx: Context<WithdrawCollateralFromComet>,
         manager_nonce: u8,
-        _user_nonce: u8,
         comet_index: u8,
         collateral_amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
-
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
+
         let mut comet_positions = ctx.accounts.comet_positions.load_mut()?;
         let comet_position = comet_positions.comet_positions[comet_index as usize];
 
@@ -1278,11 +1354,11 @@ pub mod incept {
     pub fn add_liquidity_to_comet(
         ctx: Context<AddLiquidityToComet>,
         manager_nonce: u8,
-        _user_nonce: u8,
         comet_index: u8,
         usdi_amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
         let mut comet_positions = ctx.accounts.comet_positions.load_mut()?;
         let comet_position = comet_positions.comet_positions[comet_index as usize];
@@ -1414,17 +1490,31 @@ pub mod incept {
             liquidity_token_value.to_u64(),
         )?;
 
+        // update pool data
+        token_data.pools[comet_position.pool_index as usize].iasset_amount = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[comet_position.pool_index as usize].usdi_amount = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
         Ok(())
     }
 
     pub fn subtract_liquidity_from_comet(
-        ctx: Context<AddLiquidityToComet>,
+        ctx: Context<SubtractLiquidityFromComet>,
         manager_nonce: u8,
-        _user_nonce: u8,
         comet_index: u8,
         usdi_amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
         let mut comet_positions = ctx.accounts.comet_positions.load_mut()?;
         let comet_position = comet_positions.comet_positions[comet_index as usize];
@@ -1546,13 +1636,26 @@ pub mod incept {
             liquidity_token_value.to_u64(),
         )?;
 
+        // update pool data
+        token_data.pools[comet_position.pool_index as usize].iasset_amount = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[comet_position.pool_index as usize].usdi_amount = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
         Ok(())
     }
 
     pub fn close_comet(
         ctx: Context<CloseComet>,
         manager_nonce: u8,
-        _user_nonce: u8,
         comet_index: u8,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
@@ -1920,16 +2023,30 @@ pub mod incept {
         // remove comet from user list
         comet_positions.remove(comet_index as usize);
 
+        // update pool data
+        token_data.pools[comet_position.pool_index as usize].iasset_amount = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[comet_position.pool_index as usize].usdi_amount = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
         Ok(())
     }
 
     pub fn recenter_comet(
         ctx: Context<RecenterComet>,
         manager_nonce: u8,
-        _user_nonce: u8,
         comet_index: u8,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
         let mut comet_positions = ctx.accounts.comet_positions.load_mut()?;
         let comet_position = comet_positions.comet_positions[comet_index as usize];
@@ -2171,13 +2288,382 @@ pub mod incept {
             token::burn(burn_usdi_context, usdi_debt.to_u64())?;
         }
 
+        // update pool data
+        token_data.pools[comet_position.pool_index as usize].iasset_amount = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[comet_position.pool_index as usize].usdi_amount = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        Ok(())
+    }
+
+    pub fn add_collateral_to_comet_manager(
+        ctx: Context<AddCollateralToCometManager>,
+        _manager_nonce: u8,
+        collateral_index: u8,
+        collateral_amount: u64,
+    ) -> ProgramResult {
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
+        let mut comet_manager_position = ctx.accounts.comet_manager_position.load_mut()?;
+
+        let collateral = token_data.collaterals[collateral_index as usize];
+
+        let added_collateral_value = Value::new(
+            collateral_amount.into(),
+            collateral.vault_comet_supply.scale.try_into().unwrap(),
+        );
+
+        // add collateral amount to vault supply
+        token_data.collaterals[collateral_index as usize].vault_comet_supply = collateral
+            .vault_comet_supply
+            .add(added_collateral_value)
+            .unwrap();
+
+        // add collateral amount to total comet manager collateral amount
+        comet_manager_position.total_collateral_amount = comet_manager_position
+            .total_collateral_amount
+            .add(added_collateral_value.scale_to(DEVNET_TOKEN_SCALE))
+            .unwrap();
+
+        // find the index of the collateral within the manager's position
+        let manager_collateral_index =
+            comet_manager_position.get_collateral_index(collateral_index);
+
+        // check to see if a new collateral must be added to the position
+        if manager_collateral_index == usize::MAX {
+            comet_manager_position.append_collateral(MultiPoolCometCollateral {
+                authority: *ctx.accounts.user.to_account_info().key,
+                collateral_amount: added_collateral_value,
+                collateral_index: collateral_index.into(),
+            });
+        } else {
+            comet_manager_position.collaterals[manager_collateral_index].collateral_amount =
+                comet_manager_position.collaterals[manager_collateral_index]
+                    .collateral_amount
+                    .add(added_collateral_value)
+                    .unwrap();
+        }
+
+        // send collateral from user to vault
+        let cpi_ctx = CpiContext::from(&*ctx.accounts);
+        token::transfer(cpi_ctx, collateral_amount)?;
+
+        Ok(())
+    }
+
+    pub fn withdraw_collateral_from_comet_manager(
+        ctx: Context<AddCollateralToCometManager>,
+        manager_nonce: u8,
+        collateral_index: u8,
+        collateral_amount: u64,
+    ) -> ProgramResult {
+        let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
+        let mut comet_manager_position = ctx.accounts.comet_manager_position.load_mut()?;
+
+        let collateral = token_data.collaterals[collateral_index as usize];
+
+        let subtracted_collateral_value = Value::new(
+            collateral_amount.into(),
+            collateral.vault_comet_supply.scale.try_into().unwrap(),
+        );
+
+        // subtract collateral amount to vault supply
+        token_data.collaterals[collateral_index as usize].vault_comet_supply = collateral
+            .vault_comet_supply
+            .sub(subtracted_collateral_value)
+            .unwrap();
+
+        // subtract collateral amount to total comet manager collateral amount
+        comet_manager_position.total_collateral_amount = comet_manager_position
+            .total_collateral_amount
+            .sub(subtracted_collateral_value.scale_to(DEVNET_TOKEN_SCALE))
+            .unwrap();
+
+        // find the index of the collateral within the manager's position
+        let manager_collateral_index =
+            comet_manager_position.get_collateral_index(collateral_index);
+
+        if comet_manager_position.collaterals[manager_collateral_index]
+            .collateral_amount
+            .lt(subtracted_collateral_value)
+            .unwrap()
+        {
+            return Err(InceptError::InsufficientCollateral.into());
+        }
+
+        comet_manager_position.collaterals[manager_collateral_index].collateral_amount =
+            comet_manager_position.collaterals[manager_collateral_index]
+                .collateral_amount
+                .sub(subtracted_collateral_value)
+                .unwrap();
+
+        // send collateral from user to vault
+        let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
+        token::transfer(cpi_ctx, collateral_amount)?;
+
+        Ok(())
+    }
+
+    pub fn add_liquidity_to_comet_manager(
+        ctx: Context<AddLiquidityToCometManager>,
+        manager_nonce: u8,
+        pool_index: u8,
+        usdi_amount: u64,
+    ) -> ProgramResult {
+        let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
+        let mut comet_manager_position = ctx.accounts.comet_manager_position.load_mut()?;
+
+        let usdi_liquidity_value = Value::new(usdi_amount.into(), DEVNET_TOKEN_SCALE);
+        let iasset_amm_value = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        let usdi_amm_value = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        let liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        // calculate iasset liquidity value as well as liquidity token value for comet
+        let (iasset_liquidity_value, liquidity_token_value) =
+            calculate_liquidity_provider_values_from_usdi(
+                usdi_liquidity_value,
+                iasset_amm_value,
+                usdi_amm_value,
+                liquidity_token_supply,
+            );
+
+        // find the index of the comet within the manager's position
+        let manager_pool_index = comet_manager_position.get_pool_index(pool_index);
+        let comet_position = comet_manager_position.comet_positions[manager_pool_index];
+
+        // update comet position data
+        comet_manager_position.comet_positions[manager_pool_index].borrowed_usdi = comet_position
+            .borrowed_usdi
+            .add(usdi_liquidity_value)
+            .unwrap();
+        comet_manager_position.comet_positions[manager_pool_index].borrowed_iasset = comet_position
+            .borrowed_iasset
+            .add(iasset_liquidity_value)
+            .unwrap();
+        comet_manager_position.comet_positions[manager_pool_index].liquidity_token_value =
+            comet_position
+                .liquidity_token_value
+                .add(liquidity_token_value)
+                .unwrap();
+
+        // mint liquidity into amm
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .amm_usdi_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let mint_usdi_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
+        token::mint_to(mint_usdi_context, usdi_amount)?;
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .amm_iasset_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let mint_iasset_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
+        token::mint_to(mint_iasset_context, iasset_liquidity_value.to_u64())?;
+
+        // mint liquidity tokens to comet
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .comet_liquidity_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let mint_liquidity_tokens_to_comet_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
+
+        token::mint_to(
+            mint_liquidity_tokens_to_comet_context,
+            liquidity_token_value.to_u64(),
+        )?;
+
+        // update pool data
+        token_data.pools[comet_position.pool_index as usize].iasset_amount = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[comet_position.pool_index as usize].usdi_amount = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        Ok(())
+    }
+
+    pub fn subtract_liquidity_from_comet_manager(
+        ctx: Context<AddLiquidityToCometManager>,
+        manager_nonce: u8,
+        pool_index: u8,
+        usdi_amount: u64,
+    ) -> ProgramResult {
+        let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
+        let mut comet_manager_position = ctx.accounts.comet_manager_position.load_mut()?;
+
+        let usdi_liquidity_value = Value::new(usdi_amount.into(), DEVNET_TOKEN_SCALE);
+        let iasset_amm_value = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        let usdi_amm_value = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        let liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        // calculate iasset liquidity value as well as liquidity token value for comet
+        let (iasset_liquidity_value, liquidity_token_value) =
+            calculate_liquidity_provider_values_from_usdi(
+                usdi_liquidity_value,
+                iasset_amm_value,
+                usdi_amm_value,
+                liquidity_token_supply,
+            );
+
+        // find the index of the comet within the manager's position
+        let manager_pool_index = comet_manager_position.get_pool_index(pool_index);
+        let comet_position = comet_manager_position.comet_positions[manager_pool_index];
+
+        // update comet position data
+        comet_manager_position.comet_positions[manager_pool_index].borrowed_usdi = comet_position
+            .borrowed_usdi
+            .sub(usdi_liquidity_value)
+            .unwrap();
+        comet_manager_position.comet_positions[manager_pool_index].borrowed_iasset = comet_position
+            .borrowed_iasset
+            .sub(iasset_liquidity_value)
+            .unwrap();
+        comet_manager_position.comet_positions[manager_pool_index].liquidity_token_value =
+            comet_position
+                .liquidity_token_value
+                .sub(liquidity_token_value)
+                .unwrap();
+
+        // burn liquidity from amm
+        let cpi_accounts = Burn {
+            mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .amm_usdi_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let burn_usdi_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
+        token::burn(burn_usdi_context, usdi_amount)?;
+        let cpi_accounts = Burn {
+            mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .amm_iasset_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let burn_iasset_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
+        token::burn(burn_iasset_context, iasset_liquidity_value.to_u64())?;
+
+        // burn liquidity tokens from comet
+        let cpi_accounts = Burn {
+            mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .comet_liquidity_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let burn_liquidity_tokens_to_comet_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
+
+        token::burn(
+            burn_liquidity_tokens_to_comet_context,
+            liquidity_token_value.to_u64(),
+        )?;
+
+        // update pool data
+        token_data.pools[comet_position.pool_index as usize].iasset_amount = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[comet_position.pool_index as usize].usdi_amount = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
         Ok(())
     }
 
     pub fn liquidate_comet(
         ctx: Context<LiquidateComet>,
         manager_nonce: u8,
-        _user_nonce: u8,
         comet_index: u8,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
@@ -2406,7 +2892,10 @@ pub mod incept {
             seeds,
         );
 
-        token::transfer(send_collateral_context, comet_position.collateral_amount.to_u64())?;
+        token::transfer(
+            send_collateral_context,
+            comet_position.collateral_amount.to_u64(),
+        )?;
 
         // update comet data
         comet_positions.comet_positions[comet_index as usize]

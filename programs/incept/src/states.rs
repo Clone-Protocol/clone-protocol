@@ -1,6 +1,8 @@
 use crate::error::*;
 use anchor_lang::prelude::*;
 
+use crate::value::DEVNET_TOKEN_SCALE;
+
 #[zero_copy]
 #[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct Value {
@@ -21,11 +23,11 @@ pub struct Manager {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 138,800
+    // 157,670
     pub manager: Pubkey,                // 32
     pub num_pools: u64,                 // 8
     pub num_collaterals: u64,           // 8
-    pub pools: [Pool; 255],             // 255 * 392 = 99,960
+    pub pools: [Pool; 255],             // 255 * 466 = 118,830
     pub collaterals: [Collateral; 255], // 255 * 152 = 38,760
     pub chainlink_program: Pubkey,      // 32
 }
@@ -116,12 +118,15 @@ pub struct AssetInfo {
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct Pool {
-    // 392
+    // 466
     pub iasset_token_account: Pubkey,             // 32
     pub usdi_token_account: Pubkey,               // 32
     pub liquidity_token_mint: Pubkey,             // 32
     pub liquidation_iasset_token_account: Pubkey, // 32
     pub comet_liquidity_token_account: Pubkey,    // 32
+    pub iasset_amount: Value,                     // 24
+    pub usdi_amount: Value,                       // 24
+    pub liquidity_token_supply: Value,            // 24
     pub asset_info: AssetInfo,                    // 232
 }
 
@@ -142,10 +147,11 @@ pub struct Collateral {
 #[derive(Default)]
 pub struct User {
     // 128
-    pub authority: Pubkey,           // 32
-    pub comet_positions: Pubkey,     // 32
-    pub mint_positions: Pubkey,      // 32
-    pub liquidity_positions: Pubkey, // 32
+    pub authority: Pubkey,              // 32
+    pub comet_positions: Pubkey,        // 32
+    pub mint_positions: Pubkey,         // 32
+    pub liquidity_positions: Pubkey,    // 32
+    pub comet_manager_position: Pubkey, // 32
 }
 
 #[account(zero_copy)]
@@ -177,42 +183,89 @@ impl CometPositions {
 }
 
 #[account(zero_copy)]
-pub struct ManagerCometPosition {
-    // 55128
+pub struct CometManagerPosition {
+    // 55152
     pub owner: Pubkey,                                  // 32
     pub num_positions: u64,                             // 8
     pub num_collaterals: u64,                           // 8
+    pub total_collateral_amount: Value,                 // 24
     pub comet_positions: [MultiPoolCometPosition; 255], // 255 * 144 = 38760
     pub collaterals: [MultiPoolCometCollateral; 255],   // 255 * 64 = 16320
 }
 
-impl Default for ManagerCometPosition {
+impl Default for CometManagerPosition {
     fn default() -> Self {
         return Self {
             owner: Pubkey::default(),
             num_positions: 0,
             num_collaterals: 0,
+            total_collateral_amount: Value::new(0, DEVNET_TOKEN_SCALE),
             comet_positions: [MultiPoolCometPosition::default(); 255],
             collaterals: [MultiPoolCometCollateral::default(); 255],
         };
     }
 }
 
-impl ManagerCometPosition {
+impl CometManagerPosition {
     pub fn remove_position(&mut self, index: usize) {
         self.comet_positions[index] = self.comet_positions[(self.num_positions - 1) as usize];
-        self.comet_positions[(self.num_positions - 1) as usize] = CometPosition {
+        self.comet_positions[(self.num_positions - 1) as usize] = MultiPoolCometPosition {
             ..Default::default()
         };
         self.num_positions -= 1;
     }
-
     pub fn remove_collateral(&mut self, index: usize) {
         self.collaterals[index] = self.collaterals[(self.num_collaterals - 1) as usize];
-        self.collaterals[(self.num_collaterals - 1) as usize] = CometPosition {
+        self.collaterals[(self.num_collaterals - 1) as usize] = MultiPoolCometCollateral {
             ..Default::default()
         };
         self.num_collaterals -= 1;
+    }
+    pub fn get_collateral_index(&self, collateral_index: u8) -> usize {
+        let find_collateral = || -> Result<usize, InceptError> {
+            let index = match self
+                .collaterals
+                .iter()
+                .position(|x| x.collateral_index == collateral_index.into())
+            {
+                Some(i) => i,
+                None => return Err(InceptError::CollateralNotFound.into()),
+            };
+            Ok(index)
+        };
+
+        let result = find_collateral();
+
+        if let Err(_err) = result {
+            return usize::MAX;
+        } else {
+            return find_collateral().unwrap();
+        }
+    }
+    pub fn get_pool_index(&self, pool_index: u8) -> usize {
+        let find_pool = || -> Result<usize, InceptError> {
+            let index = match self
+                .comet_positions
+                .iter()
+                .position(|x| x.pool_index == pool_index.into())
+            {
+                Some(i) => i,
+                None => return Err(InceptError::PoolNotFound.into()),
+            };
+            Ok(index)
+        };
+
+        let result = find_pool();
+
+        if let Err(_err) = result {
+            return usize::MAX;
+        } else {
+            return find_pool().unwrap();
+        }
+    }
+    pub fn append_collateral(&mut self, new_collateral: MultiPoolCometCollateral) {
+        self.collaterals[(self.num_collaterals) as usize] = new_collateral;
+        self.num_collaterals += 1;
     }
 }
 
