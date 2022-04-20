@@ -218,13 +218,9 @@ pub fn calculate_lower_comet_price_barrier(
         usdi_amm_value,
         collateral_value,
     );
-    let lower_undercollateralized_iasset_barrier =
-        calculate_undercollateralized_iasset_barrier_from_usdi_barrier(
-            invariant,
-            lower_undercollateralized_usdi_barrier,
-        );
-    let lower_undercollateralized_price_barrier =
-        lower_undercollateralized_usdi_barrier.div(lower_undercollateralized_iasset_barrier);
+    let lower_undercollateralized_price_barrier = lower_undercollateralized_usdi_barrier
+        .mul(lower_undercollateralized_usdi_barrier)
+        .div(invariant);
     let lower_comet_price_barrier = lower_undercollateralized_price_barrier.mul(2);
     return lower_comet_price_barrier;
 }
