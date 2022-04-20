@@ -94,10 +94,10 @@ describe('liquidation testing', function () {
         const tokenData = await inceptClient.getTokenData()
         const pool = tokenData.pools[0];
 
-        mockUSDCTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(mockUSDCMint.publicKey);
-        usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(inceptClient.manager.usdiMint);
-        liquidityTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(pool.liquidityTokenMint);
-        iassetTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(pool.assetInfo.iassetMint);
+        mockUSDCTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(mockUSDCMint.publicKey);
+        usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(inceptClient.manager.usdiMint);
+        liquidityTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(pool.liquidityTokenMint);
+        iassetTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(pool.assetInfo.iassetMint);
 
         await mockUSDCProgram.rpc.mintMockUsdc(mockUSDCAccount[1], {
             accounts: {
@@ -252,7 +252,7 @@ describe('liquidation testing', function () {
 
         let pool: Pool = tokenData.pools[cometPositions.cometPositions[0].poolIndex];
 
-        let liquidatorIassetTokenAccount = await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        let liquidatorIassetTokenAccount = await inceptClient.getOrCreateAssociatedTokenAccount(
             pool.assetInfo.iassetMint
         )
 
@@ -284,7 +284,7 @@ describe('liquidation testing', function () {
             0
           );
 
-        usdiTokenAccountInfo = await inceptClient.fetchOrCreateAssociatedTokenAccount(
+        usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
             inceptClient.manager.usdiMint
         );
 
