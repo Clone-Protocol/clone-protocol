@@ -1582,6 +1582,19 @@ export class Incept {
     return Number(associatedTokenAccount.amount) / 100000000;
   }
 
+	public async getiAssetInfo(walletAddress?: PublicKey) {
+		const mints = await this.getiAssetMints()
+		const iassetInfo = []
+		let i = 0
+		for (var mint of mints) {
+			let poolBalances = await this.getPoolBalances(i)
+			let price = poolBalances[1] / poolBalances[0]
+			iassetInfo.push([i, price])
+			i++
+		}
+		return iassetInfo
+	}
+
   public async getiAssetMints() {
     const tokenData = await this.getTokenData();
     let mints: PublicKey[] = [];
