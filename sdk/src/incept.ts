@@ -41,7 +41,7 @@ export class Incept {
   managerAddress: [PublicKey, number];
   provider: Provider;
 
-  private constructor(
+  public constructor(
     programId: PublicKey,
     provider: Provider,
     opts?: ConfirmOptions
