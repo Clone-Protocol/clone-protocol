@@ -41,7 +41,7 @@ export class Incept {
   managerAddress: [PublicKey, number];
   provider: Provider;
 
-  private constructor(
+  public constructor(
     programId: PublicKey,
     provider: Provider,
     opts?: ConfirmOptions
@@ -114,7 +114,7 @@ export class Incept {
 
   public async getCollateral(collateralIndex: number) {
     const tokenData = (await this.getTokenData()) as TokenData;
-    return tokenData[collateralIndex];
+    return tokenData.collaterals[collateralIndex];
   }
 
   public async initializeUser() {
@@ -274,7 +274,7 @@ export class Incept {
   public async updatePricesInstruction() {
     const tokenData = await this.getTokenData();
 
-    let priceFeeds = [];
+    let priceFeeds: Array<{pubkey: PublicKey, isWritable: boolean, isSigner: boolean}> = [];
     tokenData.pools.slice(0, Number(tokenData.numPools)).forEach((pool) => {
       priceFeeds.push({
         pubkey: pool.assetInfo.priceFeedAddresses[0],
@@ -457,7 +457,7 @@ export class Incept {
 
     return (await this.program.instruction.initializeMintPosition(
       this.managerAddress[1],
-      userAddress[1],
+      userAddress.bump,
       iassetAmount,
       collateralAmount,
       {
@@ -505,7 +505,7 @@ export class Incept {
 
     return (await this.program.instruction.addCollateralToMint(
       this.managerAddress[1],
-      userAddress[1],
+      userAddress.bump,
       collateralIndex,
       collateralAmount,
       {
@@ -554,7 +554,7 @@ export class Incept {
 
     return (await this.program.instruction.withdrawCollateralFromMint(
       this.managerAddress[1],
-      userAddress[1],
+      userAddress.bump,
       collateralIndex,
       collateralAmount,
       {
@@ -599,7 +599,7 @@ export class Incept {
 
     return (await this.program.instruction.payBackMint(
       this.managerAddress[1],
-      userAddress[1],
+      userAddress.bump,
       mintIndex,
       iassetAmount,
       {
@@ -645,7 +645,7 @@ export class Incept {
 
     return (await this.program.instruction.addIassetToMint(
       this.managerAddress[1],
-      userAddress[1],
+      userAddress.bump,
       mintIndex,
       iassetAmount,
       {
@@ -938,7 +938,7 @@ export class Incept {
 
     return (await this.program.instruction.initializeComet(
       this.managerAddress[1],
-      userAddress[1],
+      userAddress.bump,
       poolIndex,
       collateralAmount,
       usdiAmount,
@@ -1043,7 +1043,7 @@ export class Incept {
 
     return (await this.program.instruction.withdrawCollateralFromComet(
       this.managerAddress[1],
-      userAddress[1],
+      userAddress.bump,
       cometIndex,
       collateralAmount,
       {
@@ -1087,7 +1087,7 @@ export class Incept {
 
     return (await this.program.instruction.addLiquidityToComet(
       this.managerAddress[1],
-      userAddress[1],
+      userAddress.bump,
       cometIndex,
       usdiAmount,
       {
@@ -1136,7 +1136,7 @@ export class Incept {
 
     return (await this.program.instruction.subtractLiquidityFromComet(
       this.managerAddress[1],
-      userAddress[1],
+      userAddress.bump,
       cometIndex,
       usdiAmount,
       {
@@ -1190,7 +1190,7 @@ export class Incept {
 
     return (await this.program.instruction.closeComet(
       this.managerAddress[1],
-      userAddress[1],
+      userAddress.bump,
       cometIndex,
       {
         accounts: {
@@ -1241,7 +1241,7 @@ export class Incept {
 
     return (await this.program.instruction.recenterComet(
       this.managerAddress[1],
-      userAddress[1],
+      userAddress.bump,
       cometIndex,
       {
         accounts: {
@@ -1598,11 +1598,13 @@ export class Incept {
   public async getiAssetMints() {
     const tokenData = await this.getTokenData();
     let mints: PublicKey[] = [];
-    for (const [index, pool] of tokenData.pools.entries()) {
+    let index = 0;
+    for (const pool of tokenData.pools) {
       if (index === Number(tokenData.numPools)) {
         break;
       }
       mints.push(pool.assetInfo.iassetMint);
+      index++;
     }
     return mints;
   }
@@ -1653,7 +1655,7 @@ export class Incept {
         amount = 0;
       }
 
-      if (amount > 0) {
+      if (amount !== null && amount > 0) {
         let poolBalances = await this.getPoolBalances(i);
         let price = poolBalances[1] / poolBalances[0];
         userInfo.push([i, price, amount]);
@@ -1752,6 +1754,9 @@ export class Incept {
       let liquidityTokenSupply = (
         await this.connection.getTokenSupply(pool.liquidityTokenMint)
       ).value!.uiAmount;
+      if (liquidityTokenSupply === null) {
+        throw new Error("Couldn't get token supply");
+      }
       let iassetValue =
         (poolBalances[0] * liquidityTokenAmount) / liquidityTokenSupply;
       let usdiValue =
@@ -1815,6 +1820,9 @@ export class Incept {
       let liquidityTokenSupply = (
         await this.connection.getTokenSupply(pool.liquidityTokenMint)
       ).value!.uiAmount;
+      if (liquidityTokenSupply === null) {
+        throw new Error("Couldn't get token supply");
+      }
       let iassetValue =
         (poolBalances[0] * liquidityTokenAmount) / liquidityTokenSupply;
       let usdiValue =
@@ -1911,6 +1919,9 @@ export class Incept {
           "confirmed"
         )
       ).value!.uiAmount;
+      if (liquidityTokenSupplyBeforeComet === null) {
+        throw new Error("Couldn't get token supply");
+      }
       let cometLiquidityTokenAmount =
         (usdiAmount * liquidityTokenSupplyBeforeComet) / balances[1];
       let updatedliquidityTokenSupply =
@@ -2054,5 +2065,5 @@ export interface Collateral {
   vaultUsdiSupply: Value;
   vaultMintSupply: Value;
   vaultCometSupply: Value;
-  status: number;
+  stable: number;
 }
