@@ -17,7 +17,7 @@ mod value;
 
 use crate::value::Div;
 
-declare_id!("EwZEhz1NLbzSKLQ6jhu2kk6784Ly2EWJo4BK3HTmFvEv");
+declare_id!("4RCgZyehQFKVBEnXf1ZfKksAL3YFbwCKqUmbwpQx7eHf");
 
 #[program]
 pub mod incept {
