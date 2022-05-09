@@ -21,7 +21,7 @@ import {
   setPrice,
   getFeedData,
   ChainLinkOracle,
-} from "./oracle";
+} from "../sdk/src/oracle";
 import { sleep } from "../sdk/src/utils";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
@@ -51,7 +51,6 @@ describe("incept", async () => {
   let iassetTokenAccountInfo;
   let liquidityTokenAccountInfo;
 
-  // @ts-expect-error
   let inceptClient = new InceptConnection(
     inceptProgram.programId,
     provider
