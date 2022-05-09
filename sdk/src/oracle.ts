@@ -1,8 +1,8 @@
 import * as anchor from "@project-serum/anchor";
 import { Program, BN } from "@project-serum/anchor";
 import { parsePriceData } from "@pythnetwork/client";
-import { Pyth } from "../target/types/pyth";
-import { Store } from "../target/types/store";
+import { Pyth } from "./idl/pyth";
+import { Store } from "./idl/store";
 
 export class ChainLinkOracle {
   private priceFeed: anchor.web3.Keypair;
@@ -113,6 +113,9 @@ export const setPrice = async (
   const priceFeedInfo = await pythProgram.provider.connection.getAccountInfo(
     priceFeed
   );
+  if (priceFeedInfo === null) {
+    throw new Error("Price feed info null!")
+  }
   const data = parsePriceData(priceFeedInfo.data);
   await pythProgram.rpc.setPrice(new BN(price * 10 ** -data.exponent), {
     accounts: { price: priceFeed },
@@ -126,5 +129,8 @@ export const getFeedData = async (
   const priceFeedInfo = await pythProgram.provider.connection.getAccountInfo(
     priceFeed
   );
+  if (priceFeedInfo === null) {
+    throw new Error("Price feed info null!")
+  }
   return parsePriceData(priceFeedInfo.data);
 };

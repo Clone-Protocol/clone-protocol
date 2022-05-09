@@ -8,10 +8,10 @@ export enum Network {
 }
 
 export const LOCAL_NET = {
-	incept: new PublicKey('Aw4gPAFKNV9hQpSZB9pdkBnniVDR13uidY3D5NMKKFUi'),
-	oracle: new PublicKey('Aw4gPAFKNV9hQpSZB9pdkBnniVDR13uidY3D5NMKKFUi'),
+	incept: new PublicKey('4RCgZyehQFKVBEnXf1ZfKksAL3YFbwCKqUmbwpQx7eHf'),
+	oracle: new PublicKey('BJ3D4Gx9WQjG7F65SFk2AvBeNcECBr732JkWjb8RFiWD'),
   exchangeAuthority: new PublicKey(
-    "6dcLU83ferGcEAjeUeLuJ8q7JbSV2vK3EGajW895tZBj"
+    "DmhNzyGk93utgYYR41hRJWJzKtFKUYt4UR3bZFbVAD4i"
   ),
   endpoint: 'http://127.0.0.1:8899',
 }

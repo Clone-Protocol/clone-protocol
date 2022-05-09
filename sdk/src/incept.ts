@@ -247,18 +247,21 @@ export class Incept {
 
   public async getPoolBalances(poolIndex: number) {
     let pool = await this.getPool(poolIndex);
-    let iasset = (
-      await this.connection.getTokenAccountBalance(
-        pool.iassetTokenAccount,
-        "confirmed"
-      )
-    ).value!.amount;
-    let usdi = (
-      await this.connection.getTokenAccountBalance(
-        pool.usdiTokenAccount,
-        "confirmed"
-      )
-    ).value!.amount;
+
+		let iasset = 0
+		let usdi = 0
+
+		try {
+			iasset = Number(
+				(await this.connection.getTokenAccountBalance(pool.iassetTokenAccount, 'confirmed')).value!.uiAmount
+			)
+		} catch {}
+
+		try {
+			usdi = Number(
+				(await this.connection.getTokenAccountBalance(pool.usdiTokenAccount, 'confirmed')).value!.uiAmount
+			)
+		} catch {}
     return [Number(iasset), Number(usdi)];
   }
 
@@ -267,11 +270,13 @@ export class Incept {
     return tokenData.pools[poolIndex].assetInfo as AssetInfo;
   }
 
-  public async updatePrices(signers?: Array<Keypair>) {
-    const updatePricesIx = await this.updatePricesInstruction();
+  public async updatePrices(signers?: Array<Keypair>, poolIndex?: number) {
+    const updatePricesIx = await this.updatePricesInstruction(poolIndex);
     await this.provider.send(new Transaction().add(updatePricesIx), signers);
   }
-  public async updatePricesInstruction() {
+
+  //NOTE: It seems like with too many pools (10) the maximum number of allowed transactions can be exceeded.
+  public async updatePricesInstruction(poolIndex?: number) {
     const tokenData = await this.getTokenData();
 
     let priceFeeds: Array<{pubkey: PublicKey, isWritable: boolean, isSigner: boolean}> = [];
@@ -287,6 +292,10 @@ export class Incept {
         isSigner: false,
       });
     });
+
+    if (typeof poolIndex !== 'undefined') {
+      priceFeeds = priceFeeds.slice(2 * poolIndex, 2 * poolIndex + 2);
+    }
 
     return (await this.program.instruction.updatePrices(
       this.managerAddress[1],
@@ -428,7 +437,7 @@ export class Incept {
     collateralIndex: number,
     signers?: Array<Keypair>
   ) {
-    const updatePricesIx = await this.updatePricesInstruction();
+    const updatePricesIx = await this.updatePricesInstruction(poolIndex);
     const initializeMintPositionsIx =
       await this.initializeMintPositionsInstruction(
         userCollateralTokenAccount,
@@ -692,6 +701,7 @@ export class Incept {
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
+    let pool = await tokenData.pools[poolIndex];
 
     return (await this.program.instruction.initializeLiquidityPosition(
       this.managerAddress[1],
@@ -706,9 +716,9 @@ export class Incept {
           userUsdiTokenAccount: userUsdiTokenAccount,
           userIassetTokenAccount: userIassetTokenAccount,
           userLiquidityTokenAccount: userLiquidityTokenAccount,
-          ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
-          ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
-          liquidityTokenMint: tokenData.pools[poolIndex].liquidityTokenMint,
+          ammUsdiTokenAccount: pool.usdiTokenAccount,
+          ammIassetTokenAccount: pool.iassetTokenAccount,
+          liquidityTokenMint: pool.liquidityTokenMint,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
