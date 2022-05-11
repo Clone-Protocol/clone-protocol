@@ -311,18 +311,18 @@ export class Incept {
   }
 
   public async getTokenData() {
-    // @ts-ignore
     return (await this.program.account.tokenData.fetch(
       this.manager.tokenData
     )) as TokenData;
   }
 
   public async getLiquidityPositions() {
-    // @ts-ignore
+    const userAccountData = (await this.getUserAccount()) as User;
     return (await this.program.account.liquidityPositions.fetch(
-      this.provider.wallet.publicKey
+      userAccountData.liquidityPositions
     )) as LiquidityPositions;
   }
+
   public async getLiquidityPosition(liquidityIndex: number) {
     return (await this.getLiquidityPositions()).liquidityPositions[
       liquidityIndex
@@ -1972,7 +1972,7 @@ export interface Manager {
   usdiMint: PublicKey;
   liquidatedCometUsdi: PublicKey;
   tokenData: PublicKey;
-  // admin: PublicKey;
+  admin: PublicKey;
 }
 
 export interface User {
