@@ -15,7 +15,7 @@ import {
   Manager,
   Pool,
 } from "../sdk/src/incept";
-import { createPriceFeed, setPrice, getFeedData } from "./oracle";
+import { createPriceFeed, setPrice, getFeedData } from "../sdk/src/oracle";
 import { Network } from "../sdk/src/network";
 import { INCEPT_EXCHANGE_SEED } from "./utils";
 import { sleep } from "../sdk/src/utils";
@@ -52,7 +52,6 @@ describe('liquidation testing', function () {
         );
 
 
-        // @ts-expect-error
         inceptClient = new InceptConnection(
             inceptProgram.programId,
             provider
