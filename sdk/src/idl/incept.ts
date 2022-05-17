@@ -2355,8 +2355,10 @@ export type Incept = {
         "kind": "struct",
         "fields": [
           {
-            "name": "liquidated",
-            "type": "u64"
+            "name": "status",
+            "type": {
+              "defined": "LiquidationStatus"
+            }
           },
           {
             "name": "excessTokenTypeIsUsdi",
@@ -2486,6 +2488,23 @@ export type Incept = {
           },
           {
             "name": "MintPositionUnableToLiquidate"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LiquidationStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Healthy"
+          },
+          {
+            "name": "Partially"
+          },
+          {
+            "name": "Fully"
           }
         ]
       }
@@ -4850,8 +4869,10 @@ export const IDL: Incept = {
         "kind": "struct",
         "fields": [
           {
-            "name": "liquidated",
-            "type": "u64"
+            "name": "status",
+            "type": {
+              "defined": "LiquidationStatus"
+            }
           },
           {
             "name": "excessTokenTypeIsUsdi",
@@ -4981,6 +5002,23 @@ export const IDL: Incept = {
           },
           {
             "name": "MintPositionUnableToLiquidate"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LiquidationStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Healthy"
+          },
+          {
+            "name": "Partially"
+          },
+          {
+            "name": "Fully"
           }
         ]
       }
