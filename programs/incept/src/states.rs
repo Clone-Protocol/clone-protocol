@@ -1,6 +1,19 @@
 use crate::error::*;
 use anchor_lang::prelude::*;
 
+#[derive(PartialEq, Debug, Clone, Copy, AnchorDeserialize, AnchorSerialize)]
+pub enum LiquidationStatus {
+    Healthy,
+    Partially,
+    Fully,
+}
+
+impl Default for LiquidationStatus {
+    fn default() -> Self {
+        LiquidationStatus::Healthy
+    }
+}
+
 #[zero_copy]
 #[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct Value {
@@ -196,7 +209,7 @@ pub struct CometPosition {
 #[derive(PartialEq, Default, Debug)]
 pub struct CometLiquidation {
     // 40
-    pub liquidated: u64,                // 8
+    pub status: LiquidationStatus,      // 8
     pub excess_token_type_is_usdi: u64, // 8
     pub excess_token_amount: Value,     // 24
 }

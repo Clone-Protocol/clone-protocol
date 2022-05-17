@@ -5,8 +5,8 @@ use error::*;
 use instructions::*;
 use pyth::pc::Price;
 use states::{
-    AssetInfo, Collateral, CometLiquidation, CometPosition, LiquidityPosition, MintPosition, Pool,
-    TokenData, Value,
+    AssetInfo, Collateral, CometLiquidation, CometPosition, LiquidationStatus, LiquidityPosition,
+    MintPosition, Pool, TokenData, Value,
 };
 
 mod error;
@@ -1143,7 +1143,7 @@ pub mod incept {
         let collateral = token_data.collaterals[comet_position.collateral_index as usize];
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.liquidated != 0 {
+        if comet_position.comet_liquidation.status == LiquidationStatus::Fully {
             return Err(InceptError::CometAlreadyLiquidated.into());
         }
 
@@ -1217,7 +1217,7 @@ pub mod incept {
         );
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.liquidated != 0 {
+        if comet_position.comet_liquidation.status != LiquidationStatus::Healthy {
             return Err(InceptError::CometAlreadyLiquidated.into());
         }
 
@@ -1340,7 +1340,7 @@ pub mod incept {
         }
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.liquidated != 0 {
+        if comet_position.comet_liquidation.status == LiquidationStatus::Fully {
             return Err(InceptError::CometAlreadyLiquidated.into());
         }
 
@@ -1472,7 +1472,7 @@ pub mod incept {
         );
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.liquidated != 0 {
+        if comet_position.comet_liquidation.status == LiquidationStatus::Fully {
             return Err(InceptError::CometAlreadyLiquidated.into());
         }
 
@@ -1576,9 +1576,9 @@ pub mod incept {
         );
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.liquidated != 0 {
-            return Err(InceptError::CometAlreadyLiquidated.into());
-        }
+        // if comet_position.comet_liquidation.status != LiquidationStatus::Fully {
+        //     return Err(InceptError::CometAlreadyLiquidated.into());
+        // }
 
         // calculate initial comet pool price
         let initial_comet_price =
@@ -1949,7 +1949,7 @@ pub mod incept {
         );
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.liquidated != 0 {
+        if comet_position.comet_liquidation.status == LiquidationStatus::Fully {
             return Err(InceptError::CometAlreadyLiquidated.into());
         }
 
@@ -2187,7 +2187,7 @@ pub mod incept {
         let comet_position = comet_positions.comet_positions[comet_index as usize];
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.liquidated != 0 {
+        if comet_position.comet_liquidation.status == LiquidationStatus::Fully {
             return Err(InceptError::CometAlreadyLiquidated.into());
         }
 
@@ -2411,7 +2411,7 @@ pub mod incept {
         // update comet data
         comet_positions.comet_positions[comet_index as usize]
             .comet_liquidation
-            .liquidated = 1;
+            .status = LiquidationStatus::Fully;
 
         if lower_price_breached {
             comet_positions.comet_positions[comet_index as usize]
@@ -2444,7 +2444,7 @@ pub mod incept {
         let comet_position = comet_positions.comet_positions[comet_index as usize];
 
         // throw error if the comet is not yet liquidated
-        if comet_position.comet_liquidation.liquidated == 0 {
+        if comet_position.comet_liquidation.status == LiquidationStatus::Healthy {
             return Err(InceptError::CometNotYetLiquidated.into());
         }
 
@@ -2629,7 +2629,7 @@ pub mod incept {
         // TODO: Check if a partial liquidation or full liquidation is valid.
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.liquidated != 0 {
+        if comet_position.comet_liquidation.status != LiquidationStatus::Healthy {
             return Err(InceptError::CometAlreadyLiquidated.into());
         }
 
