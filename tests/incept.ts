@@ -516,12 +516,10 @@ describe("incept", async () => {
       );
 
     let userAccountData = await inceptClient.getUserAccount();
-    let { userPubkey, bump } = await inceptClient.getUserAddress();
     let assetInfo = await inceptClient.getAssetInfo(0);
 
     await inceptProgram.rpc.payBackMint(
       inceptClient.managerAddress[1],
-      bump,
       new BN(0),
       new BN(5000000),
       {

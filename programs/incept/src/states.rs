@@ -146,12 +146,14 @@ pub struct Collateral {
 #[account]
 #[derive(Default)]
 pub struct User {
-    // 128
-    pub authority: Pubkey,              // 32
-    pub comet_positions: Pubkey,        // 32
-    pub mint_positions: Pubkey,         // 32
-    pub liquidity_positions: Pubkey,    // 32
-    pub comet_manager_position: Pubkey, // 32
+    // 200
+    pub is_manager: u8,              //8
+    pub authority: Pubkey,           // 32
+    pub comet_positions: Pubkey,     // 32
+    pub mint_positions: Pubkey,      // 32
+    pub liquidity_positions: Pubkey, // 32
+    pub multi_pool_comet: Pubkey,    // 32
+    pub comet_manager: Pubkey,       // 32
 }
 
 #[account(zero_copy)]
@@ -183,8 +185,8 @@ impl CometPositions {
 }
 
 #[account(zero_copy)]
-pub struct CometManagerPosition {
-    // 55152
+pub struct MultiPoolComet {
+    // 55144
     pub owner: Pubkey,                                  // 32
     pub num_positions: u64,                             // 8
     pub num_collaterals: u64,                           // 8
@@ -193,7 +195,7 @@ pub struct CometManagerPosition {
     pub collaterals: [MultiPoolCometCollateral; 255],   // 255 * 64 = 16320
 }
 
-impl Default for CometManagerPosition {
+impl Default for MultiPoolComet {
     fn default() -> Self {
         return Self {
             owner: Pubkey::default(),
@@ -206,7 +208,7 @@ impl Default for CometManagerPosition {
     }
 }
 
-impl CometManagerPosition {
+impl MultiPoolComet {
     pub fn remove_position(&mut self, index: usize) {
         self.comet_positions[index] = self.comet_positions[(self.num_positions - 1) as usize];
         self.comet_positions[(self.num_positions - 1) as usize] = MultiPoolCometPosition {
@@ -263,9 +265,13 @@ impl CometManagerPosition {
             return find_pool().unwrap();
         }
     }
-    pub fn append_collateral(&mut self, new_collateral: MultiPoolCometCollateral) {
+    pub fn add_collateral(&mut self, new_collateral: MultiPoolCometCollateral) {
         self.collaterals[(self.num_collaterals) as usize] = new_collateral;
         self.num_collaterals += 1;
+    }
+    pub fn add_position(&mut self, new_pool: MultiPoolCometPosition) {
+        self.comet_positions[(self.num_positions) as usize] = new_pool;
+        self.num_positions += 1;
     }
 }
 
