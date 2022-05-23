@@ -79,6 +79,10 @@ pub enum InceptError {
     /// Mint Position Unable To Liquidate
     #[error("Mint Position Unable to Liquidate")]
     MintPositionUnableToLiquidate,
+
+    /// No Such Collateral Position
+    #[error("No Such Collatera lPosition")]
+    NoSuchCollateralPosition,
 }
 
 impl From<InceptError> for ProgramError {
