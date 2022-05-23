@@ -2463,27 +2463,33 @@ pub mod incept {
         // add collateral amount to total comet manager collateral amount
         multi_pool_comet.total_collateral_amount = multi_pool_comet
             .total_collateral_amount
+            .scale_to(DEVNET_TOKEN_SCALE)
             .add(added_collateral_value.scale_to(DEVNET_TOKEN_SCALE))
             .unwrap();
 
         // find the index of the collateral within the manager's position
         let multi_pool_comet_collateral_index =
             multi_pool_comet.get_collateral_index(collateral_index);
-
+        msg!("0");
         // check to see if a new collateral must be added to the position
         if multi_pool_comet_collateral_index == usize::MAX {
+            msg!("1");
             multi_pool_comet.add_collateral(MultiPoolCometCollateral {
                 authority: *ctx.accounts.user.to_account_info().key,
                 collateral_amount: added_collateral_value,
                 collateral_index: collateral_index.into(),
             });
+            msg!("2");
         } else {
+            msg!("0.5");
             multi_pool_comet.collaterals[multi_pool_comet_collateral_index].collateral_amount =
                 multi_pool_comet.collaterals[multi_pool_comet_collateral_index]
                     .collateral_amount
                     .add(added_collateral_value)
                     .unwrap();
+            msg!("1.5");
         }
+        msg!("2");
 
         // send collateral from user to vault
         let cpi_ctx = CpiContext::from(&*ctx.accounts);
@@ -2555,7 +2561,7 @@ pub mod incept {
             multi_pool_comet.remove_collateral(multi_pool_comet_collateral_index)
         }
 
-        // send collateral from user to vault
+        // send collateral from vault to user
         let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
         token::transfer(cpi_ctx, collateral_amount)?;
 
@@ -2571,7 +2577,8 @@ pub mod incept {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
         let mut multi_pool_comet = ctx.accounts.multi_pool_comet.load_mut()?;
-        let multi_pool_comet_position = multi_pool_comet.comet_positions[comet_position_index as usize];
+        let multi_pool_comet_position =
+            multi_pool_comet.comet_positions[comet_position_index as usize];
 
         let usdi_liquidity_value = Value::new(usdi_amount.into(), DEVNET_TOKEN_SCALE);
         let iasset_amm_value = Value::new(
@@ -2599,7 +2606,8 @@ pub mod incept {
             );
 
         // find the index of the comet within the manager's position
-        let multi_pool_comet_pool_index = multi_pool_comet.get_pool_index(multi_pool_comet_position.pool_index.try_into().unwrap());
+        let multi_pool_comet_pool_index = multi_pool_comet
+            .get_pool_index(multi_pool_comet_position.pool_index.try_into().unwrap());
         let comet_position = multi_pool_comet.comet_positions[multi_pool_comet_pool_index];
 
         // update comet position data

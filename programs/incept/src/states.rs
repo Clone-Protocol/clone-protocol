@@ -223,7 +223,11 @@ impl MultiPoolComet {
         };
         self.num_collaterals -= 1;
     }
-    pub fn get_collateral_index(&self, collateral_index: u8) -> usize {
+    pub fn get_collateral_index(&self, input_collateral_index: u8) -> usize {
+        let mut collateral_index = input_collateral_index;
+        if collateral_index == 0 {
+            collateral_index = u8::MAX;
+        }
         let find_collateral = || -> Result<usize, InceptError> {
             let index = match self
                 .collaterals
@@ -267,6 +271,9 @@ impl MultiPoolComet {
     }
     pub fn add_collateral(&mut self, new_collateral: MultiPoolCometCollateral) {
         self.collaterals[(self.num_collaterals) as usize] = new_collateral;
+        if self.collaterals[(self.num_collaterals) as usize].collateral_index == 0 {
+            self.collaterals[(self.num_collaterals) as usize].collateral_index = u8::MAX.into();
+        }
         self.num_collaterals += 1;
     }
     pub fn add_position(&mut self, new_pool: MultiPoolCometPosition) {

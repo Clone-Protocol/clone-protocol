@@ -1269,28 +1269,22 @@ export class Incept {
   }
 
   public async initializeMultiPoolCometPosition(
-    collateralAmount: BN,
     usdiAmount: BN,
     poolIndex: number,
-    collateralIndex: number,
     forManager: boolean,
     signers?: Array<Keypair>
   ) {
     const initializeCometIx =
       await this.initializeMultiPoolCometPositionInstruction(
-        collateralAmount,
         usdiAmount,
         poolIndex,
-        collateralIndex,
         forManager
       );
     await this.provider.send(new Transaction().add(initializeCometIx), signers);
   }
   public async initializeMultiPoolCometPositionInstruction(
-    collateralAmount: BN,
     usdiAmount: BN,
     poolIndex: number,
-    collateralIndex: number,
     forManager: boolean
   ) {
     let tokenData = await this.getTokenData();
@@ -1303,7 +1297,6 @@ export class Incept {
     return (await this.program.instruction.initializeMultiPoolCometPosition(
       this.managerAddress[1],
       poolIndex,
-      collateralAmount,
       usdiAmount,
       {
         accounts: {
@@ -1425,7 +1418,6 @@ export class Incept {
   }
 
   public async addLiquidityToMultiPoolComet(
-    userCollateralTokenAccount: PublicKey,
     usdiAmount: BN,
     cometPositionIndex: number,
     forManager: boolean,
@@ -2059,7 +2051,7 @@ export interface MultiPoolCometPosition {
 export interface MultiPoolCometCollateral {
   authority: PublicKey;
   collateralAmount: Value;
-  collateral_index: number;
+  collateralIndex: number;
 }
 
 export interface Value {

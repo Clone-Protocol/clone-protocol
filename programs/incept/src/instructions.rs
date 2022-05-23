@@ -1570,7 +1570,7 @@ impl<'a, 'b, 'c, 'info> From<&WithdrawCollateralFromMultiPoolComet<'info>>
                 .user_collateral_token_account
                 .to_account_info()
                 .clone(),
-            authority: accounts.user.to_account_info().clone(),
+            authority: accounts.manager.to_account_info().clone(),
         };
         let cpi_program = accounts.token_program.to_account_info();
         CpiContext::new(cpi_program, cpi_accounts)
