@@ -1,3 +1,4 @@
+use crate::states::*;
 use crate::value::{Add, Compare, Div, Mul, Sub, DEVNET_TOKEN_SCALE};
 use crate::*;
 
@@ -352,4 +353,77 @@ pub fn check_mint_collateral_sufficient(
         return Err(InceptError::InvalidMintCollateralRatio.into());
     }
     Ok(())
+}
+
+pub fn calculate_impermanent_loss(
+    position: &MultiPoolCometPosition,
+    pool: &Pool,
+    slot: u64,
+) -> Result<Value, InceptError> {
+    check_feed_update(pool.asset_info, slot).unwrap();
+
+    let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
+        position.liquidity_token_value,
+        pool.liquidity_token_supply,
+    );
+
+    let claimable_usdi = liquidity_proportion.mul(pool.usdi_amount);
+    let claimable_iasset = liquidity_proportion.mul(pool.iasset_amount);
+
+    if claimable_usdi.lt(position.borrowed_usdi).unwrap() {
+        return Ok(position.borrowed_usdi.sub(claimable_usdi).unwrap());
+    } else if claimable_iasset.lt(position.borrowed_iasset).unwrap() {
+        let pool_price = pool.usdi_amount.div(pool.iasset_amount);
+        let effective_price = if pool_price.gt(pool.asset_info.price).unwrap() {
+            pool_price
+        } else {
+            pool.asset_info.price
+        };
+        return Ok(effective_price.mul(position.borrowed_iasset.sub(claimable_iasset).unwrap()));
+    } else if claimable_usdi.eq(position.borrowed_usdi).unwrap()
+        && claimable_iasset.eq(position.borrowed_iasset).unwrap()
+    {
+        return Ok(Value::new(0, DEVNET_TOKEN_SCALE));
+    }
+    Err(InceptError::FailedImpermanentLossCalculation)
+}
+
+pub enum HealthScore {
+    Healthy { score: u8 },
+    SubjectToLiquidation,
+}
+
+pub fn calculate_health_score(
+    positions: &MultiPoolComet,
+    token_data: &TokenData,
+) -> Result<HealthScore, InceptError> {
+    let slot = Clock::get().unwrap().slot;
+    let mut loss = Value::new(0, DEVNET_TOKEN_SCALE);
+
+    for index in 0..positions.num_positions {
+        let comet_position = positions.comet_positions[index as usize];
+        let pool = token_data.pools[comet_position.pool_index as usize];
+
+        let impermanent_loss_term = calculate_impermanent_loss(&comet_position, &pool, slot)
+            .unwrap()
+            .mul(token_data.il_health_score_coefficient);
+
+        let position_term = comet_position
+            .borrowed_usdi
+            .mul(pool.asset_info.health_score_coefficient);
+
+        loss = loss
+            .add(impermanent_loss_term)
+            .unwrap()
+            .add(position_term)
+            .unwrap();
+    }
+
+    let score = 100f64 - loss.div(positions.total_collateral_amount).to_scaled_f64();
+
+    if score > 0f64 {
+        Ok(HealthScore::Healthy { score: score as u8 })
+    } else {
+        Ok(HealthScore::SubjectToLiquidation)
+    }
 }

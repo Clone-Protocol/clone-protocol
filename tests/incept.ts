@@ -15,6 +15,7 @@ import {
   LiquidityPositions,
   Manager,
   Pool,
+  DEVNET_TOKEN_SCALE
 } from "../sdk/src/incept";
 import {
   createPriceFeed,
@@ -72,7 +73,8 @@ describe("incept", async () => {
   });
 
   it("manager initialized!", async () => {
-    await inceptClient.initializeManager(storeProgram.programId);
+    const ilHealthScoreCoefficient = new BN(Math.floor(128.288 * 10 ** DEVNET_TOKEN_SCALE));
+    await inceptClient.initializeManager(storeProgram.programId, ilHealthScoreCoefficient);
   });
 
   it("user initialized!", async () => {
@@ -178,12 +180,14 @@ describe("incept", async () => {
   });
 
   it("pool initialized!", async () => {
+    const healthScoreCoefficient = new BN(Math.floor(1.059 * 10 ** DEVNET_TOKEN_SCALE));
     await inceptClient.initializePool(
       walletPubkey,
       150,
       200,
       priceFeed,
-      chainlink.priceFeedPubkey()
+      chainlink.priceFeedPubkey(),
+      healthScoreCoefficient
     );
   });
 

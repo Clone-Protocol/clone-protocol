@@ -5,8 +5,8 @@ use error::*;
 use instructions::*;
 use pyth::pc::Price;
 use states::{
-    AssetInfo, Collateral, CometLiquidation, CometPosition, LiquidityPosition, MintPosition,
-    MultiPoolCometCollateral, MultiPoolCometPosition, Pool, TokenData, Value, LiquidationStatus
+    AssetInfo, Collateral, CometLiquidation, CometPosition, LiquidationStatus, LiquidityPosition,
+    MintPosition, MultiPoolCometCollateral, MultiPoolCometPosition, Pool, TokenData, Value,
 };
 
 mod error;
@@ -31,7 +31,13 @@ pub mod incept {
     pub fn initialize_manager(
         ctx: Context<InitializeManager>,
         _manager_nonce: u8,
+        _il_health_score_coefficient: u64,
     ) -> ProgramResult {
+        require!(
+            _il_health_score_coefficient > 0,
+            InceptError::InvalidHealthScoreCoefficient
+        );
+
         let mut token_data = ctx.accounts.token_data.load_init()?;
 
         // set manager data
@@ -47,6 +53,24 @@ pub mod incept {
         // set manager as token data owner
         token_data.manager = *ctx.accounts.manager.to_account_info().key;
         token_data.chainlink_program = *ctx.accounts.chainlink_program.to_account_info().key;
+        token_data.il_health_score_coefficient =
+            Value::new(_il_health_score_coefficient.into(), DEVNET_TOKEN_SCALE);
+
+        Ok(())
+    }
+
+    pub fn update_il_health_score_coefficient(
+        ctx: Context<UpdateILHealthScoreCoefficient>,
+        _manager_nonce: u8,
+        _il_health_score_coefficient: u64,
+    ) -> ProgramResult {
+        require!(
+            _il_health_score_coefficient > 0,
+            InceptError::InvalidHealthScoreCoefficient
+        );
+        let mut token_data = ctx.accounts.token_data.load_init()?;
+        token_data.il_health_score_coefficient =
+            Value::new(_il_health_score_coefficient.into(), DEVNET_TOKEN_SCALE);
 
         Ok(())
     }
@@ -127,7 +151,12 @@ pub mod incept {
         _manager_nonce: u8,
         stable_collateral_ratio: u16,
         crypto_collateral_ratio: u16,
+        health_score_coefficient: u64,
     ) -> ProgramResult {
+        require!(
+            health_score_coefficient > 0,
+            InceptError::InvalidHealthScoreCoefficient
+        );
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
         // append pool to list
@@ -167,6 +196,29 @@ pub mod incept {
         token_data.pools[index as usize]
             .asset_info
             .crypto_collateral_ratio = Value::from_percent(crypto_collateral_ratio);
+        token_data.pools[index as usize]
+            .asset_info
+            .health_score_coefficient =
+            Value::new(health_score_coefficient.into(), DEVNET_TOKEN_SCALE);
+
+        Ok(())
+    }
+
+    pub fn update_pool_health_score_coefficient(
+        ctx: Context<UpdatePoolHealthScore>,
+        _manager_nonce: u8,
+        pool_index: u8,
+        health_score_coefficient: u64,
+    ) -> ProgramResult {
+        require!(
+            health_score_coefficient > 0,
+            InceptError::InvalidHealthScoreCoefficient
+        );
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
+        token_data.pools[pool_index as usize]
+            .asset_info
+            .health_score_coefficient =
+            Value::new(health_score_coefficient.into(), DEVNET_TOKEN_SCALE);
 
         Ok(())
     }
@@ -2565,6 +2617,18 @@ pub mod incept {
         let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
         token::transfer(cpi_ctx, collateral_amount)?;
 
+
+        // Require a healthy score after transactions
+        let health_score = calculate_health_score(&multi_pool_comet, token_data)?;
+
+        require!(
+            match health_score {
+                math::HealthScore::Healthy { score: _ } => true,
+                math::HealthScore::SubjectToLiquidation => false,
+            },
+            error::InceptError::HealthScoreTooLow
+        );
+
         Ok(())
     }
 
@@ -2692,6 +2756,17 @@ pub mod incept {
         token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = Value::new(
             ctx.accounts.liquidity_token_mint.supply.into(),
             DEVNET_TOKEN_SCALE,
+        );
+
+        // Require a healthy score after transactions
+        let health_score = calculate_health_score(&multi_pool_comet, token_data)?;
+
+        require!(
+            match health_score {
+                math::HealthScore::Healthy { score: _ } => true,
+                math::HealthScore::SubjectToLiquidation => false,
+            },
+            error::InceptError::HealthScoreTooLow
         );
 
         Ok(())

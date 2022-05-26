@@ -55,6 +55,40 @@ export type Incept = {
         {
           "name": "managerNonce",
           "type": "u8"
+        },
+        {
+          "name": "ilHealthScoreCoefficient",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "updateIlHealthScoreCoefficient",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "ilHealthScoreCoefficient",
+          "type": "u64"
         }
       ]
     },
@@ -269,6 +303,44 @@ export type Incept = {
         {
           "name": "cryptoCollateralRatio",
           "type": "u16"
+        },
+        {
+          "name": "healthScoreCoefficient",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "updatePoolHealthScoreCoefficient",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "healthScoreCoefficient",
+          "type": "u64"
         }
       ]
     },
@@ -2504,6 +2576,12 @@ export type Incept = {
           {
             "name": "chainlinkProgram",
             "type": "publicKey"
+          },
+          {
+            "name": "ilHealthScoreCoefficient",
+            "type": {
+              "defined": "Value"
+            }
           }
         ]
       }
@@ -2743,6 +2821,12 @@ export type Incept = {
           },
           {
             "name": "cryptoCollateralRatio",
+            "type": {
+              "defined": "Value"
+            }
+          },
+          {
+            "name": "healthScoreCoefficient",
             "type": {
               "defined": "Value"
             }
@@ -3110,6 +3194,35 @@ export type Incept = {
           },
           {
             "name": "NoSuchCollateralPosition"
+          },
+          {
+            "name": "InvalidHealthScoreCoefficient"
+          },
+          {
+            "name": "FailedImpermanentLossCalculation"
+          },
+          {
+            "name": "HealthScoreTooLow"
+          }
+        ]
+      }
+    },
+    {
+      "name": "HealthScore",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Healthy",
+            "fields": [
+              {
+                "name": "score",
+                "type": "u8"
+              }
+            ]
+          },
+          {
+            "name": "SubjectToLiquidation"
           }
         ]
       }
@@ -3191,6 +3304,40 @@ export const IDL: Incept = {
         {
           "name": "managerNonce",
           "type": "u8"
+        },
+        {
+          "name": "ilHealthScoreCoefficient",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "updateIlHealthScoreCoefficient",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "ilHealthScoreCoefficient",
+          "type": "u64"
         }
       ]
     },
@@ -3405,6 +3552,44 @@ export const IDL: Incept = {
         {
           "name": "cryptoCollateralRatio",
           "type": "u16"
+        },
+        {
+          "name": "healthScoreCoefficient",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "updatePoolHealthScoreCoefficient",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "healthScoreCoefficient",
+          "type": "u64"
         }
       ]
     },
@@ -5640,6 +5825,12 @@ export const IDL: Incept = {
           {
             "name": "chainlinkProgram",
             "type": "publicKey"
+          },
+          {
+            "name": "ilHealthScoreCoefficient",
+            "type": {
+              "defined": "Value"
+            }
           }
         ]
       }
@@ -5879,6 +6070,12 @@ export const IDL: Incept = {
           },
           {
             "name": "cryptoCollateralRatio",
+            "type": {
+              "defined": "Value"
+            }
+          },
+          {
+            "name": "healthScoreCoefficient",
             "type": {
               "defined": "Value"
             }
@@ -6246,6 +6443,35 @@ export const IDL: Incept = {
           },
           {
             "name": "NoSuchCollateralPosition"
+          },
+          {
+            "name": "InvalidHealthScoreCoefficient"
+          },
+          {
+            "name": "FailedImpermanentLossCalculation"
+          },
+          {
+            "name": "HealthScoreTooLow"
+          }
+        ]
+      }
+    },
+    {
+      "name": "HealthScore",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Healthy",
+            "fields": [
+              {
+                "name": "score",
+                "type": "u8"
+              }
+            ]
+          },
+          {
+            "name": "SubjectToLiquidation"
           }
         ]
       }

@@ -81,8 +81,20 @@ pub enum InceptError {
     MintPositionUnableToLiquidate,
 
     /// No Such Collateral Position
-    #[error("No Such Collatera lPosition")]
+    #[error("No Such Collateral Position")]
     NoSuchCollateralPosition,
+
+    /// Invalid Health Score Coefficient
+    #[error("Invalid Health Score Coefficient")]
+    InvalidHealthScoreCoefficient,
+
+    /// Negative Impermanent Loss
+    #[error("Failed Impermanent Loss Calculation")]
+    FailedImpermanentLossCalculation,
+
+    /// Health Score Too Low
+    #[error("Health Score Too Low")]
+    HealthScoreTooLow,
 }
 
 impl From<InceptError> for ProgramError {

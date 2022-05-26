@@ -21,8 +21,9 @@ import { sleep, toScaledNumber, toScaledPercent, div, mul } from "./utils";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
+export const DEVNET_TOKEN_SCALE = 8;
 
-const TOKEN_DATA_SIZE = 157168;
+const TOKEN_DATA_SIZE = 163312;
 const COMET_POSITIONS_SIZE = 59208;
 const MINT_POSITIONS_SIZE = 24528;
 const LIQUIDITY_POSITIONS_SIZE = 16368;
@@ -53,13 +54,13 @@ export class Incept {
     this.opts = opts;
     this.program = new Program<InceptProgram>(IDL, this.programId, provider);
   }
-  public async initializeManager(chainlinkProgram: PublicKey) {
+  public async initializeManager(chainlinkProgram: PublicKey, ilHealthScoreCoefficient: BN) {
     const managerPubkeyAndBump = await this.getManagerAddress();
     const usdiMint = anchor.web3.Keypair.generate();
     const liquidatedCometUsdiTokenAccount = anchor.web3.Keypair.generate();
     const tokenData = anchor.web3.Keypair.generate();
 
-    await this.program.rpc.initializeManager(managerPubkeyAndBump[1], {
+    await this.program.rpc.initializeManager(managerPubkeyAndBump[1], ilHealthScoreCoefficient, {
       accounts: {
         admin: this.provider.wallet.publicKey,
         manager: managerPubkeyAndBump[0],
@@ -81,6 +82,7 @@ export class Incept {
       ],
       signers: [usdiMint, tokenData, liquidatedCometUsdiTokenAccount],
     });
+
     this.managerAddress = managerPubkeyAndBump;
     // @ts-ignore
     this.manager = (await this.program.account.manager.fetch(
@@ -195,12 +197,13 @@ export class Incept {
     );
   }
 
-  public async initializePool(
+  public async  initializePool(
     admin: PublicKey,
     stableCollateralRatio: number,
     cryptoCollateralRatio: number,
     pythOracle: PublicKey,
-    chainlinkOracle: PublicKey
+    chainlinkOracle: PublicKey,
+    healthScoreCoefficient: BN
   ) {
     const usdiTokenAccount = anchor.web3.Keypair.generate();
     const iassetMintAccount = anchor.web3.Keypair.generate();
@@ -213,6 +216,7 @@ export class Incept {
       this.managerAddress[1],
       stableCollateralRatio,
       cryptoCollateralRatio,
+      healthScoreCoefficient,
       {
         accounts: {
           admin: admin,
@@ -1439,6 +1443,7 @@ export class Incept {
     forManager: boolean,
     signers?: Array<Keypair>
   ) {
+    const updatePricesIx = await this.updatePricesInstruction();
     const addLiquidityToMultiPoolCometIx =
       await this.addLiquidityToMultiPoolCometInstruction(
         usdiAmount,
@@ -1446,7 +1451,7 @@ export class Incept {
         forManager
       );
     await this.provider.send(
-      new Transaction().add(addLiquidityToMultiPoolCometIx),
+      new Transaction().add(updatePricesIx).add(addLiquidityToMultiPoolCometIx),
       signers
     );
   }
@@ -2181,6 +2186,7 @@ export class Incept {
   }
 
   public async getUserCometInfos() {
+    console.log("Get User comet infos!")
     const cometPositions = await this.getCometPositions();
     const cometInfos = [];
     for (let i = 0; i < Number(cometPositions.numPositions); i++) {
