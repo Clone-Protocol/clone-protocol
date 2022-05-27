@@ -2617,7 +2617,6 @@ pub mod incept {
         let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
         token::transfer(cpi_ctx, collateral_amount)?;
 
-
         // Require a healthy score after transactions
         let health_score = calculate_health_score(&multi_pool_comet, token_data)?;
 
