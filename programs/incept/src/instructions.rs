@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8)]
+#[instruction(manager_nonce: u8, il_health_score_coefficient: u64)]
 pub struct InitializeManager<'info> {
     pub admin: Signer<'info>,
     #[account(
@@ -35,6 +35,20 @@ pub struct InitializeManager<'info> {
     pub token_program: Program<'info, Token>,
     pub chainlink_program: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(manager_nonce: u8, il_health_score_coefficient: u64)]
+pub struct UpdateILHealthScoreCoefficient<'info> {
+    #[account(address = manager.admin)]
+    pub admin: Signer<'info>,
+    #[account(
+        seeds = [b"manager".as_ref()],
+        bump = manager_nonce,
+        has_one = token_data
+    )]
+    pub manager: Account<'info, Manager>,
+    pub token_data: AccountLoader<'info, TokenData>,
 }
 
 #[derive(Accounts)]
@@ -93,7 +107,7 @@ pub struct AddCollateral<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, stable_collateral_ratio: u16, crypto_collateral_ratio: u16,)]
+#[instruction(manager_nonce: u8, stable_collateral_ratio: u16, crypto_collateral_ratio: u16, health_score_coefficient: u64)]
 pub struct InitializePool<'info> {
     #[account(address = manager.admin)]
     pub admin: Signer<'info>,
@@ -160,6 +174,24 @@ pub struct InitializePool<'info> {
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(manager_nonce: u8, pool_index: u8, health_score_coefficient: u64)]
+pub struct UpdatePoolHealthScore<'info> {
+    #[account(address = manager.admin)]
+    pub admin: Signer<'info>,
+    #[account(
+        seeds = [b"manager".as_ref()],
+        bump = manager_nonce,
+        has_one = token_data
+    )]
+    pub manager: Box<Account<'info, Manager>>,
+    #[account(
+        mut,
+        has_one = manager
+    )]
+    pub token_data: AccountLoader<'info, TokenData>,
 }
 
 #[derive(Accounts)]

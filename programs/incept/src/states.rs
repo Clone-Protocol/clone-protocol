@@ -34,13 +34,14 @@ pub struct Manager {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 157,670
-    pub manager: Pubkey,                // 32
-    pub num_pools: u64,                 // 8
-    pub num_collaterals: u64,           // 8
-    pub pools: [Pool; 255],             // 255 * 466 = 118,830
-    pub collaterals: [Collateral; 255], // 255 * 152 = 38,760
-    pub chainlink_program: Pubkey,      // 32
+    // 163,304
+    pub manager: Pubkey,                    // 32
+    pub num_pools: u64,                     // 8
+    pub num_collaterals: u64,               // 8
+    pub pools: [Pool; 255],                 // 255 * 488 = 124,440
+    pub collaterals: [Collateral; 255],     // 255 * 152 = 38,760
+    pub chainlink_program: Pubkey,          // 32
+    pub il_health_score_coefficient: Value, // 24
 }
 
 impl Default for TokenData {
@@ -52,6 +53,7 @@ impl Default for TokenData {
             pools: [Pool::default(); 255],
             collaterals: [Collateral::default(); 255],
             chainlink_program: Pubkey::default(),
+            il_health_score_coefficient: Value::default(),
         };
     }
 }
@@ -114,7 +116,7 @@ impl TokenData {
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct AssetInfo {
-    // 232
+    // 256
     pub iasset_mint: Pubkey,               // 32
     pub price_feed_addresses: [Pubkey; 2], // 64
     pub price: Value,                      // 24
@@ -124,12 +126,13 @@ pub struct AssetInfo {
     pub last_update: u64,                  // 8
     pub stable_collateral_ratio: Value,    // 24
     pub crypto_collateral_ratio: Value,    // 24
+    pub health_score_coefficient: Value,   // 24
 }
 
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct Pool {
-    // 466
+    // 488
     pub iasset_token_account: Pubkey,             // 32
     pub usdi_token_account: Pubkey,               // 32
     pub liquidity_token_mint: Pubkey,             // 32
@@ -138,7 +141,7 @@ pub struct Pool {
     pub iasset_amount: Value,                     // 24
     pub usdi_amount: Value,                       // 24
     pub liquidity_token_supply: Value,            // 24
-    pub asset_info: AssetInfo,                    // 232
+    pub asset_info: AssetInfo,                    // 256
 }
 
 #[zero_copy]
