@@ -167,6 +167,11 @@ pub fn calculate_undercollateralized_lower_usdi_barrier(
     usdi_amm_value: Value,
     collateral_value: Value,
 ) -> Value {
+
+    if usdi_liquidity_value.lte(collateral_value).unwrap() {
+        return Value::new(0, usdi_liquidity_value.scale as u8);
+    }
+
     return usdi_liquidity_value
         .sub(collateral_value)
         .unwrap()
