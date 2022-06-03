@@ -1937,7 +1937,7 @@ export class Incept {
       let updatedliquidityTokenSupply =
         liquidityTokenSupplyBeforeComet + cometLiquidityTokenAmount;
       let yUnder =
-        ((usdiAmount - collateralAmount) * updatedliquidityTokenSupply) /
+        (Math.max(usdiAmount - collateralAmount, 0) * updatedliquidityTokenSupply) /
         cometLiquidityTokenAmount;
       let iassetAmount = usdiAmount / (balances[1] / balances[0]);
       let invariant = (balances[1] + usdiAmount) * (balances[0] + iassetAmount);
