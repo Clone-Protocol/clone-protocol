@@ -75,7 +75,6 @@ export class ChainLinkOracle {
       }
     );
   }
-
 }
 
 export const createPriceFeed = async (
@@ -114,7 +113,7 @@ export const setPrice = async (
     priceFeed
   );
   if (priceFeedInfo === null) {
-    throw new Error("Price feed info null!")
+    throw new Error("Price feed info null!");
   }
   const data = parsePriceData(priceFeedInfo.data);
   await pythProgram.rpc.setPrice(new BN(price * 10 ** -data.exponent), {
@@ -130,7 +129,7 @@ export const getFeedData = async (
     priceFeed
   );
   if (priceFeedInfo === null) {
-    throw new Error("Price feed info null!")
+    throw new Error("Price feed info null!");
   }
   return parsePriceData(priceFeedInfo.data);
 };

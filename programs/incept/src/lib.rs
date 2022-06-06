@@ -390,8 +390,7 @@ pub mod incept {
             collateral_ratio,
             collateral_amount_value,
             slot,
-        )
-        .unwrap();
+        )?;
 
         // lock user collateral in vault
         let cpi_ctx_transfer: CpiContext<Transfer> = CpiContext::from(&*ctx.accounts);

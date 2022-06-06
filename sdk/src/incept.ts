@@ -2338,14 +2338,6 @@ export class Incept {
     );
   }
 
-  public async calculateMaxUSDiAmountFromCollateral(
-    collateralIndex: number,
-    poolIndex: number,
-    collateralAmount: number
-  ) {
-    // Coming soon
-  }
-
   public async calculateRangeFromUSDiAndCollateral(
     collateralIndex: number,
     poolIndex: number,
@@ -2353,51 +2345,121 @@ export class Incept {
     usdiAmount: number
   ) {
     let collateral = await this.getCollateral(collateralIndex);
-    let pool = await this.getPool(poolIndex);
-    let balances = await this.getPoolBalances(poolIndex);
-    if (collateral.stable) {
-      let liquidityTokenSupplyBeforeComet = (
-        await this.connection.getTokenSupply(
-          pool.liquidityTokenMint,
-          "confirmed"
-        )
-      ).value!.uiAmount;
-      if (liquidityTokenSupplyBeforeComet === null) {
-        throw new Error("Couldn't get token supply");
-      }
-      let cometLiquidityTokenAmount =
-        (usdiAmount * liquidityTokenSupplyBeforeComet) / balances[1];
-      let updatedliquidityTokenSupply =
-        liquidityTokenSupplyBeforeComet + cometLiquidityTokenAmount;
-      let yUnder =
-        ((usdiAmount - collateralAmount) * updatedliquidityTokenSupply) /
-        cometLiquidityTokenAmount;
-      let iassetAmount = usdiAmount / (balances[1] / balances[0]);
-      let invariant = (balances[1] + usdiAmount) * (balances[0] + iassetAmount);
-      let xUnder = invariant / yUnder;
-      let pLower = (yUnder / xUnder) * 2;
-
-      let a = collateralAmount / invariant;
-      let b = cometLiquidityTokenAmount / updatedliquidityTokenSupply;
-      let c = iassetAmount;
-      let xUpper = (Math.sqrt(b ** 2 + 4 * a * c) - b) / (2 * a);
-      let yUpper = invariant / xUpper;
-      let pUpper = ((yUpper / xUpper) * 2) / 3;
-
-      return [pLower, pUpper];
-    } else {
-      //coming soon...
-      return;
+    if (!collateral.stable) {
+      throw new Error("Non-stable collateral not yet supported!");
     }
+
+    let pool = await this.getPool(poolIndex);
+
+    let liquidityTokenSupplyBeforeComet = (
+      await this.connection.getTokenSupply(pool.liquidityTokenMint, "confirmed")
+    ).value!.uiAmount;
+
+    if (liquidityTokenSupplyBeforeComet === null) {
+      throw new Error("Couldn't get token supply");
+    }
+
+    let balances = await this.getPoolBalances(poolIndex);
+
+    let cometLiquidityTokenAmount =
+      (usdiAmount * liquidityTokenSupplyBeforeComet) / balances[1];
+    let updatedliquidityTokenSupply =
+      liquidityTokenSupplyBeforeComet + cometLiquidityTokenAmount;
+    let yUnder =
+      (Math.max(usdiAmount - collateralAmount, 0) *
+        updatedliquidityTokenSupply) /
+      cometLiquidityTokenAmount;
+    let iassetAmount = usdiAmount / (balances[1] / balances[0]);
+    let invariant = (balances[1] + usdiAmount) * (balances[0] + iassetAmount);
+    let xUnder = invariant / yUnder;
+    let pLower = (yUnder / xUnder) * 2;
+
+    let a = collateralAmount / invariant;
+    let b = cometLiquidityTokenAmount / updatedliquidityTokenSupply;
+    let c = iassetAmount;
+    let xUpper = (Math.sqrt(b ** 2 + 4 * a * c) - b) / (2 * a);
+    let yUpper = invariant / xUpper;
+    let pUpper = ((yUpper / xUpper) * 2) / 3;
+
+    return [pLower, pUpper];
   }
 
-  public async calculateUSDiAmountAndUpperRangeFromLowerRange(
+  public async calculateUSDiAmountFromRange(
     collateralIndex: number,
     poolIndex: number,
     collateralAmount: number,
-    lowerRange: number
+    rangePrice: number,
+    isLowerRange: boolean
   ) {
-    // Coming soon
+    let collateral = await this.getCollateral(collateralIndex);
+    if (!collateral.stable) {
+      throw new Error("Non-stable collateral not yet supported!");
+    }
+
+    let pool = await this.getPool(poolIndex);
+
+    let liquidityTokenSupplyBeforeComet = (
+      await this.connection.getTokenSupply(pool.liquidityTokenMint, "confirmed")
+    ).value!.uiAmount;
+
+    if (liquidityTokenSupplyBeforeComet === null) {
+      throw new Error("Couldn't get token supply");
+    }
+
+    let [iAssetBalance, usdiBalance] = await this.getPoolBalances(poolIndex);
+
+    const invariant = iAssetBalance * usdiBalance;
+    const poolPrice = usdiBalance / iAssetBalance;
+
+    const a = 1;
+    let b;
+    let c;
+    let adjustedPrice;
+    if (isLowerRange) {
+      adjustedPrice = rangePrice / 2;
+      b = usdiBalance - Math.sqrt(invariant * adjustedPrice) - collateralAmount;
+      c = -usdiBalance * collateralAmount;
+    } else {
+      adjustedPrice = (rangePrice * 3) / 2;
+      b =
+        iAssetBalance -
+        Math.sqrt(invariant / adjustedPrice) -
+        collateralAmount / adjustedPrice;
+      c = (-iAssetBalance * collateralAmount) / adjustedPrice;
+    }
+    let borrowAmountUsdi = Math.max(
+      0,
+      (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a)
+    );
+
+    if (!isLowerRange) {
+      borrowAmountUsdi *= poolPrice;
+    }
+
+    return borrowAmountUsdi;
+  }
+
+  public async calculateMaxUSDiAmountFromCollateral(
+    poolIndex: number,
+    collateralAmount: number
+  ) {
+    const [iAssetBalance, usdiBalance] = await this.getPoolBalances(poolIndex);
+    const price = usdiBalance / iAssetBalance;
+    const usdiLowerLimit = await this.calculateUSDiAmountFromRange(
+      0,
+      0,
+      collateralAmount,
+      price,
+      true
+    );
+    const usdiUpperLimit = await this.calculateUSDiAmountFromRange(
+      0,
+      0,
+      collateralAmount,
+      price,
+      false
+    );
+    return Math.min(usdiLowerLimit, usdiUpperLimit);
   }
 
   public async updateILHealthScoreCoefficient(coefficient: BN) {
