@@ -2233,7 +2233,7 @@ pub mod incept {
             );
 
             token::burn(burn_iasset_context, iasset_debt.to_u64())?;
-        } else {
+        } else if initial_comet_price.gt(current_price).unwrap() {
             // calculate extra iasset comet can claim, usdi debt that comet cannot claim, and iasset amount needed to buy usdi and cover debt
             let (iasset_surplus, iasset_amount, usdi_debt) =
                 calculate_recentering_values_with_iasset_surplus(
@@ -2334,6 +2334,8 @@ pub mod incept {
             );
 
             token::burn(burn_usdi_context, usdi_debt.to_u64())?;
+        } else {
+            return Err(InceptError::NoPriceDeviationDetected.into());
         }
 
         // update pool data
@@ -2512,7 +2514,7 @@ pub mod incept {
             .add(added_collateral_value)
             .unwrap();
 
-        // add collateral amount to total comet manager collateral amount
+        // add collateral amount to total multi pool comet collateral amount
         multi_pool_comet.total_collateral_amount = multi_pool_comet
             .total_collateral_amount
             .scale_to(DEVNET_TOKEN_SCALE)
@@ -2522,26 +2524,21 @@ pub mod incept {
         // find the index of the collateral within the manager's position
         let multi_pool_comet_collateral_index =
             multi_pool_comet.get_collateral_index(collateral_index);
-        msg!("0");
+
         // check to see if a new collateral must be added to the position
         if multi_pool_comet_collateral_index == usize::MAX {
-            msg!("1");
             multi_pool_comet.add_collateral(MultiPoolCometCollateral {
                 authority: *ctx.accounts.user.to_account_info().key,
                 collateral_amount: added_collateral_value,
                 collateral_index: collateral_index.into(),
             });
-            msg!("2");
         } else {
-            msg!("0.5");
             multi_pool_comet.collaterals[multi_pool_comet_collateral_index].collateral_amount =
                 multi_pool_comet.collaterals[multi_pool_comet_collateral_index]
                     .collateral_amount
                     .add(added_collateral_value)
                     .unwrap();
-            msg!("1.5");
         }
-        msg!("2");
 
         // send collateral from user to vault
         let cpi_ctx = CpiContext::from(&*ctx.accounts);
@@ -2567,13 +2564,13 @@ pub mod incept {
             collateral.vault_comet_supply.scale.try_into().unwrap(),
         );
 
-        // subtract collateral amount to vault supply
+        // subtract collateral amount from vault supply
         token_data.collaterals[collateral_index as usize].vault_comet_supply = collateral
             .vault_comet_supply
             .sub(subtracted_collateral_value)
             .unwrap();
 
-        // subtract collateral amount to total comet manager collateral amount
+        // subtract collateral amount from total multi pool collateral amount
         multi_pool_comet.total_collateral_amount = multi_pool_comet
             .total_collateral_amount
             .sub(subtracted_collateral_value.scale_to(DEVNET_TOKEN_SCALE))
@@ -2640,8 +2637,7 @@ pub mod incept {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
         let mut multi_pool_comet = ctx.accounts.multi_pool_comet.load_mut()?;
-        let multi_pool_comet_position =
-            multi_pool_comet.comet_positions[comet_position_index as usize];
+        let comet_position = multi_pool_comet.comet_positions[comet_position_index as usize];
 
         let usdi_liquidity_value = Value::new(usdi_amount.into(), DEVNET_TOKEN_SCALE);
         let iasset_amm_value = Value::new(
@@ -2668,23 +2664,18 @@ pub mod incept {
                 liquidity_token_supply,
             );
 
-        // find the index of the comet within the manager's position
-        let multi_pool_comet_pool_index = multi_pool_comet
-            .get_pool_index(multi_pool_comet_position.pool_index.try_into().unwrap());
-        let comet_position = multi_pool_comet.comet_positions[multi_pool_comet_pool_index];
-
         // update comet position data
-        multi_pool_comet.comet_positions[multi_pool_comet_pool_index].borrowed_usdi =
+        multi_pool_comet.comet_positions[comet_position_index as usize].borrowed_usdi =
             comet_position
                 .borrowed_usdi
                 .add(usdi_liquidity_value)
                 .unwrap();
-        multi_pool_comet.comet_positions[multi_pool_comet_pool_index].borrowed_iasset =
+        multi_pool_comet.comet_positions[comet_position_index as usize].borrowed_iasset =
             comet_position
                 .borrowed_iasset
                 .add(iasset_liquidity_value)
                 .unwrap();
-        multi_pool_comet.comet_positions[multi_pool_comet_pool_index].liquidity_token_value =
+        multi_pool_comet.comet_positions[comet_position_index as usize].liquidity_token_value =
             comet_position
                 .liquidity_token_value
                 .add(liquidity_token_value)
@@ -2774,12 +2765,13 @@ pub mod incept {
     pub fn withdraw_liquidity_from_multi_pool_comet(
         ctx: Context<WithdrawLiquidityFromMultiPoolComet>,
         manager_nonce: u8,
-        pool_index: u8,
+        comet_position_index: u8,
         usdi_amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
         let mut multi_pool_comet = ctx.accounts.multi_pool_comet.load_mut()?;
+        let comet_position = multi_pool_comet.comet_positions[comet_position_index as usize];
 
         let usdi_liquidity_value = Value::new(usdi_amount.into(), DEVNET_TOKEN_SCALE);
         let iasset_amm_value = Value::new(
@@ -2806,58 +2798,495 @@ pub mod incept {
                 liquidity_token_supply,
             );
 
-        // find the index of the comet within the manager's position
-        let multi_pool_comet_pool_index = multi_pool_comet.get_pool_index(pool_index);
-        let comet_position = multi_pool_comet.comet_positions[multi_pool_comet_pool_index];
-
         // update comet position data
-        multi_pool_comet.comet_positions[multi_pool_comet_pool_index].borrowed_usdi =
+        multi_pool_comet.comet_positions[comet_position_index as usize].borrowed_usdi =
             comet_position
                 .borrowed_usdi
                 .sub(usdi_liquidity_value)
                 .unwrap();
-        multi_pool_comet.comet_positions[multi_pool_comet_pool_index].borrowed_iasset =
+        multi_pool_comet.comet_positions[comet_position_index as usize].borrowed_iasset =
             comet_position
                 .borrowed_iasset
                 .sub(iasset_liquidity_value)
                 .unwrap();
-        multi_pool_comet.comet_positions[multi_pool_comet_pool_index].liquidity_token_value =
+        multi_pool_comet.comet_positions[comet_position_index as usize].liquidity_token_value =
             comet_position
                 .liquidity_token_value
                 .sub(liquidity_token_value)
                 .unwrap();
 
-        // burn liquidity from amm
+        // calculate initial comet pool price
+        let initial_comet_price =
+            calculate_amm_price(comet_position.borrowed_iasset, comet_position.borrowed_usdi);
+        // calculate current pool price
+        let current_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
+
+        // check if price has increased since comet was initialized
+        if initial_comet_price.lt(current_price).unwrap() {
+            let iasset_burn_value = initial_comet_price.mul(iasset_liquidity_value);
+            // burn liquidity from amm
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .amm_usdi_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let burn_usdi_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::burn(burn_usdi_context, usdi_amount)?;
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .amm_iasset_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let burn_iasset_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::burn(burn_iasset_context, iasset_burn_value.to_u64())?;
+
+            // transfer surplus iasset to liquidity provider
+            let cpi_accounts = Transfer {
+                from: ctx
+                    .accounts
+                    .amm_iasset_token_account
+                    .to_account_info()
+                    .clone(),
+                to: ctx
+                    .accounts
+                    .user_iasset_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let transfer_iasset_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::transfer(
+                transfer_iasset_context,
+                iasset_liquidity_value
+                    .sub(iasset_burn_value)
+                    .unwrap()
+                    .to_u64(),
+            )?;
+        } else if initial_comet_price.gt(current_price).unwrap() {
+            let usdi_burn_value = usdi_liquidity_value.div(initial_comet_price);
+            // burn liquidity from amm
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .amm_usdi_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let burn_usdi_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::burn(burn_usdi_context, usdi_burn_value.to_u64())?;
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .amm_iasset_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let burn_iasset_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::burn(burn_iasset_context, iasset_liquidity_value.to_u64())?;
+
+            // transfer surplus iasset to liquidity provider
+            let cpi_accounts = Transfer {
+                from: ctx
+                    .accounts
+                    .amm_usdi_token_account
+                    .to_account_info()
+                    .clone(),
+                to: ctx
+                    .accounts
+                    .user_usdi_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let transfer_usdi_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::transfer(
+                transfer_usdi_context,
+                usdi_liquidity_value.sub(usdi_burn_value).unwrap().to_u64(),
+            )?;
+        } else {
+            // burn liquidity from amm
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .amm_usdi_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let burn_usdi_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::burn(burn_usdi_context, usdi_amount)?;
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .amm_iasset_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let burn_iasset_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::burn(burn_iasset_context, iasset_liquidity_value.to_u64())?;
+        }
+        // burn liquidity tokens from comet
         let cpi_accounts = Burn {
-            mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+            mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
             to: ctx
                 .accounts
-                .amm_usdi_token_account
+                .comet_liquidity_token_account
                 .to_account_info()
                 .clone(),
             authority: ctx.accounts.manager.to_account_info().clone(),
         };
-        let burn_usdi_context = CpiContext::new_with_signer(
+        let burn_liquidity_tokens_to_comet_context = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info().clone(),
             cpi_accounts,
             seeds,
         );
-        token::burn(burn_usdi_context, usdi_amount)?;
-        let cpi_accounts = Burn {
-            mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-            to: ctx
-                .accounts
-                .amm_iasset_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.manager.to_account_info().clone(),
-        };
-        let burn_iasset_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            cpi_accounts,
-            seeds,
+
+        token::burn(
+            burn_liquidity_tokens_to_comet_context,
+            liquidity_token_value.to_u64(),
+        )?;
+
+        // update pool data
+        token_data.pools[comet_position.pool_index as usize].iasset_amount = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
         );
-        token::burn(burn_iasset_context, iasset_liquidity_value.to_u64())?;
+        token_data.pools[comet_position.pool_index as usize].usdi_amount = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        Ok(())
+    }
+
+    pub fn withdraw_liquidity_from_multi_pool_comet_surplus_to_collateral(
+        ctx: Context<WithdrawLiquidityFromMultiPoolCometSurplusToCollateral>,
+        manager_nonce: u8,
+        comet_position_index: u8,
+        collateral_index: u8,
+        usdi_amount: u64,
+    ) -> ProgramResult {
+        let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
+        let mut multi_pool_comet = ctx.accounts.multi_pool_comet.load_mut()?;
+        let comet_position = multi_pool_comet.comet_positions[comet_position_index as usize];
+        let collateral = token_data.collaterals[collateral_index as usize];
+
+        let usdi_liquidity_value = Value::new(usdi_amount.into(), DEVNET_TOKEN_SCALE);
+        let iasset_amm_value = Value::new(
+            ctx.accounts.amm_iasset_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        let usdi_amm_value = Value::new(
+            ctx.accounts.amm_usdi_token_account.amount.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        let liquidity_token_supply = Value::new(
+            ctx.accounts.liquidity_token_mint.supply.into(),
+            DEVNET_TOKEN_SCALE,
+        );
+
+        // calculate iasset liquidity value as well as liquidity token value for comet
+        let (iasset_liquidity_value, liquidity_token_value) =
+            calculate_liquidity_provider_values_from_usdi(
+                usdi_liquidity_value,
+                iasset_amm_value,
+                usdi_amm_value,
+                liquidity_token_supply,
+            );
+
+        // update comet position data
+        multi_pool_comet.comet_positions[comet_position_index as usize].borrowed_usdi =
+            comet_position
+                .borrowed_usdi
+                .sub(usdi_liquidity_value)
+                .unwrap();
+        multi_pool_comet.comet_positions[comet_position_index as usize].borrowed_iasset =
+            comet_position
+                .borrowed_iasset
+                .sub(iasset_liquidity_value)
+                .unwrap();
+        multi_pool_comet.comet_positions[comet_position_index as usize].liquidity_token_value =
+            comet_position
+                .liquidity_token_value
+                .sub(liquidity_token_value)
+                .unwrap();
+
+        // calculate initial comet pool price
+        let initial_comet_price =
+            calculate_amm_price(comet_position.borrowed_iasset, comet_position.borrowed_usdi);
+        // calculate current pool price
+        let current_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
+
+        // check if price has increased since comet was initialized
+        if initial_comet_price.lt(current_price).unwrap() {
+            let iasset_burn_value = usdi_liquidity_value.div(initial_comet_price);
+
+            // calculate how much usdi must be spent
+            let usdi_trade_value = calculate_price_from_iasset(
+                iasset_liquidity_value.sub(iasset_burn_value).unwrap(),
+                iasset_amm_value,
+                usdi_amm_value,
+                true,
+            );
+
+            // burn liquidity from the amm and move surplus to collateral
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .amm_usdi_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let burn_usdi_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::burn(
+                burn_usdi_context,
+                usdi_liquidity_value.add(usdi_trade_value).unwrap().to_u64(),
+            )?;
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .amm_iasset_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let burn_iasset_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::burn(
+                burn_iasset_context,
+                iasset_burn_value.to_u64(),
+            )?;
+
+            // check if sufficient collateral exists within the vault
+            if collateral.vault_usdi_supply.lt(usdi_trade_value).unwrap() {
+                return Err(InceptError::InsufficientUSDiCollateral.into());
+            }
+            // subtract amount from vault usdi supply and move to comet supply
+            token_data.collaterals[collateral_index as usize].vault_usdi_supply = collateral
+                .vault_usdi_supply
+                .sub(
+                    usdi_trade_value
+                        .scale_to(collateral.vault_comet_supply.scale.try_into().unwrap()),
+                )
+                .unwrap();
+            token_data.collaterals[collateral_index as usize].vault_comet_supply = collateral
+                .vault_comet_supply
+                .add(
+                    usdi_trade_value
+                        .scale_to(collateral.vault_comet_supply.scale.try_into().unwrap()),
+                )
+                .unwrap();
+
+            // add collateral amount to total multi pool collateral amount
+            multi_pool_comet.total_collateral_amount = multi_pool_comet
+                .total_collateral_amount
+                .add(usdi_trade_value)
+                .unwrap();
+
+            // find the index of the collateral within the comet holder's position
+            let multi_pool_comet_collateral_index =
+                multi_pool_comet.get_collateral_index(collateral_index);
+
+            // check to see if a new collateral must be added to the position
+            if multi_pool_comet_collateral_index == usize::MAX {
+                multi_pool_comet.add_collateral(MultiPoolCometCollateral {
+                    authority: *ctx.accounts.user.to_account_info().key,
+                    collateral_amount: usdi_trade_value
+                        .scale_to(collateral.vault_comet_supply.scale.try_into().unwrap()),
+                    collateral_index: collateral_index.into(),
+                });
+            } else {
+                multi_pool_comet.collaterals[multi_pool_comet_collateral_index].collateral_amount =
+                    multi_pool_comet.collaterals[multi_pool_comet_collateral_index]
+                        .collateral_amount
+                        .add(
+                            usdi_trade_value
+                                .scale_to(collateral.vault_comet_supply.scale.try_into().unwrap()),
+                        )
+                        .unwrap();
+            }
+        } else if initial_comet_price.gt(current_price).unwrap() {
+            let usdi_burn_value = iasset_liquidity_value.mul(initial_comet_price);
+            // burn liquidity from amm
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .amm_usdi_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let burn_usdi_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::burn(burn_usdi_context, usdi_liquidity_value.to_u64())?;
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .amm_iasset_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let burn_iasset_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::burn(burn_iasset_context, iasset_liquidity_value.to_u64())?;
+
+            // find the amount of surplus usdi
+            let usdi_surplus_value = usdi_liquidity_value.sub(usdi_burn_value).unwrap();
+
+            // check if sufficient collateral exists within the vault
+            if collateral.vault_usdi_supply.lt(usdi_surplus_value).unwrap() {
+                return Err(InceptError::InsufficientUSDiCollateral.into());
+            }
+            // subtract amount from vault usdi supply and move to comet supply
+            token_data.collaterals[collateral_index as usize].vault_usdi_supply = collateral
+                .vault_usdi_supply
+                .sub(
+                    usdi_surplus_value
+                        .scale_to(collateral.vault_comet_supply.scale.try_into().unwrap()),
+                )
+                .unwrap();
+            token_data.collaterals[collateral_index as usize].vault_comet_supply = collateral
+                .vault_comet_supply
+                .add(
+                    usdi_surplus_value
+                        .scale_to(collateral.vault_comet_supply.scale.try_into().unwrap()),
+                )
+                .unwrap();
+
+            // add collateral amount to total multi pool collateral amount
+            multi_pool_comet.total_collateral_amount = multi_pool_comet
+                .total_collateral_amount
+                .add(usdi_surplus_value)
+                .unwrap();
+
+            // find the index of the collateral within the comet holder's position
+            let multi_pool_comet_collateral_index =
+                multi_pool_comet.get_collateral_index(collateral_index);
+
+            // check to see if a new collateral must be added to the position
+            if multi_pool_comet_collateral_index == usize::MAX {
+                multi_pool_comet.add_collateral(MultiPoolCometCollateral {
+                    authority: *ctx.accounts.user.to_account_info().key,
+                    collateral_amount: usdi_surplus_value
+                        .scale_to(collateral.vault_comet_supply.scale.try_into().unwrap()),
+                    collateral_index: collateral_index.into(),
+                });
+            } else {
+                multi_pool_comet.collaterals[multi_pool_comet_collateral_index].collateral_amount =
+                    multi_pool_comet.collaterals[multi_pool_comet_collateral_index]
+                        .collateral_amount
+                        .add(
+                            usdi_surplus_value
+                                .scale_to(collateral.vault_comet_supply.scale.try_into().unwrap()),
+                        )
+                        .unwrap();
+            }
+        } else {
+            // burn liquidity from amm
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .amm_usdi_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let burn_usdi_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::burn(burn_usdi_context, usdi_amount)?;
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .amm_iasset_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let burn_iasset_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+            token::burn(burn_iasset_context, iasset_liquidity_value.to_u64())?;
+        }
 
         // burn liquidity tokens from comet
         let cpi_accounts = Burn {
@@ -3025,7 +3454,7 @@ pub mod incept {
             );
 
             token::burn(burn_iasset_context, iasset_debt.to_u64())?;
-        } else {
+        } else if initial_comet_price.gt(current_price).unwrap() {
             // calculate extra iasset comet can claim, usdi debt that comet cannot claim, and iasset amount needed to buy usdi and cover debt
             let (iasset_surplus, iasset_amount, usdi_debt) =
                 calculate_recentering_values_with_iasset_surplus(
@@ -3106,6 +3535,8 @@ pub mod incept {
             );
 
             token::burn(burn_usdi_context, usdi_debt.to_u64())?;
+        } else {
+            return Err(InceptError::NoPriceDeviationDetected.into());
         }
 
         // update pool data
@@ -4058,7 +4489,7 @@ pub mod incept {
             );
 
             token::burn(burn_iasset_context, iasset_debt.to_u64())?;
-        } else {
+        } else if initial_comet_price.gt(current_price).unwrap() {
             // calculate extra iasset comet can claim, usdi debt that comet cannot claim, and iasset amount needed to buy usdi and cover debt
             let (iasset_surplus, iasset_amount, usdi_debt) =
                 calculate_recentering_values_with_iasset_surplus(
@@ -4158,6 +4589,8 @@ pub mod incept {
             );
 
             token::burn(burn_usdi_context, usdi_debt.to_u64())?;
+        } else {
+            return Err(InceptError::NoPriceDeviationDetected.into());
         }
 
         Ok(())

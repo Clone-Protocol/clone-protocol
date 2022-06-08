@@ -95,6 +95,10 @@ pub enum InceptError {
     /// Health Score Too Low
     #[error("Health Score Too Low")]
     HealthScoreTooLow,
+
+    /// Insufficient USDi Collateral
+    #[error("Insufficient USDi Collateral")]
+    InsufficientUSDiCollateral,
 }
 
 impl From<InceptError> for ProgramError {

@@ -262,27 +262,6 @@ impl MultiPoolComet {
             return find_collateral().unwrap();
         }
     }
-    pub fn get_pool_index(&self, pool_index: u8) -> usize {
-        let find_pool = || -> Result<usize, InceptError> {
-            let index = match self
-                .comet_positions
-                .iter()
-                .position(|x| x.pool_index == pool_index.into())
-            {
-                Some(i) => i,
-                None => return Err(InceptError::PoolNotFound.into()),
-            };
-            Ok(index)
-        };
-
-        let result = find_pool();
-
-        if let Err(_err) = result {
-            return usize::MAX;
-        } else {
-            return find_pool().unwrap();
-        }
-    }
     pub fn add_collateral(&mut self, new_collateral: MultiPoolCometCollateral) {
         self.collaterals[(self.num_collaterals) as usize] = new_collateral;
         if self.collaterals[(self.num_collaterals) as usize].collateral_index == 0 {
