@@ -77,7 +77,7 @@ export type Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         }
       ],
@@ -3326,7 +3326,7 @@ export const IDL: Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         }
       ],

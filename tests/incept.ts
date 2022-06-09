@@ -47,6 +47,13 @@ describe("incept", async () => {
     mockUSDCProgram.programId
   );
 
+  const healthScoreCoefficient = new BN(
+    Math.floor(1.059 * 10 ** DEVNET_TOKEN_SCALE)
+  );
+  const ilHealthScoreCoefficient = new BN(
+    Math.floor(128.288 * 10 ** DEVNET_TOKEN_SCALE)
+  );
+
   let priceFeed;
   let mockUSDCTokenAccountInfo;
   let usdiTokenAccountInfo;
@@ -73,9 +80,6 @@ describe("incept", async () => {
   });
 
   it("manager initialized!", async () => {
-    const ilHealthScoreCoefficient = new BN(
-      Math.floor(128.288 * 10 ** DEVNET_TOKEN_SCALE)
-    );
     await inceptClient.initializeManager(
       storeProgram.programId,
       ilHealthScoreCoefficient
@@ -185,9 +189,6 @@ describe("incept", async () => {
   });
 
   it("pool initialized!", async () => {
-    const healthScoreCoefficient = new BN(
-      Math.floor(1.059 * 10 ** DEVNET_TOKEN_SCALE)
-    );
     await inceptClient.initializePool(
       walletPubkey,
       150,
@@ -1659,6 +1660,23 @@ describe("incept", async () => {
       80910.92477586,
       "check iasset pool balance"
     );
+  });
+
+  it("multi pool comet health check", async () => {
+    let healthScore = await inceptClient.getHealthScore();
+
+    assert.equal(healthScore, 98.941, "check health score.");
+
+    await inceptClient.updatePoolHealthScoreCoefficient(
+      healthScoreCoefficient.mul(new BN(2)),
+      0
+    );
+    await inceptClient.updateILHealthScoreCoefficient(
+      ilHealthScoreCoefficient.mul(new BN(2))
+    );
+
+    healthScore = await inceptClient.getHealthScore();
+    assert.equal(healthScore, 97.882, "check health score.");
   });
 
   it("multi pool comet liquidity withdrawn!", async () => {

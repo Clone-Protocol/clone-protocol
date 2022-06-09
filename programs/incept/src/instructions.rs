@@ -48,6 +48,10 @@ pub struct UpdateILHealthScoreCoefficient<'info> {
         has_one = token_data
     )]
     pub manager: Account<'info, Manager>,
+    #[account(
+        mut,
+        has_one = manager
+    )]
     pub token_data: AccountLoader<'info, TokenData>,
 }
 

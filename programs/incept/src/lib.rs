@@ -68,7 +68,7 @@ pub mod incept {
             _il_health_score_coefficient > 0,
             InceptError::InvalidHealthScoreCoefficient
         );
-        let mut token_data = ctx.accounts.token_data.load_init()?;
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
         token_data.il_health_score_coefficient =
             Value::new(_il_health_score_coefficient.into(), DEVNET_TOKEN_SCALE);
 
