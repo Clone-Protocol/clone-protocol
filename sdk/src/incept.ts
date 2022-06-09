@@ -2252,10 +2252,10 @@ export class Incept {
         default:
           throw new Error("Not supported");
       }
-      let centerPrice = div(
-        cometPosition.borrowedUsdi,
-        cometPosition.borrowedIasset
-      );
+      let centerPrice =
+        toScaledNumber(cometPosition.borrowedUsdi) /
+        toScaledNumber(cometPosition.borrowedIasset);
+
       let liquidityTokenAmount = toScaledNumber(
         cometPosition.liquidityTokenValue
       );
@@ -2288,7 +2288,7 @@ export class Incept {
         poolIndex,
         collateralIndex,
         indicatorPrice,
-        toScaledNumber(centerPrice),
+        centerPrice,
         lowerPriceRange,
         upperPriceRange,
         toScaledNumber(cometPosition.collateralAmount),
