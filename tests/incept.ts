@@ -1677,6 +1677,11 @@ describe("incept", async () => {
 
     healthScore = await inceptClient.getHealthScore();
     assert.equal(healthScore, 97.882, "check health score.");
+
+    const totalILD = await inceptClient.getILD();
+    const poolILD = await inceptClient.getILD(0);
+    assert.equal(totalILD, poolILD, 'check ILD calculation');
+
   });
 
   it("multi pool comet liquidity withdrawn!", async () => {

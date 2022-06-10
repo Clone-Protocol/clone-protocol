@@ -2551,6 +2551,51 @@ export class Incept {
 
     return 100 - loss;
   }
+
+  public async getILD(poolIndex?: number) {
+    const tokenData = await this.getTokenData();
+    const multiPoolComet = await this.getMultiPoolComet();
+
+    let ILD = 0;
+
+    multiPoolComet.cometPositions
+      .slice(0, Number(multiPoolComet.numPositions))
+      .forEach((position) => {
+
+        if (poolIndex !== null && poolIndex !== position.poolIndex) {
+          return;
+        }
+
+        let pool = tokenData.pools[position.poolIndex];
+        let poolUsdiAmount = toScaledNumber(pool.usdiAmount);
+        let poolIassetAmount = toScaledNumber(pool.iassetAmount);
+        let poolPrice = poolUsdiAmount / poolIassetAmount;
+
+        let borrowedUsdi = toScaledNumber(position.borrowedUsdi);
+        let borrowedIasset = toScaledNumber(position.borrowedIasset);
+        let claimableRatio =
+          toScaledNumber(position.liquidityTokenValue) /
+          toScaledNumber(pool.liquidityTokenSupply);
+
+        let claimableUsdi = poolUsdiAmount * claimableRatio;
+        let claimableIasset = poolIassetAmount * claimableRatio;
+
+        if (borrowedUsdi < claimableUsdi) {
+          ILD +=
+            claimableUsdi - borrowedUsdi;
+        } else if (borrowedIasset < claimableIasset) {
+          let markPrice = Math.max(
+            toScaledNumber(pool.assetInfo.price),
+            poolPrice
+          );
+          ILD +=
+            markPrice *
+            (claimableIasset - borrowedIasset);
+        }
+      });
+
+    return ILD;
+  }
 }
 
 export interface Manager {
