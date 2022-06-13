@@ -2042,6 +2042,35 @@ export class Incept {
     );
     return Math.min(usdiLowerLimit, usdiUpperLimit);
   }
+
+  public async calculateMaxWithdrawableCollateral(
+    cometIndex: number
+  ) {
+    const cometPosition = await this.getCometPosition(cometIndex);
+    const pool = await this.getPool(cometPosition.poolIndex);
+
+    const borrowedUsdi = toScaledNumber(cometPosition.borrowedUsdi);
+    const borrowedIasset = toScaledNumber(cometPosition.borrowedIasset);
+
+    const totalLpTokenSupply = (
+      await this.connection.getTokenSupply(pool.liquidityTokenMint, "confirmed")
+    ).value!.uiAmount;
+
+    const L = toScaledNumber(cometPosition.liquidityTokenValue) / totalLpTokenSupply;
+
+    const [iAsset, usdi] = await this.getPoolBalances(cometPosition.poolIndex);
+
+    const poolPrice = usdi / iAsset;
+    const k = usdi * iAsset;
+
+    const currentCollateral = toScaledNumber(cometPosition.collateralAmount);
+
+    let requiredCollateral = Math.max(
+      borrowedUsdi - L * Math.sqrt(0.5 * poolPrice * k),
+      borrowedIasset * 1.5 * poolPrice - L * Math.sqrt(1.5 * poolPrice * k)
+    );
+    return Math.max(currentCollateral - requiredCollateral, 0);
+  }
 }
 
 export interface Manager {

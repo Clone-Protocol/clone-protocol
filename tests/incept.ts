@@ -1253,6 +1253,9 @@ describe("incept", async () => {
     const tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[poolIndex];
 
+    let withdrawableCollateral = await inceptClient.calculateMaxWithdrawableCollateral(0);
+    assert.equal(withdrawableCollateral, 103.55103473381615);
+
     usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
       inceptClient.manager.usdiMint
     );
@@ -1312,6 +1315,9 @@ describe("incept", async () => {
       81010.29109402,
       "check pool iAsset"
     );
+
+    withdrawableCollateral = await inceptClient.calculateMaxWithdrawableCollateral(0);
+    assert.equal(withdrawableCollateral, 0);
   });
 
   it("comet recentered!", async () => {
