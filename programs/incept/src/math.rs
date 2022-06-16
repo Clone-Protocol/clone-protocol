@@ -16,24 +16,19 @@ pub fn calculate_price_from_iasset(
     iasset_amm_value: Value,
     usdi_amm_value: Value,
     buy: bool,
-) -> Value {
+) -> Result<Value, InceptError> {
     let invariant = calculate_invariant(iasset_amm_value, usdi_amm_value);
     if buy {
-        let new_iasset_amm_value = iasset_amm_value.sub(iasset_amount_value).unwrap();
-        return invariant
-            .div(new_iasset_amm_value)
-            .sub(usdi_amm_value)
-            .unwrap();
+        let new_iasset_amm_value = iasset_amm_value.sub(iasset_amount_value)?;
+        return invariant.div(new_iasset_amm_value).sub(usdi_amm_value);
     }
-    let new_iasset_amm_value = iasset_amm_value.add(iasset_amount_value).unwrap();
-    return usdi_amm_value
-        .sub(invariant.div(new_iasset_amm_value))
-        .unwrap();
+    let new_iasset_amm_value = iasset_amm_value.add(iasset_amount_value)?;
+    return usdi_amm_value.sub(invariant.div(new_iasset_amm_value));
 }
 
 pub fn check_price_confidence(price: Value, confidence: Value) -> Result<(), InceptError> {
     let confidence_40x = confidence.mul(40);
-    if confidence_40x.gte(price).unwrap() {
+    if confidence_40x.gte(price)? {
         return Err(InceptError::OracleConfidenceOutOfRange.into());
     };
     Ok(())
@@ -44,7 +39,7 @@ pub fn calculate_liquidity_provider_values_from_iasset(
     iasset_amm_value: Value,
     usdi_amm_value: Value,
     liquidity_token_supply: Value,
-) -> (Value, Value) {
+) -> Result<(Value, Value), InceptError> {
     let usdi_liquidity_value: Value;
     let liquidity_tokens_value: Value;
     // check to see if the market is empty
@@ -57,11 +52,11 @@ pub fn calculate_liquidity_provider_values_from_iasset(
         usdi_liquidity_value =
             calculate_amm_price(iasset_amm_value, usdi_amm_value).mul(iasset_liquidity_value);
         liquidity_tokens_value = liquidity_token_supply.mul(
-            calculate_liquidity_proportion_from_usdi(usdi_liquidity_value, usdi_amm_value),
+            calculate_liquidity_proportion_from_usdi(usdi_liquidity_value, usdi_amm_value)?,
         );
     }
 
-    return (usdi_liquidity_value, liquidity_tokens_value);
+    return Ok((usdi_liquidity_value, liquidity_tokens_value));
 }
 
 pub fn calculate_liquidity_provider_values_from_usdi(
@@ -69,13 +64,12 @@ pub fn calculate_liquidity_provider_values_from_usdi(
     iasset_amm_value: Value,
     usdi_amm_value: Value,
     liquidity_token_supply: Value,
-) -> (Value, Value) {
+) -> Result<(Value, Value), InceptError> {
     let liquidity_proportion =
-        calculate_liquidity_proportion_from_usdi(usdi_liquidity_value, usdi_amm_value);
+        calculate_liquidity_proportion_from_usdi(usdi_liquidity_value, usdi_amm_value)?;
     let inverse_liquidity_proportion =
         Value::new(u128::pow(10, DEVNET_TOKEN_SCALE.into()), DEVNET_TOKEN_SCALE)
-            .sub(liquidity_proportion)
-            .unwrap();
+            .sub(liquidity_proportion)?;
     let iasset_liquidity_value: Value;
     let liquidity_tokens_value: Value;
     // check to see if the market is empty
@@ -92,7 +86,7 @@ pub fn calculate_liquidity_provider_values_from_usdi(
             .div(inverse_liquidity_proportion);
     }
 
-    return (iasset_liquidity_value, liquidity_tokens_value);
+    return Ok((iasset_liquidity_value, liquidity_tokens_value));
 }
 
 pub fn calculate_liquidity_provider_values_from_liquidity_tokens(
@@ -100,7 +94,7 @@ pub fn calculate_liquidity_provider_values_from_liquidity_tokens(
     iasset_amm_value: Value,
     usdi_amm_value: Value,
     liquidity_token_supply: Value,
-) -> (Value, Value) {
+) -> Result<(Value, Value), InceptError> {
     let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
         liquidity_token_value,
         liquidity_token_supply,
@@ -109,7 +103,7 @@ pub fn calculate_liquidity_provider_values_from_liquidity_tokens(
     let iasset_value = iasset_amm_value.mul(liquidity_proportion);
     let usdi_value = usdi_amm_value.mul(liquidity_proportion);
 
-    return (iasset_value, usdi_value);
+    return Ok((iasset_value, usdi_value));
 }
 
 pub fn calculate_amm_price(iasset_value: Value, usdi_value: Value) -> Value {
@@ -130,8 +124,8 @@ pub fn calculate_liquidity_proportion_from_liquidity_tokens(
 pub fn calculate_liquidity_proportion_from_usdi(
     usdi_liquidity_value: Value,
     usdi_amm_value: Value,
-) -> Value {
-    return usdi_liquidity_value.div(usdi_amm_value.add(usdi_liquidity_value).unwrap());
+) -> Result<Value, InceptError> {
+    return Ok(usdi_liquidity_value.div(usdi_amm_value.add(usdi_liquidity_value)?));
 }
 
 pub fn calculate_comet_price_barrier(
@@ -140,7 +134,7 @@ pub fn calculate_comet_price_barrier(
     collateral_value: Value,
     iasset_amm_value: Value,
     usdi_amm_value: Value,
-) -> (Value, Value) {
+) -> Result<(Value, Value), InceptError> {
     let invariant = calculate_invariant(
         iasset_amm_value.add(iasset_liquidity_value).unwrap(),
         usdi_amm_value.add(usdi_liquidity_value).unwrap(),
@@ -151,32 +145,31 @@ pub fn calculate_comet_price_barrier(
         usdi_amm_value,
         collateral_value,
         invariant,
-    );
+    )?;
 
     let upper_price_barrier = calculate_upper_comet_price_barrier(
         iasset_liquidity_value,
         iasset_amm_value,
         collateral_value,
         invariant,
-    );
+    )?;
 
-    return (lower_price_barrier, upper_price_barrier);
+    return Ok((lower_price_barrier, upper_price_barrier));
 }
 
 pub fn calculate_undercollateralized_lower_usdi_barrier(
     usdi_liquidity_value: Value,
     usdi_amm_value: Value,
     collateral_value: Value,
-) -> Value {
-    if usdi_liquidity_value.lte(collateral_value).unwrap() {
-        return Value::new(0, usdi_liquidity_value.scale as u8);
+) -> Result<Value, InceptError> {
+    if usdi_liquidity_value.lte(collateral_value)? {
+        return Ok(Value::new(0, usdi_liquidity_value.scale as u8));
     }
 
-    return usdi_liquidity_value
-        .sub(collateral_value)
-        .unwrap()
-        .mul(usdi_amm_value.add(usdi_liquidity_value).unwrap())
-        .div(usdi_liquidity_value);
+    return Ok(usdi_liquidity_value
+        .sub(collateral_value)?
+        .mul(usdi_amm_value.add(usdi_liquidity_value)?)
+        .div(usdi_liquidity_value));
 }
 
 pub fn calculate_undercollateralized_upper_usdi_barrier(
@@ -184,17 +177,17 @@ pub fn calculate_undercollateralized_upper_usdi_barrier(
     iasset_amm_value: Value,
     collateral_value: Value,
     invariant: Value,
-) -> Value {
+) -> Result<Value, InceptError> {
     let a = collateral_value.to_scaled_f64() / invariant.to_scaled_f64();
     let b = iasset_liquidity_value
-        .div(iasset_amm_value.add(iasset_liquidity_value).unwrap())
+        .div(iasset_amm_value.add(iasset_liquidity_value)?)
         .to_scaled_f64();
     let c = iasset_liquidity_value.to_scaled_f64();
-    return Value::new(
+    return Ok(Value::new(
         (((f64::sqrt(f64::powf(b, 2.0) + (4.0 * a * c)) - b) / (2.0 * a)) * f64::powf(10.0, 8.0))
             as u128,
         8,
-    );
+    ));
     // return b
     //     .pow_with_accuracy(2)
     //     .add(a.mul(c).mul(4))
@@ -217,17 +210,17 @@ pub fn calculate_lower_comet_price_barrier(
     usdi_amm_value: Value,
     collateral_value: Value,
     invariant: Value,
-) -> Value {
+) -> Result<Value, InceptError> {
     let lower_undercollateralized_usdi_barrier = calculate_undercollateralized_lower_usdi_barrier(
         usdi_liquidity_value,
         usdi_amm_value,
         collateral_value,
-    );
+    )?;
     let lower_undercollateralized_price_barrier = lower_undercollateralized_usdi_barrier
         .mul(lower_undercollateralized_usdi_barrier)
         .div(invariant);
     let lower_comet_price_barrier = lower_undercollateralized_price_barrier.mul(2);
-    return lower_comet_price_barrier;
+    return Ok(lower_comet_price_barrier);
 }
 
 pub fn calculate_upper_comet_price_barrier(
@@ -235,13 +228,13 @@ pub fn calculate_upper_comet_price_barrier(
     iasset_amm_value: Value,
     collateral_value: Value,
     invariant: Value,
-) -> Value {
+) -> Result<Value, InceptError> {
     let upper_undercollateralized_usdi_barrier = calculate_undercollateralized_upper_usdi_barrier(
         iasset_liquidity_value,
         iasset_amm_value,
         collateral_value,
         invariant,
-    );
+    )?;
 
     let upper_undercollateralized_iasset_barrier =
         calculate_undercollateralized_iasset_barrier_from_usdi_barrier(
@@ -259,7 +252,7 @@ pub fn calculate_upper_comet_price_barrier(
             DEVNET_TOKEN_SCALE,
         ));
 
-    return upper_comet_price_barrier;
+    return Ok(upper_comet_price_barrier);
 }
 
 pub fn calculate_recentering_values_with_usdi_surplus(
@@ -345,14 +338,16 @@ pub fn check_mint_collateral_sufficient(
     collateral_amount: Value,
     slot: u64,
 ) -> Result<(), InceptError> {
-    check_feed_update(asset_info, slot).unwrap();
+    if check_feed_update(asset_info, slot).is_err() {
+        return Err(InceptError::OutdatedOracle);
+    }
+
     if asset_info
         .price
         .scale_to(collateral_amount.scale as u8)
         .mul(asset_amount_borrowed)
         .mul(collateral_ratio)
-        .gte(collateral_amount)
-        .unwrap()
+        .gte(collateral_amount)?
     {
         return Err(InceptError::InvalidMintCollateralRatio.into());
     }
@@ -364,7 +359,9 @@ pub fn calculate_impermanent_loss(
     pool: &Pool,
     slot: u64,
 ) -> Result<Value, InceptError> {
-    check_feed_update(pool.asset_info, slot).unwrap();
+    if check_feed_update(pool.asset_info, slot).is_err() {
+        return Err(InceptError::OutdatedOracle);
+    }
 
     let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
         position.liquidity_token_value,
@@ -374,18 +371,18 @@ pub fn calculate_impermanent_loss(
     let claimable_usdi = liquidity_proportion.mul(pool.usdi_amount);
     let claimable_iasset = liquidity_proportion.mul(pool.iasset_amount);
 
-    if claimable_usdi.lt(position.borrowed_usdi).unwrap() {
-        return Ok(position.borrowed_usdi.sub(claimable_usdi).unwrap());
-    } else if claimable_iasset.lt(position.borrowed_iasset).unwrap() {
+    if claimable_usdi.lt(position.borrowed_usdi)? {
+        return position.borrowed_usdi.sub(claimable_usdi);
+    } else if claimable_iasset.lt(position.borrowed_iasset)? {
         let pool_price = pool.usdi_amount.div(pool.iasset_amount);
-        let effective_price = if pool_price.gt(pool.asset_info.price).unwrap() {
+        let effective_price = if pool_price.gt(pool.asset_info.price)? {
             pool_price
         } else {
             pool.asset_info.price
         };
-        return Ok(effective_price.mul(position.borrowed_iasset.sub(claimable_iasset).unwrap()));
-    } else if claimable_usdi.eq(position.borrowed_usdi).unwrap()
-        && claimable_iasset.eq(position.borrowed_iasset).unwrap()
+        return Ok(effective_price.mul(position.borrowed_iasset.sub(claimable_iasset)?));
+    } else if claimable_usdi.eq(position.borrowed_usdi)?
+        && claimable_iasset.eq(position.borrowed_iasset)?
     {
         return Ok(Value::new(0, DEVNET_TOKEN_SCALE));
     }
@@ -401,26 +398,21 @@ pub fn calculate_health_score(
     positions: &MultiPoolComet,
     token_data: &TokenData,
 ) -> Result<HealthScore, InceptError> {
-    let slot = Clock::get().unwrap().slot;
+    let slot = Clock::get().expect("Failed to get slot.").slot;
     let mut loss = Value::new(0, DEVNET_TOKEN_SCALE);
 
     for index in 0..positions.num_positions {
         let comet_position = positions.comet_positions[index as usize];
         let pool = token_data.pools[comet_position.pool_index as usize];
 
-        let impermanent_loss_term = calculate_impermanent_loss(&comet_position, &pool, slot)
-            .unwrap()
+        let impermanent_loss_term = calculate_impermanent_loss(&comet_position, &pool, slot)?
             .mul(token_data.il_health_score_coefficient);
 
         let position_term = comet_position
             .borrowed_usdi
             .mul(pool.asset_info.health_score_coefficient);
 
-        loss = loss
-            .add(impermanent_loss_term)
-            .unwrap()
-            .add(position_term)
-            .unwrap();
+        loss = loss.add(impermanent_loss_term)?.add(position_term)?;
     }
 
     let score = 100f64 - loss.div(positions.total_collateral_amount).to_scaled_f64();

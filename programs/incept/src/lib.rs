@@ -610,7 +610,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 liquidity_token_supply,
-            );
+            )?;
 
         // check to see if the pool is currently empty
         if iasset_amm_value.val == 0 && usdi_amm_value.val == 0 {
@@ -724,7 +724,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 liquidity_token_supply,
-            );
+            )?;
 
         // transfer iasset from user to amm
         let cpi_accounts = Transfer {
@@ -830,7 +830,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             liquidity_token_supply,
-        );
+        )?;
 
         // burn user liquidity tokens
         let cpi_ctx = CpiContext::from(&*ctx.accounts);
@@ -942,7 +942,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             true,
-        );
+        )?;
 
         // ensure that the user has sufficient usdi
         if ctx.accounts.user_usdi_token_account.amount < usdi_amount_value.to_u64() {
@@ -1030,7 +1030,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             false,
-        );
+        )?;
 
         // transfer iasset from user to amm
         let cpi_accounts = Transfer {
@@ -1134,7 +1134,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 liquidity_token_supply,
-            );
+            )?;
 
         // generate current pool price
         let current_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
@@ -1146,7 +1146,7 @@ pub mod incept {
             collateral_value.scale_to(DEVNET_TOKEN_SCALE),
             iasset_amm_value,
             usdi_amm_value,
-        );
+        )?;
 
         // throw error if the comet is out of range
         if lower_price_range.gte(current_price).unwrap()
@@ -1307,7 +1307,7 @@ pub mod incept {
                 .scale_to(DEVNET_TOKEN_SCALE),
             iasset_amm_value,
             usdi_amm_value,
-        );
+        )?;
 
         // reset price range
         comet_positions.comet_positions[comet_index as usize].lower_price_range = lower_price_range;
@@ -1378,7 +1378,7 @@ pub mod incept {
                 .scale_to(DEVNET_TOKEN_SCALE),
             iasset_amm_value,
             usdi_amm_value,
-        );
+        )?;
 
         // throw error if the comet is out of range
         if lower_price_range.gte(current_price).unwrap()
@@ -1435,7 +1435,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 liquidity_token_supply,
-            );
+            )?;
 
         // generate current pool price
         let current_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
@@ -1453,7 +1453,7 @@ pub mod incept {
             collateral_value.scale_to(DEVNET_TOKEN_SCALE),
             iasset_amm_value,
             usdi_amm_value,
-        );
+        )?;
 
         // throw error if the comet is out of range
         if lower_price_range.gte(current_price).unwrap()
@@ -1591,7 +1591,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 liquidity_token_supply,
-            );
+            )?;
 
         // calculate comet range
         let (lower_price_range, upper_price_range) = calculate_comet_price_barrier(
@@ -1606,7 +1606,7 @@ pub mod incept {
             collateral_value.scale_to(DEVNET_TOKEN_SCALE),
             iasset_amm_value,
             usdi_amm_value,
-        );
+        )?;
 
         // throw error if the comet is already liquidated
         if comet_position.comet_liquidation.status == LiquidationStatus::Fully {
@@ -1742,7 +1742,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             liquidity_token_supply,
-        );
+        )?;
 
         // check if the price has moved significantly
         if (iasset_value.lt(comet_position.borrowed_iasset).unwrap()
@@ -2123,7 +2123,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             liquidity_token_supply,
-        );
+        )?;
 
         // check if the price has moved significantly
         if (iasset_value.lt(comet_position.borrowed_iasset).unwrap()
@@ -2178,7 +2178,7 @@ pub mod incept {
                 new_collateral_amount.scale_to(DEVNET_TOKEN_SCALE),
                 iasset_amm_value,
                 usdi_amm_value,
-            );
+            )?;
 
             // throw error if the price is out of range
             if lower_price_range.gte(current_price).unwrap()
@@ -2265,7 +2265,7 @@ pub mod incept {
                     .scale_to(DEVNET_TOKEN_SCALE),
                 iasset_amm_value,
                 usdi_amm_value,
-            );
+            )?;
             // throw error if the price is out of range
             if lower_price_range.gte(current_price).unwrap()
                 || upper_price_range.lte(current_price).unwrap()
@@ -2400,7 +2400,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 liquidity_token_supply,
-            );
+            )?;
 
         // mint usdi to amm
         let cpi_accounts = MintTo {
@@ -2665,7 +2665,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 liquidity_token_supply,
-            );
+            )?;
 
         // find the index of the comet within the manager's position
         let multi_pool_comet_pool_index = multi_pool_comet
@@ -2803,7 +2803,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 liquidity_token_supply,
-            );
+            )?;
 
         // find the index of the comet within the manager's position
         let multi_pool_comet_pool_index = multi_pool_comet.get_pool_index(pool_index);
@@ -2930,7 +2930,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             liquidity_token_supply,
-        );
+        )?;
 
         // check if the price has moved significantly
         if (iasset_value.lt(comet_position.borrowed_iasset).unwrap()
@@ -3166,7 +3166,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             liquidity_token_supply,
-        );
+        )?;
 
         // check if the price has moved significantly
         if (iasset_value.lt(comet_position.borrowed_iasset).unwrap()
@@ -3545,7 +3545,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             liquidity_token_supply,
-        );
+        )?;
 
         let pool_iasset_to_burn;
         let pool_usdi_to_burn;
@@ -3948,7 +3948,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             liquidity_token_supply,
-        );
+        )?;
 
         // check if the price has moved significantly
         if (iasset_value.lt(comet_position.borrowed_iasset).unwrap()
@@ -4004,7 +4004,7 @@ pub mod incept {
                 new_collateral_amount.scale_to(DEVNET_TOKEN_SCALE),
                 iasset_amm_value,
                 usdi_amm_value,
-            );
+            )?;
             // throw error if the price is out of range
             // if lower_price_range.gte(current_price).unwrap()
             //     || upper_price_range.lte(current_price).unwrap()
@@ -4090,7 +4090,7 @@ pub mod incept {
                     .scale_to(DEVNET_TOKEN_SCALE),
                 iasset_amm_value,
                 usdi_amm_value,
-            );
+            )?;
             // throw error if the price is out of range
             // if lower_price_range.gte(current_price).unwrap()
             //     || upper_price_range.lte(current_price).unwrap()
