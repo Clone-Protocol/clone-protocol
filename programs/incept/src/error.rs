@@ -95,6 +95,38 @@ pub enum InceptError {
     /// Health Score Too Low
     #[error("Health Score Too Low")]
     HealthScoreTooLow,
+
+    /// Invalid Input Mint Account
+    #[error("Invalid input mint account")]
+    InvalidInputMintAccount,
+
+    /// Invalid Input Collateral Account
+    #[error("Invalid input collateral account")]
+    InvalidInputCollateralAccount,
+
+    /// Invalid Account Loader Owner
+    #[error("Invalid Account loader owner")]
+    InvalidAccountLoaderOwner,
+
+    /// Invalid Input USDi Account
+    #[error("Invalid input USDi account")]
+    InvalidInputUsdiAccount,
+
+    /// Invalid Input iAsset Account
+    #[error("Invalid input iAsset account")]
+    InvalidInputIassetAccount,
+
+    /// Invalid position index
+    #[error("Invalid input position index")]
+    InvalidInputPositionIndex,
+
+    /// Non positive
+    #[error("Invalid token account balance")]
+    InvalidTokenAccountBalance,
+
+    /// Non positive
+    #[error("Inequality comparison violated")]
+    InequalityComparisonViolated,
 }
 
 impl From<InceptError> for ProgramError {
