@@ -120,11 +120,11 @@ pub enum InceptError {
     #[error("Invalid input position index")]
     InvalidInputPositionIndex,
 
-    /// Non positive
+    /// Invalid token account balance
     #[error("Invalid token account balance")]
     InvalidTokenAccountBalance,
 
-    /// Non positive
+    /// Inequality comparison violated
     #[error("Inequality comparison violated")]
     InequalityComparisonViolated,
 }
