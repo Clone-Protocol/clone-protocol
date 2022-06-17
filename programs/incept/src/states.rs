@@ -219,7 +219,7 @@ impl SinglePoolComets {
 #[account(zero_copy)]
 pub struct Comet {
     // 55152
-    pub is_single_pool: u8,                  // 8
+    pub is_single_pool: u64,                 // 8
     pub owner: Pubkey,                       // 32
     pub num_positions: u64,                  // 8
     pub num_collaterals: u64,                // 8

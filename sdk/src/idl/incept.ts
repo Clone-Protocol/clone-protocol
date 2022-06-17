@@ -2024,7 +2024,7 @@ export type Incept = {
         "fields": [
           {
             "name": "isSinglePool",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "owner",
@@ -4625,7 +4625,7 @@ export const IDL: Incept = {
         "fields": [
           {
             "name": "isSinglePool",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "owner",
