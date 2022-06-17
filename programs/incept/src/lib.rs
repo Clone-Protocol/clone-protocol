@@ -68,8 +68,9 @@ pub mod incept {
             _il_health_score_coefficient > 0,
             InceptError::InvalidHealthScoreCoefficient
         );
+
         // update coefficient
-        let mut token_data = ctx.accounts.token_data.load_init()?;
+        let token_data = &mut ctx.accounts.token_data.load_mut()?;
         token_data.il_health_score_coefficient =
             Value::new(_il_health_score_coefficient.into(), DEVNET_TOKEN_SCALE);
 
@@ -399,8 +400,7 @@ pub mod incept {
             collateral_ratio,
             collateral_amount_value,
             slot,
-        )
-        .unwrap();
+        )?;
 
         // lock user collateral in vault
         let cpi_ctx_transfer: CpiContext<Transfer> = CpiContext::from(&*ctx.accounts);
@@ -620,7 +620,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 liquidity_token_supply,
-            );
+            )?;
 
         // check to see if the pool is currently empty
         if iasset_amm_value.val == 0 && usdi_amm_value.val == 0 {
@@ -734,7 +734,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 liquidity_token_supply,
-            );
+            )?;
 
         // transfer iasset from user to amm
         let cpi_accounts = Transfer {
@@ -840,7 +840,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             liquidity_token_supply,
-        );
+        )?;
 
         // burn user liquidity tokens
         let cpi_ctx = CpiContext::from(&*ctx.accounts);
@@ -953,7 +953,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             true,
-        );
+        )?;
 
         // ensure that the user has sufficient usdi
         if ctx.accounts.user_usdi_token_account.amount < usdi_amount_value.to_u64() {
@@ -1048,7 +1048,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             false,
-        );
+        )?;
 
         // transfer iasset from user to amm
         let cpi_accounts = Transfer {
@@ -1203,7 +1203,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             liquidity_token_supply,
-        );
+        )?;
 
         // check if the price has moved significantly
         if (iasset_value
@@ -1754,7 +1754,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 liquidity_token_supply,
-            );
+            )?;
 
         // find the index of the position within the comet position
         let comet_position_index = comet.get_pool_index(pool_index);
@@ -1904,7 +1904,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 liquidity_token_supply,
-            );
+            )?;
 
         // update comet position data
         comet.positions[comet_position_index as usize].borrowed_usdi = comet_position
@@ -2151,7 +2151,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 liquidity_token_supply,
-            );
+            )?;
 
         // update comet position data
         comet.positions[comet_position_index as usize].borrowed_usdi = comet_position
@@ -2183,7 +2183,7 @@ pub mod incept {
                 iasset_amm_value,
                 usdi_amm_value,
                 true,
-            );
+            )?;
 
             // burn liquidity from the amm and move surplus to collateral
             let cpi_accounts = Burn {
@@ -2454,7 +2454,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             liquidity_token_supply,
-        );
+        )?;
 
         // check if the price has moved significantly
         if (iasset_value.lt(comet_position.borrowed_iasset).unwrap()
@@ -2688,7 +2688,7 @@ pub mod incept {
             iasset_amm_value,
             usdi_amm_value,
             liquidity_token_supply,
-        );
+        )?;
 
         // check if the price has moved significantly
         if (iasset_value.lt(comet_position.borrowed_iasset).unwrap()

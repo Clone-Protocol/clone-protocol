@@ -8,20 +8,20 @@ export enum Network {
 }
 
 export const LOCAL_NET = {
-	incept: new PublicKey('4RCgZyehQFKVBEnXf1ZfKksAL3YFbwCKqUmbwpQx7eHf'),
-	oracle: new PublicKey('BJ3D4Gx9WQjG7F65SFk2AvBeNcECBr732JkWjb8RFiWD'),
+  incept: new PublicKey("4RCgZyehQFKVBEnXf1ZfKksAL3YFbwCKqUmbwpQx7eHf"),
+  oracle: new PublicKey("BJ3D4Gx9WQjG7F65SFk2AvBeNcECBr732JkWjb8RFiWD"),
   exchangeAuthority: new PublicKey(
     "DmhNzyGk93utgYYR41hRJWJzKtFKUYt4UR3bZFbVAD4i"
   ),
-  endpoint: 'http://127.0.0.1:8899',
-}
+  endpoint: "http://127.0.0.1:8899",
+};
 export const DEV_NET = {
   incept: new PublicKey("HcyCw29qWC77CTnmJkwjnW1whbTppv4xh2SQQzjMin55"),
   oracle: new PublicKey("DUTaRHQcejLHkDdsnR8cUUv2BakxCJfJQmWQNK2hzizE"),
   exchangeAuthority: new PublicKey(
     "6dcLU83ferGcEAjeUeLuJ8q7JbSV2vK3EGajW895tZBj"
   ),
-  endpoint: 'https://explorer-api.devnet.solana.com',
+  endpoint: "https://explorer-api.devnet.solana.com",
 };
 export const TEST_NET = {
   incept: new PublicKey("HcyCw29qWC77CTnmJkwjnW1whbTppv4xh2SQQzjMin55"),
@@ -29,17 +29,16 @@ export const TEST_NET = {
   exchangeAuthority: new PublicKey(
     "6dcLU83ferGcEAjeUeLuJ8q7JbSV2vK3EGajW895tZBj"
   ),
-  endpoint: 'http://127.0.0.1:8899',
+  endpoint: "http://127.0.0.1:8899",
 };
 export const MAIN_NET = {
   incept: new PublicKey("5TeGDBaMNPc2uxvx6YLDycsoxFnBuqierPt3a8Bk4xFX"),
-  oracle: new PublicKey('4nopYr9nYL5MN1zVgvQQfLhDdqAyVHtR5ZkpPcS12M5b'),
+  oracle: new PublicKey("4nopYr9nYL5MN1zVgvQQfLhDdqAyVHtR5ZkpPcS12M5b"),
   exchangeAuthority: new PublicKey(
     "4f1XgkC1dSvvovZ9EU85pY8pwNdJRhqy7jjq188b1DjJ"
   ),
-  endpoint: 'http://127.0.0.1:8899',
+  endpoint: "http://127.0.0.1:8899",
 };
-
 
 /**
  * Pulls which network to use (LOCAL_NET, DEV_NET) from the environment variable `USE_NETWORK`.
@@ -48,22 +47,22 @@ export const MAIN_NET = {
  * @returns { PublicKey, PublicKey, string }
  *
  */
- export const getNetworkDetailsFromEnv = () => {
-	let details = LOCAL_NET
+export const getNetworkDetailsFromEnv = () => {
+  let details = LOCAL_NET;
 
-	if (process.env.NEXT_PUBLIC_USE_NETWORK) {
-		if (process.env.NEXT_PUBLIC_USE_NETWORK.toLowerCase() === 'dev_net') {
-			details = DEV_NET
-		}
-	}
+  if (process.env.NEXT_PUBLIC_USE_NETWORK) {
+    if (process.env.NEXT_PUBLIC_USE_NETWORK.toLowerCase() === "dev_net") {
+      details = DEV_NET;
+    }
+  }
 
-	if (process.env.NEXT_PUBLIC_INCEPT_PROGRAM_ID) {
-		details.incept = new PublicKey(process.env.NEXT_PUBLIC_INCEPT_PROGRAM_ID)
-	}
+  if (process.env.NEXT_PUBLIC_INCEPT_PROGRAM_ID) {
+    details.incept = new PublicKey(process.env.NEXT_PUBLIC_INCEPT_PROGRAM_ID);
+  }
 
-	if (process.env.NEXT_PUBLIC_NETWORK_ENDPOINT) {
-		details.endpoint = process.env.NEXT_PUBLIC_NETWORK_ENDPOINT
-	}
+  if (process.env.NEXT_PUBLIC_NETWORK_ENDPOINT) {
+    details.endpoint = process.env.NEXT_PUBLIC_NETWORK_ENDPOINT;
+  }
 
-	return details
-}
+  return details;
+};

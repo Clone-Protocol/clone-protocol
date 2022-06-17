@@ -77,7 +77,7 @@ export type Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         }
       ],
@@ -1116,7 +1116,7 @@ export type Incept = {
         {
           "name": "poolIndex",
           "type": "u8"
-        },
+        }
       ]
     },
     {
@@ -1673,7 +1673,7 @@ export type Incept = {
           "type": "u8"
         },
         {
-          "name": "collateralIndex",
+          "name": "cometCollateralIndex",
           "type": "u8"
         }
       ]
@@ -2528,6 +2528,33 @@ export type Incept = {
           },
           {
             "name": "InsufficientUSDiCollateral"
+          },
+          {
+            "name": "AttemptedToAddNewPoolToSingleComet"
+          },
+          {
+            "name": "AttemptedToAddNewCollateralToSingleComet"
+          },
+          {
+            "name": "InvalidInputMintAccount"
+          },
+          {
+            "name": "InvalidInputCollateralAccount"
+          },
+          {
+            "name": "InvalidAccountLoaderOwner"
+          },
+          {
+            "name": "InvalidInputPositionIndex"
+          },
+          {
+            "name": "InvalidTokenAccountBalance"
+          },
+          {
+            "name": "InequalityComparisonViolated"
+          },
+          {
+            "name": "NotSinglePoolComet"
           }
         ]
       }
@@ -2651,7 +2678,7 @@ export const IDL: Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         }
       ],
@@ -3650,7 +3677,8 @@ export const IDL: Incept = {
           "name": "tokenData",
           "isMut": true,
           "isSigner": false
-        },{
+        },
+        {
           "name": "singlePoolComets",
           "isMut": true,
           "isSigner": false
@@ -3689,7 +3717,7 @@ export const IDL: Incept = {
         {
           "name": "poolIndex",
           "type": "u8"
-        },
+        }
       ]
     },
     {
@@ -4246,7 +4274,7 @@ export const IDL: Incept = {
           "type": "u8"
         },
         {
-          "name": "collateralIndex",
+          "name": "cometCollateralIndex",
           "type": "u8"
         }
       ]
@@ -5101,6 +5129,33 @@ export const IDL: Incept = {
           },
           {
             "name": "InsufficientUSDiCollateral"
+          },
+          {
+            "name": "AttemptedToAddNewPoolToSingleComet"
+          },
+          {
+            "name": "AttemptedToAddNewCollateralToSingleComet"
+          },
+          {
+            "name": "InvalidInputMintAccount"
+          },
+          {
+            "name": "InvalidInputCollateralAccount"
+          },
+          {
+            "name": "InvalidAccountLoaderOwner"
+          },
+          {
+            "name": "InvalidInputPositionIndex"
+          },
+          {
+            "name": "InvalidTokenAccountBalance"
+          },
+          {
+            "name": "InequalityComparisonViolated"
+          },
+          {
+            "name": "NotSinglePoolComet"
           }
         ]
       }

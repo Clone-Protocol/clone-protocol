@@ -107,6 +107,34 @@ pub enum InceptError {
     /// Attempted To Add New Collateral To Single Comet
     #[error("Attempted To Add New Collateral To Single Comet")]
     AttemptedToAddNewCollateralToSingleComet,
+
+    /// Invalid Input Mint Account
+    #[error("Invalid input mint account")]
+    InvalidInputMintAccount,
+
+    /// Invalid Input Collateral Account
+    #[error("Invalid input collateral account")]
+    InvalidInputCollateralAccount,
+
+    /// Invalid Account Loader Owner
+    #[error("Invalid Account loader owner")]
+    InvalidAccountLoaderOwner,
+
+    /// Invalid position index
+    #[error("Invalid input position index")]
+    InvalidInputPositionIndex,
+
+    /// Invalid token account balance
+    #[error("Invalid token account balance")]
+    InvalidTokenAccountBalance,
+
+    /// Inequality comparison violated
+    #[error("Inequality comparison violated")]
+    InequalityComparisonViolated,
+
+    /// Not Single Pool Comet
+    #[error("Not Single Pool Comet")]
+    NotSinglePoolComet,
 }
 
 impl From<InceptError> for ProgramError {
