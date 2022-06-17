@@ -1,5 +1,5 @@
 use crate::states::{
-    CometPositions, LiquidityPositions, Manager, MintPositions, MultiPoolComet, TokenData, User,
+    Comet, LiquidityPositions, Manager, MintPositions, SinglePoolComets, TokenData, User,
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
@@ -63,13 +63,15 @@ pub struct InitializeUser<'info> {
     )]
     pub user_account: Account<'info, User>,
     #[account(zero)]
-    pub comet_positions: AccountLoader<'info, CometPositions>,
+    pub single_pool_comets: AccountLoader<'info, SinglePoolComets>,
     #[account(zero)]
     pub mint_positions: AccountLoader<'info, MintPositions>,
     #[account(zero)]
     pub liquidity_positions: AccountLoader<'info, LiquidityPositions>,
     #[account(zero)]
-    pub multi_pool_comet: AccountLoader<'info, MultiPoolComet>,
+    pub comet: AccountLoader<'info, Comet>,
+    #[account(zero)]
+    pub comet_manager: AccountLoader<'info, Comet>,
     pub usdi_mint: Account<'info, Mint>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
@@ -844,8 +846,37 @@ pub struct SellSynth<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, pool_index: u8, collateral_amount: u64, usdi_amount: u64)]
-pub struct InitializeComet<'info> {
+#[instruction(manager_nonce: u8, pool_index: u8)]
+pub struct InitializeSinglePoolComet<'info> {
+    pub user: Signer<'info>,
+    #[account(
+        seeds = [b"manager".as_ref()],
+        bump = manager_nonce,
+        has_one = token_data,
+    )]
+    pub manager: Box<Account<'info, Manager>>,
+    #[account(
+        mut,
+        has_one = manager
+    )]
+    pub token_data: AccountLoader<'info, TokenData>,
+    #[account(
+        mut,
+        constraint = &single_pool_comets.load()?.owner == user.to_account_info().key
+    )]
+    pub single_pool_comets: AccountLoader<'info, SinglePoolComets>,
+    #[account(zero)]
+    pub single_pool_comet: AccountLoader<'info, Comet>,
+    #[account(mut)]
+    pub vault: Account<'info, TokenAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(manager_nonce: u8, comet_index: u8)]
+pub struct CloseSinglePoolComet<'info> {
     pub user: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
@@ -865,64 +896,86 @@ pub struct InitializeComet<'info> {
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[pool_index as usize].asset_info.iasset_mint,
+        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[single_pool_comet.load()?.positions[0].pool_index as usize].asset_info.iasset_mint,
     )]
     pub iasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        constraint = vault.mint == user_collateral_token_account.mint
+        constraint = user_collateral_token_account.mint == vault.mint
     )]
     pub user_collateral_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = &comet_positions.load()?.owner == user.to_account_info().key
+        constraint = &user_iasset_token_account.mint == iasset_mint.to_account_info().key
     )]
-    pub comet_positions: AccountLoader<'info, CometPositions>,
+    pub user_iasset_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[pool_index as usize].usdi_token_account,
+        constraint = &user_usdi_token_account.mint == usdi_mint.to_account_info().key
+    )]
+    pub user_usdi_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        constraint = &single_pool_comets.load()?.owner == user.to_account_info().key,
+        constraint = (comet_index as u64) < single_pool_comets.load()?.num_comets
+    )]
+    pub single_pool_comets: AccountLoader<'info, SinglePoolComets>,
+    #[account(
+        mut,
+        constraint = &single_pool_comet.load()?.owner == user.to_account_info().key,
+        constraint = single_pool_comet.load()?.num_positions == 1,
+        address = single_pool_comets.load()?.comets[comet_index as usize]
+    )]
+    pub single_pool_comet: AccountLoader<'info, Comet>,
+    #[account(
+        mut,
+        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[single_pool_comet.load()?.positions[0].pool_index as usize].usdi_token_account,
     )]
     pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[pool_index as usize].iasset_token_account,
+        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[single_pool_comet.load()?.positions[0].pool_index as usize].iasset_token_account,
     )]
     pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[pool_index as usize].liquidity_token_mint,
+        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[single_pool_comet.load()?.positions[0].pool_index as usize].liquidity_token_mint,
     )]
     pub liquidity_token_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        constraint = comet_liquidity_token_account.to_account_info().key == &token_data.load()?.pools[pool_index as usize].comet_liquidity_token_account,
+        address = token_data.load()?.pools[single_pool_comet.load()?.positions[0].pool_index as usize].comet_liquidity_token_account,
     )]
     pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(mut)]
-    pub vault: Account<'info, TokenAccount>,
-    pub rent: Sysvar<'info, Rent>,
+    #[account(
+        mut,
+        constraint = vault.to_account_info().key == &token_data.load()?.collaterals[single_pool_comet.load()?.collaterals[0].collateral_index as usize].vault,
+        constraint = &vault.mint == &token_data.load()?.collaterals[single_pool_comet.load()?.collaterals[0].collateral_index as usize].mint
+   )]
+    pub vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-}
-impl<'a, 'b, 'c, 'info> From<&InitializeComet<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
-{
-    fn from(accounts: &InitializeComet<'info>) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
-            from: accounts
-                .user_collateral_token_account
-                .to_account_info()
-                .clone(),
-            to: accounts.vault.to_account_info().clone(),
-            authority: accounts.user.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
 }
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, comet_index: u8, collateral_amount: u64)]
+#[instruction(manager_nonce: u8)]
+pub struct InitializeUserCometManagerPosition<'info> {
+    pub user: Signer<'info>,
+    #[account(address = manager.admin)]
+    pub admin: Signer<'info>,
+    #[account(
+        seeds = [b"manager".as_ref()],
+        bump = manager_nonce,
+        has_one = admin
+    )]
+    pub manager: Account<'info, Manager>,
+    #[account(mut)]
+    pub user_account: Box<Account<'info, User>>,
+    #[account(zero)]
+    pub comet_manager: AccountLoader<'info, Comet>,
+}
+
+#[derive(Accounts)]
+#[instruction(manager_nonce: u8, collateral_index: u8, collateral_amount: u64)]
 pub struct AddCollateralToComet<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -933,19 +986,19 @@ pub struct AddCollateralToComet<'info> {
     pub manager: Account<'info, Manager>,
     #[account(
         mut,
-        has_one = manager
+        has_one = manager,
+        constraint = (collateral_index as u64) < token_data.load()?.num_collaterals
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        constraint = &comet_positions.load()?.owner == user.to_account_info().key,
-        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
+        constraint = &comet.load()?.owner == user.to_account_info().key,
     )]
-    pub comet_positions: AccountLoader<'info, CometPositions>,
+    pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
-        constraint = vault.to_account_info().key == &token_data.load()?.collaterals[comet_positions.load()?.comet_positions[comet_index as usize].collateral_index as usize].vault,
-        constraint = &vault.mint == &token_data.load()?.collaterals[comet_positions.load()?.comet_positions[comet_index as usize].collateral_index as usize].mint
+        constraint = vault.to_account_info().key == &token_data.load()?.collaterals[collateral_index as usize].vault,
+        constraint = &vault.mint == &token_data.load()?.collaterals[collateral_index as usize].mint
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -954,16 +1007,6 @@ pub struct AddCollateralToComet<'info> {
         constraint = user_collateral_token_account.mint == vault.mint
     )]
     pub user_collateral_token_account: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].usdi_token_account,
-    )]
-    pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].iasset_token_account,
-    )]
-    pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 impl<'a, 'b, 'c, 'info> From<&AddCollateralToComet<'info>>
@@ -986,7 +1029,7 @@ impl<'a, 'b, 'c, 'info> From<&AddCollateralToComet<'info>>
 }
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, comet_index: u8, collateral_amount: u64)]
+#[instruction(manager_nonce: u8, comet_collateral_index: u8, collateral_amount: u64)]
 pub struct WithdrawCollateralFromComet<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -997,37 +1040,26 @@ pub struct WithdrawCollateralFromComet<'info> {
     pub manager: Account<'info, Manager>,
     #[account(
         mut,
-        has_one = manager
+        has_one = manager,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        constraint = &comet_positions.load()?.owner == user.to_account_info().key,
-        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
+        constraint = &comet.load()?.owner == user.to_account_info().key,
+        constraint = (comet_collateral_index as u64) < comet.load()?.num_collaterals
     )]
-    pub comet_positions: AccountLoader<'info, CometPositions>,
+    pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
-        constraint = vault.to_account_info().key == &token_data.load()?.collaterals[comet_positions.load()?.comet_positions[comet_index as usize].collateral_index as usize].vault,
-        constraint = &vault.mint == &token_data.load()?.collaterals[comet_positions.load()?.comet_positions[comet_index as usize].collateral_index as usize].mint
+        constraint = vault.to_account_info().key == &token_data.load()?.collaterals[comet.load()?.collaterals[comet_collateral_index as usize].collateral_index as usize].vault,
+        constraint = &vault.mint == &token_data.load()?.collaterals[comet.load()?.collaterals[comet_collateral_index as usize].collateral_index as usize].mint,
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = user_collateral_token_account.amount >= collateral_amount,
         constraint = user_collateral_token_account.mint == vault.mint
     )]
     pub user_collateral_token_account: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].usdi_token_account,
-    )]
-    pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].iasset_token_account,
-    )]
-    pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 impl<'a, 'b, 'c, 'info> From<&WithdrawCollateralFromComet<'info>>
@@ -1050,7 +1082,7 @@ impl<'a, 'b, 'c, 'info> From<&WithdrawCollateralFromComet<'info>>
 }
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, comet_index: u8, usdi_amount: u64)]
+#[instruction(manager_nonce: u8, pool_index: u8, usdi_amount: u64)]
 pub struct AddLiquidityToComet<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -1066,404 +1098,9 @@ pub struct AddLiquidityToComet<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        address = manager.usdi_mint
+        constraint = &comet.load()?.owner == user.to_account_info().key,
     )]
-    pub usdi_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].asset_info.iasset_mint,
-    )]
-    pub iasset_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = &comet_positions.load()?.owner == user.to_account_info().key,
-        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
-    )]
-    pub comet_positions: AccountLoader<'info, CometPositions>,
-    #[account(
-        mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].usdi_token_account,
-    )]
-    pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].iasset_token_account,
-    )]
-    pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].liquidity_token_mint,
-    )]
-    pub liquidity_token_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = comet_liquidity_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].comet_liquidity_token_account,
-    )]
-    pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
-    pub token_program: Program<'info, Token>,
-}
-
-#[derive(Accounts)]
-#[instruction(manager_nonce: u8, comet_index: u8, usdi_amount: u64)]
-pub struct WithdrawLiquidityFromComet<'info> {
-    pub user: Signer<'info>,
-    #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
-        has_one = token_data,
-    )]
-    pub manager: Account<'info, Manager>,
-    #[account(
-        mut,
-        has_one = manager
-    )]
-    pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        mut,
-        address = manager.usdi_mint
-    )]
-    pub usdi_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].asset_info.iasset_mint,
-    )]
-    pub iasset_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = &comet_positions.load()?.owner == user.to_account_info().key,
-        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
-    )]
-    pub comet_positions: AccountLoader<'info, CometPositions>,
-    #[account(
-        mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].usdi_token_account,
-    )]
-    pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].iasset_token_account,
-    )]
-    pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].liquidity_token_mint,
-    )]
-    pub liquidity_token_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = comet_liquidity_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].comet_liquidity_token_account,
-    )]
-    pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
-    pub token_program: Program<'info, Token>,
-}
-
-#[derive(Accounts)]
-#[instruction(manager_nonce: u8, comet_index: u8)]
-pub struct CloseComet<'info> {
-    pub user: Signer<'info>,
-    #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
-        has_one = token_data,
-    )]
-    pub manager: Box<Account<'info, Manager>>,
-    #[account(
-        mut,
-        has_one = manager
-    )]
-    pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        mut,
-        address = manager.usdi_mint
-    )]
-    pub usdi_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].asset_info.iasset_mint,
-    )]
-    pub iasset_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = user_collateral_token_account.mint == vault.mint
-    )]
-    pub user_collateral_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = &user_iasset_token_account.mint == iasset_mint.to_account_info().key
-    )]
-    pub user_iasset_token_account: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        constraint = &user_usdi_token_account.mint == usdi_mint.to_account_info().key
-    )]
-    pub user_usdi_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = &comet_positions.load()?.owner == user.to_account_info().key,
-        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
-    )]
-    pub comet_positions: AccountLoader<'info, CometPositions>,
-    #[account(
-        mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].usdi_token_account,
-    )]
-    pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].iasset_token_account,
-    )]
-    pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].liquidity_token_mint,
-    )]
-    pub liquidity_token_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        address = token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].comet_liquidity_token_account,
-    )]
-    pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = vault.to_account_info().key == &token_data.load()?.collaterals[comet_positions.load()?.comet_positions[comet_index as usize].collateral_index as usize].vault,
-        constraint = &vault.mint == &token_data.load()?.collaterals[comet_positions.load()?.comet_positions[comet_index as usize].collateral_index as usize].mint
-   )]
-    pub vault: Box<Account<'info, TokenAccount>>,
-    pub token_program: Program<'info, Token>,
-}
-
-#[derive(Accounts)]
-#[instruction(manager_nonce: u8, comet_index: u8)]
-pub struct RecenterComet<'info> {
-    pub user: Signer<'info>,
-    #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
-        has_one = token_data,
-    )]
-    pub manager: Box<Account<'info, Manager>>,
-    #[account(
-        mut,
-        has_one = manager
-    )]
-    pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        mut,
-        address = manager.usdi_mint
-    )]
-    pub usdi_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].asset_info.iasset_mint,
-    )]
-    pub iasset_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = &user_iasset_token_account.mint == iasset_mint.to_account_info().key
-    )]
-    pub user_iasset_token_account: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        constraint = &comet_positions.load()?.owner == user.to_account_info().key,
-        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
-    )]
-    pub comet_positions: AccountLoader<'info, CometPositions>,
-    #[account(
-        mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].usdi_token_account,
-    )]
-    pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].iasset_token_account,
-    )]
-    pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].liquidity_token_mint,
-    )]
-    pub liquidity_token_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = vault.to_account_info().key == &token_data.load()?.collaterals[comet_positions.load()?.comet_positions[comet_index as usize].collateral_index as usize].vault,
-        constraint = &vault.mint == &token_data.load()?.collaterals[comet_positions.load()?.comet_positions[comet_index as usize].collateral_index as usize].mint
-   )]
-    pub vault: Box<Account<'info, TokenAccount>>,
-    pub token_program: Program<'info, Token>,
-}
-
-#[derive(Accounts)]
-#[instruction(manager_nonce: u8, market_index: u8, comet_index: u8)]
-pub struct LiquidateComet<'info> {
-    pub liquidator: Signer<'info>,
-    #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
-        has_one = token_data,
-        constraint = liquidated_comet_usdi_token_account.to_account_info().key == &manager.liquidated_comet_usdi
-    )]
-    pub manager: Box<Account<'info, Manager>>,
-    #[account(
-        mut,
-        has_one = manager
-    )]
-    pub token_data: AccountLoader<'info, TokenData>,
-    #[account(has_one = comet_positions)]
-    pub user_account: Box<Account<'info, User>>,
-    #[account(
-        mut,
-        address = manager.usdi_mint
-    )]
-    pub usdi_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].asset_info.iasset_mint,
-    )]
-    pub iasset_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
-    )]
-    pub comet_positions: AccountLoader<'info, CometPositions>,
-    #[account(
-        mut,
-        address = token_data.load()?.collaterals[comet_positions.load()?.comet_positions[comet_index as usize].collateral_index as usize].vault,
-        constraint = &vault.mint == &token_data.load()?.collaterals[comet_positions.load()?.comet_positions[comet_index as usize].collateral_index as usize].mint
-   )]
-    pub vault: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        address = token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].comet_liquidity_token_account,
-    )]
-    pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(mut)]
-    pub liquidated_comet_usdi_token_account: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        address = token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].liquidation_iasset_token_account
-    )]
-    pub liquidation_iasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        address = manager.liquidated_comet_usdi
-    )]
-    pub liquidated_comet_usdi: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].usdi_token_account,
-    )]
-    pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].iasset_token_account,
-    )]
-    pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = liquidator_collateral_token_account.mint == vault.mint
-    )]
-    pub liquidator_collateral_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = &liquidator_usdi_token_account.mint == usdi_mint.to_account_info().key
-    )]
-    pub liquidator_usdi_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = &liquidator_iasset_token_account.mint == iasset_mint.to_account_info().key
-    )]
-    pub liquidator_iasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].liquidity_token_mint,
-    )]
-    pub liquidity_token_mint: Box<Account<'info, Mint>>,
-    pub token_program: Program<'info, Token>,
-}
-
-#[derive(Accounts)]
-#[instruction(manager_nonce: u8, user_nonce: u8, comet_index: u8)]
-pub struct ClaimLiquidatedComet<'info> {
-    pub user: Signer<'info>,
-    #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
-        has_one = token_data,
-    )]
-    pub manager: Box<Account<'info, Manager>>,
-    #[account(
-        mut,
-        has_one = manager
-    )]
-    pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
-        has_one = comet_positions,
-    )]
-    pub user_account: Box<Account<'info, User>>,
-    #[account(
-        mut,
-        constraint = &comet_positions.load()?.owner == user.to_account_info().key,
-        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
-    )]
-    pub comet_positions: AccountLoader<'info, CometPositions>,
-    #[account(
-        mut,
-        constraint = user_iasset_token_account.mint == token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].asset_info.iasset_mint
-    )]
-    pub user_iasset_token_account: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        constraint = user_usdi_token_account.mint == manager.usdi_mint
-    )]
-    pub user_usdi_token_account: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        address = token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].liquidation_iasset_token_account
-    )]
-    pub liquidation_iasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        address = manager.liquidated_comet_usdi
-    )]
-    pub liquidated_comet_usdi: Box<Account<'info, TokenAccount>>,
-    pub token_program: Program<'info, Token>,
-}
-
-#[derive(Accounts)]
-#[instruction(manager_nonce: u8)]
-pub struct InitializeUserCometManagerPosition<'info> {
-    pub user: Signer<'info>,
-    #[account(address = manager.admin)]
-    pub admin: Signer<'info>,
-    #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
-        has_one = admin
-    )]
-    pub manager: Account<'info, Manager>,
-    #[account(mut)]
-    pub user_account: Box<Account<'info, User>>,
-    #[account(zero)]
-    pub comet_manager: AccountLoader<'info, MultiPoolComet>,
-}
-
-#[derive(Accounts)]
-#[instruction(manager_nonce: u8, pool_index: u8, usdi_amount: u64)]
-pub struct InitializeMultiPoolCometPosition<'info> {
-    pub user: Signer<'info>,
-    #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
-        has_one = token_data,
-    )]
-    pub manager: Box<Account<'info, Manager>>,
-    #[account(
-        mut,
-        has_one = manager
-    )]
-    pub token_data: AccountLoader<'info, TokenData>,
+    pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
         address = manager.usdi_mint
@@ -1474,11 +1111,6 @@ pub struct InitializeMultiPoolCometPosition<'info> {
         constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[pool_index as usize].asset_info.iasset_mint,
     )]
     pub iasset_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = &multi_pool_comet.load()?.owner == user.to_account_info().key
-    )]
-    pub multi_pool_comet: AccountLoader<'info, MultiPoolComet>,
     #[account(
         mut,
         constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[pool_index as usize].usdi_token_account,
@@ -1499,121 +1131,12 @@ pub struct InitializeMultiPoolCometPosition<'info> {
         constraint = comet_liquidity_token_account.to_account_info().key == &token_data.load()?.pools[pool_index as usize].comet_liquidity_token_account,
     )]
     pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
-    pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-#[instruction(manager_nonce: u8, collateral_index: u8, collateral_amount: u64)]
-pub struct AddCollateralToMultiPoolComet<'info> {
-    pub user: Signer<'info>,
-    #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
-        has_one = token_data,
-    )]
-    pub manager: Account<'info, Manager>,
-    #[account(
-        mut,
-        has_one = manager,
-        constraint = (collateral_index as u64) < token_data.load()?.num_collaterals
-    )]
-    pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        mut,
-        constraint = &multi_pool_comet.load()?.owner == user.to_account_info().key,
-    )]
-    pub multi_pool_comet: AccountLoader<'info, MultiPoolComet>,
-    #[account(
-        mut,
-        constraint = vault.to_account_info().key == &token_data.load()?.collaterals[collateral_index as usize].vault,
-        constraint = &vault.mint == &token_data.load()?.collaterals[collateral_index as usize].mint
-   )]
-    pub vault: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = user_collateral_token_account.amount >= collateral_amount,
-        constraint = user_collateral_token_account.mint == vault.mint
-    )]
-    pub user_collateral_token_account: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,
-}
-impl<'a, 'b, 'c, 'info> From<&AddCollateralToMultiPoolComet<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
-{
-    fn from(
-        accounts: &AddCollateralToMultiPoolComet<'info>,
-    ) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
-            from: accounts
-                .user_collateral_token_account
-                .to_account_info()
-                .clone(),
-            to: accounts.vault.to_account_info().clone(),
-            authority: accounts.user.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
-}
-
-#[derive(Accounts)]
-#[instruction(manager_nonce: u8, collateral_index: u8, collateral_amount: u64)]
-pub struct WithdrawCollateralFromMultiPoolComet<'info> {
-    pub user: Signer<'info>,
-    #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
-        has_one = token_data,
-    )]
-    pub manager: Account<'info, Manager>,
-    #[account(
-        mut,
-        has_one = manager,
-        constraint = (collateral_index as u64) < token_data.load()?.num_collaterals
-    )]
-    pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        mut,
-        constraint = &multi_pool_comet.load()?.owner == user.to_account_info().key,
-    )]
-    pub multi_pool_comet: AccountLoader<'info, MultiPoolComet>,
-    #[account(
-        mut,
-        constraint = vault.to_account_info().key == &token_data.load()?.collaterals[collateral_index as usize].vault,
-        constraint = &vault.mint == &token_data.load()?.collaterals[collateral_index as usize].mint,
-   )]
-    pub vault: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = user_collateral_token_account.mint == vault.mint
-    )]
-    pub user_collateral_token_account: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,
-}
-impl<'a, 'b, 'c, 'info> From<&WithdrawCollateralFromMultiPoolComet<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
-{
-    fn from(
-        accounts: &WithdrawCollateralFromMultiPoolComet<'info>,
-    ) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
-            from: accounts.vault.to_account_info().clone(),
-            to: accounts
-                .user_collateral_token_account
-                .to_account_info()
-                .clone(),
-            authority: accounts.manager.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
 }
 
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, comet_position_index: u8, usdi_amount: u64)]
-pub struct AddLiquidityToMultiPoolComet<'info> {
+pub struct WithdrawLiquidityFromComet<'info> {
     pub user: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
@@ -1628,64 +1151,10 @@ pub struct AddLiquidityToMultiPoolComet<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        constraint = &multi_pool_comet.load()?.owner == user.to_account_info().key,
-        constraint = (comet_position_index as u64) < multi_pool_comet.load()?.num_positions
+        constraint = &comet.load()?.owner == user.to_account_info().key,
+        constraint = (comet_position_index as u64) < comet.load()?.num_positions
     )]
-    pub multi_pool_comet: AccountLoader<'info, MultiPoolComet>,
-    #[account(
-        mut,
-        address = manager.usdi_mint
-    )]
-    pub usdi_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].asset_info.iasset_mint,
-    )]
-    pub iasset_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].usdi_token_account,
-    )]
-    pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].iasset_token_account,
-    )]
-    pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].liquidity_token_mint,
-    )]
-    pub liquidity_token_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = comet_liquidity_token_account.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].comet_liquidity_token_account,
-    )]
-    pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
-    pub token_program: Program<'info, Token>,
-}
-
-#[derive(Accounts)]
-#[instruction(manager_nonce: u8, comet_position_index: u8, usdi_amount: u64)]
-pub struct WithdrawLiquidityFromMultiPoolComet<'info> {
-    pub user: Signer<'info>,
-    #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
-        has_one = token_data,
-    )]
-    pub manager: Account<'info, Manager>,
-    #[account(
-        mut,
-        has_one = manager
-    )]
-    pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        mut,
-        constraint = &multi_pool_comet.load()?.owner == user.to_account_info().key,
-        constraint = (comet_position_index as u64) < multi_pool_comet.load()?.num_positions
-    )]
-    pub multi_pool_comet: AccountLoader<'info, MultiPoolComet>,
+    pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
         constraint = user_usdi_token_account.mint == manager.usdi_mint
@@ -1693,7 +1162,7 @@ pub struct WithdrawLiquidityFromMultiPoolComet<'info> {
     pub user_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = user_iasset_token_account.mint == token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].asset_info.iasset_mint
+        constraint = user_iasset_token_account.mint == token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].asset_info.iasset_mint
     )]
     pub user_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -1703,27 +1172,27 @@ pub struct WithdrawLiquidityFromMultiPoolComet<'info> {
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].asset_info.iasset_mint,
+        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].asset_info.iasset_mint,
     )]
     pub iasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].usdi_token_account,
+        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].usdi_token_account,
     )]
     pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].iasset_token_account,
+        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].iasset_token_account,
     )]
     pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].liquidity_token_mint,
+        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].liquidity_token_mint,
     )]
     pub liquidity_token_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        constraint = comet_liquidity_token_account.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].comet_liquidity_token_account,
+        constraint = comet_liquidity_token_account.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].comet_liquidity_token_account,
     )]
     pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
@@ -1731,7 +1200,7 @@ pub struct WithdrawLiquidityFromMultiPoolComet<'info> {
 
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, comet_position_index: u8, collateral_index: u8, usdi_amount: u64)]
-pub struct WithdrawLiquidityFromMultiPoolCometSurplusToCollateral<'info> {
+pub struct WithdrawLiquidityFromCometSurplusToCollateral<'info> {
     pub user: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
@@ -1747,10 +1216,10 @@ pub struct WithdrawLiquidityFromMultiPoolCometSurplusToCollateral<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        constraint = &multi_pool_comet.load()?.owner == user.to_account_info().key,
-        constraint = (comet_position_index as u64) < multi_pool_comet.load()?.num_positions
+        constraint = &comet.load()?.owner == user.to_account_info().key,
+        constraint = (comet_position_index as u64) < comet.load()?.num_positions
     )]
-    pub multi_pool_comet: AccountLoader<'info, MultiPoolComet>,
+    pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
         address = manager.usdi_mint
@@ -1758,27 +1227,27 @@ pub struct WithdrawLiquidityFromMultiPoolCometSurplusToCollateral<'info> {
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].asset_info.iasset_mint,
+        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].asset_info.iasset_mint,
     )]
     pub iasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].usdi_token_account,
+        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].usdi_token_account,
     )]
     pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].iasset_token_account,
+        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].iasset_token_account,
     )]
     pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].liquidity_token_mint,
+        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].liquidity_token_mint,
     )]
     pub liquidity_token_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        constraint = comet_liquidity_token_account.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].comet_liquidity_token_account,
+        constraint = comet_liquidity_token_account.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].comet_liquidity_token_account,
     )]
     pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -1792,7 +1261,7 @@ pub struct WithdrawLiquidityFromMultiPoolCometSurplusToCollateral<'info> {
 
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, comet_position_index: u8, collateral_index: u8)]
-pub struct RecenterMultiPoolComet<'info> {
+pub struct RecenterComet<'info> {
     pub user: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
@@ -1813,7 +1282,7 @@ pub struct RecenterMultiPoolComet<'info> {
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].asset_info.iasset_mint,
+        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].asset_info.iasset_mint,
     )]
     pub iasset_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -1823,23 +1292,23 @@ pub struct RecenterMultiPoolComet<'info> {
     pub user_iasset_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
-        constraint = &multi_pool_comet.load()?.owner == user.to_account_info().key,
-        constraint = (comet_position_index as u64) < multi_pool_comet.load()?.num_positions
+        constraint = &comet.load()?.owner == user.to_account_info().key,
+        constraint = (comet_position_index as u64) < comet.load()?.num_positions
     )]
-    pub multi_pool_comet: AccountLoader<'info, MultiPoolComet>,
+    pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].usdi_token_account,
+        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].usdi_token_account,
     )]
     pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].iasset_token_account,
+        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].iasset_token_account,
     )]
     pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].liquidity_token_mint,
+        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].liquidity_token_mint,
     )]
     pub liquidity_token_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -1853,7 +1322,7 @@ pub struct RecenterMultiPoolComet<'info> {
 
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, comet_position_index: u8)]
-pub struct CloseMultiPoolComet<'info> {
+pub struct CloseCometPosition<'info> {
     pub user: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
@@ -1873,7 +1342,7 @@ pub struct CloseMultiPoolComet<'info> {
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].asset_info.iasset_mint,
+        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].asset_info.iasset_mint,
     )]
     pub iasset_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -1888,28 +1357,28 @@ pub struct CloseMultiPoolComet<'info> {
     pub user_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = &multi_pool_comet.load()?.owner == user.to_account_info().key,
-        constraint = (comet_position_index as u64) < multi_pool_comet.load()?.num_positions
+        constraint = &comet.load()?.owner == user.to_account_info().key,
+        constraint = (comet_position_index as u64) < comet.load()?.num_positions
     )]
-    pub multi_pool_comet: AccountLoader<'info, MultiPoolComet>,
+    pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].usdi_token_account,
+        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].usdi_token_account,
     )]
     pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].iasset_token_account,
+        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].iasset_token_account,
     )]
     pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].liquidity_token_mint,
+        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].liquidity_token_mint,
     )]
     pub liquidity_token_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[multi_pool_comet.load()?.comet_positions[comet_position_index as usize].pool_index as usize].comet_liquidity_token_account,
+        address = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].comet_liquidity_token_account,
     )]
     pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
@@ -2012,72 +1481,5 @@ pub struct LiquidateMintPosition<'info> {
         constraint = &liquidator_iasset_token_account.mint == iasset_mint.to_account_info().key
     )]
     pub liquidator_iasset_token_account: Box<Account<'info, TokenAccount>>,
-    pub token_program: Program<'info, Token>,
-}
-
-#[derive(Accounts)]
-#[instruction(manager_nonce: u8, comet_index: u8)]
-pub struct PartialCometLiquidation<'info> {
-    pub liquidator: Signer<'info>,
-    #[account(has_one = comet_positions)]
-    pub user_account: Box<Account<'info, User>>,
-    #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
-        has_one = token_data,
-    )]
-    pub manager: Box<Account<'info, Manager>>,
-    #[account(
-        mut,
-        has_one = manager
-    )]
-    pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        mut,
-        address = manager.usdi_mint
-    )]
-    pub usdi_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = iasset_mint.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].asset_info.iasset_mint,
-    )]
-    pub iasset_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = &user_iasset_token_account.mint == iasset_mint.to_account_info().key
-    )]
-    pub user_iasset_token_account: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        constraint = &liquidator_iasset_token_account.mint == iasset_mint.to_account_info().key
-    )]
-    pub liquidator_iasset_token_account: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        owner = *user_account.to_account_info().owner,
-        constraint = (comet_index as u64) < comet_positions.load()?.num_positions
-    )]
-    pub comet_positions: AccountLoader<'info, CometPositions>,
-    #[account(
-        mut,
-        constraint = amm_usdi_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].usdi_token_account,
-    )]
-    pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = amm_iasset_token_account.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].iasset_token_account,
-    )]
-    pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        constraint = liquidity_token_mint.to_account_info().key == &token_data.load()?.pools[comet_positions.load()?.comet_positions[comet_index as usize].pool_index as usize].liquidity_token_mint,
-    )]
-    pub liquidity_token_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        constraint = vault.to_account_info().key == &token_data.load()?.collaterals[comet_positions.load()?.comet_positions[comet_index as usize].collateral_index as usize].vault,
-        constraint = &vault.mint == &token_data.load()?.collaterals[comet_positions.load()?.comet_positions[comet_index as usize].collateral_index as usize].mint
-   )]
-    pub vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }

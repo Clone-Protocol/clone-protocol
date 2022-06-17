@@ -134,130 +134,6 @@ pub fn calculate_liquidity_proportion_from_usdi(
     return usdi_liquidity_value.div(usdi_amm_value.add(usdi_liquidity_value).unwrap());
 }
 
-pub fn calculate_comet_price_barrier(
-    usdi_liquidity_value: Value,
-    iasset_liquidity_value: Value,
-    collateral_value: Value,
-    iasset_amm_value: Value,
-    usdi_amm_value: Value,
-) -> (Value, Value) {
-    let invariant = calculate_invariant(
-        iasset_amm_value.add(iasset_liquidity_value).unwrap(),
-        usdi_amm_value.add(usdi_liquidity_value).unwrap(),
-    );
-
-    let lower_price_barrier = calculate_lower_comet_price_barrier(
-        usdi_liquidity_value,
-        usdi_amm_value,
-        collateral_value,
-        invariant,
-    );
-
-    let upper_price_barrier = calculate_upper_comet_price_barrier(
-        iasset_liquidity_value,
-        iasset_amm_value,
-        collateral_value,
-        invariant,
-    );
-
-    return (lower_price_barrier, upper_price_barrier);
-}
-
-pub fn calculate_undercollateralized_lower_usdi_barrier(
-    usdi_liquidity_value: Value,
-    usdi_amm_value: Value,
-    collateral_value: Value,
-) -> Value {
-    return usdi_liquidity_value
-        .sub(collateral_value)
-        .unwrap()
-        .mul(usdi_amm_value.add(usdi_liquidity_value).unwrap())
-        .div(usdi_liquidity_value);
-}
-
-pub fn calculate_undercollateralized_upper_usdi_barrier(
-    iasset_liquidity_value: Value,
-    iasset_amm_value: Value,
-    collateral_value: Value,
-    invariant: Value,
-) -> Value {
-    let a = collateral_value.to_scaled_f64() / invariant.to_scaled_f64();
-    let b = iasset_liquidity_value
-        .div(iasset_amm_value.add(iasset_liquidity_value).unwrap())
-        .to_scaled_f64();
-    let c = iasset_liquidity_value.to_scaled_f64();
-    return Value::new(
-        (((f64::sqrt(f64::powf(b, 2.0) + (4.0 * a * c)) - b) / (2.0 * a)) * f64::powf(10.0, 8.0))
-            as u128,
-        8,
-    );
-    // return b
-    //     .pow_with_accuracy(2)
-    //     .add(a.mul(c).mul(4))
-    //     .unwrap()
-    //     .sqrt()
-    //     .sub(b)
-    //     .unwrap()
-    //     .div(a.mul(2));
-}
-
-pub fn calculate_undercollateralized_iasset_barrier_from_usdi_barrier(
-    invariant: Value,
-    lower_undercollateralized_usdi_barrier: Value,
-) -> Value {
-    return invariant.div(lower_undercollateralized_usdi_barrier);
-}
-
-pub fn calculate_lower_comet_price_barrier(
-    usdi_liquidity_value: Value,
-    usdi_amm_value: Value,
-    collateral_value: Value,
-    invariant: Value,
-) -> Value {
-    let lower_undercollateralized_usdi_barrier = calculate_undercollateralized_lower_usdi_barrier(
-        usdi_liquidity_value,
-        usdi_amm_value,
-        collateral_value,
-    );
-    let lower_undercollateralized_price_barrier = lower_undercollateralized_usdi_barrier
-        .mul(lower_undercollateralized_usdi_barrier)
-        .div(invariant);
-    let lower_comet_price_barrier = lower_undercollateralized_price_barrier.mul(2);
-    return lower_comet_price_barrier;
-}
-
-pub fn calculate_upper_comet_price_barrier(
-    iasset_liquidity_value: Value,
-    iasset_amm_value: Value,
-    collateral_value: Value,
-    invariant: Value,
-) -> Value {
-    let upper_undercollateralized_usdi_barrier = calculate_undercollateralized_upper_usdi_barrier(
-        iasset_liquidity_value,
-        iasset_amm_value,
-        collateral_value,
-        invariant,
-    );
-
-    let upper_undercollateralized_iasset_barrier =
-        calculate_undercollateralized_iasset_barrier_from_usdi_barrier(
-            invariant,
-            upper_undercollateralized_usdi_barrier,
-        );
-
-    let upper_undercollateralized_price_barrier =
-        upper_undercollateralized_iasset_barrier.div(upper_undercollateralized_usdi_barrier);
-
-    let upper_comet_price_barrier = upper_undercollateralized_price_barrier
-        .mul(2)
-        .div(Value::new(
-            3 * u128::pow(10, DEVNET_TOKEN_SCALE.into()),
-            DEVNET_TOKEN_SCALE,
-        ));
-
-    return upper_comet_price_barrier;
-}
-
 pub fn calculate_recentering_values_with_usdi_surplus(
     comet_iasset_borrowed: Value,
     comet_usdi_borrowed: Value,
@@ -356,7 +232,7 @@ pub fn check_mint_collateral_sufficient(
 }
 
 pub fn calculate_impermanent_loss(
-    position: &MultiPoolCometPosition,
+    position: &CometPosition,
     pool: &Pool,
     slot: u64,
 ) -> Result<Value, InceptError> {
@@ -394,14 +270,14 @@ pub enum HealthScore {
 }
 
 pub fn calculate_health_score(
-    positions: &MultiPoolComet,
+    comet: &Comet,
     token_data: &TokenData,
 ) -> Result<HealthScore, InceptError> {
     let slot = Clock::get().unwrap().slot;
     let mut loss = Value::new(0, DEVNET_TOKEN_SCALE);
 
-    for index in 0..positions.num_positions {
-        let comet_position = positions.comet_positions[index as usize];
+    for index in 0..comet.num_positions {
+        let comet_position = comet.positions[index as usize];
         let pool = token_data.pools[comet_position.pool_index as usize];
 
         let impermanent_loss_term = calculate_impermanent_loss(&comet_position, &pool, slot)
@@ -419,7 +295,7 @@ pub fn calculate_health_score(
             .unwrap();
     }
 
-    let score = 100f64 - loss.div(positions.total_collateral_amount).to_scaled_f64();
+    let score = 100f64 - loss.div(comet.total_collateral_amount).to_scaled_f64();
 
     if score > 0f64 {
         Ok(HealthScore::Healthy { score: score as u8 })

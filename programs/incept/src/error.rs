@@ -99,6 +99,14 @@ pub enum InceptError {
     /// Insufficient USDi Collateral
     #[error("Insufficient USDi Collateral")]
     InsufficientUSDiCollateral,
+
+    /// Attempted To Add New Pool To Single Comet
+    #[error("Attempted To Add New Pool To Single Comet")]
+    AttemptedToAddNewPoolToSingleComet,
+
+    /// Attempted To Add New Collateral To Single Comet
+    #[error("Attempted To Add New Collateral To Single Comet")]
+    AttemptedToAddNewCollateralToSingleComet,
 }
 
 impl From<InceptError> for ProgramError {

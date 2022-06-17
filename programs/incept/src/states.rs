@@ -38,7 +38,7 @@ pub struct TokenData {
     pub manager: Pubkey,                    // 32
     pub num_pools: u64,                     // 8
     pub num_collaterals: u64,               // 8
-    pub pools: [Pool; 255],                 // 255 * 488 = 124,440
+    pub pools: [Pool; 255],                 // 255 * 536 = 136,680
     pub collaterals: [Collateral; 255],     // 255 * 152 = 38,760
     pub chainlink_program: Pubkey,          // 32
     pub il_health_score_coefficient: Value, // 24
@@ -71,14 +71,19 @@ impl TokenData {
         &self,
         collateral_vault: Pubkey,
     ) -> Result<(Collateral, usize), InceptError> {
-        let (collateral, index) = match self
-            .collaterals
-            .iter()
-            .position(|x| x.vault == collateral_vault)
-        {
-            Some(i) => (self.collaterals[i], i),
-            None => return Err(InceptError::CollateralNotFound.into()),
-        };
+        let mut collateral = Collateral::default();
+        let mut index: usize = 0;
+        for i in 0..self.num_collaterals {
+            let temp_collateral = self.collaterals[i as usize];
+            if temp_collateral.vault == collateral_vault {
+                collateral = temp_collateral;
+                index = i as usize;
+                break;
+            }
+            if i == self.num_collaterals - 1 {
+                return Err(InceptError::CollateralNotFound.into());
+            }
+        }
 
         Ok((collateral, index))
     }
@@ -86,14 +91,19 @@ impl TokenData {
         &self,
         iasset_mint: Pubkey,
     ) -> Result<(Pool, usize), InceptError> {
-        let (pool, index) = match self
-            .pools
-            .iter()
-            .position(|x| x.asset_info.iasset_mint == iasset_mint)
-        {
-            Some(i) => (self.pools[i], i),
-            None => return Err(InceptError::PoolNotFound.into()),
-        };
+        let mut pool = Pool::default();
+        let mut index: usize = 0;
+        for i in 0..self.num_pools {
+            let temp_pool = self.pools[i as usize];
+            if temp_pool.asset_info.iasset_mint == iasset_mint {
+                pool = temp_pool;
+                index = i as usize;
+                break;
+            }
+            if i == self.num_collaterals - 1 {
+                return Err(InceptError::PoolNotFound.into());
+            }
+        }
 
         Ok((pool, index))
     }
@@ -101,13 +111,21 @@ impl TokenData {
         &self,
         price_feed_addresses: [&Pubkey; 2],
     ) -> Result<(Pool, usize), InceptError> {
-        let (pool, index) = match self.pools.iter().position(|x| {
-            x.asset_info.price_feed_addresses[0] == *price_feed_addresses[0]
-                && x.asset_info.price_feed_addresses[1] == *price_feed_addresses[1]
-        }) {
-            Some(i) => (self.pools[i], i),
-            None => return Err(InceptError::PoolNotFound.into()),
-        };
+        let mut pool = Pool::default();
+        let mut index: usize = 0;
+        for i in 0..self.num_pools {
+            let temp_pool = self.pools[i as usize];
+            if temp_pool.asset_info.price_feed_addresses[0] == *price_feed_addresses[0]
+                && temp_pool.asset_info.price_feed_addresses[1] == *price_feed_addresses[1]
+            {
+                pool = temp_pool;
+                index = i as usize;
+                break;
+            }
+            if i == self.num_collaterals - 1 {
+                return Err(InceptError::PoolNotFound.into());
+            }
+        }
 
         Ok((pool, index))
     }
@@ -132,7 +150,7 @@ pub struct AssetInfo {
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct Pool {
-    // 488
+    // 536
     pub iasset_token_account: Pubkey,             // 32
     pub usdi_token_account: Pubkey,               // 32
     pub liquidity_token_mint: Pubkey,             // 32
@@ -141,6 +159,8 @@ pub struct Pool {
     pub iasset_amount: Value,                     // 24
     pub usdi_amount: Value,                       // 24
     pub liquidity_token_supply: Value,            // 24
+    pub treasury_trading_fee: Value,              // 24
+    pub liquidity_trading_fee: Value,             // 24
     pub asset_info: AssetInfo,                    // 256
 }
 
@@ -161,96 +181,95 @@ pub struct Collateral {
 #[derive(Default)]
 pub struct User {
     // 200
-    pub is_manager: u8,              //8
+    pub is_manager: u8,              // 8
     pub authority: Pubkey,           // 32
-    pub comet_positions: Pubkey,     // 32
+    pub single_pool_comets: Pubkey,  // 32
     pub mint_positions: Pubkey,      // 32
     pub liquidity_positions: Pubkey, // 32
-    pub multi_pool_comet: Pubkey,    // 32
+    pub comet: Pubkey,               // 32
     pub comet_manager: Pubkey,       // 32
 }
 
 #[account(zero_copy)]
-pub struct CometPositions {
-    // 59200
-    pub owner: Pubkey,                         // 32
-    pub num_positions: u64,                    // 8
-    pub comet_positions: [CometPosition; 255], // 255 * 232 = 59160
+pub struct SinglePoolComets {
+    // 8200
+    pub owner: Pubkey,         // 32
+    pub num_comets: u64,       // 8
+    pub comets: [Pubkey; 255], // 255 * 32 = 8160
 }
 
-impl Default for CometPositions {
+impl Default for SinglePoolComets {
     fn default() -> Self {
         return Self {
             owner: Pubkey::default(),
-            num_positions: 0,
-            comet_positions: [CometPosition::default(); 255],
+            num_comets: 0,
+            comets: [Pubkey::default(); 255],
         };
     }
 }
 
-impl CometPositions {
+impl SinglePoolComets {
     pub fn remove(&mut self, index: usize) {
-        self.comet_positions[index] = self.comet_positions[(self.num_positions - 1) as usize];
-        self.comet_positions[(self.num_positions - 1) as usize] = CometPosition {
-            ..Default::default()
-        };
-        self.num_positions -= 1;
+        self.comets[index] = self.comets[(self.num_comets - 1) as usize];
+        self.comets[(self.num_comets - 1) as usize] = Pubkey::default();
+        self.num_comets -= 1;
     }
 }
 
 #[account(zero_copy)]
-pub struct MultiPoolComet {
-    // 55144
-    pub owner: Pubkey,                                  // 32
-    pub num_positions: u64,                             // 8
-    pub num_collaterals: u64,                           // 8
-    pub total_collateral_amount: Value,                 // 24
-    pub comet_positions: [MultiPoolCometPosition; 255], // 255 * 144 = 38760
-    pub collaterals: [MultiPoolCometCollateral; 255],   // 255 * 64 = 16320
+pub struct Comet {
+    // 55152
+    pub is_single_pool: u8,                  // 8
+    pub owner: Pubkey,                       // 32
+    pub num_positions: u64,                  // 8
+    pub num_collaterals: u64,                // 8
+    pub total_collateral_amount: Value,      // 24
+    pub positions: [CometPosition; 255],     // 255 * 144 = 38760
+    pub collaterals: [CometCollateral; 255], // 255 * 64 = 16320
 }
 
-impl Default for MultiPoolComet {
+impl Default for Comet {
     fn default() -> Self {
         return Self {
+            is_single_pool: 0,
             owner: Pubkey::default(),
             num_positions: 0,
             num_collaterals: 0,
             total_collateral_amount: Value::new(0, DEVNET_TOKEN_SCALE),
-            comet_positions: [MultiPoolCometPosition::default(); 255],
-            collaterals: [MultiPoolCometCollateral::default(); 255],
+            positions: [CometPosition::default(); 255],
+            collaterals: [CometCollateral::default(); 255],
         };
     }
 }
 
-impl MultiPoolComet {
+impl Comet {
     pub fn remove_position(&mut self, index: usize) {
-        self.comet_positions[index] = self.comet_positions[(self.num_positions - 1) as usize];
-        self.comet_positions[(self.num_positions - 1) as usize] = MultiPoolCometPosition {
+        self.positions[index] = self.positions[(self.num_positions - 1) as usize];
+        self.positions[(self.num_positions - 1) as usize] = CometPosition {
             ..Default::default()
         };
         self.num_positions -= 1;
     }
     pub fn remove_collateral(&mut self, index: usize) {
         self.collaterals[index] = self.collaterals[(self.num_collaterals - 1) as usize];
-        self.collaterals[(self.num_collaterals - 1) as usize] = MultiPoolCometCollateral {
+        self.collaterals[(self.num_collaterals - 1) as usize] = CometCollateral {
             ..Default::default()
         };
         self.num_collaterals -= 1;
     }
-    pub fn get_collateral_index(&self, input_collateral_index: u8) -> usize {
-        let mut collateral_index = input_collateral_index;
-        if collateral_index == 0 {
-            collateral_index = u8::MAX;
-        }
+    pub fn get_collateral_index(&self, collateral_index: u8) -> usize {
         let find_collateral = || -> Result<usize, InceptError> {
-            let index = match self
-                .collaterals
-                .iter()
-                .position(|x| x.collateral_index == collateral_index.into())
-            {
-                Some(i) => i,
-                None => return Err(InceptError::CollateralNotFound.into()),
-            };
+            let mut index: usize = 0;
+            for i in 0..self.num_collaterals {
+                let temp_collateral = self.collaterals[i as usize];
+                if temp_collateral.collateral_index == collateral_index.into() {
+                    index = i as usize;
+                    break;
+                }
+                if i == self.num_collaterals - 1 {
+                    return Err(InceptError::CollateralNotFound.into());
+                }
+            }
             Ok(index)
         };
 
@@ -262,22 +281,43 @@ impl MultiPoolComet {
             return find_collateral().unwrap();
         }
     }
-    pub fn add_collateral(&mut self, new_collateral: MultiPoolCometCollateral) {
-        self.collaterals[(self.num_collaterals) as usize] = new_collateral;
-        if self.collaterals[(self.num_collaterals) as usize].collateral_index == 0 {
-            self.collaterals[(self.num_collaterals) as usize].collateral_index = u8::MAX.into();
+    pub fn get_pool_index(&self, pool_index: u8) -> usize {
+        let find_pool = || -> Result<usize, InceptError> {
+            let mut index: usize = 0;
+            for i in 0..self.num_positions {
+                let temp_position = self.positions[i as usize];
+                if temp_position.pool_index == pool_index.into() {
+                    index = i as usize;
+                    break;
+                }
+                if i == self.num_collaterals - 1 {
+                    return Err(InceptError::CollateralNotFound.into());
+                }
+            }
+            Ok(index)
+        };
+
+        let result = find_pool();
+
+        if let Err(_err) = result {
+            return usize::MAX;
+        } else {
+            return find_pool().unwrap();
         }
+    }
+    pub fn add_collateral(&mut self, new_collateral: CometCollateral) {
+        self.collaterals[(self.num_collaterals) as usize] = new_collateral;
         self.num_collaterals += 1;
     }
-    pub fn add_position(&mut self, new_pool: MultiPoolCometPosition) {
-        self.comet_positions[(self.num_positions) as usize] = new_pool;
+    pub fn add_position(&mut self, new_pool: CometPosition) {
+        self.positions[(self.num_positions) as usize] = new_pool;
         self.num_positions += 1;
     }
 }
 
 #[zero_copy]
 #[derive(Default)]
-pub struct MultiPoolCometPosition {
+pub struct CometPosition {
     // 152
     pub authority: Pubkey,                   // 32
     pub pool_index: u64,                     // 8
@@ -289,7 +329,7 @@ pub struct MultiPoolCometPosition {
 
 #[zero_copy]
 #[derive(Default)]
-pub struct MultiPoolCometCollateral {
+pub struct CometCollateral {
     // 64
     pub authority: Pubkey,        // 32
     pub collateral_amount: Value, // 24
@@ -297,28 +337,12 @@ pub struct MultiPoolCometCollateral {
 }
 
 #[zero_copy]
-#[derive(Default)]
-pub struct CometPosition {
-    // 232
-    pub authority: Pubkey,                   // 32
-    pub collateral_amount: Value,            // 24
-    pub pool_index: u64,                     // 8
-    pub collateral_index: u64,               // 8
-    pub borrowed_usdi: Value,                // 24
-    pub borrowed_iasset: Value,              // 24
-    pub liquidity_token_value: Value,        // 24
-    pub lower_price_range: Value,            // 24
-    pub upper_price_range: Value,            // 24
-    pub comet_liquidation: CometLiquidation, // 40
-}
-
-#[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct CometLiquidation {
     // 40
-    pub status: LiquidationStatus,      // 8
-    pub excess_token_type_is_usdi: u64, // 8
-    pub excess_token_amount: Value,     // 24
+    pub status: LiquidationStatus,     // 8
+    pub excess_token_type_is_usdi: u8, // 8
+    pub excess_token_amount: Value,    // 24
 }
 
 #[account(zero_copy)]
