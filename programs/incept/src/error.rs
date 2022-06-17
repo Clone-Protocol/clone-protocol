@@ -108,14 +108,6 @@ pub enum InceptError {
     #[error("Invalid Account loader owner")]
     InvalidAccountLoaderOwner,
 
-    /// Invalid Input USDi Account
-    #[error("Invalid input USDi account")]
-    InvalidInputUsdiAccount,
-
-    /// Invalid Input iAsset Account
-    #[error("Invalid input iAsset account")]
-    InvalidInputIassetAccount,
-
     /// Invalid position index
     #[error("Invalid input position index")]
     InvalidInputPositionIndex,

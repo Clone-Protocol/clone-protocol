@@ -1,7 +1,7 @@
+use crate::error::*;
 use crate::states::{
     CometPositions, LiquidityPositions, Manager, MintPositions, MultiPoolComet, TokenData, User,
 };
-use crate::error::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 
@@ -733,7 +733,7 @@ pub struct WithdrawLiquidity<'info> {
     #[account(
         mut,
         associated_token::mint = manager.usdi_mint,
-        associated_token::authority = user 
+        associated_token::authority = user
     )]
     pub user_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
