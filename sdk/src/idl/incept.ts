@@ -1963,7 +1963,7 @@ export type Incept = {
         "fields": [
           {
             "name": "isManager",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "authority",
@@ -2387,7 +2387,7 @@ export type Incept = {
           },
           {
             "name": "excessTokenTypeIsUsdi",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "excessTokenAmount",
@@ -4564,7 +4564,7 @@ export const IDL: Incept = {
         "fields": [
           {
             "name": "isManager",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "authority",
@@ -4988,7 +4988,7 @@ export const IDL: Incept = {
           },
           {
             "name": "excessTokenTypeIsUsdi",
-            "type": "u8"
+            "type": "u64"
           },
           {
             "name": "excessTokenAmount",

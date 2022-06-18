@@ -6,7 +6,7 @@ use instructions::*;
 use pyth::pc::Price;
 use states::{
     AssetInfo, Collateral, CometCollateral, CometLiquidation, CometPosition, LiquidationStatus,
-    LiquidityPosition, MintPosition, Pool, TokenData, Value
+    LiquidityPosition, MintPosition, Pool, TokenData, Value,
 };
 
 mod error;
@@ -1165,413 +1165,417 @@ pub mod incept {
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
-
-        let mut single_pool_comets = ctx.accounts.single_pool_comets.load_mut()?;
-        let single_pool_comet = ctx.accounts.single_pool_comet.load_mut()?;
-        let single_pool_comet_position = single_pool_comet.positions[0];
-
-        let iasset_amm_value = Value::new(
-            ctx.accounts.amm_iasset_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-        let usdi_amm_value = Value::new(
-            ctx.accounts.amm_usdi_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-
-        let liquidity_token_supply = Value::new(
-            ctx.accounts.liquidity_token_mint.supply.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-
-        // throw error if the comet is already liquidated
-        if single_pool_comet_position.comet_liquidation.status == LiquidationStatus::Fully {
-            return Err(InceptError::CometAlreadyLiquidated.into());
-        }
-
-        // calculate initial comet pool price
-        let initial_comet_price = calculate_amm_price(
-            single_pool_comet_position.borrowed_iasset,
-            single_pool_comet_position.borrowed_usdi,
-        );
-        // calculate current pool price
-        let current_market_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
-
-        // calculate usdi and iasset comet can claim right now
-        let (iasset_value, usdi_value) = calculate_liquidity_provider_values_from_liquidity_tokens(
-            single_pool_comet_position.liquidity_token_value,
-            iasset_amm_value,
-            usdi_amm_value,
-            liquidity_token_supply,
-        )?;
-
-        // check if the price has moved significantly
-        if (iasset_value
-            .lt(single_pool_comet_position.borrowed_iasset)
-            .unwrap()
-            && usdi_value
-                .lt(single_pool_comet_position.borrowed_usdi)
-                .unwrap())
-            || (iasset_value
-                .gt(single_pool_comet_position.borrowed_iasset)
-                .unwrap()
-                && usdi_value
-                    .gt(single_pool_comet_position.borrowed_usdi)
-                    .unwrap())
         {
-            // price has NOT moved significantly
-            // burn liquidity tokens from comet to recover liquidity
-            let cpi_accounts = Burn {
-                mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
-                to: ctx
-                    .accounts
-                    .comet_liquidity_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
-            };
-            let burn_liquidity_tokens_from_comet_context = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-                seeds,
+            let mut single_pool_comets = ctx.accounts.single_pool_comets.load_mut()?;
+            let single_pool_comet = ctx.accounts.single_pool_comet.load()?;
+            let single_pool_comet_position = single_pool_comet.positions[0];
+
+            let iasset_amm_value = Value::new(
+                ctx.accounts.amm_iasset_token_account.amount.into(),
+                DEVNET_TOKEN_SCALE,
+            );
+            let usdi_amm_value = Value::new(
+                ctx.accounts.amm_usdi_token_account.amount.into(),
+                DEVNET_TOKEN_SCALE,
             );
 
-            token::burn(
-                burn_liquidity_tokens_from_comet_context,
-                single_pool_comet_position.liquidity_token_value.to_u64(),
-            )?;
-
-            // burn iasset from amm
-            let cpi_accounts = Burn {
-                mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-                to: ctx
-                    .accounts
-                    .amm_iasset_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
-            };
-            let burn_iasset_from_amm_context = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-                seeds,
-            );
-
-            token::burn(
-                burn_iasset_from_amm_context,
-                single_pool_comet_position.borrowed_iasset.to_u64(),
-            )?;
-
-            // burn usdi from amm
-            let cpi_accounts = Burn {
-                mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                to: ctx
-                    .accounts
-                    .amm_usdi_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
-            };
-            let burn_usdi_from_amm_context = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-                seeds,
-            );
-
-            token::burn(
-                burn_usdi_from_amm_context,
-                single_pool_comet_position.borrowed_usdi.to_u64(),
-            )?;
-        }
-        // check if price has increased since comet was initialized
-        else if initial_comet_price.lt(current_market_price).unwrap() {
-            //calculate impermanent loss
-            let iasset_impermanent_loss = single_pool_comet_position
-                .borrowed_iasset
-                .sub(iasset_value)
-                .unwrap();
-
-            // burn iasset from user to pay back impermanent loss
-            let cpi_accounts = Burn {
-                mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-                to: ctx
-                    .accounts
-                    .user_iasset_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.user.to_account_info().clone(),
-            };
-            let burn_iasset_from_user_context = CpiContext::new(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-            );
-
-            token::burn(
-                burn_iasset_from_user_context,
-                iasset_impermanent_loss.to_u64(),
-            )?;
-
-            // burn liquidity tokens from comet to recover liquidity
-            let cpi_accounts = Burn {
-                mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
-                to: ctx
-                    .accounts
-                    .comet_liquidity_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
-            };
-            let burn_liquidity_tokens_from_comet_context = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-                seeds,
-            );
-
-            token::burn(
-                burn_liquidity_tokens_from_comet_context,
-                single_pool_comet_position.liquidity_token_value.to_u64(),
-            )?;
-
-            // burn iasset from amm
-            let cpi_accounts = Burn {
-                mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-                to: ctx
-                    .accounts
-                    .amm_iasset_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
-            };
-            let burn_iasset_from_amm_context = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-                seeds,
-            );
-
-            token::burn(burn_iasset_from_amm_context, iasset_value.to_u64())?;
-
-            // burn usdi from amm
-            let cpi_accounts = Burn {
-                mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                to: ctx
-                    .accounts
-                    .amm_usdi_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
-            };
-            let burn_usdi_from_amm_context = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-                seeds,
-            );
-
-            token::burn(
-                burn_usdi_from_amm_context,
-                single_pool_comet_position.borrowed_usdi.to_u64(),
-            )?;
-
-            // transfer surplus usdi from the amm to the user
-            let cpi_accounts = Transfer {
-                from: ctx
-                    .accounts
-                    .amm_usdi_token_account
-                    .to_account_info()
-                    .clone(),
-                to: ctx
-                    .accounts
-                    .user_usdi_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
-            };
-            let send_usdi_to_user_context = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-                seeds,
-            );
-
-            token::transfer(
-                send_usdi_to_user_context,
-                usdi_value
-                    .sub(single_pool_comet_position.borrowed_usdi)
-                    .unwrap()
-                    .to_u64(),
-            )?;
-        } else {
-            // price has decreased since comet was initialized
-            // calculate impermanent loss
-            let usdi_impermanent_loss = single_pool_comet_position
-                .borrowed_usdi
-                .sub(usdi_value)
-                .unwrap();
-
-            // burn usdi from the user to pay back impermanent loss
-            let cpi_accounts = Burn {
-                mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                to: ctx
-                    .accounts
-                    .user_usdi_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.user.to_account_info().clone(),
-            };
-            let burn_usdi_from_user_context = CpiContext::new(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-            );
-
-            token::burn(burn_usdi_from_user_context, usdi_impermanent_loss.to_u64())?;
-
-            // burn liquidity tokens from comet to recover liquidity
-            let cpi_accounts = Burn {
-                mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
-                to: ctx
-                    .accounts
-                    .comet_liquidity_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
-            };
-            let burn_liquidity_tokens_from_comet_context = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-                seeds,
-            );
-
-            token::burn(
-                burn_liquidity_tokens_from_comet_context,
-                single_pool_comet_position.liquidity_token_value.to_u64(),
-            )?;
-
-            // burn usdi from amm
-            let cpi_accounts = Burn {
-                mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                to: ctx
-                    .accounts
-                    .amm_usdi_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
-            };
-            let burn_usdi_from_amm_context = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-                seeds,
-            );
-
-            token::burn(burn_usdi_from_amm_context, usdi_value.to_u64())?;
-
-            // burn iasset from amm
-            let cpi_accounts = Burn {
-                mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-                to: ctx
-                    .accounts
-                    .amm_iasset_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
-            };
-            let burn_iasset_from_amm_context = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-                seeds,
-            );
-
-            token::burn(
-                burn_iasset_from_amm_context,
-                single_pool_comet_position.borrowed_iasset.to_u64(),
-            )?;
-
-            // transfer surplus iasset from the amm to the user
-            let cpi_accounts = Transfer {
-                from: ctx
-                    .accounts
-                    .amm_iasset_token_account
-                    .to_account_info()
-                    .clone(),
-                to: ctx
-                    .accounts
-                    .user_iasset_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
-            };
-            let send_iasset_to_user_context = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-                seeds,
-            );
-
-            token::transfer(
-                send_iasset_to_user_context,
-                iasset_value
-                    .sub(single_pool_comet_position.borrowed_iasset)
-                    .unwrap()
-                    .to_u64(),
-            )?;
-        }
-        let comet_collateral = single_pool_comet.collaterals[0];
-        let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
-
-        // subtract collateral amount from vault supply
-        token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
-            collateral
-                .vault_comet_supply
-                .sub(comet_collateral.collateral_amount)
-                .unwrap();
-
-        // send collateral from vault to user
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.vault.to_account_info().clone(),
-            to: ctx
-                .accounts
-                .user_collateral_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.manager.to_account_info().clone(),
-        };
-        let send_collateral_to_user_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            cpi_accounts,
-            seeds,
-        );
-
-        token::transfer(
-            send_collateral_to_user_context,
-            comet_collateral.collateral_amount.to_u64(),
-        )?;
-
-        // close single pool comet account
-        let cpi_accounts = CloseAccount {
-            account: ctx.accounts.single_pool_comet.to_account_info().clone(),
-            destination: ctx.accounts.user.to_account_info().clone(),
-            authority: ctx.accounts.user.to_account_info().clone(),
-        };
-        let close_single_pool_comet_account = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            cpi_accounts,
-            seeds,
-        );
-        token::close_account(close_single_pool_comet_account)?;
-
-        // remove the single pool comet
-        single_pool_comets.remove(comet_index as usize);
-
-        // update pool data
-        token_data.pools[single_pool_comet_position.pool_index as usize].iasset_amount = Value::new(
-            ctx.accounts.amm_iasset_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-        token_data.pools[single_pool_comet_position.pool_index as usize].usdi_amount = Value::new(
-            ctx.accounts.amm_usdi_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-        token_data.pools[single_pool_comet_position.pool_index as usize].liquidity_token_supply =
-            Value::new(
+            let liquidity_token_supply = Value::new(
                 ctx.accounts.liquidity_token_mint.supply.into(),
                 DEVNET_TOKEN_SCALE,
             );
+
+            // throw error if the comet is already liquidated
+            if single_pool_comet_position.comet_liquidation.status == LiquidationStatus::Fully {
+                return Err(InceptError::CometAlreadyLiquidated.into());
+            }
+
+            // calculate initial comet pool price
+            let initial_comet_price = calculate_amm_price(
+                single_pool_comet_position.borrowed_iasset,
+                single_pool_comet_position.borrowed_usdi,
+            );
+            // calculate current pool price
+            let current_market_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
+
+            // calculate usdi and iasset comet can claim right now
+            let (iasset_value, usdi_value) =
+                calculate_liquidity_provider_values_from_liquidity_tokens(
+                    single_pool_comet_position.liquidity_token_value,
+                    iasset_amm_value,
+                    usdi_amm_value,
+                    liquidity_token_supply,
+                )?;
+
+            // check if the price has moved significantly
+            if (iasset_value
+                .lte(single_pool_comet_position.borrowed_iasset)
+                .unwrap()
+                && usdi_value
+                    .lte(single_pool_comet_position.borrowed_usdi)
+                    .unwrap())
+                || (iasset_value
+                    .gte(single_pool_comet_position.borrowed_iasset)
+                    .unwrap()
+                    && usdi_value
+                        .gte(single_pool_comet_position.borrowed_usdi)
+                        .unwrap())
+            {
+                // price has NOT moved significantly
+                // burn liquidity tokens from comet to recover liquidity
+                let cpi_accounts = Burn {
+                    mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .comet_liquidity_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                };
+                let burn_liquidity_tokens_from_comet_context = CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    cpi_accounts,
+                    seeds,
+                );
+
+                token::burn(
+                    burn_liquidity_tokens_from_comet_context,
+                    single_pool_comet_position.liquidity_token_value.to_u64(),
+                )?;
+
+                // burn iasset from amm
+                let cpi_accounts = Burn {
+                    mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .amm_iasset_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                };
+                let burn_iasset_from_amm_context = CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    cpi_accounts,
+                    seeds,
+                );
+
+                token::burn(
+                    burn_iasset_from_amm_context,
+                    single_pool_comet_position.borrowed_iasset.to_u64(),
+                )?;
+
+                // burn usdi from amm
+                let cpi_accounts = Burn {
+                    mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .amm_usdi_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                };
+                let burn_usdi_from_amm_context = CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    cpi_accounts,
+                    seeds,
+                );
+
+                token::burn(
+                    burn_usdi_from_amm_context,
+                    single_pool_comet_position.borrowed_usdi.to_u64(),
+                )?;
+            }
+            // check if price has increased since comet was initialized
+            else if initial_comet_price.lt(current_market_price).unwrap() {
+                //calculate impermanent loss
+                let iasset_impermanent_loss = single_pool_comet_position
+                    .borrowed_iasset
+                    .sub(iasset_value)
+                    .unwrap();
+
+                // burn iasset from user to pay back impermanent loss
+                let cpi_accounts = Burn {
+                    mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .user_iasset_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.user.to_account_info().clone(),
+                };
+                let burn_iasset_from_user_context = CpiContext::new(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    cpi_accounts,
+                );
+
+                token::burn(
+                    burn_iasset_from_user_context,
+                    iasset_impermanent_loss.to_u64(),
+                )?;
+
+                // burn liquidity tokens from comet to recover liquidity
+                let cpi_accounts = Burn {
+                    mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .comet_liquidity_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                };
+                let burn_liquidity_tokens_from_comet_context = CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    cpi_accounts,
+                    seeds,
+                );
+
+                token::burn(
+                    burn_liquidity_tokens_from_comet_context,
+                    single_pool_comet_position.liquidity_token_value.to_u64(),
+                )?;
+
+                // burn iasset from amm
+                let cpi_accounts = Burn {
+                    mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .amm_iasset_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                };
+                let burn_iasset_from_amm_context = CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    cpi_accounts,
+                    seeds,
+                );
+
+                token::burn(burn_iasset_from_amm_context, iasset_value.to_u64())?;
+
+                // burn usdi from amm
+                let cpi_accounts = Burn {
+                    mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .amm_usdi_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                };
+                let burn_usdi_from_amm_context = CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    cpi_accounts,
+                    seeds,
+                );
+
+                token::burn(
+                    burn_usdi_from_amm_context,
+                    single_pool_comet_position.borrowed_usdi.to_u64(),
+                )?;
+
+                // transfer surplus usdi from the amm to the user
+                let cpi_accounts = Transfer {
+                    from: ctx
+                        .accounts
+                        .amm_usdi_token_account
+                        .to_account_info()
+                        .clone(),
+                    to: ctx
+                        .accounts
+                        .user_usdi_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                };
+                let send_usdi_to_user_context = CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    cpi_accounts,
+                    seeds,
+                );
+
+                token::transfer(
+                    send_usdi_to_user_context,
+                    usdi_value
+                        .sub(single_pool_comet_position.borrowed_usdi)
+                        .unwrap()
+                        .to_u64(),
+                )?;
+            } else {
+                // price has decreased since comet was initialized
+                // calculate impermanent loss
+                let usdi_impermanent_loss = single_pool_comet_position
+                    .borrowed_usdi
+                    .sub(usdi_value)
+                    .unwrap();
+
+                // burn usdi from the user to pay back impermanent loss
+                let cpi_accounts = Burn {
+                    mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .user_usdi_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.user.to_account_info().clone(),
+                };
+                let burn_usdi_from_user_context = CpiContext::new(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    cpi_accounts,
+                );
+
+                token::burn(burn_usdi_from_user_context, usdi_impermanent_loss.to_u64())?;
+
+                // burn liquidity tokens from comet to recover liquidity
+                let cpi_accounts = Burn {
+                    mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .comet_liquidity_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                };
+                let burn_liquidity_tokens_from_comet_context = CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    cpi_accounts,
+                    seeds,
+                );
+
+                token::burn(
+                    burn_liquidity_tokens_from_comet_context,
+                    single_pool_comet_position.liquidity_token_value.to_u64(),
+                )?;
+
+                // burn usdi from amm
+                let cpi_accounts = Burn {
+                    mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .amm_usdi_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                };
+                let burn_usdi_from_amm_context = CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    cpi_accounts,
+                    seeds,
+                );
+
+                token::burn(burn_usdi_from_amm_context, usdi_value.to_u64())?;
+
+                // burn iasset from amm
+                let cpi_accounts = Burn {
+                    mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .amm_iasset_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                };
+                let burn_iasset_from_amm_context = CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    cpi_accounts,
+                    seeds,
+                );
+
+                token::burn(
+                    burn_iasset_from_amm_context,
+                    single_pool_comet_position.borrowed_iasset.to_u64(),
+                )?;
+
+                // transfer surplus iasset from the amm to the user
+                let cpi_accounts = Transfer {
+                    from: ctx
+                        .accounts
+                        .amm_iasset_token_account
+                        .to_account_info()
+                        .clone(),
+                    to: ctx
+                        .accounts
+                        .user_iasset_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                };
+                let send_iasset_to_user_context = CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    cpi_accounts,
+                    seeds,
+                );
+
+                token::transfer(
+                    send_iasset_to_user_context,
+                    iasset_value
+                        .sub(single_pool_comet_position.borrowed_iasset)
+                        .unwrap()
+                        .to_u64(),
+                )?;
+            }
+
+            let comet_collateral = single_pool_comet.collaterals[0];
+            let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
+
+            // subtract collateral amount from vault supply
+            token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
+                collateral
+                    .vault_comet_supply
+                    .sub(comet_collateral.collateral_amount)
+                    .unwrap();
+
+            // send collateral from vault to user
+            let cpi_accounts = Transfer {
+                from: ctx.accounts.vault.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .user_collateral_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            };
+            let send_collateral_to_user_context = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+                seeds,
+            );
+
+            token::transfer(
+                send_collateral_to_user_context,
+                comet_collateral.collateral_amount.to_u64(),
+            )?;
+
+            // remove the single pool comet
+            single_pool_comets.remove(comet_index as usize);
+
+            // update pool data
+            token_data.pools[single_pool_comet_position.pool_index as usize].iasset_amount =
+                Value::new(
+                    ctx.accounts.amm_iasset_token_account.amount.into(),
+                    DEVNET_TOKEN_SCALE,
+                );
+            token_data.pools[single_pool_comet_position.pool_index as usize].usdi_amount =
+                Value::new(
+                    ctx.accounts.amm_usdi_token_account.amount.into(),
+                    DEVNET_TOKEN_SCALE,
+                );
+            token_data.pools[single_pool_comet_position.pool_index as usize]
+                .liquidity_token_supply = Value::new(
+                ctx.accounts.liquidity_token_mint.supply.into(),
+                DEVNET_TOKEN_SCALE,
+            );
+        }
+        // close single pool comet account
+        // let cpi_accounts = CloseAccount {
+        //     account: ctx.accounts.single_pool_comet.to_account_info().clone(),
+        //     destination: ctx.accounts.user.to_account_info().clone(),
+        //     authority: ctx.accounts.manager.to_account_info().clone(),
+        // };
+        // let close_single_pool_comet_account = CpiContext::new_with_signer(
+        //     ctx.accounts.token_program.to_account_info().clone(),
+        //     cpi_accounts,
+        //     seeds,
+        // );
+        // token::close_account(close_single_pool_comet_account)?;
 
         Ok(())
     }
@@ -1621,8 +1625,15 @@ pub mod incept {
             .add(added_collateral_value.scale_to(DEVNET_TOKEN_SCALE))
             .unwrap();
 
+        // set next collateral to default data
+        let num_collaterals = comet.num_collaterals;
+        // comet.collaterals[num_collaterals as usize] = CometCollateral::default();
+        // msg!("hello");
+        msg!(&comet.collaterals[num_collaterals as usize].collateral_index.to_string()[..]);
+
         // find the comet collateral index
         let comet_collateral_index = comet.get_collateral_index(collateral_index);
+        msg!(&comet_collateral_index.to_string());
 
         // check to see if a new collateral must be added to the position
         if comet_collateral_index == usize::MAX {

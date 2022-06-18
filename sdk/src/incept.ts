@@ -27,7 +27,7 @@ const TOKEN_DATA_SIZE = 175552;
 const SINGLE_POOL_COMET_SIZE = 8208;
 const MINT_POSITIONS_SIZE = 24528;
 const LIQUIDITY_POSITIONS_SIZE = 16368;
-const COMET_SIZE = 53128;
+const COMET_SIZE = 55168;
 
 const SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID: PublicKey = new PublicKey(
   "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
@@ -1111,16 +1111,6 @@ export class Incept {
     let singlePoolComet = await this.getSinglePoolComet(cometIndex);
     let position = singlePoolComet.positions[0];
 
-
-    console.log("CORRECT")
-    console.log(singlePoolComet.isSinglePool);
-    console.log("incorrect, should be 1")
-    console.log(singlePoolComet.numPositions);
-    console.log("incorrect, should be 1")
-    console.log(singlePoolComet.numCollaterals);
-    console.log("incorrect and causing the error you see")
-    console.log(Number(position.poolIndex));
-
     return (await this.program.instruction.addLiquidityToComet(
       this.managerAddress[1],
       position.poolIndex,
@@ -1173,7 +1163,7 @@ export class Incept {
     cometIndex: number
   ) {
     let tokenData = await this.getTokenData();
-    let cometAddress = await this.getSinglePoolComets()[cometIndex];
+    let cometAddress = (await this.getSinglePoolComets()).comets[cometIndex];
     let singlePoolComet = await this.getSinglePoolComet(cometIndex);
     let position = singlePoolComet.positions[0];
 
@@ -1225,7 +1215,7 @@ export class Incept {
     cometIndex: number
   ) {
     let tokenData = await this.getTokenData();
-    let cometAddress = await this.getSinglePoolComets()[cometIndex];
+    let cometAddress = (await this.getSinglePoolComets()).comets[cometIndex];
     let singlePoolComet = await this.getSinglePoolComet(cometIndex);
     let position = singlePoolComet.positions[0];
 
@@ -1278,7 +1268,7 @@ export class Incept {
     cometIndex: number
   ) {
     let tokenData = await this.getTokenData();
-    let cometAddress = await this.getSinglePoolComets()[cometIndex];
+    let cometAddress = (await this.getSinglePoolComets()).comets[cometIndex];
     let comet = await this.getSinglePoolComet(cometIndex);
     let position = comet.positions[0];
 
@@ -1316,13 +1306,13 @@ export class Incept {
     cometIndex: number,
     signers?: Array<Keypair>
   ) {
-    const closeCometIx = await this.closeSinglePoolCometInstruction(
+    const closeSinglePoolCometIx = await this.closeSinglePoolCometInstruction(
       userCollateralTokenAccount,
       userIassetTokenAccount,
       userUsdiTokenAccount,
       cometIndex
     );
-    await this.provider.send(new Transaction().add(closeCometIx), signers);
+    await this.provider.send(new Transaction().add(closeSinglePoolCometIx), signers);
   }
   public async closeSinglePoolCometInstruction(
     userCollateralTokenAccount: PublicKey,
@@ -1351,7 +1341,7 @@ export class Incept {
           userIassetTokenAccount: userIassetTokenAccount,
           userUsdiTokenAccount: userUsdiTokenAccount,
           singlePoolComets: userAccount.singlePoolComets,
-          singlePoolComet: singlePoolComets[cometIndex],
+          singlePoolComet: singlePoolComets.comets[cometIndex],
           cometLiquidityTokenAccount:
             tokenData.pools[singlePoolComet.positions[0].poolIndex]
               .cometLiquidityTokenAccount,
@@ -1459,6 +1449,7 @@ export class Incept {
     forManager: boolean,
     signers?: Array<Keypair>
   ) {
+    const updatePricesIx = await this.updatePricesInstruction();
     const withdrawCollateralFromCometIx =
       await this.withdrawCollateralFromCometInstruction(
         userCollateralTokenAccount,
@@ -1467,7 +1458,7 @@ export class Incept {
         forManager
       );
     await this.provider.send(
-      new Transaction().add(withdrawCollateralFromCometIx),
+      new Transaction().add(updatePricesIx).add(withdrawCollateralFromCometIx),
       signers
     );
   }
@@ -2557,7 +2548,7 @@ export interface Manager {
 }
 
 export interface User {
-  isManager: number;
+  isManager: BN;
   authority: PublicKey;
   singlePoolComets: PublicKey;
   mintPositions: PublicKey;

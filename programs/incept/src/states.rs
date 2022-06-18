@@ -181,7 +181,7 @@ pub struct Collateral {
 #[derive(Default)]
 pub struct User {
     // 200
-    pub is_manager: u8,              // 8
+    pub is_manager: u64,             // 8
     pub authority: Pubkey,           // 32
     pub single_pool_comets: Pubkey,  // 32
     pub mint_positions: Pubkey,      // 32
@@ -258,52 +258,26 @@ impl Comet {
         self.num_collaterals -= 1;
     }
     pub fn get_collateral_index(&self, collateral_index: u8) -> usize {
-        let find_collateral = || -> Result<usize, InceptError> {
-            let mut index: usize = 0;
-            for i in 0..self.num_collaterals {
-                let temp_collateral = self.collaterals[i as usize];
-                if temp_collateral.collateral_index == collateral_index.into() {
-                    index = i as usize;
-                    break;
-                }
-                if i == self.num_collaterals - 1 {
-                    return Err(InceptError::CollateralNotFound.into());
-                }
+        let mut index: usize = usize::MAX;
+        for i in 0..self.num_collaterals {
+            let temp_collateral = self.collaterals[i as usize];
+            if temp_collateral.collateral_index == collateral_index.into() {
+                index = i as usize;
+                break;
             }
-            Ok(index)
-        };
-
-        let result = find_collateral();
-
-        if let Err(_err) = result {
-            return usize::MAX;
-        } else {
-            return find_collateral().unwrap();
         }
+        return index;
     }
     pub fn get_pool_index(&self, pool_index: u8) -> usize {
-        let find_pool = || -> Result<usize, InceptError> {
-            let mut index: usize = 0;
-            for i in 0..self.num_positions {
-                let temp_position = self.positions[i as usize];
-                if temp_position.pool_index == pool_index.into() {
-                    index = i as usize;
-                    break;
-                }
-                if i == self.num_collaterals - 1 {
-                    return Err(InceptError::CollateralNotFound.into());
-                }
+        let mut index: usize = usize::MAX;
+        for i in 0..self.num_positions {
+            let temp_position = self.positions[i as usize];
+            if temp_position.pool_index == pool_index.into() {
+                index = i as usize;
+                break;
             }
-            Ok(index)
-        };
-
-        let result = find_pool();
-
-        if let Err(_err) = result {
-            return usize::MAX;
-        } else {
-            return find_pool().unwrap();
         }
+        return index;
     }
     pub fn add_collateral(&mut self, new_collateral: CometCollateral) {
         self.collaterals[(self.num_collaterals) as usize] = new_collateral;
@@ -316,7 +290,6 @@ impl Comet {
 }
 
 #[zero_copy]
-#[derive(Default)]
 pub struct CometPosition {
     // 152
     pub authority: Pubkey,                   // 32
@@ -326,23 +299,43 @@ pub struct CometPosition {
     pub liquidity_token_value: Value,        // 24
     pub comet_liquidation: CometLiquidation, // 40
 }
+impl Default for CometPosition {
+    fn default() -> Self {
+        return Self {
+            authority: Pubkey::default(),
+            pool_index: u8::MAX.into(),
+            borrowed_usdi: Value::new(0, DEVNET_TOKEN_SCALE),
+            borrowed_iasset: Value::new(0, DEVNET_TOKEN_SCALE),
+            liquidity_token_value: Value::new(0, DEVNET_TOKEN_SCALE),
+            comet_liquidation: CometLiquidation::default(),
+        };
+    }
+}
 
 #[zero_copy]
-#[derive(Default)]
 pub struct CometCollateral {
     // 64
     pub authority: Pubkey,        // 32
     pub collateral_amount: Value, // 24
     pub collateral_index: u64,    // 8
 }
+impl Default for CometCollateral {
+    fn default() -> Self {
+        return Self {
+            authority: Pubkey::default(),
+            collateral_amount: Value::new(0, DEVNET_TOKEN_SCALE),
+            collateral_index: u8::MAX.into(),
+        };
+    }
+}
 
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct CometLiquidation {
     // 40
-    pub status: LiquidationStatus,     // 8
-    pub excess_token_type_is_usdi: u8, // 8
-    pub excess_token_amount: Value,    // 24
+    pub status: LiquidationStatus,      // 8
+    pub excess_token_type_is_usdi: u64, // 8
+    pub excess_token_amount: Value,     // 24
 }
 
 #[account(zero_copy)]

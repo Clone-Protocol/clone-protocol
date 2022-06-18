@@ -951,7 +951,7 @@ pub struct CloseSinglePoolComet<'info> {
     pub single_pool_comets: AccountLoader<'info, SinglePoolComets>,
     #[account(
         mut,
-        owner = *user.to_account_info().key,
+        constraint = single_pool_comet.load()?.owner == *user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
         constraint = single_pool_comet.load()?.num_positions == 1 @ InceptError::NotSinglePoolComet,
         address = single_pool_comets.load()?.comets[comet_index as usize]
     )]
