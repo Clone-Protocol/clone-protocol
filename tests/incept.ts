@@ -406,12 +406,70 @@ describe("incept", async () => {
       "check USDC amount"
     );
 
-    const vault = await inceptClient.connection.getTokenAccountBalance(
+    let vault = await inceptClient.connection.getTokenAccountBalance(
       tokenData.collaterals[0].vault,
       "confirmed"
     );
     assert.equal(vault.value!.uiAmount, 21000000, "check usdc vault amount");
+
   });
+
+  it("full withdraw and close mint position!", async () => {
+    // @ts-ignore
+    let signers: Array<Signer> = [provider.wallet.payer];
+    const tokenData = (await inceptProgram.account.tokenData.fetch(
+      inceptClient.manager.tokenData
+    )) as TokenData;
+    const pool = tokenData.pools[0];
+
+    await inceptClient.closeMintPosition(
+      iassetTokenAccountInfo.address,
+      0,
+      mockUSDCTokenAccountInfo.address,
+      signers
+    );
+
+    await sleep(200);
+
+    iassetTokenAccountInfo =
+      await inceptClient.getOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
+    mockUSDCTokenAccountInfo =
+      await inceptClient.getOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
+
+    assert.equal(
+      Number(iassetTokenAccountInfo.amount) / 1000000000000,
+      0,
+      "check iasset token amount"
+    );
+    assert.equal(
+      Number(mockUSDCTokenAccountInfo.amount) / 10000000,
+      999999000000,
+      "check USDC amount"
+    );
+
+    const vault = await inceptClient.connection.getTokenAccountBalance(
+      tokenData.collaterals[0].vault,
+      "confirmed"
+    );
+
+    assert.equal(vault.value!.uiAmount, 1000000, "check usdc vault amount");
+
+    // Recreate original position.
+    await inceptClient.initializeMintPositions(
+      new BN(20000000000000),
+      new BN(200000000000000),
+      mockUSDCTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      0,
+      0,
+      signers
+    );
+  })
+
 
   it("mint collateral added!", async () => {
     // @ts-ignore

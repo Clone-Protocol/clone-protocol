@@ -704,6 +704,37 @@ export class Incept {
     )) as TransactionInstruction;
   }
 
+  public async closeMintPosition(
+    userIassetTokenAccount: PublicKey,
+    mintIndex: number,
+    userCollateralTokenAccount: PublicKey,
+    signers: Array<Keypair>
+  ) {
+
+    const mintPosition = await this.getMintPosition(mintIndex);
+
+    const payBackiAssetToMintIx = await this.payBackiAssetToMintInstruction(
+      userIassetTokenAccount,
+      mintPosition.borrowedIasset.val,
+      mintIndex
+    );
+
+    const withdrawCollateralFromMintIx = await this.withdrawCollateralFromMintInstruction(
+      this.provider.wallet.publicKey,
+      userCollateralTokenAccount,
+      mintPosition.collateralAmount.val,
+      mintPosition.collateralIndex
+    );
+
+    const updatePricesIx = await this.updatePricesInstruction();
+
+    await this.provider.send(
+      new Transaction().add(payBackiAssetToMintIx).add(updatePricesIx).add(withdrawCollateralFromMintIx),
+      signers
+    );
+  }
+
+
   public async initializeLiquidityPosition(
     iassetAmount: BN,
     userUsdiTokenAccount: PublicKey,

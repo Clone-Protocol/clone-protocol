@@ -220,7 +220,8 @@ pub fn check_mint_collateral_sufficient(
         .scale_to(collateral_amount.scale as u8)
         .mul(asset_amount_borrowed)
         .mul(collateral_ratio)
-        .gte(collateral_amount)?
+        .gt(collateral_amount)
+        .unwrap()
     {
         return Err(InceptError::InvalidMintCollateralRatio.into());
     }
