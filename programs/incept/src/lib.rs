@@ -455,6 +455,15 @@ pub mod incept {
         let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
         token::transfer(cpi_ctx, amount)?;
 
+        // check to see if mint is empty, if so remove
+        if mint_positions.mint_positions[mint_index as usize]
+            .collateral_amount
+            .to_u64()
+            == 0
+        {
+            mint_positions.remove(mint_index as usize);
+        }
+
         Ok(())
     }
 
@@ -477,15 +486,6 @@ pub mod incept {
         // update total amount of borrowed iasset
         mint_positions.mint_positions[mint_index as usize].borrowed_iasset =
             mint_position.borrowed_iasset.sub(amount_value).unwrap();
-
-        // check to see if mint is empty, if so remove
-        if mint_positions.mint_positions[mint_index as usize]
-            .borrowed_iasset
-            .to_u64()
-            == 0
-        {
-            mint_positions.remove(mint_index as usize);
-        }
 
         Ok(())
     }
