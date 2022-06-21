@@ -276,7 +276,11 @@ pub fn calculate_health_score(
     let mut loss = Value::new(0, DEVNET_TOKEN_SCALE);
 
     for index in 0..comet.num_positions {
-        check_feed_update(token_data.pools[comet.positions[index as usize].pool_index as usize].asset_info, slot).unwrap();
+        check_feed_update(
+            token_data.pools[comet.positions[index as usize].pool_index as usize].asset_info,
+            slot,
+        )
+        .unwrap();
         let comet_position = comet.positions[index as usize];
         let pool = token_data.pools[comet_position.pool_index as usize];
 

@@ -1,5 +1,6 @@
 use crate::error::*;
 use anchor_lang::prelude::*;
+
 #[derive(PartialEq, Debug, Clone, Copy, AnchorDeserialize, AnchorSerialize)]
 pub enum LiquidationStatus {
     Healthy,

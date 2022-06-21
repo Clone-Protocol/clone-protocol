@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Burn, CloseAccount, MintTo, Transfer};
+use anchor_lang::AccountsClose;
+use anchor_spl::token::{self, Burn, MintTo, Transfer};
 use chainlink_solana as chainlink;
 use error::*;
 use instructions::*;
@@ -1565,17 +1566,9 @@ pub mod incept {
             );
         }
         // close single pool comet account
-        // let cpi_accounts = CloseAccount {
-        //     account: ctx.accounts.single_pool_comet.to_account_info().clone(),
-        //     destination: ctx.accounts.user.to_account_info().clone(),
-        //     authority: ctx.accounts.manager.to_account_info().clone(),
-        // };
-        // let close_single_pool_comet_account = CpiContext::new_with_signer(
-        //     ctx.accounts.token_program.to_account_info().clone(),
-        //     cpi_accounts,
-        //     seeds,
-        // );
-        // token::close_account(close_single_pool_comet_account)?;
+        ctx.accounts
+            .single_pool_comet
+            .close(ctx.accounts.user.to_account_info())?;
 
         Ok(())
     }
@@ -1629,7 +1622,11 @@ pub mod incept {
         let num_collaterals = comet.num_collaterals;
         // comet.collaterals[num_collaterals as usize] = CometCollateral::default();
         // msg!("hello");
-        msg!(&comet.collaterals[num_collaterals as usize].collateral_index.to_string()[..]);
+        msg!(
+            &comet.collaterals[num_collaterals as usize]
+                .collateral_index
+                .to_string()[..]
+        );
 
         // find the comet collateral index
         let comet_collateral_index = comet.get_collateral_index(collateral_index);

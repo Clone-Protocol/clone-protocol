@@ -1368,6 +1368,8 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
+    const prevSolanaBalance = await inceptClient.connection.getBalance(walletPubkey);
+
     await inceptClient.closeSinglePoolComet(
       mockUSDCTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
@@ -1435,6 +1437,9 @@ describe("incept", async () => {
       0,
       "check num single pool comets"
     );
+
+    const currentSolanaBalance = await inceptClient.connection.getBalance(walletPubkey);
+    assert.isAbove(currentSolanaBalance, prevSolanaBalance, 'should have more lamports after close');
   });
 
   it("comet collateral added!", async () => {
