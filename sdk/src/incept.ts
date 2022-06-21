@@ -726,7 +726,7 @@ export class Incept {
       mintPosition.collateralIndex
     );
 
-    const updatePricesIx = await this.updatePricesInstruction();
+    const updatePricesIx = await this.updatePricesInstruction(mintPosition.poolIndex);
 
     await this.provider.send(
       new Transaction().add(payBackiAssetToMintIx).add(updatePricesIx).add(withdrawCollateralFromMintIx),
