@@ -79,29 +79,68 @@ pub mod incept {
     }
 
     pub fn initialize_user(ctx: Context<InitializeUser>, _user_nonce: u8) -> ProgramResult {
+        // set user authority
+        ctx.accounts.user_account.authority = *ctx.accounts.user.to_account_info().key;
+
+        Ok(())
+    }
+
+    pub fn initialize_single_pool_comets(
+        ctx: Context<InitializeSinglePoolComets>,
+        _user_nonce: u8,
+    ) -> ProgramResult {
         let mut single_pool_comets = ctx.accounts.single_pool_comets.load_init()?;
-        let mut mint_positions = ctx.accounts.mint_positions.load_init()?;
-        let mut liquidity_positions = ctx.accounts.liquidity_positions.load_init()?;
-        let mut comet = ctx.accounts.comet.load_init()?;
-        let mut comet_manager = ctx.accounts.comet_manager.load_init()?;
 
         // set user data
-        ctx.accounts.user_account.authority = *ctx.accounts.user.to_account_info().key;
         ctx.accounts.user_account.single_pool_comets =
             *ctx.accounts.single_pool_comets.to_account_info().key;
+
+        // set user as owner
+        single_pool_comets.owner = *ctx.accounts.user.to_account_info().key;
+
+        Ok(())
+    }
+
+    pub fn initialize_mint_positions(
+        ctx: Context<InitializeMintPositions>,
+        _user_nonce: u8,
+    ) -> ProgramResult {
+        let mut mint_positions = ctx.accounts.mint_positions.load_init()?;
+
+        // set user data
         ctx.accounts.user_account.mint_positions =
             *ctx.accounts.mint_positions.to_account_info().key;
+
+        // set user as owner
+        mint_positions.owner = *ctx.accounts.user.to_account_info().key;
+
+        Ok(())
+    }
+
+    pub fn initialize_liquidity_positions(
+        ctx: Context<InitializeLiquidityPositions>,
+        _user_nonce: u8,
+    ) -> ProgramResult {
+        let mut liquidity_positions = ctx.accounts.liquidity_positions.load_init()?;
+
+        // set user data
         ctx.accounts.user_account.liquidity_positions =
             *ctx.accounts.liquidity_positions.to_account_info().key;
-        ctx.accounts.user_account.comet = *ctx.accounts.comet.to_account_info().key;
-        ctx.accounts.user_account.comet_manager = *ctx.accounts.comet_manager.to_account_info().key;
 
-        // set user as comets, mint, and liquidity positions owner
-        single_pool_comets.owner = *ctx.accounts.user.to_account_info().key;
-        mint_positions.owner = *ctx.accounts.user.to_account_info().key;
+        // set user as owner
         liquidity_positions.owner = *ctx.accounts.user.to_account_info().key;
+
+        Ok(())
+    }
+
+    pub fn initialize_comet(ctx: Context<InitializeComet>, _user_nonce: u8) -> ProgramResult {
+        let mut comet = ctx.accounts.comet.load_init()?;
+
+        // set user data
+        ctx.accounts.user_account.comet = *ctx.accounts.comet.to_account_info().key;
+
+        // set user as owner
         comet.owner = *ctx.accounts.user.to_account_info().key;
-        comet_manager.owner = *ctx.accounts.user.to_account_info().key;
 
         Ok(())
     }
@@ -359,6 +398,7 @@ pub mod incept {
         iasset_amount: u64,
         collateral_amount: u64,
     ) -> ProgramResult {
+        msg!("hi");
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
@@ -1573,11 +1613,12 @@ pub mod incept {
         Ok(())
     }
 
-    pub fn initialize_user_comet_manager_position(
-        ctx: Context<InitializeUserCometManagerPosition>,
+    pub fn initialize_comet_manager(
+        ctx: Context<InitializeCometManager>,
         _manager_nonce: u8,
+        _user_nonce: u8,
     ) -> ProgramResult {
-        let mut comet_manager = ctx.accounts.comet_manager.load_mut()?;
+        let mut comet_manager = ctx.accounts.comet_manager.load_init()?;
 
         // set user data
         ctx.accounts.user_account.is_manager = 1;

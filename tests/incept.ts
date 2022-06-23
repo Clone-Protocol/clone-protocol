@@ -96,58 +96,20 @@ describe("incept", async () => {
       "check authority address"
     );
     assert(
-      !userAccountData.singlePoolComets.equals(anchor.web3.PublicKey.default),
+      userAccountData.singlePoolComets.equals(anchor.web3.PublicKey.default),
       "check single pool comets address"
     );
     assert(
-      !userAccountData.mintPositions.equals(anchor.web3.PublicKey.default),
+      userAccountData.mintPositions.equals(anchor.web3.PublicKey.default),
       "check mint position address"
     );
     assert(
-      !userAccountData.liquidityPositions.equals(anchor.web3.PublicKey.default),
+      userAccountData.liquidityPositions.equals(anchor.web3.PublicKey.default),
       "check liquidity position address"
     );
     assert(
-      !userAccountData.comet.equals(anchor.web3.PublicKey.default),
+      userAccountData.comet.equals(anchor.web3.PublicKey.default),
       "check comet address"
-    );
-
-    const singlePoolComets = await inceptClient.getSinglePoolComets();
-
-    assert(
-      !singlePoolComets.owner.equals(anchor.web3.PublicKey.default),
-      "check comet positions owner"
-    );
-    assert(
-      (await singlePoolComets).numComets.eq(new BN(0)),
-      "check num comet positions"
-    );
-
-    const mintPositions = (await inceptProgram.account.mintPositions.fetch(
-      userAccountData.mintPositions
-    )) as MintPositions;
-
-    assert(
-      !mintPositions.owner.equals(anchor.web3.PublicKey.default),
-      "check mint positions owner"
-    );
-    assert(
-      mintPositions.numPositions.eq(new BN(0)),
-      "check num mint positions"
-    );
-
-    const liquidityPositions =
-      (await inceptProgram.account.liquidityPositions.fetch(
-        userAccountData.liquidityPositions
-      )) as LiquidityPositions;
-
-    assert(
-      !liquidityPositions.owner.equals(anchor.web3.PublicKey.default),
-      "check liquidity positions owner"
-    );
-    assert(
-      liquidityPositions.numPositions.eq(new BN(0)),
-      "check num liquidity positions"
     );
   });
 
@@ -374,7 +336,7 @@ describe("incept", async () => {
     // @ts-ignore
     let signers: Array<Signer> = [provider.wallet.payer];
 
-    await inceptClient.initializeMintPositions(
+    await inceptClient.initializeMintPosition(
       new BN(20000000000000),
       new BN(200000000000000),
       mockUSDCTokenAccountInfo.address,
@@ -459,7 +421,7 @@ describe("incept", async () => {
     assert.equal(vault.value!.uiAmount, 1000000, "check usdc vault amount");
 
     // Recreate original position.
-    await inceptClient.initializeMintPositions(
+    await inceptClient.initializeMintPosition(
       new BN(20000000000000),
       new BN(200000000000000),
       mockUSDCTokenAccountInfo.address,
@@ -1440,6 +1402,10 @@ describe("incept", async () => {
 
     const currentSolanaBalance = await inceptClient.connection.getBalance(walletPubkey);
     assert.isAbove(currentSolanaBalance, prevSolanaBalance, 'should have more lamports after close');
+  });
+
+  it("comet initialized!", async () => {
+    await inceptClient.initializeComet()
   });
 
   it("comet collateral added!", async () => {
