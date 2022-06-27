@@ -106,7 +106,79 @@ export type Incept = {
           "isSigner": false
         },
         {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initializeSinglePoolComets",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "singlePoolComets",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initializeMintPositions",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -116,23 +188,85 @@ export type Incept = {
           "isSigner": false
         },
         {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initializeLiquidityPositions",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "liquidityPositions",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initializeComet",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
           "isMut": true,
           "isSigner": false
         },
         {
           "name": "comet",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometManager",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdiMint",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -1215,7 +1349,7 @@ export type Incept = {
       ]
     },
     {
-      "name": "initializeUserCometManagerPosition",
+      "name": "initializeCometManager",
       "accounts": [
         {
           "name": "user",
@@ -1246,6 +1380,10 @@ export type Incept = {
       "args": [
         {
           "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "userNonce",
           "type": "u8"
         }
       ]
@@ -2707,7 +2845,79 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initializeSinglePoolComets",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "singlePoolComets",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initializeMintPositions",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -2717,23 +2927,85 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initializeLiquidityPositions",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "liquidityPositions",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initializeComet",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
           "isMut": true,
           "isSigner": false
         },
         {
           "name": "comet",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometManager",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdiMint",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -3816,7 +4088,7 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "initializeUserCometManagerPosition",
+      "name": "initializeCometManager",
       "accounts": [
         {
           "name": "user",
@@ -3847,6 +4119,10 @@ export const IDL: Incept = {
       "args": [
         {
           "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "userNonce",
           "type": "u8"
         }
       ]

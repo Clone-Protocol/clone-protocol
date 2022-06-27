@@ -67,17 +67,74 @@ pub struct InitializeUser<'info> {
         payer = user
     )]
     pub user_account: Account<'info, User>,
+    pub rent: Sysvar<'info, Rent>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(user_nonce: u8)]
+pub struct InitializeSinglePoolComets<'info> {
+    pub user: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_nonce
+    )]
+    pub user_account: Account<'info, User>,
     #[account(zero)]
     pub single_pool_comets: AccountLoader<'info, SinglePoolComets>,
+    pub rent: Sysvar<'info, Rent>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(user_nonce: u8)]
+pub struct InitializeMintPositions<'info> {
+    pub user: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_nonce,
+    )]
+    pub user_account: Account<'info, User>,
     #[account(zero)]
     pub mint_positions: AccountLoader<'info, MintPositions>,
+    pub rent: Sysvar<'info, Rent>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(user_nonce: u8)]
+pub struct InitializeLiquidityPositions<'info> {
+    pub user: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_nonce
+    )]
+    pub user_account: Account<'info, User>,
     #[account(zero)]
     pub liquidity_positions: AccountLoader<'info, LiquidityPositions>,
+    pub rent: Sysvar<'info, Rent>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(user_nonce: u8)]
+pub struct InitializeComet<'info> {
+    pub user: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_nonce
+    )]
+    pub user_account: Account<'info, User>,
     #[account(zero)]
     pub comet: AccountLoader<'info, Comet>,
-    #[account(zero)]
-    pub comet_manager: AccountLoader<'info, Comet>,
-    pub usdi_mint: Account<'info, Mint>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -987,18 +1044,22 @@ pub struct CloseSinglePoolComet<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8)]
-pub struct InitializeUserCometManagerPosition<'info> {
+#[instruction(manager_nonce: u8, user_nonce: u8)]
+pub struct InitializeCometManager<'info> {
     pub user: Signer<'info>,
     #[account(address = manager.admin)]
     pub admin: Signer<'info>,
     #[account(
+        mut,
         seeds = [b"manager".as_ref()],
         bump = manager_nonce,
         has_one = admin
     )]
     pub manager: Account<'info, Manager>,
-    #[account(mut)]
+    #[account(
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_nonce
+    )]
     pub user_account: Box<Account<'info, User>>,
     #[account(zero)]
     pub comet_manager: AccountLoader<'info, Comet>,
@@ -1467,7 +1528,7 @@ impl<'a, 'b, 'c, 'info> From<&MintUSDIHackathon<'info>>
 }
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, mint_index: u8)]
+#[instruction(manager_nonce: u8, user_nonce: u8, mint_index: u8)]
 pub struct LiquidateMintPosition<'info> {
     pub liquidator: Signer<'info>,
     #[account(
