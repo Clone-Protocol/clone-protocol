@@ -409,6 +409,13 @@ export class Incept {
     );
   }
 
+  public async getManagerAccount() {
+    // @ts-ignore
+    return (await this.program.account.manager.fetch(
+      this.managerAddress[0]
+    )) as Manager;
+  }
+
   public async getUserAddress(address?: PublicKey) {
     if (!address) {
       address = this.provider.wallet.publicKey;
