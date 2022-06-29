@@ -4,137 +4,153 @@ use solana_program::program_error::ProgramError;
 
 #[derive(Error, Debug, Copy, Clone)]
 pub enum InceptError {
-    /// Invalid Mint Collateral Ratio
+    /// 0. Invalid Mint Collateral Ratio
     #[error("Invalid Mint Collateral Ratio")]
     InvalidMintCollateralRatio,
 
-    /// Invalid Comet Collateral Ratio
+    /// 1. Invalid Comet Collateral Ratio
     #[error("Invalid Comet Collateral Ratio")]
     InvalidCometCollateralRatio,
 
-    /// Different Scale
+    /// 2. Different Scale
     #[error("Different Scale")]
     DifferentScale,
 
-    /// Math Error
+    /// 3. Math Error
     #[error("Math Error")]
     MathError,
 
-    /// Oracle Confidence Out Of Range
+    /// 4. Oracle Confidence Out Of Range
     #[error("Oracle Confidence Out Of Range")]
     OracleConfidenceOutOfRange,
 
-    /// Asset Info Not Found
+    /// 5. Asset Info Not Found
     #[error("Asset Info Not Found")]
     AssetInfoNotFound,
 
-    /// Collateral Not Found
+    /// 6. Collateral Not Found
     #[error("Collateral Not Found")]
     CollateralNotFound,
 
-    /// Pool Not Found
+    /// 7. Pool Not Found
     #[error("Pool Not Found")]
     PoolNotFound,
 
-    /// Invalid Collateral Type
+    /// 8. Invalid Collateral Type
     #[error("Invalid Collateral Type")]
     InvalidCollateralType,
 
-    /// Invalid Token Amount
+    /// 9. Invalid Token Amount
     #[error("Invalid Token Amount")]
     InvalidTokenAmount,
 
-    /// Invalid Bool
+    /// 10. Invalid Bool
     #[error("Invalid Bool")]
     InvalidBool,
 
-    /// Insufficient Collateral
+    /// 11. Insufficient Collateral
     #[error("Insufficient Collateral")]
     InsufficientCollateral,
 
-    /// No Price Deviation Detected
+    /// 12. No Price Deviation Detected
     #[error("No Price Deviation Detected")]
     NoPriceDeviationDetected,
 
-    /// Outdated Oracle
+    /// 13. Outdated Oracle
     #[error("Outdated Oracle")]
     OutdatedOracle,
 
-    /// Comet Already Liquidated
+    /// 14. Comet Already Liquidated
     #[error("Comet Already Liquidated")]
     CometAlreadyLiquidated,
 
-    /// Comet Not Yet Liquidated
+    /// 15. Comet Not Yet Liquidated
     #[error("Comet Not Yet Liquidated")]
     CometNotYetLiquidated,
 
-    /// Comet Unable To Liquidate
+    /// 16. Comet Unable To Liquidate
     #[error("Comet Unable to Liquidate")]
     CometUnableToLiquidate,
 
-    /// Non Stables not Supported
+    /// 17. Non Stables not Supported
     #[error("Non-stables Not Supported")]
     NonStablesNotSupported,
 
-    /// Mint Position Unable To Liquidate
+    /// 18. Mint Position Unable To Liquidate
     #[error("Mint Position Unable to Liquidate")]
     MintPositionUnableToLiquidate,
 
-    /// No Such Collateral Position
+    /// 19. No Such Collateral Position
     #[error("No Such Collateral Position")]
     NoSuchCollateralPosition,
 
-    /// Invalid Health Score Coefficient
+    /// 20. Invalid Health Score Coefficient
     #[error("Invalid Health Score Coefficient")]
     InvalidHealthScoreCoefficient,
 
-    /// Negative Impermanent Loss
+    /// 21. Negative Impermanent Loss
     #[error("Failed Impermanent Loss Calculation")]
     FailedImpermanentLossCalculation,
 
-    /// Health Score Too Low
+    /// 22. Health Score Too Low
     #[error("Health Score Too Low")]
     HealthScoreTooLow,
 
-    /// Insufficient USDi Collateral
+    /// 23. Insufficient USDi Collateral
     #[error("Insufficient USDi Collateral")]
     InsufficientUSDiCollateral,
 
-    /// Attempted To Add New Pool To Single Comet
+    /// 24. Attempted To Add New Pool To Single Comet
     #[error("Attempted To Add New Pool To Single Comet")]
     AttemptedToAddNewPoolToSingleComet,
 
-    /// Attempted To Add New Collateral To Single Comet
+    /// 25. Attempted To Add New Collateral To Single Comet
     #[error("Attempted To Add New Collateral To Single Comet")]
     AttemptedToAddNewCollateralToSingleComet,
 
-    /// Invalid Input Mint Account
+    /// 26. Invalid Input Mint Account
     #[error("Invalid input mint account")]
     InvalidInputMintAccount,
 
-    /// Invalid Input Collateral Account
+    /// 27. Invalid Input Collateral Account
     #[error("Invalid input collateral account")]
     InvalidInputCollateralAccount,
 
-    /// Invalid Account Loader Owner
+    /// 28. Invalid Account Loader Owner
     #[error("Invalid Account loader owner")]
     InvalidAccountLoaderOwner,
 
-    /// Invalid position index
+    /// 29. Invalid position index
     #[error("Invalid input position index")]
     InvalidInputPositionIndex,
 
-    /// Invalid token account balance
+    /// 30. Invalid token account balance
     #[error("Invalid token account balance")]
     InvalidTokenAccountBalance,
 
-    /// Inequality comparison violated
+    /// 31. Inequality comparison violated
     #[error("Inequality comparison violated")]
     InequalityComparisonViolated,
 
-    /// Not Single Pool Comet
+    /// 32. Not Single Pool Comet
     #[error("Not Single Pool Comet")]
     NotSinglePoolComet,
+
+    /// 33. Not subject to liquidation
+    #[error("Not Subject to Liquidation")]
+    NotSubjectToLiquidation,
+
+    /// 34. Must reduce liquidity first
+    #[error("Not Subject to IL liquidation")]
+    NotSubjectToILLiquidation,
+
+    /// 35. Liquidation amount too large
+    #[error("Liquidation amount too large")]
+    LiquidationAmountTooLarge,
+
+    /// 36. No remaining account supplied
+    #[error("No remaining accounts supplied")]
+    NoRemainingAccountsSupplied
 }
 
 impl From<InceptError> for ProgramError {

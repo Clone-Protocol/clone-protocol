@@ -35,7 +35,7 @@ pub struct Manager {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 163,304
+    // 175,592
     pub manager: Pubkey,                    // 32
     pub num_pools: u64,                     // 8
     pub num_collaterals: u64,               // 8
@@ -43,6 +43,8 @@ pub struct TokenData {
     pub collaterals: [Collateral; 255],     // 255 * 152 = 38,760
     pub chainlink_program: Pubkey,          // 32
     pub il_health_score_coefficient: Value, // 24
+    pub il_health_score_cutoff: Value,      // 24
+    pub il_liquidation_reward_pct: Value,   // 24
 }
 
 impl Default for TokenData {
@@ -55,6 +57,8 @@ impl Default for TokenData {
             collaterals: [Collateral::default(); 255],
             chainlink_program: Pubkey::default(),
             il_health_score_coefficient: Value::default(),
+            il_health_score_cutoff: Value::default(),
+            il_liquidation_reward_pct: Value::default(),
         };
     }
 }
@@ -314,6 +318,7 @@ impl Default for CometPosition {
 }
 
 #[zero_copy]
+#[derive(Debug)]
 pub struct CometCollateral {
     // 64
     pub authority: Pubkey,        // 32

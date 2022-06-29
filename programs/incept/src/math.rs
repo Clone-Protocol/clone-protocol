@@ -3,8 +3,6 @@ use crate::value::{Add, Compare, Div, Mul, Sub, DEVNET_TOKEN_SCALE};
 use crate::*;
 
 pub fn check_feed_update(asset_info: AssetInfo, slot: u64) -> ProgramResult {
-    msg!(&asset_info.last_update.to_string()[..]);
-    msg!(&slot.to_string()[..]);
     if asset_info.last_update < slot {
         return Err(InceptError::OutdatedOracle.into());
     }
@@ -241,31 +239,36 @@ pub fn calculate_impermanent_loss(
         position.liquidity_token_value,
         pool.liquidity_token_supply,
     );
+    let pool_price = pool.usdi_amount.div(pool.iasset_amount);
+    let effective_price = if pool_price.gt(pool.asset_info.price)? {
+        pool_price
+    } else {
+        pool.asset_info.price
+    };
+
+    if liquidity_proportion.val == 0u128 {
+        if position.borrowed_usdi.gt(position.borrowed_iasset)? {
+            return Ok(position.borrowed_usdi);
+        } else {
+            return Ok(position.borrowed_iasset.mul(effective_price));
+        }
+    }
 
     let claimable_usdi = liquidity_proportion.mul(pool.usdi_amount);
     let claimable_iasset = liquidity_proportion.mul(pool.iasset_amount);
-
-    if claimable_usdi.lt(position.borrowed_usdi)? {
+    let init_price = position.borrowed_usdi.div(position.borrowed_iasset);
+    if pool_price.lt(init_price)? {
         return position.borrowed_usdi.sub(claimable_usdi);
-    } else if claimable_iasset.lt(position.borrowed_iasset)? {
-        let pool_price = pool.usdi_amount.div(pool.iasset_amount);
-        let effective_price = if pool_price.gt(pool.asset_info.price)? {
-            pool_price
-        } else {
-            pool.asset_info.price
-        };
+    } else if pool_price.gt(init_price)? {
         return Ok(effective_price.mul(position.borrowed_iasset.sub(claimable_iasset)?));
-    } else if claimable_usdi.eq(position.borrowed_usdi)?
-        && claimable_iasset.eq(position.borrowed_iasset)?
-    {
-        return Ok(Value::new(0, DEVNET_TOKEN_SCALE));
     }
-    Err(InceptError::FailedImpermanentLossCalculation)
+    Ok(Value::new(0, DEVNET_TOKEN_SCALE))
 }
 
+#[derive(Clone, Debug)]
 pub enum HealthScore {
-    Healthy { score: u8 },
-    SubjectToLiquidation,
+    Healthy { score: f64 },
+    SubjectToLiquidation { score: f64 },
 }
 
 pub fn calculate_health_score(
@@ -276,16 +279,48 @@ pub fn calculate_health_score(
     let mut loss = Value::new(0, DEVNET_TOKEN_SCALE);
 
     for index in 0..comet.num_positions {
-        check_feed_update(
-            token_data.pools[comet.positions[index as usize].pool_index as usize].asset_info,
-            slot,
-        )
-        .unwrap();
+
         let comet_position = comet.positions[index as usize];
         let pool = token_data.pools[comet_position.pool_index as usize];
 
-        let impermanent_loss_term = calculate_impermanent_loss(&comet_position, &pool, slot)?
-            .mul(token_data.il_health_score_coefficient);
+        if check_feed_update(pool.asset_info, slot).is_err() {
+            return Err(InceptError::OutdatedOracle);
+        }
+
+        let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
+            comet_position.liquidity_token_value,
+            pool.liquidity_token_supply,
+        );
+        let pool_price = pool.usdi_amount.div(pool.iasset_amount);
+        let effective_price = if pool_price.gt(pool.asset_info.price)? {
+            pool_price
+        } else {
+            pool.asset_info.price
+        };
+
+        let impermanent_loss;
+
+        if liquidity_proportion.val == 0u128 {
+            if comet_position.borrowed_usdi.gt(comet_position.borrowed_iasset)? {
+                impermanent_loss = comet_position.borrowed_usdi;
+            } else {
+                impermanent_loss = comet_position.borrowed_iasset.mul(effective_price);
+            }
+        } else {
+            let claimable_usdi = liquidity_proportion.mul(pool.usdi_amount);
+            let claimable_iasset = liquidity_proportion.mul(pool.iasset_amount);
+            let init_price = comet_position.borrowed_usdi.div(comet_position.borrowed_iasset);
+
+            if pool_price.lt(init_price)? {
+                impermanent_loss = comet_position.borrowed_usdi.sub(claimable_usdi)?;
+            } else if pool_price.gt(init_price)? {
+                impermanent_loss = effective_price.mul(comet_position.borrowed_iasset.sub(claimable_iasset)?);
+            } else {
+                impermanent_loss = Value::new(0u128, DEVNET_TOKEN_SCALE);
+            }
+        }
+
+        let impermanent_loss_term = impermanent_loss.mul(token_data.il_health_score_coefficient);
 
         let position_term = comet_position
             .borrowed_usdi
@@ -297,8 +332,8 @@ pub fn calculate_health_score(
     let score = 100f64 - loss.div(comet.total_collateral_amount).to_scaled_f64();
 
     if score > 0f64 {
-        Ok(HealthScore::Healthy { score: score as u8 })
+        Ok(HealthScore::Healthy { score })
     } else {
-        Ok(HealthScore::SubjectToLiquidation)
+        Ok(HealthScore::SubjectToLiquidation { score })
     }
 }

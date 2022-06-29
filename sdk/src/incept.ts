@@ -23,7 +23,11 @@ const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 export const DEVNET_TOKEN_SCALE = 8;
 
-const TOKEN_DATA_SIZE = 175552;
+export const toDevnetScale = (x: number) => {
+  return new BN(x * 10 ** DEVNET_TOKEN_SCALE);
+};
+
+const TOKEN_DATA_SIZE = 175600;
 const SINGLE_POOL_COMET_SIZE = 8208;
 const MINT_POSITIONS_SIZE = 24528;
 const LIQUIDITY_POSITIONS_SIZE = 16368;
@@ -56,7 +60,10 @@ export class Incept {
   }
   public async initializeManager(
     chainlinkProgram: PublicKey,
-    ilHealthScoreCoefficient: BN
+    ilHealthScoreCoefficient: number,
+    ilHealthScoreCutoff: number,
+    ilLiquidationRewardPct: number
+
   ) {
     const managerPubkeyAndBump = await this.getManagerAddress();
     const usdiMint = anchor.web3.Keypair.generate();
@@ -65,7 +72,9 @@ export class Incept {
 
     await this.program.rpc.initializeManager(
       managerPubkeyAndBump[1],
-      ilHealthScoreCoefficient,
+      toDevnetScale(ilHealthScoreCoefficient),
+      toDevnetScale(ilHealthScoreCutoff),
+      toDevnetScale(ilLiquidationRewardPct),
       {
         accounts: {
           admin: this.provider.wallet.publicKey,
@@ -173,7 +182,7 @@ export class Incept {
     liquidityTradingFee: number,
     pythOracle: PublicKey,
     chainlinkOracle: PublicKey,
-    healthScoreCoefficient: BN
+    healthScoreCoefficient: number
   ) {
     const usdiTokenAccount = anchor.web3.Keypair.generate();
     const iassetMintAccount = anchor.web3.Keypair.generate();
@@ -187,7 +196,7 @@ export class Incept {
       stableCollateralRatio,
       cryptoCollateralRatio,
       liquidityTradingFee,
-      healthScoreCoefficient,
+      toDevnetScale(healthScoreCoefficient),
       {
         accounts: {
           admin: admin,
@@ -1606,7 +1615,7 @@ export class Incept {
     let cometAddress = forManager
       ? userAccount.cometManager
       : userAccount.comet;
-
+    console.log("COLLATERAL INDEX:", Number(comet.collaterals[cometCollateralIndex].collateralIndex));
     return (await this.program.instruction.withdrawCollateralFromComet(
       this.managerAddress[1],
       cometCollateralIndex,
@@ -2487,10 +2496,10 @@ export class Incept {
     return Math.min(usdiLowerLimit, usdiUpperLimit);
   }
 
-  public async updateILHealthScoreCoefficient(coefficient: BN) {
+  public async updateILHealthScoreCoefficient(coefficient: number) {
     const [pubKey, bump] = await this.getManagerAddress();
 
-    await this.program.rpc.updateIlHealthScoreCoefficient(bump, coefficient, {
+    await this.program.rpc.updateIlHealthScoreCoefficient(bump, toDevnetScale(coefficient), {
       accounts: {
         admin: this.provider.wallet.publicKey,
         manager: pubKey,
@@ -2500,7 +2509,7 @@ export class Incept {
   }
 
   public async updatePoolHealthScoreCoefficient(
-    coefficient: BN,
+    coefficient: number,
     poolIndex: number
   ) {
     const [pubKey, bump] = await this.getManagerAddress();
@@ -2508,7 +2517,7 @@ export class Incept {
     await this.program.rpc.updatePoolHealthScoreCoefficient(
       bump,
       poolIndex,
-      coefficient,
+      toDevnetScale(coefficient),
       {
         accounts: {
           admin: this.provider.wallet.publicKey,
@@ -2533,9 +2542,11 @@ export class Incept {
           let poolUsdiAmount = toScaledNumber(pool.usdiAmount);
           let poolIassetAmount = toScaledNumber(pool.iassetAmount);
           let poolPrice = poolUsdiAmount / poolIassetAmount;
-
           let borrowedUsdi = toScaledNumber(position.borrowedUsdi);
           let borrowedIasset = toScaledNumber(position.borrowedIasset);
+
+          let initPrice = borrowedUsdi / borrowedIasset;
+
           let claimableRatio =
             toScaledNumber(position.liquidityTokenValue) /
             toScaledNumber(pool.liquidityTokenSupply);
@@ -2549,17 +2560,19 @@ export class Incept {
           let poolHealthScoreCoefficient = toScaledNumber(
             pool.assetInfo.healthScoreCoefficient
           );
+          let markPrice = Math.max(
+            toScaledNumber(pool.assetInfo.price),
+            poolPrice
+          );
 
           let ilHealthImpact = 0;
 
-          if (borrowedUsdi < claimableUsdi) {
+          if (borrowedUsdi === 0 || borrowedIasset === 0) {
+            ilHealthImpact = borrowedUsdi ? borrowedUsdi : borrowedIasset * markPrice * ilHealthScoreCoefficient;
+          } else if (poolPrice < initPrice) {
             ilHealthImpact =
               (claimableUsdi - borrowedUsdi) * ilHealthScoreCoefficient;
-          } else if (borrowedIasset < claimableIasset) {
-            let markPrice = Math.max(
-              toScaledNumber(pool.assetInfo.price),
-              poolPrice
-            );
+          } else if (initPrice < poolPrice) {
             ilHealthImpact =
               markPrice *
               (claimableIasset - borrowedIasset) *
@@ -2612,6 +2625,120 @@ export class Incept {
     });
 
     return ILD;
+  }
+
+  public async liquidateCometPositionReductionInstruction(
+    liquidateeAddress: PublicKey,
+    positionIndex: number,
+    reductionAmount: number
+  ) {
+    let userAccount = await this.getUserAccount(liquidateeAddress);
+    let comet = await this.getComet(false, liquidateeAddress);
+    let position = comet.positions[positionIndex];
+    let tokenData = await this.getTokenData();
+    let pool = tokenData.pools[position.poolIndex];
+    const liquidatorUsdiTokenAccount =
+      await this.getOrCreateAssociatedTokenAccount(this.manager.usdiMint);
+    const liquidatoriAssetTokenAccount =
+      await this.getOrCreateAssociatedTokenAccount(pool.assetInfo.iassetMint);
+
+
+    return await this.program.instruction.liquidateCometPositionReduction(
+      this.managerAddress[1],
+      positionIndex,
+      toDevnetScale(reductionAmount),
+      {
+        accounts: {
+          liquidator: this.provider.wallet.publicKey,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          userAccount: liquidateeAddress,
+          comet: userAccount.comet,
+          usdiMint: this.manager.usdiMint,
+          iassetMint: pool.assetInfo.iassetMint,
+          ammUsdiTokenAccount: pool.usdiTokenAccount,
+          ammIassetTokenAccount: pool.iassetTokenAccount,
+          liquidityTokenMint: pool.liquidityTokenMint,
+          cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
+          liquidatorUsdiTokenAccount: liquidatorUsdiTokenAccount.address,
+          liquidatorIassetTokenAccount: liquidatoriAssetTokenAccount.address,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    );
+  }
+
+  public async liquidateCometPositionReduction(
+    liquidateeAddress: PublicKey,
+    positionIndex: number,
+    reductionAmount: number
+  ) {
+
+    let updatePricesIx = await this.updatePricesInstruction()
+
+    let ix = await this.liquidateCometPositionReductionInstruction(
+      liquidateeAddress, positionIndex, reductionAmount
+    )
+    return await this.provider.send(
+      new Transaction().add(updatePricesIx).add(ix)
+    );
+  }
+
+  public async liquidateCometPositionILInstruction(
+    liquidateeAddress: PublicKey,
+    positionIndex: number,
+    usdiCollateralIndex: number,
+    reductionAmount: number
+  ) {
+    let userAccount = await this.getUserAccount(liquidateeAddress);
+    let comet = await this.getComet(false, liquidateeAddress);
+    let position = comet.positions[positionIndex];
+    let tokenData = await this.getTokenData();
+    let pool = tokenData.pools[position.poolIndex];
+    let collateral = tokenData.collaterals[usdiCollateralIndex];
+    const liquidatorUsdiTokenAccount =
+      await this.getOrCreateAssociatedTokenAccount(this.manager.usdiMint);
+
+    return await this.program.instruction.liquidateCometIlReduction(
+      this.managerAddress[1],
+      positionIndex,
+      usdiCollateralIndex,
+      toDevnetScale(reductionAmount),
+      {
+        accounts: {
+          liquidator: this.provider.wallet.publicKey,
+          manager: this.managerAddress[0],
+          tokenData: this.manager.tokenData,
+          userAccount: liquidateeAddress,
+          comet: userAccount.comet,
+          usdiMint: this.manager.usdiMint,
+          vault: collateral.vault,
+          iassetMint: pool.assetInfo.iassetMint,
+          ammUsdiTokenAccount: pool.usdiTokenAccount,
+          ammIassetTokenAccount: pool.iassetTokenAccount,
+          liquidityTokenMint: pool.liquidityTokenMint,
+          cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
+          liquidatorUsdiTokenAccount: liquidatorUsdiTokenAccount.address,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    );
+  }
+
+  public async liquidateCometILReduction(
+    liquidateeAddress: PublicKey,
+    positionIndex: number,
+    usdiCollateralIndex: number,
+    reductionAmount: number
+  ) {
+
+    let updatePricesIx = await this.updatePricesInstruction()
+    let ix = await this.liquidateCometPositionILInstruction(
+      liquidateeAddress, positionIndex, usdiCollateralIndex, reductionAmount
+    )
+    return await this.provider.send(
+      new Transaction().add(updatePricesIx).add(ix)
+    );
   }
 
   public async calculateMaxWithdrawableCollateral(cometIndex: number) {

@@ -16,6 +16,7 @@ import {
   Manager,
   Pool,
   DEVNET_TOKEN_SCALE,
+  toDevnetScale
 } from "../sdk/src/incept";
 import {
   createPriceFeed,
@@ -23,8 +24,7 @@ import {
   getFeedData,
   ChainLinkOracle,
 } from "../sdk/src/oracle";
-import { sleep, signAndSend } from "../sdk/src/utils";
-import { SinglePoolComets } from '../sdk/src/incept';
+import { sleep, signAndSend, toScaledNumber } from "../sdk/src/utils";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -47,12 +47,10 @@ describe("incept", async () => {
     mockUSDCProgram.programId
   );
 
-  const healthScoreCoefficient = new BN(
-    Math.floor(1.059 * 10 ** DEVNET_TOKEN_SCALE)
-  );
-  const ilHealthScoreCoefficient = new BN(
-    Math.floor(128.288 * 10 ** DEVNET_TOKEN_SCALE)
-  );
+  const healthScoreCoefficient = 1.059;
+  const ilHealthScoreCoefficient = 128.288;
+  const ilHealthScoreCutoff = 100;
+  const ilLiquidationRewardPct = 5;
 
   let priceFeed;
   let mockUSDCTokenAccountInfo;
@@ -82,7 +80,9 @@ describe("incept", async () => {
   it("manager initialized!", async () => {
     await inceptClient.initializeManager(
       storeProgram.programId,
-      ilHealthScoreCoefficient
+      ilHealthScoreCoefficient,
+      ilHealthScoreCutoff,
+      ilLiquidationRewardPct
     );
   });
 
@@ -152,6 +152,16 @@ describe("incept", async () => {
     await sleep(200);
   });
 
+  it("usdi added as a collateral!", async () => {
+    await inceptClient.addCollateral(
+      walletPubkey,
+      8,
+      1,
+      inceptClient.manager.usdiMint
+    );
+    await sleep(200);
+  });
+
   it("pool initialized!", async () => {
     await inceptClient.initializePool(
       walletPubkey,
@@ -174,7 +184,7 @@ describe("incept", async () => {
       "wrong manager!"
     );
     assert(tokenData.numPools.eq(new BN(1)), "num pools incorrect");
-    assert(tokenData.numCollaterals.eq(new BN(1)), "num collaterals incorrect");
+    assert(tokenData.numCollaterals.eq(new BN(2)), "num collaterals incorrect");
 
     const first_pool = tokenData.pools[0];
     assert(
@@ -1409,31 +1419,41 @@ describe("incept", async () => {
   });
 
   it("comet collateral added!", async () => {
-    mockUSDCTokenAccountInfo =
+    usdiTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
-        mockUSDCMint.publicKey
+        inceptClient.manager.usdiMint
       );
 
+    let comet = await inceptClient.getComet();
+
+    console.log("COMET COLLATERALS:", comet.numCollaterals.toNumber());
+    console.log("1 Comet index and amount:", comet.collaterals[0].collateralIndex, comet.collaterals[0].collateralAmount);
+
     await inceptClient.addCollateralToComet(
-      mockUSDCTokenAccountInfo.address,
-      new BN(50000000),
-      0,
+      usdiTokenAccountInfo.address,
+      toDevnetScale(100000),
+      1,
       false
     );
 
     await sleep(200);
 
     const tokenData = await inceptClient.getTokenData();
-    const collateral = tokenData.collaterals[0];
+    const collateral = tokenData.collaterals[1];
+    comet = await inceptClient.getComet();
 
-    mockUSDCTokenAccountInfo =
+    console.log("2 Comet index and amount:",comet.collaterals[0].collateralIndex, comet.collaterals[0].collateralAmount);
+
+    console.log("COMET COLLATERALS:", comet.numCollaterals.toNumber());
+
+    usdiTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
-        mockUSDCMint.publicKey
+        inceptClient.manager.usdiMint
       );
     assert.equal(
-      Number(mockUSDCTokenAccountInfo.amount) / 10000000,
-      999978999987.3646,
-      "check user USDC"
+      Number(usdiTokenAccountInfo.amount) / 100000000,
+      389276.48918785,
+      "check user USDi"
     );
 
     const vault = await inceptClient.connection.getTokenAccountBalance(
@@ -1442,20 +1462,20 @@ describe("incept", async () => {
     );
     assert.equal(
       vault.value!.uiAmount,
-      21000012.635265,
+      100000,
       "check vault balance"
     );
   });
 
   it("comet collateral withdrawn!", async () => {
-    mockUSDCTokenAccountInfo =
+    usdiTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
-        mockUSDCMint.publicKey
+        inceptClient.manager.usdiMint
       );
 
     await inceptClient.withdrawCollateralFromComet(
-      mockUSDCTokenAccountInfo.address,
-      new BN(10000000),
+      usdiTokenAccountInfo.address,
+      toDevnetScale(10000),
       0,
       false
     );
@@ -1463,16 +1483,16 @@ describe("incept", async () => {
     await sleep(200);
 
     const tokenData = await inceptClient.getTokenData();
-    const collateral = tokenData.collaterals[0];
+    const collateral = tokenData.collaterals[1];
 
-    mockUSDCTokenAccountInfo =
+    usdiTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
-        mockUSDCMint.publicKey
+        inceptClient.manager.usdiMint
       );
     assert.equal(
-      Number(mockUSDCTokenAccountInfo.amount) / 10000000,
-      999978999988.3647,
-      "check user USDC"
+      Number(usdiTokenAccountInfo.amount) / 100000000,
+      389276.48918785 + 10000,
+      "check user USDi"
     );
 
     const vault = await inceptClient.connection.getTokenAccountBalance(
@@ -1481,7 +1501,7 @@ describe("incept", async () => {
     );
     assert.equal(
       vault.value!.uiAmount,
-      21000011.635265,
+      100000 - 10000,
       "check vault balance"
     );
   });
@@ -1489,7 +1509,7 @@ describe("incept", async () => {
   it("comet liquidity added!", async () => {
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
-        mockUSDCMint.publicKey
+        inceptClient.manager.usdiMint
       );
 
     await inceptClient.addLiquidityToComet(new BN(400000000), 0, false);
@@ -1527,18 +1547,18 @@ describe("incept", async () => {
   it("multi pool comet health check", async () => {
     let healthScore = await inceptClient.getHealthScore();
 
-    assert.equal(healthScore, 98.941, "check health score.");
+    assert.equal(healthScore, 98.97127018299089, "check health score.");
 
     await inceptClient.updatePoolHealthScoreCoefficient(
-      healthScoreCoefficient.mul(new BN(2)),
+      healthScoreCoefficient * 2,
       0
     );
     await inceptClient.updateILHealthScoreCoefficient(
-      ilHealthScoreCoefficient.mul(new BN(2))
+      ilHealthScoreCoefficient * 2
     );
 
     healthScore = await inceptClient.getHealthScore();
-    assert.equal(healthScore, 97.882, "check health score.");
+    assert.equal(healthScore, 97.94254036598178, "check health score.");
 
     const totalILD = await inceptClient.getILD();
     const poolILD = await inceptClient.getILD(0);
@@ -1602,7 +1622,7 @@ describe("incept", async () => {
 
     await inceptClient.hackathonMintUsdi(
       usdiTokenAccountInfo.address,
-      5000000000
+      500000000000000
     );
 
     await sleep(200);
@@ -1613,7 +1633,7 @@ describe("incept", async () => {
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      currentUSDI + 50,
+      currentUSDI + 5000000,
       "usdi not minted properly!"
     );
   });
@@ -1767,6 +1787,114 @@ describe("incept", async () => {
       "check pool iAsset"
     );
   });
+
+  it("comet liquidation", async () => {
+    // Change price.
+    // await setPrice(pythProgram, 20, priceFeed);
+    // let updatedPrice = (await getFeedData(pythProgram, priceFeed)).aggregate
+    //   .price;
+    // //chainlink = new ChainLinkOracle(storeProgram);
+    // await chainlink.submitAnswer(new BN(1649943159), new BN('2000000000'));
+
+    // await inceptClient.updatePrices();
+
+    // await sleep(200);
+    const { userPubkey, bump } = await inceptClient.getUserAddress();
+
+    let tokenData = await inceptClient.getTokenData();
+    const poolIndex = 0;
+    let pool = tokenData.pools[poolIndex];
+    const comet = await inceptClient.getComet();
+
+    usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
+      inceptClient.manager.usdiMint
+    );
+
+    await inceptClient.hackathonMintUsdi(
+      usdiTokenAccountInfo.address,
+      8000000 * 100000000
+    );
+
+    await sleep(200);
+
+    usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
+      inceptClient.manager.usdiMint
+    );
+
+    console.log("Starting USDi",Number(usdiTokenAccountInfo.amount) / 100000000);
+  
+    iassetTokenAccountInfo =
+      await inceptClient.getOrCreateAssociatedTokenAccount(
+        pool.assetInfo.iassetMint
+      );
+
+    console.log("Prev price:", toScaledNumber(pool.usdiAmount) / toScaledNumber(pool.iassetAmount), toScaledNumber(pool.usdiAmount), toScaledNumber(pool.iassetAmount));
+
+    await inceptClient.buySynth(
+      new BN('5999800000000'),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      poolIndex
+    );
+
+    await sleep(2000);
+
+    let tokenData2 = await inceptClient.getTokenData();
+    let pool2 = tokenData2.pools[poolIndex];
+
+    let poolPrice = toScaledNumber(pool2.usdiAmount) / toScaledNumber(pool2.iassetAmount);
+    console.log("After price:", poolPrice, toScaledNumber(pool2.usdiAmount), toScaledNumber(pool2.iassetAmount));
+  
+    usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
+      inceptClient.manager.usdiMint
+    );
+
+    console.log("Leftover USDI:", Number(usdiTokenAccountInfo.amount) / 100000000);
+    let usdiPool = await inceptClient.connection.getTokenAccountBalance(pool2.usdiTokenAccount);
+    let iassetPool = await inceptClient.connection.getTokenAccountBalance(pool2.iassetTokenAccount);
+
+
+    console.log("Price from accounts:", usdiPool.value.uiAmount / iassetPool.value.uiAmount, usdiPool.value.uiAmount, iassetPool.value.uiAmount);
+
+    await inceptClient.updatePoolHealthScoreCoefficient(
+      100, 0
+    );
+    await inceptClient.updateILHealthScoreCoefficient(
+      0.00001
+    );
+    // Check that the score is zero.
+    let healthScore1 = await inceptClient.getHealthScore();
+    console.log("HEALTH SCORE BEFORE LIQ:", healthScore1);
+
+    await inceptClient.liquidateCometPositionReduction(
+      userPubkey, 0, toScaledNumber(comet.positions[0].liquidityTokenValue)
+    );
+
+    await sleep(200);
+
+    let healthScore2 = await inceptClient.getHealthScore();
+
+    console.log("HEALTH SCORE AFTER LIQ:", healthScore2);
+
+    assert.isAbove(healthScore2, healthScore1, 'check liquidation for reducing position');
+
+    // Reduce IL. 
+    await inceptClient.updateILHealthScoreCoefficient(
+      100
+    );
+
+    let healthScore3 = await inceptClient.getHealthScore();
+    console.log("HEALTH SCORE:",healthScore3);
+
+    // Reduce IL liquidation
+
+    await inceptClient.liquidateCometILReduction(
+      userPubkey, 0, 1, 0.4
+    );
+
+  });
+
+  return;
 
   it("comet closed!", async () => {
     let poolIndex = 0;
