@@ -37,7 +37,7 @@ export class Incept {
   connection: Connection;
   programId: PublicKey;
   program: Program<InceptProgram>;
-  manager: Manager;
+  manager?: Manager;
   opts?: ConfirmOptions;
   managerAddress: [PublicKey, number];
   provider: Provider;
@@ -62,6 +62,7 @@ export class Incept {
     const usdiMint = anchor.web3.Keypair.generate();
     const liquidatedCometUsdiTokenAccount = anchor.web3.Keypair.generate();
     const tokenData = anchor.web3.Keypair.generate();
+    console.log("Manager:", managerPubkeyAndBump[0].toString());
 
     await this.program.rpc.initializeManager(
       managerPubkeyAndBump[1],
@@ -113,7 +114,7 @@ export class Incept {
 
   public onTokenDataChange(fn: (state: TokenData) => void) {
     this.program.account.tokenData
-      .subscribe(this.manager.tokenData)
+      .subscribe(this.manager!.tokenData)
       .on("change", (state: TokenData) => {
         fn(state);
       });
@@ -154,7 +155,7 @@ export class Incept {
         accounts: {
           admin: admin,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           collateralMint: collateral_mint,
           vault: vaultAccount.publicKey,
           rent: RENT_PUBKEY,
@@ -192,8 +193,8 @@ export class Incept {
         accounts: {
           admin: admin,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
-          usdiMint: this.manager.usdiMint,
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
           usdiTokenAccount: usdiTokenAccount.publicKey,
           iassetMint: iassetMintAccount.publicKey,
           iassetTokenAccount: iassetTokenAccount.publicKey,
@@ -286,9 +287,15 @@ export class Incept {
       });
     });
 
+
     if (typeof poolIndex !== "undefined") {
+      console.log(priceFeeds[0].pubkey.toString())
+      console.log(poolIndex, priceFeeds[2 * poolIndex].pubkey.toString());
       priceFeeds = priceFeeds.slice(2 * poolIndex, 2 * poolIndex + 2);
+      //console.log("after slicing;", priceFeeds);
     }
+
+    console.log(poolIndex, priceFeeds[0].pubkey.toString(), priceFeeds[1].pubkey.toString())
 
     return (await this.program.instruction.updatePrices(
       this.managerAddress[1],
@@ -296,7 +303,7 @@ export class Incept {
         remainingAccounts: priceFeeds,
         accounts: {
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           chainlinkProgram: tokenData.chainlinkProgram,
         },
       }
@@ -305,7 +312,7 @@ export class Incept {
 
   public async getTokenData() {
     return (await this.program.account.tokenData.fetch(
-      this.manager.tokenData
+      this.manager!.tokenData
     )) as TokenData;
   }
 
@@ -335,7 +342,6 @@ export class Incept {
 
   public async getSinglePoolComets(address?: PublicKey) {
     const userAccountData = (await this.getUserAccount(address)) as User;
-    // @ts-ignore
     return (await this.program.account.singlePoolComets.fetch(
       userAccountData.singlePoolComets
     )) as SinglePoolComets;
@@ -421,9 +427,9 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           vault: tokenData.collaterals[collateralIndex].vault,
-          usdiMint: this.manager.usdiMint,
+          usdiMint: this.manager!.usdiMint,
           userUsdiTokenAccount: userUsdiTokenAccount,
           userCollateralTokenAccount: userCollateralTokenAccount,
           tokenProgram: TOKEN_PROGRAM_ID,
@@ -501,7 +507,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           mintPositions: userAccount.mintPositions,
           vault: tokenData.collaterals[collateralIndex].vault,
           userCollateralTokenAccount: userCollateralTokenAccount,
@@ -547,7 +553,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           mintPositions: userAccount.mintPositions,
           vault: tokenData.collaterals[collateralIndex].vault,
           userCollateralTokenAccount: userCollateralTokenAccount,
@@ -594,7 +600,7 @@ export class Incept {
         accounts: {
           user: user,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           mintPositions: userAccount.mintPositions,
           vault: tokenData.collaterals[collateralIndex].vault,
           userCollateralTokenAccount: userCollateralTokenAccount,
@@ -637,7 +643,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           mintPositions: userAccount.mintPositions,
           iassetMint: assetInfo.iassetMint,
           userIassetTokenAccount: userIassetTokenAccount,
@@ -681,7 +687,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           mintPositions: userAccount.mintPositions,
           iassetMint: assetInfo.iassetMint,
           userIassetTokenAccount: userIassetTokenAccount,
@@ -792,7 +798,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           liquidityPositions: userAccount.liquidityPositions,
           userUsdiTokenAccount: userUsdiTokenAccount,
           userIassetTokenAccount: userIassetTokenAccount,
@@ -847,7 +853,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           liquidityPositions: userAccount.liquidityPositions,
           userUsdiTokenAccount: userUsdiTokenAccount,
           userIassetTokenAccount: userIassetTokenAccount,
@@ -901,7 +907,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           liquidityPositions: userAccount.liquidityPositions,
           userUsdiTokenAccount: userUsdiTokenAccount,
           userIassetTokenAccount: userIassetTokenAccount,
@@ -946,7 +952,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           userUsdiTokenAccount: userUsdiTokenAccount,
           userIassetTokenAccount: userIassetTokenAccount,
           ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
@@ -988,7 +994,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           userUsdiTokenAccount: userUsdiTokenAccount,
           userIassetTokenAccount: userIassetTokenAccount,
           ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
@@ -1074,7 +1080,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           singlePoolComets: userAccount.singlePoolComets,
           singlePoolComet: singlePoolCometAccount.publicKey,
           vault: tokenData.collaterals[collateralIndex].vault,
@@ -1128,7 +1134,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           comet: cometAddress,
           vault:
             tokenData.collaterals[
@@ -1176,7 +1182,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           comet: cometAddress,
           vault:
             tokenData.collaterals[
@@ -1224,8 +1230,8 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
-          usdiMint: this.manager.usdiMint,
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
           iassetMint: tokenData.pools[position.poolIndex].assetInfo.iassetMint,
           comet: cometAddress,
           ammUsdiTokenAccount:
@@ -1280,8 +1286,8 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
-          usdiMint: this.manager.usdiMint,
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
           iassetMint: tokenData.pools[position.poolIndex].assetInfo.iassetMint,
           comet: cometAddress,
           userUsdiTokenAccount: userUsdiTokenAccount,
@@ -1332,8 +1338,8 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
-          usdiMint: this.manager.usdiMint,
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
           iassetMint: tokenData.pools[position.poolIndex].assetInfo.iassetMint,
           comet: cometAddress,
           ammUsdiTokenAccount:
@@ -1385,8 +1391,8 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
-          usdiMint: this.manager.usdiMint,
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
           iassetMint: tokenData.pools[position.poolIndex].assetInfo.iassetMint,
           userIassetTokenAccount: userIassetTokenAccount,
           comet: cometAddress,
@@ -1440,8 +1446,8 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
-          usdiMint: this.manager.usdiMint,
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
           iassetMint:
             tokenData.pools[singlePoolComet.positions[0].poolIndex].assetInfo
               .iassetMint,
@@ -1564,7 +1570,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           comet: cometAddress,
           vault: tokenData.collaterals[collateralIndex].vault,
           userCollateralTokenAccount: userCollateralTokenAccount,
@@ -1615,7 +1621,7 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           comet: cometAddress,
           vault:
             tokenData.collaterals[
@@ -1664,8 +1670,8 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
-          usdiMint: this.manager.usdiMint,
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
           iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
           comet: cometAddress,
           ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
@@ -1723,8 +1729,8 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
-          usdiMint: this.manager.usdiMint,
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
           iassetMint: tokenData.pools[position.poolIndex].assetInfo.iassetMint,
           comet: cometAddress,
           userUsdiTokenAccount: userUsdiTokenAccount,
@@ -1784,8 +1790,8 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
-          usdiMint: this.manager.usdiMint,
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
           iassetMint: tokenData.pools[position.poolIndex].assetInfo.iassetMint,
           comet: cometAddress,
           ammUsdiTokenAccount:
@@ -1843,8 +1849,8 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
-          usdiMint: this.manager.usdiMint,
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
           iassetMint:
             tokenData.pools[cometPosition.poolIndex].assetInfo.iassetMint,
           userIassetTokenAccount: userIassetTokenAccount,
@@ -1901,8 +1907,8 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
-          usdiMint: this.manager.usdiMint,
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
           iassetMint:
             tokenData.pools[cometPosition.poolIndex].assetInfo.iassetMint,
           userIassetTokenAccount: userIassetTokenAccount,
@@ -1934,8 +1940,8 @@ export class Incept {
         accounts: {
           user: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
-          usdiMint: this.manager.usdiMint,
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
           userUsdiTokenAccount: userUsdiTokenAccount,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
@@ -1944,7 +1950,7 @@ export class Incept {
   }
 
   public async getOrCreateUsdiAssociatedTokenAccount() {
-    return await this.getOrCreateAssociatedTokenAccount(this.manager.usdiMint);
+    return await this.getOrCreateAssociatedTokenAccount(this.manager!.usdiMint);
   }
 
   public async getOrCreateAssociatedTokenAccount(mint: PublicKey) {
@@ -2048,7 +2054,7 @@ export class Incept {
         accounts: {
           liquidator: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           userAccount: liquidateAccount,
           iassetMint: pool.assetInfo.iassetMint,
           mintPositions: userAccount.mintPositions,
@@ -2093,6 +2099,8 @@ export class Incept {
 
   public async getMintiAssetData(index: number) {
     let assetInfo = await this.getAssetInfo(index);
+    console.log("AssetINfo:", assetInfo);
+    console.log("Iasset MINT:", assetInfo.iassetMint)
     let associatedTokenAddress = (
       await this.getOrCreateAssociatedTokenAccount(assetInfo.iassetMint)
     ).address;
@@ -2273,7 +2281,7 @@ export class Incept {
       let totalCollateralAmount = toScaledNumber(
         singlePoolComet.totalCollateralAmount
       );
-      let range = this.calculateRangeFromUSDiAndCollateral(
+      let range = await this.calculateRangeFromUSDiAndCollateral(
         collateralIndex,
         poolIndex,
         totalCollateralAmount,
@@ -2494,7 +2502,7 @@ export class Incept {
       accounts: {
         admin: this.provider.wallet.publicKey,
         manager: pubKey,
-        tokenData: this.manager.tokenData,
+        tokenData: this.manager!.tokenData,
       },
     });
   }
@@ -2513,7 +2521,7 @@ export class Incept {
         accounts: {
           admin: this.provider.wallet.publicKey,
           manager: pubKey,
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
         },
       }
     );
@@ -2627,7 +2635,7 @@ export class Incept {
 
     const totalLpTokenSupply = (
       await this.connection.getTokenSupply(pool.liquidityTokenMint, "confirmed")
-    ).value!.uiAmount;
+    ).value!.uiAmount as number;
 
     const L =
       toScaledNumber(singlePoolComet.positions[0].liquidityTokenValue) /
@@ -2705,8 +2713,13 @@ export interface MintPosition {
   borrowedIasset: Value;
 }
 
+export interface LiquidationStatus {
+  healthy: object;
+  partially: object;
+  fully: object;
+}
 export interface CometLiquidation {
-  status: number;
+  status: LiquidationStatus;
   excess_token_type_is_usdi: number;
   excess_token_amount: Value;
 }
