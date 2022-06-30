@@ -76,63 +76,39 @@ impl TokenData {
         &self,
         collateral_vault: Pubkey,
     ) -> Result<(Collateral, usize), InceptError> {
-        let mut collateral = Collateral::default();
-        let mut index: usize = 0;
         for i in 0..self.num_collaterals {
             let temp_collateral = self.collaterals[i as usize];
             if temp_collateral.vault == collateral_vault {
-                collateral = temp_collateral;
-                index = i as usize;
-                break;
-            }
-            if i == self.num_collaterals - 1 {
-                return Err(InceptError::CollateralNotFound.into());
+                return Ok((temp_collateral, i as usize));
             }
         }
-
-        Ok((collateral, index))
+        Err(InceptError::CollateralNotFound.into())
     }
     pub fn get_pool_tuple_from_iasset_mint(
         &self,
         iasset_mint: Pubkey,
     ) -> Result<(Pool, usize), InceptError> {
-        let mut pool = Pool::default();
-        let mut index: usize = 0;
         for i in 0..self.num_pools {
             let temp_pool = self.pools[i as usize];
             if temp_pool.asset_info.iasset_mint == iasset_mint {
-                pool = temp_pool;
-                index = i as usize;
-                break;
-            }
-            if i == self.num_collaterals - 1 {
-                return Err(InceptError::PoolNotFound.into());
+                return Ok((temp_pool, i as usize));
             }
         }
-
-        Ok((pool, index))
+        Err(InceptError::PoolNotFound.into())
     }
     pub fn get_pool_tuple_from_oracle(
         &self,
         price_feed_addresses: [&Pubkey; 2],
     ) -> Result<(Pool, usize), InceptError> {
-        let mut pool = Pool::default();
-        let mut index: usize = 0;
         for i in 0..self.num_pools {
             let temp_pool = self.pools[i as usize];
             if temp_pool.asset_info.price_feed_addresses[0] == *price_feed_addresses[0]
                 && temp_pool.asset_info.price_feed_addresses[1] == *price_feed_addresses[1]
             {
-                pool = temp_pool;
-                index = i as usize;
-                break;
-            }
-            if i == self.num_collaterals - 1 {
-                return Err(InceptError::PoolNotFound.into());
+                return Ok((temp_pool, i as usize));
             }
         }
-
-        Ok((pool, index))
+        Err(InceptError::PoolNotFound.into())
     }
 }
 
