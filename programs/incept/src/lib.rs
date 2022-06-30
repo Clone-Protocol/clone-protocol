@@ -1226,7 +1226,7 @@ pub mod incept {
             );
 
             // throw error if the comet is already liquidated
-            if single_pool_comet_position.comet_liquidation.status == LiquidationStatus::Fully {
+            if single_pool_comet_position.comet_liquidation.status == 2u64 { //Fully liquidated
                 return Err(InceptError::CometAlreadyLiquidated.into());
             }
 
@@ -2721,7 +2721,7 @@ pub mod incept {
         );
 
         // throw error if the comet is already liquidated
-        if comet_position.comet_liquidation.status == LiquidationStatus::Fully {
+        if comet_position.comet_liquidation.status == 2u64 { // Fully
             return Err(InceptError::CometAlreadyLiquidated.into());
         }
 

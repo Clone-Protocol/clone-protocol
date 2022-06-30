@@ -310,7 +310,7 @@ impl Default for CometCollateral {
 #[derive(PartialEq, Default, Debug)]
 pub struct CometLiquidation {
     // 40
-    pub status: LiquidationStatus,      // 8
+    pub status: u64,                    // 8
     pub excess_token_type_is_usdi: u64, // 8
     pub excess_token_amount: Value,     // 24
 }

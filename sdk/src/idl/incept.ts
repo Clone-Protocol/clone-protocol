@@ -2519,9 +2519,7 @@ export type Incept = {
         "fields": [
           {
             "name": "status",
-            "type": {
-              "defined": "LiquidationStatus"
-            }
+            "type": "u64"
           },
           {
             "name": "excessTokenTypeIsUsdi",
@@ -5258,9 +5256,7 @@ export const IDL: Incept = {
         "fields": [
           {
             "name": "status",
-            "type": {
-              "defined": "LiquidationStatus"
-            }
+            "type": "u64"
           },
           {
             "name": "excessTokenTypeIsUsdi",

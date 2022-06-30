@@ -2709,9 +2709,9 @@ export interface LiquidationStatus {
   fully: object;
 }
 export interface CometLiquidation {
-  status: LiquidationStatus;
-  excess_token_type_is_usdi: number;
-  excess_token_amount: Value;
+  status: number,//LiquidationStatus;
+  excessTokenTypeIsUsdi: number;
+  excessTokenAmount: Value;
 }
 
 export interface Comet {
