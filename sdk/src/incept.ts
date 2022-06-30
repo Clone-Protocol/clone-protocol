@@ -69,7 +69,6 @@ export class Incept {
     const usdiMint = anchor.web3.Keypair.generate();
     const liquidatedCometUsdiTokenAccount = anchor.web3.Keypair.generate();
     const tokenData = anchor.web3.Keypair.generate();
-    console.log("Manager:", managerPubkeyAndBump[0].toString());
 
     await this.program.rpc.initializeManager(
       managerPubkeyAndBump[1],
@@ -296,15 +295,9 @@ export class Incept {
       });
     });
 
-
     if (typeof poolIndex !== "undefined") {
-      console.log(priceFeeds[0].pubkey.toString())
-      console.log(poolIndex, priceFeeds[2 * poolIndex].pubkey.toString());
       priceFeeds = priceFeeds.slice(2 * poolIndex, 2 * poolIndex + 2);
-      //console.log("after slicing;", priceFeeds);
     }
-
-    console.log(poolIndex, priceFeeds[0].pubkey.toString(), priceFeeds[1].pubkey.toString())
 
     return (await this.program.instruction.updatePrices(
       this.managerAddress[1],
@@ -2108,8 +2101,6 @@ export class Incept {
 
   public async getMintiAssetData(index: number) {
     let assetInfo = await this.getAssetInfo(index);
-    console.log("AssetINfo:", assetInfo);
-    console.log("Iasset MINT:", assetInfo.iassetMint)
     let associatedTokenAddress = (
       await this.getOrCreateAssociatedTokenAccount(assetInfo.iassetMint)
     ).address;
@@ -2272,7 +2263,6 @@ export class Incept {
   }
 
   public async getUserSinglePoolCometInfos() {
-    console.log("Get User comet infos!");
     const singlePoolComets = await this.getSinglePoolComets();
     const cometInfos = [];
     for (let i = 0; i < Number(singlePoolComets.numComets); i++) {
