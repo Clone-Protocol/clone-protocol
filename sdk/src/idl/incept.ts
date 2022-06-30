@@ -1363,12 +1363,12 @@ export type Incept = {
         },
         {
           "name": "manager",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
           "name": "userAccount",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -4102,12 +4102,12 @@ export const IDL: Incept = {
         },
         {
           "name": "manager",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
           "name": "userAccount",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
