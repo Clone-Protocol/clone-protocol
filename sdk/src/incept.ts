@@ -67,7 +67,6 @@ export class Incept {
     ilHealthScoreCoefficient: number,
     ilHealthScoreCutoff: number,
     ilLiquidationRewardPct: number
-
   ) {
     const managerPubkeyAndBump = await this.getManagerAddress();
     const usdiMint = anchor.web3.Keypair.generate();
@@ -136,7 +135,6 @@ export class Incept {
 
   public async initializeUser() {
     const { userPubkey, bump } = await this.getUserAddress();
-
     await this.program.rpc.initializeUser(bump, {
       accounts: {
         user: this.provider.wallet.publicKey,
@@ -1617,7 +1615,7 @@ export class Incept {
     let cometAddress = forManager
       ? userAccount.cometManager
       : userAccount.comet;
-    console.log("COLLATERAL INDEX:", Number(comet.collaterals[cometCollateralIndex].collateralIndex));
+
     return (await this.program.instruction.withdrawCollateralFromComet(
       this.managerAddress[1],
       cometCollateralIndex,
@@ -1849,7 +1847,7 @@ export class Incept {
     return (await this.program.instruction.recenterComet(
       this.managerAddress[1],
       cometPositionIndex,
-      cometCollateralIndex,
+      comet.collaterals[cometCollateralIndex].collateralIndex,
       {
         accounts: {
           user: this.provider.wallet.publicKey,
@@ -2061,6 +2059,7 @@ export class Incept {
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           userAccount: liquidateAccount,
+          user: liquidateAccount,
           iassetMint: pool.assetInfo.iassetMint,
           mintPositions: userAccount.mintPositions,
           vault: collateral.vault,
@@ -2516,13 +2515,17 @@ export class Incept {
   public async updateILHealthScoreCoefficient(coefficient: number) {
     const [pubKey, bump] = await this.getManagerAddress();
 
-    await this.program.rpc.updateIlHealthScoreCoefficient(bump, toDevnetScale(coefficient), {
-      accounts: {
-        admin: this.provider.wallet.publicKey,
-        manager: pubKey,
-        tokenData: this.manager!.tokenData,
-      },
-    });
+    await this.program.rpc.updateIlHealthScoreCoefficient(
+      bump,
+      toDevnetScale(coefficient),
+      {
+        accounts: {
+          admin: this.provider.wallet.publicKey,
+          manager: pubKey,
+          tokenData: this.manager!.tokenData,
+        },
+      }
+    );
   }
 
   public async updatePoolHealthScoreCoefficient(
@@ -2585,17 +2588,18 @@ export class Incept {
           let ilHealthImpact = 0;
 
           if (borrowedUsdi === 0 || borrowedIasset === 0) {
-            ilHealthImpact = borrowedUsdi ? borrowedUsdi : borrowedIasset * markPrice * ilHealthScoreCoefficient;
+            ilHealthImpact = borrowedUsdi
+              ? borrowedUsdi
+              : borrowedIasset * markPrice * ilHealthScoreCoefficient;
           } else if (poolPrice < initPrice) {
             ilHealthImpact =
-              (claimableUsdi - borrowedUsdi) * ilHealthScoreCoefficient;
+              (borrowedUsdi - claimableUsdi) * ilHealthScoreCoefficient;
           } else if (initPrice < poolPrice) {
             ilHealthImpact =
               markPrice *
-              (claimableIasset - borrowedIasset) *
+              (borrowedIasset - claimableIasset) *
               ilHealthScoreCoefficient;
           }
-
           let positionHealthImpact = poolHealthScoreCoefficient * borrowedUsdi;
 
           return positionHealthImpact + ilHealthImpact;
@@ -2649,8 +2653,9 @@ export class Incept {
     positionIndex: number,
     reductionAmount: number
   ) {
-    let userAccount = await this.getUserAccount(liquidateeAddress);
-    let comet = await this.getComet(false, liquidateeAddress);
+    const { userPubkey, bump } = await this.getUserAddress(liquidateeAddress);
+    let userAccount = await this.getUserAccount(userPubkey);
+    let comet = await this.getComet(false, userPubkey);
     let position = comet.positions[positionIndex];
     let tokenData = await this.getTokenData();
     let pool = tokenData.pools[position.poolIndex];
@@ -2659,9 +2664,9 @@ export class Incept {
     const liquidatoriAssetTokenAccount =
       await this.getOrCreateAssociatedTokenAccount(pool.assetInfo.iassetMint);
 
-
     return await this.program.instruction.liquidateCometPositionReduction(
       this.managerAddress[1],
+      bump,
       positionIndex,
       toDevnetScale(reductionAmount),
       {
@@ -2669,7 +2674,8 @@ export class Incept {
           liquidator: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
           tokenData: this.manager.tokenData,
-          userAccount: liquidateeAddress,
+          user: liquidateeAddress,
+          userAccount: userPubkey,
           comet: userAccount.comet,
           usdiMint: this.manager.usdiMint,
           iassetMint: pool.assetInfo.iassetMint,
@@ -2690,12 +2696,13 @@ export class Incept {
     positionIndex: number,
     reductionAmount: number
   ) {
-
-    let updatePricesIx = await this.updatePricesInstruction()
+    let updatePricesIx = await this.updatePricesInstruction();
 
     let ix = await this.liquidateCometPositionReductionInstruction(
-      liquidateeAddress, positionIndex, reductionAmount
-    )
+      liquidateeAddress,
+      positionIndex,
+      reductionAmount
+    );
     return await this.provider.send(
       new Transaction().add(updatePricesIx).add(ix)
     );
@@ -2704,32 +2711,37 @@ export class Incept {
   public async liquidateCometPositionILInstruction(
     liquidateeAddress: PublicKey,
     positionIndex: number,
-    usdiCollateralIndex: number,
+    usdiCometCollateralIndex: number,
     reductionAmount: number
   ) {
-    let userAccount = await this.getUserAccount(liquidateeAddress);
-    let comet = await this.getComet(false, liquidateeAddress);
+    const { userPubkey, bump } = await this.getUserAddress(liquidateeAddress);
+    let userAccount = await this.getUserAccount(userPubkey);
+    let comet = await this.getComet(false, userPubkey);
     let position = comet.positions[positionIndex];
     let tokenData = await this.getTokenData();
     let pool = tokenData.pools[position.poolIndex];
-    let collateral = tokenData.collaterals[usdiCollateralIndex];
+    let usdiCollateralIndex =
+      comet.collaterals[usdiCometCollateralIndex].collateralIndex;
+    let usdiCollateral = tokenData.collaterals[usdiCollateralIndex];
     const liquidatorUsdiTokenAccount =
       await this.getOrCreateAssociatedTokenAccount(this.manager.usdiMint);
 
     return await this.program.instruction.liquidateCometIlReduction(
       this.managerAddress[1],
+      bump,
       positionIndex,
-      usdiCollateralIndex,
+      usdiCometCollateralIndex,
       toDevnetScale(reductionAmount),
       {
         accounts: {
           liquidator: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
           tokenData: this.manager.tokenData,
-          userAccount: liquidateeAddress,
+          user: liquidateeAddress,
+          userAccount: userPubkey,
           comet: userAccount.comet,
           usdiMint: this.manager.usdiMint,
-          vault: collateral.vault,
+          vault: usdiCollateral.vault,
           iassetMint: pool.assetInfo.iassetMint,
           ammUsdiTokenAccount: pool.usdiTokenAccount,
           ammIassetTokenAccount: pool.iassetTokenAccount,
@@ -2745,14 +2757,16 @@ export class Incept {
   public async liquidateCometILReduction(
     liquidateeAddress: PublicKey,
     positionIndex: number,
-    usdiCollateralIndex: number,
+    usdiCometCollateralIndex: number,
     reductionAmount: number
   ) {
-
-    let updatePricesIx = await this.updatePricesInstruction()
+    let updatePricesIx = await this.updatePricesInstruction();
     let ix = await this.liquidateCometPositionILInstruction(
-      liquidateeAddress, positionIndex, usdiCollateralIndex, reductionAmount
-    )
+      liquidateeAddress,
+      positionIndex,
+      usdiCometCollateralIndex,
+      reductionAmount
+    );
     return await this.provider.send(
       new Transaction().add(updatePricesIx).add(ix)
     );
