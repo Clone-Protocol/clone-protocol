@@ -279,7 +279,6 @@ pub fn calculate_health_score(
     let mut loss = Value::new(0, DEVNET_TOKEN_SCALE);
 
     for index in 0..comet.num_positions {
-
         let comet_position = comet.positions[index as usize];
         let pool = token_data.pools[comet_position.pool_index as usize];
 
@@ -301,7 +300,10 @@ pub fn calculate_health_score(
         let impermanent_loss;
 
         if liquidity_proportion.val == 0u128 {
-            if comet_position.borrowed_usdi.gt(comet_position.borrowed_iasset)? {
+            if comet_position
+                .borrowed_usdi
+                .gt(comet_position.borrowed_iasset)?
+            {
                 impermanent_loss = comet_position.borrowed_usdi;
             } else {
                 impermanent_loss = comet_position.borrowed_iasset.mul(effective_price);
@@ -309,12 +311,15 @@ pub fn calculate_health_score(
         } else {
             let claimable_usdi = liquidity_proportion.mul(pool.usdi_amount);
             let claimable_iasset = liquidity_proportion.mul(pool.iasset_amount);
-            let init_price = comet_position.borrowed_usdi.div(comet_position.borrowed_iasset);
+            let init_price = comet_position
+                .borrowed_usdi
+                .div(comet_position.borrowed_iasset);
 
             if pool_price.lt(init_price)? {
                 impermanent_loss = comet_position.borrowed_usdi.sub(claimable_usdi)?;
             } else if pool_price.gt(init_price)? {
-                impermanent_loss = effective_price.mul(comet_position.borrowed_iasset.sub(claimable_iasset)?);
+                impermanent_loss =
+                    effective_price.mul(comet_position.borrowed_iasset.sub(claimable_iasset)?);
             } else {
                 impermanent_loss = Value::new(0u128, DEVNET_TOKEN_SCALE);
             }

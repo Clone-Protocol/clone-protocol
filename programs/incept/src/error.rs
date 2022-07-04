@@ -150,7 +150,7 @@ pub enum InceptError {
 
     /// 36. No remaining account supplied
     #[error("No remaining accounts supplied")]
-    NoRemainingAccountsSupplied
+    NoRemainingAccountsSupplied,
 }
 
 impl From<InceptError> for ProgramError {
