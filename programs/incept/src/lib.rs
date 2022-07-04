@@ -6,7 +6,7 @@ use error::*;
 use instructions::*;
 use pyth::pc::Price;
 use states::{
-    AssetInfo, Collateral, CometCollateral, CometLiquidation, CometPosition, LiquidationStatus,
+    AssetInfo, Collateral, CometCollateral, CometLiquidation, CometPosition,
     LiquidityPosition, MintPosition, Pool, TokenData, Value,
 };
 

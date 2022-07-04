@@ -226,45 +226,6 @@ pub fn check_mint_collateral_sufficient(
     Ok(())
 }
 
-pub fn calculate_impermanent_loss(
-    position: &CometPosition,
-    pool: &Pool,
-    slot: u64,
-) -> Result<Value, InceptError> {
-    if check_feed_update(pool.asset_info, slot).is_err() {
-        return Err(InceptError::OutdatedOracle);
-    }
-
-    let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
-        position.liquidity_token_value,
-        pool.liquidity_token_supply,
-    );
-    let pool_price = pool.usdi_amount.div(pool.iasset_amount);
-    let effective_price = if pool_price.gt(pool.asset_info.price)? {
-        pool_price
-    } else {
-        pool.asset_info.price
-    };
-
-    if liquidity_proportion.val == 0u128 {
-        if position.borrowed_usdi.gt(position.borrowed_iasset)? {
-            return Ok(position.borrowed_usdi);
-        } else {
-            return Ok(position.borrowed_iasset.mul(effective_price));
-        }
-    }
-
-    let claimable_usdi = liquidity_proportion.mul(pool.usdi_amount);
-    let claimable_iasset = liquidity_proportion.mul(pool.iasset_amount);
-    let init_price = position.borrowed_usdi.div(position.borrowed_iasset);
-    if pool_price.lt(init_price)? {
-        return position.borrowed_usdi.sub(claimable_usdi);
-    } else if pool_price.gt(init_price)? {
-        return Ok(effective_price.mul(position.borrowed_iasset.sub(claimable_iasset)?));
-    }
-    Ok(Value::new(0, DEVNET_TOKEN_SCALE))
-}
-
 #[derive(Clone, Debug)]
 pub enum HealthScore {
     Healthy { score: f64 },
