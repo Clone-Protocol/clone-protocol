@@ -1542,7 +1542,12 @@ pub struct LiquidateMintPosition<'info> {
         has_one = manager
     )]
     pub token_data: AccountLoader<'info, TokenData>,
-    #[account(has_one = mint_positions)]
+    pub user: AccountInfo<'info>,
+    #[account(
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_nonce,
+        has_one = mint_positions
+    )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
@@ -1587,7 +1592,7 @@ pub struct LiquidateMintPosition<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, position_index: u8, lp_token_reduction: u64)]
+#[instruction(manager_nonce: u8, user_nonce: u8, position_index: u8, lp_token_reduction: u64)]
 pub struct LiquidateCometPositionReduction<'info> {
     pub liquidator: Signer<'info>,
     #[account(
@@ -1601,8 +1606,10 @@ pub struct LiquidateCometPositionReduction<'info> {
         has_one = manager
     )]
     pub token_data: AccountLoader<'info, TokenData>,
+    pub user: AccountInfo<'info>,
     #[account(
-        mut,
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_nonce,
         has_one = comet
     )]
     pub user_account: Box<Account<'info, User>>,
@@ -1658,7 +1665,7 @@ pub struct LiquidateCometPositionReduction<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, position_index: u8, usdi_collateral_index: u8, il_reduction_amount: u64)]
+#[instruction(manager_nonce: u8, user_nonce: u8, position_index: u8, comet_collateral_usdi_index: u8, il_reduction_amount: u64)]
 pub struct LiquidateCometILReduction<'info> {
     pub liquidator: Signer<'info>,
     #[account(
@@ -1671,6 +1678,12 @@ pub struct LiquidateCometILReduction<'info> {
         has_one = manager
     )]
     pub token_data: AccountLoader<'info, TokenData>,
+    pub user: AccountInfo<'info>,
+    #[account(
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_nonce,
+        has_one = comet,
+    )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
@@ -1716,9 +1729,9 @@ pub struct LiquidateCometILReduction<'info> {
     pub liquidator_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.collaterals[usdi_collateral_index as usize].vault,
+        address = token_data.load()?.collaterals[comet.load()?.collaterals[comet_collateral_usdi_index as usize].collateral_index as usize].vault,
+        constraint = &vault.mint == &usdi_mint.key()
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
-
