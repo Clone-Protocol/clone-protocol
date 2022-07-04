@@ -18,6 +18,10 @@ import {
   Keypair,
 } from "@solana/web3.js";
 import { sleep, toScaledNumber, toScaledPercent, div, mul } from "./utils";
+import {
+  MintPositionsUninitialized,
+  SinglePoolCometUninitialized,
+} from "./error";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -89,7 +93,6 @@ export class Incept {
           systemProgram: SYSTEM_PROGRAM_ID,
         },
         instructions: [
-          // @ts-ignore
           await this.program.account.tokenData.createInstruction(
             tokenData,
             TOKEN_DATA_SIZE
@@ -100,7 +103,6 @@ export class Incept {
     );
 
     this.managerAddress = managerPubkeyAndBump;
-    // @ts-ignore
     this.manager = (await this.program.account.manager.fetch(
       this.managerAddress[0]
     )) as Manager;
@@ -108,7 +110,6 @@ export class Incept {
 
   public async loadManager() {
     this.managerAddress = await this.getManagerAddress();
-    // @ts-ignore
     this.manager = (await this.getManagerAccount()) as Manager;
   }
 
@@ -333,24 +334,33 @@ export class Incept {
 
   public async getMintPositions() {
     const userAccountData = (await this.getUserAccount()) as User;
-    // @ts-ignore
+
+    if (
+      userAccountData.mintPositions.toString() === PublicKey.default.toString()
+    ) {
+      throw new MintPositionsUninitialized();
+    }
+
     return (await this.program.account.mintPositions.fetch(
       userAccountData.mintPositions
     )) as MintPositions;
   }
+
   public async getMintPosition(mintIndex: number) {
     return (await this.getMintPositions()).mintPositions[mintIndex];
   }
 
   public async getSinglePoolComets(address?: PublicKey) {
     const userAccountData = (await this.getUserAccount(address)) as User;
+    if (userAccountData.singlePoolComets.equals(PublicKey.default)) {
+      throw new SinglePoolCometUninitialized();
+    }
     return (await this.program.account.singlePoolComets.fetch(
       userAccountData.singlePoolComets
     )) as SinglePoolComets;
   }
   public async getSinglePoolComet(cometIndex: number) {
     const singlePoolComets = await this.getSinglePoolComets();
-    // @ts-ignore
     return (await this.program.account.comet.fetch(
       singlePoolComets.comets[cometIndex]
     )) as Comet;
@@ -358,7 +368,6 @@ export class Incept {
 
   public async getComet(forManager?: boolean, address?: PublicKey) {
     const userAccountData = (await this.getUserAccount(address)) as User;
-    // @ts-ignore
     return (await this.program.account.comet.fetch(
       forManager ? userAccountData.cometManager : userAccountData.comet
     )) as Comet;
@@ -372,7 +381,6 @@ export class Incept {
   }
 
   public async getManagerAccount() {
-    // @ts-ignore
     return (await this.program.account.manager.fetch(
       this.managerAddress[0]
     )) as Manager;
@@ -490,7 +498,6 @@ export class Incept {
           systemProgram: SYSTEM_PROGRAM_ID,
         },
         instructions: [
-          // @ts-ignore
           await this.program.account.mintPositions.createInstruction(
             mintPositionsAccount,
             MINT_POSITIONS_SIZE
@@ -781,7 +788,6 @@ export class Incept {
           systemProgram: SYSTEM_PROGRAM_ID,
         },
         instructions: [
-          // @ts-ignore
           await this.program.account.liquidityPositions.createInstruction(
             liquidityPositionsAccount,
             LIQUIDITY_POSITIONS_SIZE
@@ -1015,21 +1021,20 @@ export class Incept {
     collateralIndex: number,
     signers?: Array<Keypair>
   ) {
+    await this.initializeSinglePoolComet(poolIndex, collateralIndex);
+    const updatePricesIx = await this.updatePricesInstruction(poolIndex);
     const singlePoolComets = await this.getSinglePoolComets();
 
-    await this.initializeSinglePoolComet(poolIndex, collateralIndex);
-
-    const updatePricesIx = await this.updatePricesInstruction();
     const addCollateralToSinglePoolCometIx =
       await this.addCollateralToSinglePoolCometInstruction(
         userCollateralTokenAccount,
         collateralAmount,
-        Number(singlePoolComets.numComets)
+        Number(singlePoolComets.numComets) - 1
       );
     const addLiquidityToSinglePoolCometIx =
       await this.addLiquidityToSinglePoolCometInstruction(
         usdiAmount,
-        Number(singlePoolComets.numComets)
+        Number(singlePoolComets.numComets) - 1
       );
     await this.provider.send(
       new Transaction()
@@ -1062,7 +1067,6 @@ export class Incept {
           systemProgram: SYSTEM_PROGRAM_ID,
         },
         instructions: [
-          // @ts-ignore
           await this.program.account.singlePoolComets.createInstruction(
             singlePoolCometsAccount,
             SINGLE_POOL_COMET_SIZE
@@ -1072,6 +1076,8 @@ export class Incept {
       });
     }
     userAccount = await this.getUserAccount();
+
+    const comets = await this.getSinglePoolComets();
 
     const singlePoolCometAccount = anchor.web3.Keypair.generate();
 
@@ -1091,7 +1097,6 @@ export class Incept {
           systemProgram: SYSTEM_PROGRAM_ID,
         },
         instructions: [
-          // @ts-ignore
           await this.program.account.comet.createInstruction(
             singlePoolCometAccount,
             COMET_SIZE
@@ -1497,7 +1502,6 @@ export class Incept {
           cometManager: cometManagerAccount.publicKey,
         },
         instructions: [
-          // @ts-ignore
           await this.program.account.comet.createInstruction(
             cometManagerAccount,
             COMET_SIZE
@@ -1542,7 +1546,6 @@ export class Incept {
         systemProgram: SYSTEM_PROGRAM_ID,
       },
       instructions: [
-        // @ts-ignore
         await this.program.account.comet.createInstruction(
           cometAccount,
           COMET_SIZE
@@ -2156,7 +2159,16 @@ export class Incept {
   }
 
   public async getUserMintInfos() {
-    const mintPositions = await this.getMintPositions();
+    let mintPositions;
+    try {
+      mintPositions = await this.getMintPositions();
+    } catch (error) {
+      if (error instanceof MintPositionsUninitialized) {
+        return [];
+      }
+      throw error;
+    }
+
     const mintInfos = [];
     for (let i = 0; i < Number(mintPositions.numPositions); i++) {
       let mintPosition = mintPositions.mintPositions[i];
@@ -2240,7 +2252,6 @@ export class Incept {
       let liquidityTokenAmount = toScaledNumber(
         liquidityPosition.liquidityTokenValue
       );
-      // @ts-ignore
       let liquidityTokenSupply = (
         await this.connection.getTokenSupply(pool.liquidityTokenMint)
       ).value!.uiAmount;
@@ -2263,8 +2274,17 @@ export class Incept {
   }
 
   public async getUserSinglePoolCometInfos() {
-    const singlePoolComets = await this.getSinglePoolComets();
-    const cometInfos = [];
+    let singlePoolComets;
+    let cometInfos = [];
+    try {
+      singlePoolComets = await this.getSinglePoolComets();
+    } catch (error) {
+      if (error instanceof SinglePoolCometUninitialized) {
+        return cometInfos;
+      }
+      throw error;
+    }
+
     for (let i = 0; i < Number(singlePoolComets.numComets); i++) {
       let singlePoolComet = await this.getSinglePoolComet(i);
       let cometPosition = singlePoolComet.positions[0];
@@ -2318,7 +2338,6 @@ export class Incept {
       let liquidityTokenAmount = toScaledNumber(
         cometPosition.liquidityTokenValue
       );
-      // @ts-ignore
       let liquidityTokenSupply = (
         await this.connection.getTokenSupply(pool.liquidityTokenMint)
       ).value!.uiAmount;
@@ -2836,13 +2855,13 @@ export interface LiquidationStatus {
   fully: object;
 }
 export interface CometLiquidation {
-  status: number,//LiquidationStatus;
+  status: number;
   excessTokenTypeIsUsdi: number;
   excessTokenAmount: Value;
 }
 
 export interface Comet {
-  isSinglePool: number;
+  isSinglePool: BN;
   owner: PublicKey;
   numPositions: BN;
   numCollaterals: BN;
