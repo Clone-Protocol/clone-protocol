@@ -2708,7 +2708,7 @@ export class Incept {
     let tokenData = await this.getTokenData();
     let pool = tokenData.pools[position.poolIndex];
     const liquidatorUsdiTokenAccount =
-      await this.getOrCreateAssociatedTokenAccount(this.manager.usdiMint);
+      await this.getOrCreateAssociatedTokenAccount(this.manager!.usdiMint);
     const liquidatoriAssetTokenAccount =
       await this.getOrCreateAssociatedTokenAccount(pool.assetInfo.iassetMint);
 
@@ -2721,11 +2721,11 @@ export class Incept {
         accounts: {
           liquidator: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           user: liquidateeAddress,
           userAccount: userPubkey,
           comet: userAccount.comet,
-          usdiMint: this.manager.usdiMint,
+          usdiMint: this.manager!.usdiMint,
           iassetMint: pool.assetInfo.iassetMint,
           ammUsdiTokenAccount: pool.usdiTokenAccount,
           ammIassetTokenAccount: pool.iassetTokenAccount,
@@ -2772,7 +2772,7 @@ export class Incept {
       comet.collaterals[usdiCometCollateralIndex].collateralIndex;
     let usdiCollateral = tokenData.collaterals[usdiCollateralIndex];
     const liquidatorUsdiTokenAccount =
-      await this.getOrCreateAssociatedTokenAccount(this.manager.usdiMint);
+      await this.getOrCreateAssociatedTokenAccount(this.manager!.usdiMint);
 
     return await this.program.instruction.liquidateCometIlReduction(
       this.managerAddress[1],
@@ -2784,11 +2784,11 @@ export class Incept {
         accounts: {
           liquidator: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
-          tokenData: this.manager.tokenData,
+          tokenData: this.manager!.tokenData,
           user: liquidateeAddress,
           userAccount: userPubkey,
           comet: userAccount.comet,
-          usdiMint: this.manager.usdiMint,
+          usdiMint: this.manager!.usdiMint,
           vault: usdiCollateral.vault,
           iassetMint: pool.assetInfo.iassetMint,
           ammUsdiTokenAccount: pool.usdiTokenAccount,
