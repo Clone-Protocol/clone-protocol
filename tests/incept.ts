@@ -24,7 +24,7 @@ import {
   ChainLinkOracle,
 } from "../sdk/src/oracle";
 import { sleep, signAndSend } from "../sdk/src/utils";
-import { SinglePoolComets } from '../sdk/src/incept';
+import { SinglePoolComets } from "../sdk/src/incept";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -373,7 +373,6 @@ describe("incept", async () => {
       "confirmed"
     );
     assert.equal(vault.value!.uiAmount, 21000000, "check usdc vault amount");
-
   });
 
   it("full withdraw and close mint position!", async () => {
@@ -430,8 +429,7 @@ describe("incept", async () => {
       0,
       signers
     );
-  })
-
+  });
 
   it("mint collateral added!", async () => {
     // @ts-ignore
@@ -1155,7 +1153,8 @@ describe("incept", async () => {
     const tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[poolIndex];
 
-    let withdrawableCollateral = await inceptClient.calculateMaxWithdrawableCollateral(0);
+    let withdrawableCollateral =
+      await inceptClient.calculateMaxWithdrawableCollateral(0);
     assert.equal(withdrawableCollateral, 103.55236688391187);
 
     usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
@@ -1218,7 +1217,8 @@ describe("incept", async () => {
       "check pool iAsset"
     );
 
-    withdrawableCollateral = await inceptClient.calculateMaxWithdrawableCollateral(0);
+    withdrawableCollateral =
+      await inceptClient.calculateMaxWithdrawableCollateral(0);
     assert.equal(withdrawableCollateral, 0);
   });
 
@@ -1330,7 +1330,9 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
-    const prevSolanaBalance = await inceptClient.connection.getBalance(walletPubkey);
+    const prevSolanaBalance = await inceptClient.connection.getBalance(
+      walletPubkey
+    );
 
     await inceptClient.closeSinglePoolComet(
       mockUSDCTokenAccountInfo.address,
@@ -1400,12 +1402,18 @@ describe("incept", async () => {
       "check num single pool comets"
     );
 
-    const currentSolanaBalance = await inceptClient.connection.getBalance(walletPubkey);
-    assert.isAbove(currentSolanaBalance, prevSolanaBalance, 'should have more lamports after close');
+    const currentSolanaBalance = await inceptClient.connection.getBalance(
+      walletPubkey
+    );
+    assert.isAbove(
+      currentSolanaBalance,
+      prevSolanaBalance,
+      "should have more lamports after close"
+    );
   });
 
   it("comet initialized!", async () => {
-    await inceptClient.initializeComet()
+    await inceptClient.initializeComet();
   });
 
   it("comet collateral added!", async () => {
@@ -1440,11 +1448,7 @@ describe("incept", async () => {
       collateral.vault,
       "recent"
     );
-    assert.equal(
-      vault.value!.uiAmount,
-      21000012.635265,
-      "check vault balance"
-    );
+    assert.equal(vault.value!.uiAmount, 21000012.635265, "check vault balance");
   });
 
   it("comet collateral withdrawn!", async () => {
@@ -1453,12 +1457,20 @@ describe("incept", async () => {
         mockUSDCMint.publicKey
       );
 
+    let comet = await inceptClient.getComet(false);
+    console.log("Num collaterals in comet:", comet.numCollaterals.toNumber());
+    console.log("Before collateral withdrawal", comet.collaterals[0]);
+
     await inceptClient.withdrawCollateralFromComet(
       mockUSDCTokenAccountInfo.address,
       new BN(10000000),
       0,
       false
     );
+
+    comet = await inceptClient.getComet(false);
+    console.log("Num collaterals in comet:", comet.numCollaterals.toNumber());
+    console.log("After collateral withdrawal", comet.collaterals[0]);
 
     await sleep(200);
 
@@ -1479,11 +1491,7 @@ describe("incept", async () => {
       collateral.vault,
       "recent"
     );
-    assert.equal(
-      vault.value!.uiAmount,
-      21000011.635265,
-      "check vault balance"
-    );
+    assert.equal(vault.value!.uiAmount, 21000011.635265, "check vault balance");
   });
 
   it("comet liquidity added!", async () => {
@@ -1542,8 +1550,7 @@ describe("incept", async () => {
 
     const totalILD = await inceptClient.getILD();
     const poolILD = await inceptClient.getILD(0);
-    assert.equal(totalILD, poolILD, 'check ILD calculation');
-
+    assert.equal(totalILD, poolILD, "check ILD calculation");
   });
 
   it("comet liquidity withdrawn!", async () => {

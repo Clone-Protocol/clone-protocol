@@ -135,6 +135,14 @@ pub enum InceptError {
     /// Not Single Pool Comet
     #[error("Not Single Pool Comet")]
     NotSinglePoolComet,
+
+    /// Single Pool Comet Not Empty
+    #[error("Single Pool Comet Not Empty")]
+    SinglePoolCometNotEmpty,
+
+    /// Liquidity Not Withdrawn
+    #[error("Liquidity Not Withdrawn")]
+    LiquidityNotWithdrawn,
 }
 
 impl From<InceptError> for ProgramError {

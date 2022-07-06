@@ -2705,8 +2705,14 @@ export interface MintPosition {
   borrowedIasset: Value;
 }
 
+export interface LiquidationStatus {
+  healthy: object;
+  partially: object;
+  fully: object;
+}
+
 export interface CometLiquidation {
-  status: number;
+  status: LiquidationStatus;
   excess_token_type_is_usdi: number;
   excess_token_amount: Value;
 }
