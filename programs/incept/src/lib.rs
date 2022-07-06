@@ -6,8 +6,8 @@ use error::*;
 use instructions::*;
 use pyth::pc::Price;
 use states::{
-    AssetInfo, Collateral, CometCollateral, CometLiquidation, CometPosition,
-    LiquidityPosition, MintPosition, Pool, TokenData, Value,
+    AssetInfo, Collateral, CometCollateral, CometLiquidation, CometPosition, LiquidityPosition,
+    MintPosition, Pool, TokenData, Value,
 };
 
 mod error;
@@ -2134,18 +2134,18 @@ pub mod incept {
         )?;
 
         // update pool data
-        token_data.pools[comet_position.pool_index as usize].iasset_amount = Value::new(
-            ctx.accounts.amm_iasset_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-        token_data.pools[comet_position.pool_index as usize].usdi_amount = Value::new(
-            ctx.accounts.amm_usdi_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = Value::new(
-            ctx.accounts.liquidity_token_mint.supply.into(),
-            DEVNET_TOKEN_SCALE,
-        );
+        token_data.pools[comet_position.pool_index as usize].iasset_amount = token_data.pools
+            [comet_position.pool_index as usize]
+            .iasset_amount
+            .sub(iasset_liquidity_value)?;
+        token_data.pools[comet_position.pool_index as usize].usdi_amount = token_data.pools
+            [comet_position.pool_index as usize]
+            .usdi_amount
+            .sub(usdi_liquidity_value)?;
+        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = token_data
+            .pools[comet_position.pool_index as usize]
+            .liquidity_token_supply
+            .sub(liquidity_token_value)?;
 
         Ok(())
     }
@@ -2440,18 +2440,18 @@ pub mod incept {
         )?;
 
         // update pool data
-        token_data.pools[comet_position.pool_index as usize].iasset_amount = Value::new(
-            ctx.accounts.amm_iasset_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-        token_data.pools[comet_position.pool_index as usize].usdi_amount = Value::new(
-            ctx.accounts.amm_usdi_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = Value::new(
-            ctx.accounts.liquidity_token_mint.supply.into(),
-            DEVNET_TOKEN_SCALE,
-        );
+        token_data.pools[comet_position.pool_index as usize].iasset_amount = token_data.pools
+            [comet_position.pool_index as usize]
+            .iasset_amount
+            .sub(iasset_liquidity_value)?;
+        token_data.pools[comet_position.pool_index as usize].usdi_amount = token_data.pools
+            [comet_position.pool_index as usize]
+            .usdi_amount
+            .sub(usdi_liquidity_value)?;
+        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = token_data
+            .pools[comet_position.pool_index as usize]
+            .liquidity_token_supply
+            .sub(liquidity_token_value)?;
 
         Ok(())
     }

@@ -1044,11 +1044,22 @@ describe("incept", async () => {
         mockUSDCMint.publicKey
       );
 
+    // Estimate using edit.
+    const estimation = await inceptClient.calculateEditCometSinglePool(
+      0,
+      -5,
+      0
+    );
+
     await inceptClient.withdrawCollateralFromSinglePoolComet(
       mockUSDCTokenAccountInfo.address,
       new BN(50000000),
       0
     );
+
+    const health = await inceptClient.getSinglePoolHealthScore(0);
+
+    assert.closeTo(estimation.healthScore, health.healthScore, 0.01);
 
     await sleep(200);
 
@@ -1079,9 +1090,20 @@ describe("incept", async () => {
         mockUSDCMint.publicKey
       );
 
+    // Estimate using edit.
+    const estimation = await inceptClient.calculateEditCometSinglePool(
+      0,
+      0,
+      510
+    );
+
     await inceptClient.addLiquidityToSinglePoolComet(new BN(51000000000), 0);
 
     await sleep(200);
+
+    const health = await inceptClient.getSinglePoolHealthScore(0);
+
+    assert.closeTo(estimation.healthScore, health.healthScore, 0.01);
 
     const tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[0];
@@ -1124,14 +1146,23 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
+    // Estimate using edit.
+    const estimation = await inceptClient.calculateEditCometSinglePool(
+      0,
+      0,
+      -10
+    );
+
     await inceptClient.withdrawLiquidityFromSinglePoolComet(
       iassetTokenAccountInfo.address,
       usdiTokenAccountInfo.address,
       new BN(1000000000),
       0
     );
-
     await sleep(200);
+
+    const healthScore = await inceptClient.getSinglePoolHealthScore(0);
+    assert.closeTo(estimation.healthScore, healthScore.healthScore, 0.1);
 
     const usdiAccountBalance =
       await inceptClient.connection.getTokenAccountBalance(
@@ -1162,10 +1193,6 @@ describe("incept", async () => {
     let poolIndex = 0;
     const tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[poolIndex];
-
-    let withdrawableCollateral =
-      await inceptClient.calculateMaxWithdrawableCollateral(0);
-    assert.equal(withdrawableCollateral, 103.55236688391187);
 
     usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
       inceptClient.manager.usdiMint
@@ -1226,10 +1253,6 @@ describe("incept", async () => {
       81010.29109402,
       "check pool iAsset"
     );
-
-    withdrawableCollateral =
-      await inceptClient.calculateMaxWithdrawableCollateral(0);
-    assert.equal(withdrawableCollateral, 0);
   });
 
   it("single pool comet recentered!", async () => {
@@ -1249,6 +1272,10 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         pool.assetInfo.iassetMint
       );
+    const info = await inceptClient.getSinglePoolHealthScore(0);
+
+    const recenterEstimation =
+      await inceptClient.calculateCometRecenterSinglePool(0);
 
     await inceptClient.recenterSinglePoolComet(
       iassetTokenAccountInfo.address,
@@ -1256,6 +1283,16 @@ describe("incept", async () => {
     );
 
     await sleep(200);
+
+    const info2 = await inceptClient.getSinglePoolHealthScore(0);
+
+    assert.closeTo(info2.healthScore, recenterEstimation.healthScore, 0.1);
+
+    assert.isAbove(
+      info2.healthScore,
+      info.healthScore,
+      "recenter comet should increase health!"
+    );
 
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
@@ -1549,7 +1586,13 @@ describe("incept", async () => {
 
     const totalILD = await inceptClient.getILD();
     const poolILD = await inceptClient.getILD(0);
-    assert.equal(totalILD, poolILD, "check ILD calculation");
+
+    assert.equal(totalILD[0].ILD, poolILD[0].ILD, "check ILD calculation");
+    assert.equal(
+      totalILD[0].isUsdi,
+      poolILD[0].isUsdi,
+      "check ILD calculation"
+    );
   });
 
   it("comet liquidity withdrawn!", async () => {
@@ -1762,8 +1805,6 @@ describe("incept", async () => {
   });
 
   it("comet liquidation", async () => {
-    const { userPubkey, bump } = await inceptClient.getUserAddress();
-
     let tokenData = await inceptClient.getTokenData();
     const poolIndex = 0;
     let pool = tokenData.pools[poolIndex];

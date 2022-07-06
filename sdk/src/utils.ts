@@ -49,7 +49,11 @@ export const div = (value1: Value, value2: Value) => {
 };
 
 export const toScaledNumber = (value: Value) => {
-  return Number(value.val) / Math.pow(10, value.scale.toNumber());
+  const val = value.val.toNumber();
+  if (val === 0) {
+    return 0;
+  }
+  return val / Math.pow(10, value.scale.toNumber());
 };
 
 export const toScaledPercent = (value: Value) => {

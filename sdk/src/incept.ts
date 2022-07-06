@@ -22,6 +22,7 @@ import {
   MintPositionsUninitialized,
   SinglePoolCometUninitialized,
 } from "./error";
+import { assert } from "chai";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -2609,14 +2610,59 @@ export class Incept {
     return 100 - loss;
   }
 
-  public async getILD(poolIndex?: number) {
+  public async getSinglePoolHealthScore(
+    cometIndex: number
+  ): Promise<{ healthScore: number; ILD: number; ildInUsdi: boolean }> {
+    const tokenData = await this.getTokenData();
+    const comet = await this.getSinglePoolComet(cometIndex);
+
+    let position = comet.positions[0];
+    let pool = tokenData.pools[position.poolIndex];
+    let poolUsdiAmount = toScaledNumber(pool.usdiAmount);
+    let poolIassetAmount = toScaledNumber(pool.iassetAmount);
+    let poolPrice = poolUsdiAmount / poolIassetAmount;
+    let borrowedUsdi = toScaledNumber(position.borrowedUsdi);
+    let borrowedIasset = toScaledNumber(position.borrowedIasset);
+    let initPrice = borrowedUsdi / borrowedIasset;
+
+    let claimableRatio =
+      toScaledNumber(position.liquidityTokenValue) /
+      toScaledNumber(pool.liquidityTokenSupply);
+
+    let markPrice = Math.max(toScaledNumber(pool.assetInfo.price), poolPrice);
+
+    let claimableUsdi = poolUsdiAmount * claimableRatio;
+    let claimableIasset = poolIassetAmount * claimableRatio;
+    let ILD = 0;
+    let isUsdi = false;
+    if (initPrice < poolPrice) {
+      ILD += (borrowedIasset - claimableIasset) * markPrice;
+    } else if (poolPrice < initPrice) {
+      ILD += borrowedUsdi - claimableUsdi;
+      isUsdi = true;
+    }
+
+    const ilCoefficient = toScaledNumber(tokenData.ilHealthScoreCoefficient);
+    const assetCoefficient = toScaledNumber(
+      tokenData.pools[position.poolIndex].assetInfo.healthScoreCoefficient
+    );
+    let totalLoss = ilCoefficient * ILD + assetCoefficient * borrowedUsdi;
+    const healthScore =
+      100 - totalLoss / toScaledNumber(comet.totalCollateralAmount);
+
+    return { healthScore: healthScore, ILD: ILD, ildInUsdi: isUsdi };
+  }
+
+  public async getILD(
+    poolIndex?: number
+  ): Promise<{ isUsdi: boolean; ILD: number; poolIndex: number }[]> {
     const tokenData = await this.getTokenData();
     const comet = await this.getComet();
 
-    let ILD = 0;
+    let results = [];
 
     comet.positions.slice(0, Number(comet.numPositions)).forEach((position) => {
-      if (poolIndex !== null && poolIndex !== position.poolIndex) {
+      if (poolIndex !== undefined && poolIndex !== Number(position.poolIndex)) {
         return;
       }
 
@@ -2627,25 +2673,27 @@ export class Incept {
 
       let borrowedUsdi = toScaledNumber(position.borrowedUsdi);
       let borrowedIasset = toScaledNumber(position.borrowedIasset);
+      let initPrice = borrowedUsdi / borrowedIasset;
+
       let claimableRatio =
         toScaledNumber(position.liquidityTokenValue) /
         toScaledNumber(pool.liquidityTokenSupply);
 
       let claimableUsdi = poolUsdiAmount * claimableRatio;
       let claimableIasset = poolIassetAmount * claimableRatio;
-
-      if (borrowedUsdi < claimableUsdi) {
-        ILD += claimableUsdi - borrowedUsdi;
-      } else if (borrowedIasset < claimableIasset) {
-        let markPrice = Math.max(
-          toScaledNumber(pool.assetInfo.price),
-          poolPrice
-        );
-        ILD += markPrice * (claimableIasset - borrowedIasset);
+      let ILD = 0;
+      let isUsdi = false;
+      if (poolPrice < initPrice) {
+        ILD += borrowedUsdi - claimableUsdi;
+        isUsdi = true;
+      } else if (initPrice < poolPrice) {
+        ILD += borrowedIasset - claimableIasset;
       }
+
+      results.push({ isUsdi: isUsdi, ILD: ILD, poolIndex: position.poolIndex });
     });
 
-    return ILD;
+    return results;
   }
 
   public async liquidateCometPositionReductionInstruction(
@@ -2772,41 +2820,193 @@ export class Incept {
     );
   }
 
-  public async calculateMaxWithdrawableCollateral(cometIndex: number) {
-    const singlePoolComet = await this.getSinglePoolComet(cometIndex);
-    const pool = await this.getPool(singlePoolComet.positions[0].poolIndex);
+  public async calculateEditCometSinglePool(
+    cometIndex: number,
+    collateralChange: number,
+    usdiBorrowedChange: number
+  ): Promise<{
+    maxCollateralWithdrawable: number;
+    maxUsdiPosition: number;
+    healthScore: number;
+    lowerPrice: number;
+    upperPrice: number;
+  }> {
+    const tokenData = await this.getTokenData();
+    const comet = await this.getSinglePoolComet(cometIndex);
+    const position = comet.positions[0];
+    const pool = tokenData.pools[position.poolIndex];
 
-    const borrowedUsdi = toScaledNumber(
-      singlePoolComet.positions[0].borrowedUsdi
+    let lpTokens = toScaledNumber(position.liquidityTokenValue);
+    let positionBorrowedUsdi = toScaledNumber(position.borrowedUsdi);
+    let positionBorrowedIasset = toScaledNumber(position.borrowedIasset);
+    const poolUsdi = toScaledNumber(pool.usdiAmount);
+    const poolIasset = toScaledNumber(pool.iassetAmount);
+    const poolLpTokens = toScaledNumber(pool.liquidityTokenSupply);
+    const claimableRatio = lpTokens / poolLpTokens;
+
+    const initPrice = positionBorrowedUsdi / positionBorrowedIasset;
+    const poolPrice = poolUsdi / poolIasset;
+    const iassetBorrowedChange = usdiBorrowedChange / poolPrice;
+
+    let markPrice = Math.max(toScaledNumber(pool.assetInfo.price), poolPrice);
+
+    // Calculate total lp tokens
+    if (usdiBorrowedChange > 0) {
+      lpTokens += usdiBorrowedChange / (usdiBorrowedChange + poolUsdi);
+    } else if (usdiBorrowedChange < 0) {
+      const claimableUsdi = claimableRatio * poolUsdi;
+      const newLpTokens =
+        (lpTokens * (positionBorrowedUsdi + usdiBorrowedChange)) /
+        claimableUsdi;
+      lpTokens = newLpTokens;
+    }
+    positionBorrowedUsdi += usdiBorrowedChange;
+    positionBorrowedIasset += iassetBorrowedChange;
+
+    const currentCollateral = toScaledNumber(comet.totalCollateralAmount);
+    let newCollateralAmount = currentCollateral + collateralChange;
+
+    let newInitPrice = positionBorrowedUsdi / positionBorrowedIasset;
+    let newClaimableRatio = lpTokens / poolLpTokens;
+    let newPoolUsdi = poolUsdi + usdiBorrowedChange;
+    let newPooliAsset = poolIasset + iassetBorrowedChange;
+
+    let ILD = 0;
+    if (newInitPrice < poolPrice) {
+      // IL in iAsset
+      ILD +=
+        (positionBorrowedIasset - newClaimableRatio * newPooliAsset) *
+        markPrice;
+    } else if (newInitPrice > poolPrice) {
+      ILD += positionBorrowedUsdi - newClaimableRatio * newPoolUsdi;
+    }
+
+    const ilHealthScoreCoefficient = toScaledNumber(
+      tokenData.ilHealthScoreCoefficient
     );
-    const borrowedIasset = toScaledNumber(
-      singlePoolComet.positions[0].borrowedIasset
+    const poolCoefficient = toScaledNumber(
+      pool.assetInfo.healthScoreCoefficient
     );
 
-    const totalLpTokenSupply = (
-      await this.connection.getTokenSupply(pool.liquidityTokenMint, "confirmed")
-    ).value!.uiAmount as number;
+    const ILDloss = ilHealthScoreCoefficient * ILD;
+    const positionLoss = poolCoefficient * positionBorrowedUsdi;
+    const loss = ILDloss + positionLoss;
 
-    const L =
-      toScaledNumber(singlePoolComet.positions[0].liquidityTokenValue) /
-      totalLpTokenSupply;
+    const newHealthScore = 100 - loss / newCollateralAmount;
+    const maxCollateralWithdrawable = currentCollateral - loss / 100;
 
-    const [iAsset, usdi] = await this.getPoolBalances(
-      singlePoolComet.positions[0].poolIndex
+    const maxILD =
+      (100 * newCollateralAmount - positionLoss) / ilHealthScoreCoefficient;
+
+    const newInvariant = newPoolUsdi * newPooliAsset;
+
+    // Solution 1: Price goes down, IL is in USDi
+    let y1 = (positionBorrowedUsdi - maxILD) / newClaimableRatio;
+    const lowerPrice = (y1 * y1) / newInvariant;
+
+    // Solution 2: Price goes up, IL is in iAsset
+    let a = positionBorrowedIasset / newInvariant;
+    let b = -newClaimableRatio;
+    let c = -maxILD;
+    let y2 = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+    const upperPrice = (y2 * y2) / newInvariant;
+
+    // Max USDi borrowed position possible before health = 0
+    a = ilHealthScoreCoefficient + poolCoefficient;
+    b = poolCoefficient * newPoolUsdi - 100 * newCollateralAmount;
+    c = -100 * newCollateralAmount * newPoolUsdi;
+
+    let maxUsdiPosition = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+
+    return {
+      maxCollateralWithdrawable: maxCollateralWithdrawable,
+      healthScore: newHealthScore,
+      maxUsdiPosition: maxUsdiPosition,
+      lowerPrice: lowerPrice,
+      upperPrice: upperPrice,
+    };
+  }
+
+  public async calculateCometRecenterSinglePool(cometIndex: number): Promise<{
+    healthScore: number;
+    usdiCost: number;
+    lowerPrice: number;
+    upperPrice: number;
+  }> {
+    const tokenData = await this.getTokenData();
+    const comet = await this.getSinglePoolComet(cometIndex);
+    const position = comet.positions[0];
+    const pool = tokenData.pools[position.poolIndex];
+
+    const ilCoefficient = toScaledNumber(tokenData.ilHealthScoreCoefficient);
+    const assetCoefficient = toScaledNumber(
+      pool.assetInfo.healthScoreCoefficient
     );
 
-    const poolPrice = usdi / iAsset;
-    const k = usdi * iAsset;
+    const borrowedUsdi = toScaledNumber(position.borrowedUsdi);
+    const borrowedIasset = toScaledNumber(position.borrowedIasset);
+    const lpTokens = toScaledNumber(position.liquidityTokenValue);
 
-    const currentCollateral = toScaledNumber(
-      singlePoolComet.totalCollateralAmount
-    );
+    const initPrice = borrowedUsdi / borrowedIasset;
+    let poolUsdiAmount = toScaledNumber(pool.usdiAmount);
+    let poolIassetAmount = toScaledNumber(pool.iassetAmount);
+    let poolPrice = poolUsdiAmount / poolIassetAmount;
+    const invariant = poolUsdiAmount * poolIassetAmount;
 
-    let requiredCollateral = Math.max(
-      borrowedUsdi - L * Math.sqrt(0.5 * poolPrice * k),
-      borrowedIasset * 1.5 * poolPrice - L * Math.sqrt(1.5 * poolPrice * k)
+    const claimableRatio =
+      lpTokens / (lpTokens + toScaledNumber(pool.liquidityTokenSupply));
+
+    assert.notEqual(
+      initPrice,
+      poolPrice,
+      "Cannot recenter with same initial and pool prices"
     );
-    return Math.max(currentCollateral - requiredCollateral, 0);
+    const iAssetDebt = Math.abs(
+      borrowedIasset - claimableRatio * poolIassetAmount
+    );
+    const usdiDebt = Math.abs(borrowedUsdi - claimableRatio * poolUsdiAmount);
+    let usdiCost;
+    if (initPrice < poolPrice) {
+      // calculate extra usdi comet can claim, iasset debt that comet cannot claim, and usdi amount needed to buy iasset and cover debt
+      const requiredUsdi =
+        invariant / (poolIassetAmount - iAssetDebt) - poolUsdiAmount;
+      usdiCost = requiredUsdi - usdiDebt;
+
+      poolIassetAmount -= iAssetDebt;
+      poolUsdiAmount += requiredUsdi;
+    } else {
+      // calculate extra iAsset comet can claim, usdi debt that comet cannot claim, and amount of usdi gained from trading iasset.
+      let extraUsdiFromIasset =
+        poolIassetAmount - invariant / (poolIassetAmount + iAssetDebt);
+      usdiCost = usdiDebt - extraUsdiFromIasset;
+    }
+
+    const newBorrowedUsdi = claimableRatio * poolUsdiAmount;
+    const newBorrowedIasset = claimableRatio * poolIassetAmount;
+    const newCollateral =
+      toScaledNumber(comet.totalCollateralAmount) - usdiCost;
+
+    const positionLoss = assetCoefficient * newBorrowedUsdi;
+
+    const healthScore = 100 - positionLoss / newCollateral;
+
+    const maxILD = (100 * newCollateral - positionLoss) / ilCoefficient;
+
+    // Solution 1: Price goes down, IL is in USDi
+    let y1 = (newBorrowedUsdi - maxILD) / claimableRatio;
+
+    // Solution 2: Price goes up, IL is in iAsset
+    let a = newBorrowedIasset / invariant;
+    let b = -claimableRatio;
+    let c = -maxILD;
+    let y2 = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+
+    return {
+      usdiCost: usdiCost,
+      healthScore: healthScore,
+      lowerPrice: (y1 * y1) / invariant,
+      upperPrice: (y2 * y2) / invariant,
+    };
   }
 }
 
