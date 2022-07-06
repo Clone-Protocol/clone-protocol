@@ -18,7 +18,7 @@ mod value;
 
 use crate::value::Div;
 
-declare_id!("4RCgZyehQFKVBEnXf1ZfKksAL3YFbwCKqUmbwpQx7eHf");
+declare_id!("7EJgijJbPFcDeqTweGQrdsQWdBp6SaQgJoAU6MUF5dQx");
 
 #[program]
 pub mod incept {
@@ -33,6 +33,8 @@ pub mod incept {
         ctx: Context<InitializeManager>,
         _manager_nonce: u8,
         _il_health_score_coefficient: u64,
+        _il_health_score_cutoff: u64,
+        _il_liquidation_reward_pct: u64,
     ) -> ProgramResult {
         require!(
             _il_health_score_coefficient > 0,
@@ -55,6 +57,10 @@ pub mod incept {
         token_data.chainlink_program = *ctx.accounts.chainlink_program.to_account_info().key;
         token_data.il_health_score_coefficient =
             Value::new(_il_health_score_coefficient.into(), DEVNET_TOKEN_SCALE);
+        token_data.il_health_score_cutoff =
+            Value::new(_il_health_score_cutoff.into(), DEVNET_TOKEN_SCALE);
+        token_data.il_liquidation_reward_pct =
+            Value::new(_il_liquidation_reward_pct.into(), DEVNET_TOKEN_SCALE);
 
         Ok(())
     }
@@ -280,6 +286,9 @@ pub mod incept {
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
         let chainlink_program = &ctx.accounts.chainlink_program;
         let n_accounts = ctx.remaining_accounts.iter().len();
+        if n_accounts == 0 {
+            return Err(InceptError::NoRemainingAccountsSupplied.into());
+        }
         // loop through each oracle entered into the instruction
         for i in 0..n_accounts {
             if i % 2 != 0 {
@@ -296,12 +305,11 @@ pub mod incept {
                     pyth_oracle.to_account_info().key,
                     chainlink_oracle.to_account_info().key,
                 ],
-            )
-            .unwrap();
+            )?;
             let pyth_price = Value::new(price_feed.agg.price.try_into().unwrap(), expo_u8);
             let confidence = Value::new(price_feed.agg.conf.try_into().unwrap(), expo_u8);
             // ensure prices have proper confidence
-            check_price_confidence(pyth_price, confidence).unwrap();
+            check_price_confidence(pyth_price, confidence)?;
 
             // Generate data from Chainlink oracle
             let round = chainlink::latest_round_data(
@@ -398,7 +406,6 @@ pub mod incept {
         iasset_amount: u64,
         collateral_amount: u64,
     ) -> ProgramResult {
-        msg!("hi");
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
@@ -1042,23 +1049,21 @@ pub mod incept {
             seeds,
         );
 
-        token::transfer(
-            send_iasset_to_user_context,
-            iasset_amount_value
-                .sub(iasset_amount_value.mul(pool.liquidity_trading_fee))
-                .unwrap()
-                .to_u64(),
-        )?;
+        let iasset_amount_value = iasset_amount_value
+            .sub(iasset_amount_value.mul(pool.liquidity_trading_fee))?
+            .to_u64();
+
+        token::transfer(send_iasset_to_user_context, iasset_amount_value)?;
 
         // update pool data
-        token_data.pools[pool_index as usize].iasset_amount = Value::new(
-            ctx.accounts.amm_iasset_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-        token_data.pools[pool_index as usize].usdi_amount = Value::new(
-            ctx.accounts.amm_usdi_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
+        let usdi_pool_total =
+            ctx.accounts.amm_usdi_token_account.amount + usdi_amount_value.to_u64();
+        let iasset_pool_total = ctx.accounts.amm_iasset_token_account.amount - iasset_amount_value;
+
+        token_data.pools[pool_index as usize].iasset_amount =
+            Value::new(iasset_pool_total.into(), DEVNET_TOKEN_SCALE);
+        token_data.pools[pool_index as usize].usdi_amount =
+            Value::new(usdi_pool_total.into(), DEVNET_TOKEN_SCALE);
 
         Ok(())
     }
@@ -1132,24 +1137,21 @@ pub mod incept {
             seeds,
         );
 
-        token::transfer(
-            send_usdi_to_user_context,
-            usdi_amount_value
-                .sub(usdi_amount_value.mul(pool.liquidity_trading_fee))
-                .unwrap()
-                .to_u64(),
-        )?;
+        let usdi_amount_value = usdi_amount_value
+            .sub(usdi_amount_value.mul(pool.liquidity_trading_fee))?
+            .to_u64();
+
+        token::transfer(send_usdi_to_user_context, usdi_amount_value)?;
 
         // update pool data
-        token_data.pools[pool_index as usize].iasset_amount = Value::new(
-            ctx.accounts.amm_iasset_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-        token_data.pools[pool_index as usize].usdi_amount = Value::new(
-            ctx.accounts.amm_usdi_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
+        let usdi_pool_total = ctx.accounts.amm_usdi_token_account.amount - usdi_amount_value;
+        let iasset_pool_total =
+            ctx.accounts.amm_iasset_token_account.amount + iasset_amount_value.to_u64();
 
+        token_data.pools[pool_index as usize].iasset_amount =
+            Value::new(iasset_pool_total.into(), DEVNET_TOKEN_SCALE);
+        token_data.pools[pool_index as usize].usdi_amount =
+            Value::new(usdi_pool_total.into(), DEVNET_TOKEN_SCALE);
         Ok(())
     }
 
@@ -1204,17 +1206,24 @@ pub mod incept {
         _user_nonce: u8,
         comet_index: u8,
     ) -> ProgramResult {
-        let mut single_pool_comets = ctx.accounts.single_pool_comets.load_mut()?;
+        let mut close = false;
+        {
+            let mut single_pool_comets = ctx.accounts.single_pool_comets.load_mut()?;
 
-        // remove single pool comet
-        single_pool_comets.remove(comet_index as usize);
+            // remove single pool comet
+            single_pool_comets.remove(comet_index as usize);
 
-        // close single pool comet account
-        ctx.accounts
-            .single_pool_comet
-            .close(ctx.accounts.user.to_account_info())?;
+            // close single pool comet account
+            ctx.accounts
+                .single_pool_comet
+                .close(ctx.accounts.user.to_account_info())?;
 
-        if single_pool_comets.num_comets == 0 {
+            // check to see if single pool comets account should be closed
+            if single_pool_comets.num_comets == 0 {
+                close = true;
+            }
+        }
+        if close {
             // close single pool comets account if no comets remain
             ctx.accounts
                 .single_pool_comets
@@ -1271,19 +1280,8 @@ pub mod incept {
             .add(added_collateral_value.scale_to(DEVNET_TOKEN_SCALE))
             .unwrap();
 
-        // set next collateral to default data
-        let num_collaterals = comet.num_collaterals;
-        // comet.collaterals[num_collaterals as usize] = CometCollateral::default();
-        // msg!("hello");
-        msg!(
-            &comet.collaterals[num_collaterals as usize]
-                .collateral_index
-                .to_string()[..]
-        );
-
         // find the comet collateral index
         let comet_collateral_index = comet.get_collateral_index(collateral_index);
-        msg!(&comet_collateral_index.to_string());
 
         // check to see if a new collateral must be added to the position
         if comet_collateral_index == usize::MAX {
@@ -1313,71 +1311,88 @@ pub mod incept {
     pub fn withdraw_collateral_from_comet(
         ctx: Context<WithdrawCollateralFromComet>,
         manager_nonce: u8,
+        _user_nonce: u8,
         comet_collateral_index: u8,
         collateral_amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
-        let mut comet = ctx.accounts.comet.load_mut()?;
-        let comet_collateral = comet.collaterals[comet_collateral_index as usize];
-        let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
 
-        let subtracted_collateral_value = Value::new(
-            collateral_amount.into(),
-            collateral.vault_comet_supply.scale.try_into().unwrap(),
-        );
+        let mut close = false;
+        {
+            let mut comet = ctx.accounts.comet.load_mut()?;
+            let comet_collateral = comet.collaterals[comet_collateral_index as usize];
+            let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
 
-        // subtract collateral amount from vault supply
-        token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
-            collateral
-                .vault_comet_supply
+            let subtracted_collateral_value = Value::new(
+                collateral_amount.into(),
+                collateral.vault_comet_supply.scale.try_into().unwrap(),
+            );
+
+            // subtract collateral amount from vault supply
+            token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
+                collateral
+                    .vault_comet_supply
+                    .sub(subtracted_collateral_value)
+                    .unwrap();
+
+            // subtract collateral amount from total collateral amount
+            comet.total_collateral_amount = comet
+                .total_collateral_amount
+                .sub(subtracted_collateral_value.scale_to(DEVNET_TOKEN_SCALE))
+                .unwrap();
+
+            // ensure the position holds sufficient collateral
+            if comet_collateral
+                .collateral_amount
+                .lt(subtracted_collateral_value)
+                .unwrap()
+            {
+                return Err(InceptError::InsufficientCollateral.into());
+            }
+
+            // update the collateral amount
+            comet.collaterals[comet_collateral_index as usize].collateral_amount = comet_collateral
+                .collateral_amount
                 .sub(subtracted_collateral_value)
                 .unwrap();
 
-        // subtract collateral amount from total collateral amount
-        comet.total_collateral_amount = comet
-            .total_collateral_amount
-            .sub(subtracted_collateral_value.scale_to(DEVNET_TOKEN_SCALE))
-            .unwrap();
+            // remove collateral if empty
+            if comet.collaterals[comet_collateral_index as usize]
+                .collateral_amount
+                .val
+                == 0
+            {
+                comet.remove_collateral(comet_collateral_index as usize)
+            }
 
-        // ensure the position holds sufficient collateral
-        if comet_collateral
-            .collateral_amount
-            .lt(subtracted_collateral_value)
-            .unwrap()
-        {
-            return Err(InceptError::InsufficientCollateral.into());
+            // send collateral from vault to user
+            let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
+            token::transfer(cpi_ctx, collateral_amount)?;
+
+            // check to see if the comet is empty and should be closed
+            if comet.num_collaterals == 0 {
+                close = true;
+            } else {
+                // Require a healthy score after transactions
+                let health_score = calculate_health_score(&comet, token_data)?;
+
+                require!(
+                    matches!(health_score, math::HealthScore::Healthy { .. }),
+                    error::InceptError::HealthScoreTooLow
+                );
+            }
         }
-
-        // update the collateral amount
-        comet.collaterals[comet_collateral_index as usize].collateral_amount = comet_collateral
-            .collateral_amount
-            .sub(subtracted_collateral_value)
-            .unwrap();
-
-        // remove collateral if empty
-        if comet.collaterals[comet_collateral_index as usize]
-            .collateral_amount
-            .val
-            == 0
-        {
-            comet.remove_collateral(comet_collateral_index as usize)
+        if close {
+            // close comet account if no collateral remains
+            let comet_pubkey = *ctx.accounts.comet.to_account_info().key;
+            ctx.accounts
+                .comet
+                .close(ctx.accounts.user.to_account_info())?;
+            if comet_pubkey.eq(&ctx.accounts.user_account.comet) {
+                ctx.accounts.user_account.comet = Pubkey::default();
+            }
         }
-
-        // send collateral from vault to user
-        let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
-        token::transfer(cpi_ctx, collateral_amount)?;
-
-        // Require a healthy score after transactions
-        let health_score = calculate_health_score(&comet, token_data)?;
-
-        require!(
-            match health_score {
-                math::HealthScore::Healthy { score: _ } => true,
-                math::HealthScore::SubjectToLiquidation => false,
-            },
-            error::InceptError::HealthScoreTooLow
-        );
 
         Ok(())
     }
@@ -1521,10 +1536,7 @@ pub mod incept {
         let health_score = calculate_health_score(&comet, token_data)?;
 
         require!(
-            match health_score {
-                math::HealthScore::Healthy { score: _ } => true,
-                math::HealthScore::SubjectToLiquidation => false,
-            },
+            matches!(health_score, math::HealthScore::Healthy { .. }),
             error::InceptError::HealthScoreTooLow
         );
 
@@ -1760,18 +1772,18 @@ pub mod incept {
         )?;
 
         // update pool data
-        token_data.pools[comet_position.pool_index as usize].iasset_amount = Value::new(
-            ctx.accounts.amm_iasset_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-        token_data.pools[comet_position.pool_index as usize].usdi_amount = Value::new(
-            ctx.accounts.amm_usdi_token_account.amount.into(),
-            DEVNET_TOKEN_SCALE,
-        );
-        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = Value::new(
-            ctx.accounts.liquidity_token_mint.supply.into(),
-            DEVNET_TOKEN_SCALE,
-        );
+        token_data.pools[comet_position.pool_index as usize].iasset_amount = token_data.pools
+            [comet_position.pool_index as usize]
+            .iasset_amount
+            .sub(iasset_liquidity_value)?;
+        token_data.pools[comet_position.pool_index as usize].usdi_amount = token_data.pools
+            [comet_position.pool_index as usize]
+            .usdi_amount
+            .sub(usdi_liquidity_value)?;
+        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = token_data
+            .pools[comet_position.pool_index as usize]
+            .liquidity_token_supply
+            .sub(liquidity_token_value)?;
 
         Ok(())
     }
@@ -1969,6 +1981,7 @@ pub mod incept {
                     .clone(),
                 authority: ctx.accounts.manager.to_account_info().clone(),
             };
+
             let burn_usdi_context = CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info().clone(),
                 cpi_accounts,
@@ -2146,6 +2159,447 @@ pub mod incept {
         );
 
         token::transfer(send_usdc_context, mint_position.collateral_amount.to_u64())?;
+
+        Ok(())
+    }
+
+    pub fn liquidate_comet_position_reduction(
+        ctx: Context<LiquidateCometPositionReduction>,
+        manager_nonce: u8,
+        _user_nonce: u8,
+        position_index: u8,
+        lp_token_reduction: u64,
+    ) -> ProgramResult {
+        let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+
+        let mut token_data = ctx.accounts.token_data.load_mut()?;
+        let mut comet = ctx.accounts.comet.load_mut()?;
+
+        // Require a healthy score after transactions
+        let health_score = math::calculate_health_score(&comet, &token_data)?;
+
+        require!(
+            matches!(health_score, math::HealthScore::SubjectToLiquidation { .. }),
+            error::InceptError::NotSubjectToLiquidation
+        );
+
+        let comet_position = comet.positions[position_index as usize];
+
+        require!(
+            comet_position.borrowed_usdi.val > 0,
+            error::InceptError::NotSubjectToLiquidation
+        );
+
+        let pool = token_data.pools[comet_position.pool_index as usize];
+
+        let pool_price = pool.usdi_amount.div(pool.iasset_amount);
+        let init_price = comet_position
+            .borrowed_usdi
+            .div(comet_position.borrowed_iasset);
+
+        require!(
+            lp_token_reduction <= comet_position.liquidity_token_value.to_u64(),
+            error::InceptError::LiquidationAmountTooLarge
+        );
+
+        let lp_token_reduction = Value::new(
+            lp_token_reduction.into(),
+            comet_position
+                .liquidity_token_value
+                .scale
+                .try_into()
+                .unwrap(),
+        );
+
+        let usdi_reduction_amount = lp_token_reduction
+            .mul(pool.usdi_amount)
+            .div(pool.liquidity_token_supply);
+
+        let iasset_reduction_amount = lp_token_reduction
+            .mul(pool.iasset_amount)
+            .div(pool.liquidity_token_supply);
+
+        // Calculate amounts to burn for LP tokens, usdi and iAsset
+        if pool_price.gt(init_price)? {
+            // Price went up, IL in iAsset, burn all iasset and reward some usdi
+            let usdi_position_reduction = lp_token_reduction
+                .div(comet_position.liquidity_token_value)
+                .mul(comet_position.borrowed_usdi);
+            let usdi_reward = usdi_reduction_amount.sub(usdi_position_reduction)?;
+
+            let iasset_position_reduction =
+                if iasset_reduction_amount.gt(comet_position.borrowed_iasset)? {
+                    comet_position.borrowed_iasset
+                } else {
+                    iasset_reduction_amount
+                };
+
+            // Remove from borrowed positions
+            comet.positions[position_index as usize].borrowed_usdi =
+                comet_position.borrowed_usdi.sub(usdi_position_reduction)?;
+            comet.positions[position_index as usize].borrowed_iasset = comet_position
+                .borrowed_iasset
+                .sub(iasset_position_reduction)?;
+
+            // Mint usdi reward and give to liquidator,
+            token::mint_to(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    MintTo {
+                        mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                        to: ctx
+                            .accounts
+                            .liquidator_usdi_token_account
+                            .to_account_info()
+                            .clone(),
+                        authority: ctx.accounts.manager.to_account_info().clone(),
+                    },
+                    seeds,
+                ),
+                usdi_reward.to_u64(),
+            )?;
+        } else {
+            // Price went down, IL in USDi. burn all usdi and reward some iasset
+            let iasset_position_reduction = lp_token_reduction
+                .div(comet_position.liquidity_token_value)
+                .mul(comet_position.borrowed_iasset);
+            let iasset_reward = iasset_reduction_amount.sub(iasset_position_reduction)?;
+
+            let usdi_position_reduction =
+                if usdi_reduction_amount.gt(comet_position.borrowed_usdi)? {
+                    comet_position.borrowed_usdi
+                } else {
+                    usdi_reduction_amount
+                };
+            // Remove from borrowed positions
+            comet.positions[position_index as usize].borrowed_usdi =
+                comet_position.borrowed_usdi.sub(usdi_position_reduction)?;
+            comet.positions[position_index as usize].borrowed_iasset = comet_position
+                .borrowed_iasset
+                .sub(iasset_position_reduction)?;
+
+            // Mint iasset reward and give to liquidator,
+            token::mint_to(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    MintTo {
+                        mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                        to: ctx
+                            .accounts
+                            .liquidator_iasset_token_account
+                            .to_account_info()
+                            .clone(),
+                        authority: ctx.accounts.manager.to_account_info().clone(),
+                    },
+                    seeds,
+                ),
+                iasset_reward.to_u64(),
+            )?;
+        }
+        // Remove LP tokens from position.
+        comet.positions[position_index as usize].liquidity_token_value = comet_position
+            .liquidity_token_value
+            .sub(lp_token_reduction)?;
+
+        // Burn USDi, iAsset and LP from pool
+        token::burn(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                Burn {
+                    mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .amm_usdi_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                },
+                seeds,
+            ),
+            usdi_reduction_amount.to_u64(),
+        )?;
+
+        token::burn(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                Burn {
+                    mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .amm_iasset_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                },
+                seeds,
+            ),
+            iasset_reduction_amount.to_u64(),
+        )?;
+
+        token::burn(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                Burn {
+                    mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .comet_liquidity_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager.to_account_info().clone(),
+                },
+                seeds,
+            ),
+            lp_token_reduction.to_u64(),
+        )?;
+        // update pool data
+        token_data.pools[comet_position.pool_index as usize].iasset_amount =
+            pool.iasset_amount.sub(iasset_reduction_amount)?;
+        token_data.pools[comet_position.pool_index as usize].usdi_amount =
+            pool.usdi_amount.sub(usdi_reduction_amount)?;
+        token_data.pools[comet_position.pool_index as usize].liquidity_token_supply =
+            pool.liquidity_token_supply.sub(lp_token_reduction)?;
+
+        let position_term = comet.positions[position_index as usize]
+            .borrowed_usdi
+            .mul(pool.asset_info.health_score_coefficient)
+            .div(comet.total_collateral_amount)
+            .to_scaled_f64();
+
+        let resulting_score = match health_score {
+            math::HealthScore::Healthy { score } => score + position_term,
+            math::HealthScore::SubjectToLiquidation { score } => score + position_term,
+        };
+
+        require!(
+            resulting_score < token_data.il_health_score_cutoff.to_scaled_f64(),
+            error::InceptError::LiquidationAmountTooLarge
+        );
+
+        Ok(())
+    }
+
+    pub fn liquidate_comet_il_reduction(
+        ctx: Context<LiquidateCometILReduction>,
+        manager_nonce: u8,
+        _user_nonce: u8,
+        comet_collateral_usdi_index: u8,
+        position_index: u8,
+        il_reduction_amount: u64,
+    ) -> ProgramResult {
+        let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+
+        let mut token_data = ctx.accounts.token_data.load_mut()?;
+        let mut comet = ctx.accounts.comet.load_mut()?;
+
+        // Require a healthy score after transactions
+        let health_score = math::calculate_health_score(&comet, &token_data)?;
+
+        require!(
+            matches!(health_score, math::HealthScore::SubjectToLiquidation { .. }),
+            error::InceptError::NotSubjectToLiquidation
+        );
+
+        // Check that all LP positions are zero, also if there are USDi LP positions.
+        let mut exists_usdi_il = false;
+        for i in 0..comet.num_positions {
+            let position = comet.positions[i as usize];
+
+            if position.liquidity_token_value.val != 0u128 {
+                return Err(error::InceptError::NotSubjectToILLiquidation.into());
+            }
+            if position.borrowed_usdi.gt(position.borrowed_iasset)? {
+                exists_usdi_il = true;
+            }
+        }
+        // Look at current position:
+        let position = comet.positions[position_index as usize];
+        let position_is_usdi_il = position.borrowed_usdi.gt(position.borrowed_iasset)?;
+
+        if !position_is_usdi_il && exists_usdi_il {
+            return Err(error::InceptError::NotSubjectToILLiquidation.into());
+        }
+
+        let collateral = comet.collaterals[comet_collateral_usdi_index as usize];
+
+        let pool = token_data.pools[position.pool_index as usize];
+
+        if position_is_usdi_il {
+            let impermanent_loss_usdi = position.borrowed_usdi;
+
+            require!(
+                il_reduction_amount <= impermanent_loss_usdi.to_u64(),
+                error::InceptError::LiquidationAmountTooLarge
+            );
+
+            let liquidation_value = Value::new(
+                il_reduction_amount.into(),
+                impermanent_loss_usdi.scale.try_into().unwrap(),
+            );
+            let total_usdi_required = liquidation_value.mul(token_data.il_liquidation_reward_pct);
+            let usdi_reward = total_usdi_required.sub(liquidation_value)?;
+
+            // remove total_usdi_required from comet, comet collateral and token data
+            comet.collaterals[comet_collateral_usdi_index as usize].collateral_amount =
+                collateral.collateral_amount.sub(total_usdi_required)?;
+            comet.total_collateral_amount =
+                comet.total_collateral_amount.sub(total_usdi_required)?;
+            token_data.collaterals[collateral.collateral_index as usize].vault_comet_supply =
+                token_data.collaterals[collateral.collateral_index as usize]
+                    .vault_comet_supply
+                    .sub(total_usdi_required)?;
+            // Vault usdi supply
+            // Burn USDi from vault.
+            token::burn(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    Burn {
+                        mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                        to: ctx.accounts.vault.to_account_info().clone(),
+                        authority: ctx.accounts.manager.to_account_info().clone(),
+                    },
+                    seeds,
+                ),
+                total_usdi_required.to_u64(),
+            )?;
+
+            // reduce borrowed_usdi by il value
+            comet.positions[position_index as usize].borrowed_usdi =
+                position.borrowed_usdi.sub(liquidation_value)?;
+
+            // Mint and reward liquidator with usdi_reward.
+            token::mint_to(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    MintTo {
+                        mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                        to: ctx
+                            .accounts
+                            .liquidator_usdi_token_account
+                            .to_account_info()
+                            .clone(),
+                        authority: ctx.accounts.manager.to_account_info().clone(),
+                    },
+                    seeds,
+                ),
+                usdi_reward.to_u64(),
+            )?;
+        } else {
+            let impermanent_loss_iasset = position.borrowed_iasset;
+
+            require!(
+                il_reduction_amount <= impermanent_loss_iasset.to_u64(),
+                error::InceptError::LiquidationAmountTooLarge
+            );
+
+            let liquidation_value = Value::new(
+                il_reduction_amount.into(),
+                impermanent_loss_iasset.scale.try_into().unwrap(),
+            );
+
+            // calculate how much usdi must be spent
+            let impermanent_loss_usdi = calculate_price_from_iasset(
+                liquidation_value,
+                pool.iasset_amount,
+                pool.usdi_amount,
+                true,
+            )?;
+
+            let total_usdi_required =
+                impermanent_loss_usdi.mul(token_data.il_liquidation_reward_pct);
+            let usdi_reward = total_usdi_required.sub(impermanent_loss_usdi)?;
+
+            comet.collaterals[comet_collateral_usdi_index as usize].collateral_amount =
+                collateral.collateral_amount.sub(total_usdi_required)?;
+            comet.total_collateral_amount =
+                comet.total_collateral_amount.sub(total_usdi_required)?;
+            token_data.collaterals[collateral.collateral_index as usize].vault_comet_supply =
+                token_data.collaterals[collateral.collateral_index as usize]
+                    .vault_comet_supply
+                    .sub(total_usdi_required)?;
+
+            // Burn USDi from vault.
+            token::burn(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    Burn {
+                        mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                        to: ctx.accounts.vault.to_account_info().clone(),
+                        authority: ctx.accounts.manager.to_account_info().clone(),
+                    },
+                    seeds,
+                ),
+                total_usdi_required.to_u64(),
+            )?;
+
+            // Mint USDi into AMM
+            token::mint_to(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    MintTo {
+                        mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                        to: ctx
+                            .accounts
+                            .amm_usdi_token_account
+                            .to_account_info()
+                            .clone(),
+                        authority: ctx.accounts.manager.to_account_info().clone(),
+                    },
+                    seeds,
+                ),
+                impermanent_loss_usdi.to_u64(),
+            )?;
+
+            // Burn IAsset from AMM
+            token::burn(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    Burn {
+                        mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                        to: ctx
+                            .accounts
+                            .amm_iasset_token_account
+                            .to_account_info()
+                            .clone(),
+                        authority: ctx.accounts.manager.to_account_info().clone(),
+                    },
+                    seeds,
+                ),
+                liquidation_value.to_u64(),
+            )?;
+
+            // Reduce borrowed IAsset since it's paid down.
+            comet.positions[position_index as usize].borrowed_iasset =
+                position.borrowed_iasset.sub(liquidation_value)?;
+
+            // Mint usdi reward to liquidator
+            token::mint_to(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    MintTo {
+                        mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                        to: ctx
+                            .accounts
+                            .liquidator_usdi_token_account
+                            .to_account_info()
+                            .clone(),
+                        authority: ctx.accounts.manager.to_account_info().clone(),
+                    },
+                    seeds,
+                ),
+                usdi_reward.to_u64(),
+            )?;
+        }
+
+        let resulting_score = match math::calculate_health_score(&comet, &token_data)? {
+            math::HealthScore::Healthy { score } => score,
+            math::HealthScore::SubjectToLiquidation { score } => score,
+        };
+
+        require!(
+            resulting_score <= 20f64,
+            error::InceptError::LiquidationAmountTooLarge
+        );
 
         Ok(())
     }

@@ -35,7 +35,7 @@ pub struct Manager {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 163,304
+    // 175,592
     pub manager: Pubkey,                    // 32
     pub num_pools: u64,                     // 8
     pub num_collaterals: u64,               // 8
@@ -43,6 +43,8 @@ pub struct TokenData {
     pub collaterals: [Collateral; 255],     // 255 * 152 = 38,760
     pub chainlink_program: Pubkey,          // 32
     pub il_health_score_coefficient: Value, // 24
+    pub il_health_score_cutoff: Value,      // 24
+    pub il_liquidation_reward_pct: Value,   // 24
 }
 
 impl Default for TokenData {
@@ -55,6 +57,8 @@ impl Default for TokenData {
             collaterals: [Collateral::default(); 255],
             chainlink_program: Pubkey::default(),
             il_health_score_coefficient: Value::default(),
+            il_health_score_cutoff: Value::default(),
+            il_liquidation_reward_pct: Value::default(),
         };
     }
 }
@@ -72,63 +76,39 @@ impl TokenData {
         &self,
         collateral_vault: Pubkey,
     ) -> Result<(Collateral, usize), InceptError> {
-        let mut collateral = Collateral::default();
-        let mut index: usize = 0;
         for i in 0..self.num_collaterals {
             let temp_collateral = self.collaterals[i as usize];
             if temp_collateral.vault == collateral_vault {
-                collateral = temp_collateral;
-                index = i as usize;
-                break;
-            }
-            if i == self.num_collaterals - 1 {
-                return Err(InceptError::CollateralNotFound.into());
+                return Ok((temp_collateral, i as usize));
             }
         }
-
-        Ok((collateral, index))
+        Err(InceptError::CollateralNotFound.into())
     }
     pub fn get_pool_tuple_from_iasset_mint(
         &self,
         iasset_mint: Pubkey,
     ) -> Result<(Pool, usize), InceptError> {
-        let mut pool = Pool::default();
-        let mut index: usize = 0;
         for i in 0..self.num_pools {
             let temp_pool = self.pools[i as usize];
             if temp_pool.asset_info.iasset_mint == iasset_mint {
-                pool = temp_pool;
-                index = i as usize;
-                break;
-            }
-            if i == self.num_collaterals - 1 {
-                return Err(InceptError::PoolNotFound.into());
+                return Ok((temp_pool, i as usize));
             }
         }
-
-        Ok((pool, index))
+        Err(InceptError::PoolNotFound.into())
     }
     pub fn get_pool_tuple_from_oracle(
         &self,
         price_feed_addresses: [&Pubkey; 2],
     ) -> Result<(Pool, usize), InceptError> {
-        let mut pool = Pool::default();
-        let mut index: usize = 0;
         for i in 0..self.num_pools {
             let temp_pool = self.pools[i as usize];
             if temp_pool.asset_info.price_feed_addresses[0] == *price_feed_addresses[0]
                 && temp_pool.asset_info.price_feed_addresses[1] == *price_feed_addresses[1]
             {
-                pool = temp_pool;
-                index = i as usize;
-                break;
-            }
-            if i == self.num_collaterals - 1 {
-                return Err(InceptError::PoolNotFound.into());
+                return Ok((temp_pool, i as usize));
             }
         }
-
-        Ok((pool, index))
+        Err(InceptError::PoolNotFound.into())
     }
 }
 
@@ -314,6 +294,7 @@ impl Default for CometPosition {
 }
 
 #[zero_copy]
+#[derive(Debug)]
 pub struct CometCollateral {
     // 64
     pub authority: Pubkey,        // 32
@@ -334,7 +315,7 @@ impl Default for CometCollateral {
 #[derive(PartialEq, Default, Debug)]
 pub struct CometLiquidation {
     // 40
-    pub status: LiquidationStatus,      // 8
+    pub status: u64,                    // 8
     pub excess_token_type_is_usdi: u64, // 8
     pub excess_token_amount: Value,     // 24
 }
