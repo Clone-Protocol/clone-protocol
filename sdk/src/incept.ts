@@ -2275,7 +2275,7 @@ export class Incept {
 
   public async getUserSinglePoolCometInfos() {
     let singlePoolComets;
-    let cometInfos = [];
+    let cometInfos: any[] = [];
     try {
       singlePoolComets = await this.getSinglePoolComets();
     } catch (error) {
@@ -2659,7 +2659,7 @@ export class Incept {
     const tokenData = await this.getTokenData();
     const comet = await this.getComet();
 
-    let results = [];
+    let results: { isUsdi: boolean; ILD: number; poolIndex: number }[] = [];
 
     comet.positions.slice(0, Number(comet.numPositions)).forEach((position) => {
       if (poolIndex !== undefined && poolIndex !== Number(position.poolIndex)) {
