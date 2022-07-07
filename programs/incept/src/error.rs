@@ -136,19 +136,27 @@ pub enum InceptError {
     #[error("Not Single Pool Comet")]
     NotSinglePoolComet,
 
-    /// 33. Not subject to liquidation
+    /// 33. Single Pool Comet Not Empty
+    #[error("Single Pool Comet Not Empty")]
+    SinglePoolCometNotEmpty,
+
+    /// 34. Liquidity Not Withdrawn
+    #[error("Liquidity Not Withdrawn")]
+    LiquidityNotWithdrawn,
+
+    /// 35. Not subject to liquidation
     #[error("Not Subject to Liquidation")]
     NotSubjectToLiquidation,
 
-    /// 34. Must reduce liquidity first
+    /// 36. Must reduce liquidity first
     #[error("Not Subject to IL liquidation")]
     NotSubjectToILLiquidation,
 
-    /// 35. Liquidation amount too large
+    /// 37. Liquidation amount too large
     #[error("Liquidation amount too large")]
     LiquidationAmountTooLarge,
 
-    /// 36. No remaining account supplied
+    /// 38. No remaining account supplied
     #[error("No remaining accounts supplied")]
     NoRemainingAccountsSupplied,
 }

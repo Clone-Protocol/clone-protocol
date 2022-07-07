@@ -1270,37 +1270,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdiMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "iassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userCollateralTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userUsdiTokenAccount",
+          "name": "userAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1315,31 +1285,6 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -1347,7 +1292,7 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
+          "name": "userNonce",
           "type": "u8"
         },
         {
@@ -1459,6 +1404,11 @@ export type Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -1492,6 +1442,10 @@ export type Incept = {
       "args": [
         {
           "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "userNonce",
           "type": "u8"
         },
         {
@@ -1657,90 +1611,7 @@ export type Incept = {
           "type": "u8"
         },
         {
-          "name": "usdiAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "withdrawLiquidityFromCometSurplusToCollateral",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "manager",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdiMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "iassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "cometPositionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "collateralIndex",
-          "type": "u8"
-        },
-        {
-          "name": "usdiAmount",
+          "name": "liquidityTokenAmount",
           "type": "u64"
         }
       ]
@@ -1774,6 +1645,11 @@ export type Incept = {
           "isSigner": false
         },
         {
+          "name": "userUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "userIassetTokenAccount",
           "isMut": true,
           "isSigner": false
@@ -1799,11 +1675,6 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -1817,15 +1688,11 @@ export type Incept = {
         {
           "name": "cometPositionIndex",
           "type": "u8"
-        },
-        {
-          "name": "cometCollateralIndex",
-          "type": "u8"
         }
       ]
     },
     {
-      "name": "closeCometPosition",
+      "name": "payCometImpermenantLossDebt",
       "accounts": [
         {
           "name": "user",
@@ -1853,37 +1720,17 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "userUsdiTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
+          "name": "userIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -2916,6 +2763,12 @@ export type Incept = {
           },
           {
             "name": "NotSinglePoolComet"
+          },
+          {
+            "name": "SinglePoolCometNotEmpty"
+          },
+          {
+            "name": "LiquidityNotWithdrawn"
           },
           {
             "name": "NotSubjectToLiquidation"
@@ -4254,37 +4107,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdiMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "iassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userCollateralTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userUsdiTokenAccount",
+          "name": "userAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -4299,31 +4122,6 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -4331,7 +4129,7 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
+          "name": "userNonce",
           "type": "u8"
         },
         {
@@ -4443,6 +4241,11 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -4476,6 +4279,10 @@ export const IDL: Incept = {
       "args": [
         {
           "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "userNonce",
           "type": "u8"
         },
         {
@@ -4641,90 +4448,7 @@ export const IDL: Incept = {
           "type": "u8"
         },
         {
-          "name": "usdiAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "withdrawLiquidityFromCometSurplusToCollateral",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "manager",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdiMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "iassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "cometPositionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "collateralIndex",
-          "type": "u8"
-        },
-        {
-          "name": "usdiAmount",
+          "name": "liquidityTokenAmount",
           "type": "u64"
         }
       ]
@@ -4758,6 +4482,11 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
+          "name": "userUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "userIassetTokenAccount",
           "isMut": true,
           "isSigner": false
@@ -4783,11 +4512,6 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -4801,15 +4525,11 @@ export const IDL: Incept = {
         {
           "name": "cometPositionIndex",
           "type": "u8"
-        },
-        {
-          "name": "cometCollateralIndex",
-          "type": "u8"
         }
       ]
     },
     {
-      "name": "closeCometPosition",
+      "name": "payCometImpermenantLossDebt",
       "accounts": [
         {
           "name": "user",
@@ -4837,37 +4557,17 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "userUsdiTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
+          "name": "userIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -5900,6 +5600,12 @@ export const IDL: Incept = {
           },
           {
             "name": "NotSinglePoolComet"
+          },
+          {
+            "name": "SinglePoolCometNotEmpty"
+          },
+          {
+            "name": "LiquidityNotWithdrawn"
           },
           {
             "name": "NotSubjectToLiquidation"
