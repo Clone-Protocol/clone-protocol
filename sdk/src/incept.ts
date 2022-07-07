@@ -2829,6 +2829,58 @@ export class Incept {
     );
   }
 
+  public async calculateNewSinglePoolComet(
+    poolIndex: number,
+    collateralProvided: number,
+    usdiBorrowed: number
+  ): Promise<{
+    healthScore: number;
+    lowerPrice: number;
+    upperPrice: number;
+  }> {
+    const tokenData = await this.getTokenData();
+    const pool = tokenData.pools[poolIndex];
+
+    const poolUsdi = toScaledNumber(pool.usdiAmount);
+    const poolIasset = toScaledNumber(pool.iassetAmount);
+    const poolPrice = poolUsdi / poolIasset;
+
+    const claimableRatio = usdiBorrowed / (usdiBorrowed + poolUsdi);
+
+    const poolCoefficient = toScaledNumber(
+      pool.assetInfo.healthScoreCoefficient
+    );
+
+    const loss = poolCoefficient * usdiBorrowed;
+
+    const healhScore = 100 - loss / collateralProvided;
+
+    const ilHealthScoreCoefficient = toScaledNumber(
+      tokenData.ilHealthScoreCoefficient
+    );
+
+    const maxILD = (100 * collateralProvided - loss) / ilHealthScoreCoefficient;
+
+    const invariant = poolUsdi * poolIasset;
+
+    // Solution 1: Price goes down, IL is in USDi
+    let y1 = (usdiBorrowed - maxILD) / claimableRatio;
+    const lowerPrice = (y1 * y1) / invariant;
+
+    // Solution 2: Price goes up, IL is in iAsset
+    let a = usdiBorrowed / poolPrice / invariant;
+    let b = -claimableRatio;
+    let c = -maxILD;
+    let y2 = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+    const upperPrice = (y2 * y2) / invariant;
+
+    return {
+      healthScore: healhScore,
+      lowerPrice: lowerPrice,
+      upperPrice: upperPrice,
+    };
+  }
+
   public async calculateEditCometSinglePool(
     cometIndex: number,
     collateralChange: number,
