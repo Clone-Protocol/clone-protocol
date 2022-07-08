@@ -3068,6 +3068,26 @@ export class Incept {
       upperPrice: (y2 * y2) / invariant,
     };
   }
+
+  public async getUSDiAndiAssetAmountsFromLiquidtyTokens(
+    cometIndex: number,
+  ): Promise<{ usdiClaim: number; iAssetClaim: number }> {
+
+    let comet = await this.getSinglePoolComet(cometIndex);
+    let tokenData = await this.getTokenData();
+    let position = comet.positions[0];
+    let pool = tokenData.pools[position.poolIndex];
+
+    let lpTokensClaimed = toScaledNumber(position.liquidityTokenValue);
+    let totalLpTokens = toScaledNumber(pool.liquidityTokenSupply);
+
+    let claimableRatio = lpTokensClaimed / totalLpTokens;
+
+    return {
+      usdiClaim: claimableRatio * toScaledNumber(pool.usdiAmount),
+      iAssetClaim: claimableRatio * toScaledNumber(pool.iassetAmount),
+    };
+  }
 }
 
 export interface Manager {
