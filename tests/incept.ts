@@ -1494,8 +1494,6 @@ describe("incept", async () => {
     );
 
     let comet = await inceptClient.getComet(false);
-    console.log("Num collaterals in comet:", comet.numCollaterals.toNumber());
-    console.log("Before collateral withdrawal", comet.collaterals[0]);
 
     await inceptClient.withdrawCollateralFromComet(
       usdiTokenAccountInfo.address,
@@ -1505,8 +1503,6 @@ describe("incept", async () => {
     );
 
     comet = await inceptClient.getComet(false);
-    console.log("Num collaterals in comet:", comet.numCollaterals.toNumber());
-    console.log("After collateral withdrawal", comet.collaterals[0]);
 
     await sleep(200);
 
