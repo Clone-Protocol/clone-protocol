@@ -3044,8 +3044,7 @@ export class Incept {
 
     const newBorrowedUsdi = claimableRatio * poolUsdiAmount;
     const newBorrowedIasset = claimableRatio * poolIassetAmount;
-    const newCollateral =
-      toScaledNumber(comet.totalCollateralAmount) - usdiCost;
+    const newCollateral = toScaledNumber(comet.totalCollateralAmount);
 
     const positionLoss = assetCoefficient * newBorrowedUsdi;
 
