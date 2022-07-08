@@ -2662,6 +2662,41 @@ export class Incept {
     return { healthScore: healthScore, ILD: ILD, ildInUsdi: isUsdi };
   }
 
+  public async getSinglePoolILD(
+    cometIndex: number
+  ): Promise<{ILD: number; ildInUsdi: boolean }> {
+    const tokenData = await this.getTokenData();
+    const comet = await this.getSinglePoolComet(cometIndex);
+
+    let position = comet.positions[0];
+    let pool = tokenData.pools[position.poolIndex];
+    let poolUsdiAmount = toScaledNumber(pool.usdiAmount);
+    let poolIassetAmount = toScaledNumber(pool.iassetAmount);
+    let poolPrice = poolUsdiAmount / poolIassetAmount;
+    let borrowedUsdi = toScaledNumber(position.borrowedUsdi);
+    let borrowedIasset = toScaledNumber(position.borrowedIasset);
+    let initPrice = borrowedUsdi / borrowedIasset;
+
+    let claimableRatio =
+      toScaledNumber(position.liquidityTokenValue) /
+      toScaledNumber(pool.liquidityTokenSupply);
+
+    let markPrice = Math.max(toScaledNumber(pool.assetInfo.price), poolPrice);
+
+    let claimableUsdi = poolUsdiAmount * claimableRatio;
+    let claimableIasset = poolIassetAmount * claimableRatio;
+    let ILD = 0;
+    let isUsdi = false;
+    if (initPrice < poolPrice) {
+      ILD += (borrowedIasset - claimableIasset) * markPrice;
+    } else if (poolPrice < initPrice) {
+      ILD += borrowedUsdi - claimableUsdi;
+      isUsdi = true;
+    }
+
+    return { ILD: ILD, ildInUsdi: isUsdi };
+  }
+
   public async getILD(
     poolIndex?: number
   ): Promise<{ isUsdi: boolean; ILD: number; poolIndex: number }[]> {
