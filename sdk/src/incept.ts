@@ -1742,7 +1742,7 @@ export class Incept {
     forManager: boolean,
     signers?: Array<Keypair>
   ) {
-    const updatePricesIx = await this.updatePricesInstruction();
+    const updatePricesIx = await this.updatePricesInstruction(poolIndex);
     const addLiquidityToCometIx = await this.addLiquidityToCometInstruction(
       usdiAmount,
       poolIndex,
@@ -3055,21 +3055,20 @@ export class Incept {
     const poolLpTokens = toScaledNumber(pool.liquidityTokenSupply);
     const claimableRatio = lpTokens / poolLpTokens;
 
-    const initPrice = positionBorrowedUsdi / positionBorrowedIasset;
     const poolPrice = poolUsdi / poolIasset;
     const iassetBorrowedChange = usdiBorrowedChange / poolPrice;
 
     let markPrice = Math.max(toScaledNumber(pool.assetInfo.price), poolPrice);
-
+    let newClaimableRatio = claimableRatio;
     // Calculate total lp tokens
     if (usdiBorrowedChange > 0) {
-      lpTokens += usdiBorrowedChange / (usdiBorrowedChange + poolUsdi);
+      newClaimableRatio += usdiBorrowedChange / (usdiBorrowedChange + poolUsdi);
     } else if (usdiBorrowedChange < 0) {
       const claimableUsdi = claimableRatio * poolUsdi;
       const newLpTokens =
         (lpTokens * (positionBorrowedUsdi + usdiBorrowedChange)) /
         claimableUsdi;
-      lpTokens = newLpTokens;
+      newClaimableRatio = newLpTokens / (poolLpTokens - lpTokens + newLpTokens);
     }
     positionBorrowedUsdi += usdiBorrowedChange;
     positionBorrowedIasset += iassetBorrowedChange;
@@ -3078,17 +3077,17 @@ export class Incept {
     let newCollateralAmount = currentCollateral + collateralChange;
 
     let newInitPrice = positionBorrowedUsdi / positionBorrowedIasset;
-    let newClaimableRatio = lpTokens / poolLpTokens;
     let newPoolUsdi = poolUsdi + usdiBorrowedChange;
     let newPooliAsset = poolIasset + iassetBorrowedChange;
 
     let ILD = 0;
-    if (newInitPrice < poolPrice) {
+    let epsilon = Math.pow(10, -DEVNET_TOKEN_SCALE);
+    if (poolPrice - newInitPrice > epsilon) {
       // IL in iAsset
       ILD +=
         (positionBorrowedIasset - newClaimableRatio * newPooliAsset) *
         markPrice;
-    } else if (newInitPrice > poolPrice) {
+    } else if (newInitPrice - poolPrice > epsilon) {
       ILD += positionBorrowedUsdi - newClaimableRatio * newPoolUsdi;
     }
 
