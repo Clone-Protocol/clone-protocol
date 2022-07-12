@@ -1366,6 +1366,62 @@ export class Incept {
     )) as TransactionInstruction;
   }
 
+  public async partialRecenterSinglePoolComet(
+    debtAmount: BN,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    cometIndex: number,
+    signers?: Array<Keypair>
+  ) {
+    const recenterSingleCometIx =
+      await this.partialRecenterSinglePoolCometInstruction(
+        debtAmount,
+        userUsdiTokenAccount,
+        userIassetTokenAccount,
+        cometIndex
+      );
+    await this.provider.send(
+      new Transaction().add(recenterSingleCometIx),
+      signers
+    );
+  }
+  public async partialRecenterSinglePoolCometInstruction(
+    debtAmount: BN,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    cometIndex: number
+  ) {
+    let tokenData = await this.getTokenData();
+    let cometAddress = (await this.getSinglePoolComets()).comets[cometIndex];
+    let comet = await this.getSinglePoolComet(cometIndex);
+    let position = comet.positions[0];
+
+    return (await this.program.instruction.partialRecenterComet(
+      this.managerAddress[1],
+      0,
+      debtAmount,
+      {
+        accounts: {
+          user: this.provider.wallet.publicKey,
+          manager: this.managerAddress[0],
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
+          iassetMint: tokenData.pools[position.poolIndex].assetInfo.iassetMint,
+          userUsdiTokenAccount: userUsdiTokenAccount,
+          userIassetTokenAccount: userIassetTokenAccount,
+          comet: cometAddress,
+          ammUsdiTokenAccount:
+            tokenData.pools[position.poolIndex].usdiTokenAccount,
+          ammIassetTokenAccount:
+            tokenData.pools[position.poolIndex].iassetTokenAccount,
+          liquidityTokenMint:
+            tokenData.pools[position.poolIndex].liquidityTokenMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
+
   public async paySinglePoolCometILD(
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
@@ -1392,7 +1448,7 @@ export class Incept {
     let comet = await this.getSinglePoolComet(cometIndex);
     let position = comet.positions[0];
 
-    return (await this.program.instruction.payCometImpermenantLossDebt(
+    return (await this.program.instruction.payCometImpermanentLossDebt(
       this.managerAddress[1],
       0,
       {
@@ -1850,6 +1906,65 @@ export class Incept {
     )) as TransactionInstruction;
   }
 
+  public async partialRecenterComet(
+    debtAmount: BN,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    cometPositionIndex: number,
+    forManager: boolean,
+    signers?: Array<Keypair>
+  ) {
+    const recenterCometIx = await this.partialRecenterCometInstruction(
+      debtAmount,
+      userUsdiTokenAccount,
+      userIassetTokenAccount,
+      cometPositionIndex,
+      forManager
+    );
+    await this.provider.send(new Transaction().add(recenterCometIx), signers);
+  }
+  public async partialRecenterCometInstruction(
+    debtAmount: BN,
+    userUsdiTokenAccount: PublicKey,
+    userIassetTokenAccount: PublicKey,
+    cometPositionIndex: number,
+    forManager: boolean
+  ) {
+    let tokenData = await this.getTokenData();
+    let userAccount = await this.getUserAccount();
+    let cometAddress = forManager
+      ? userAccount.cometManager
+      : userAccount.comet;
+    let comet = await this.getComet(forManager);
+    let cometPosition = comet.positions[cometPositionIndex];
+
+    return (await this.program.instruction.partialRecenterComet(
+      this.managerAddress[1],
+      cometPositionIndex,
+      debtAmount,
+      {
+        accounts: {
+          user: this.provider.wallet.publicKey,
+          manager: this.managerAddress[0],
+          tokenData: this.manager!.tokenData,
+          usdiMint: this.manager!.usdiMint,
+          iassetMint:
+            tokenData.pools[cometPosition.poolIndex].assetInfo.iassetMint,
+          userUsdiTokenAccount: userUsdiTokenAccount,
+          userIassetTokenAccount: userIassetTokenAccount,
+          comet: cometAddress,
+          ammUsdiTokenAccount:
+            tokenData.pools[cometPosition.poolIndex].usdiTokenAccount,
+          ammIassetTokenAccount:
+            tokenData.pools[cometPosition.poolIndex].iassetTokenAccount,
+          liquidityTokenMint:
+            tokenData.pools[cometPosition.poolIndex].liquidityTokenMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    )) as TransactionInstruction;
+  }
+
   public async payCometILD(
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
@@ -1879,7 +1994,7 @@ export class Incept {
     let comet = await this.getComet(forManager);
     let cometPosition = comet.positions[cometPositionIndex];
 
-    return (await this.program.instruction.payCometImpermenantLossDebt(
+    return (await this.program.instruction.payCometImpermanentLossDebt(
       this.managerAddress[1],
       cometPositionIndex,
       {
@@ -2664,7 +2779,7 @@ export class Incept {
 
   public async getSinglePoolILD(
     cometIndex: number
-  ): Promise<{ILD: number; ildInUsdi: boolean }> {
+  ): Promise<{ ILD: number; ildInUsdi: boolean }> {
     const tokenData = await this.getTokenData();
     const comet = await this.getSinglePoolComet(cometIndex);
 
@@ -3105,9 +3220,8 @@ export class Incept {
   }
 
   public async getUSDiAndiAssetAmountsFromLiquidtyTokens(
-    cometIndex: number,
+    cometIndex: number
   ): Promise<{ usdiClaim: number; iAssetClaim: number }> {
-
     let comet = await this.getSinglePoolComet(cometIndex);
     let tokenData = await this.getTokenData();
     let position = comet.positions[0];

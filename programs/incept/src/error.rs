@@ -159,6 +159,10 @@ pub enum InceptError {
     /// 38. No remaining account supplied
     #[error("No remaining accounts supplied")]
     NoRemainingAccountsSupplied,
+
+    /// 39. Invalid Recenter
+    #[error("Invalid Recenter")]
+    InvalidRecenter,
 }
 
 impl From<InceptError> for ProgramError {

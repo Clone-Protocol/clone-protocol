@@ -1692,7 +1692,86 @@ export type Incept = {
       ]
     },
     {
-      "name": "payCometImpermenantLossDebt",
+      "name": "partialRecenterComet",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityTokenMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "cometPositionIndex",
+          "type": "u8"
+        },
+        {
+          "name": "impermanentLossAmount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "payCometImpermanentLossDebt",
       "accounts": [
         {
           "name": "user",
@@ -2781,6 +2860,9 @@ export type Incept = {
           },
           {
             "name": "NoRemainingAccountsSupplied"
+          },
+          {
+            "name": "InvalidRecenter"
           }
         ]
       }
@@ -4529,7 +4611,86 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "payCometImpermenantLossDebt",
+      "name": "partialRecenterComet",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityTokenMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "cometPositionIndex",
+          "type": "u8"
+        },
+        {
+          "name": "impermanentLossAmount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "payCometImpermanentLossDebt",
       "accounts": [
         {
           "name": "user",
@@ -5618,6 +5779,9 @@ export const IDL: Incept = {
           },
           {
             "name": "NoRemainingAccountsSupplied"
+          },
+          {
+            "name": "InvalidRecenter"
           }
         ]
       }
