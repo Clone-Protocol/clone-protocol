@@ -1941,6 +1941,20 @@ describe("incept", async () => {
     );
   });
 
+  it("Pay ILD using collateral", async () => {
+    const comet1 = await inceptClient.getComet();
+    const healthScore1 = await inceptClient.getHealthScore();
+    await inceptClient.payIldWithCollateral(0, 0, toDevnetScale(1));
+    const comet2 = await inceptClient.getComet();
+    const healthScore2 = await inceptClient.getHealthScore();
+    assert.isAbove(healthScore2, healthScore1, "health score should increase");
+    assert.equal(
+      toScaledNumber(comet1.totalCollateralAmount) - 1,
+      toScaledNumber(comet2.totalCollateralAmount),
+      "collateral should decrease"
+    );
+  });
+
   it("comet closed! (liquidity withdrawn and ILD payed)", async () => {
     let poolIndex = 0;
     const tokenData = await inceptClient.getTokenData();
@@ -1978,7 +1992,7 @@ describe("incept", async () => {
     );
     assert.equal(
       Number(iassetTokenAccountInfo.amount) / 100000000,
-      189087.44572165,
+      189087.44860351,
       "check user iAsset balance"
     );
     assert.equal(
@@ -1990,7 +2004,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      3786776.85075596,
+      3786777.85075596,
       "check pool usdi"
     );
     assert.equal(
@@ -2002,7 +2016,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      10912.55427835,
+      10912.55139649,
       "check pool iAsset"
     );
 

@@ -3161,18 +3161,18 @@ export class Incept {
     const poolUsdi = toScaledNumber(pool.usdiAmount);
     const poolIasset = toScaledNumber(pool.iassetAmount);
     const poolPrice = poolUsdi / poolIasset;
-    const poolCoefficient = toScaledNumber(
-      pool.assetInfo.healthScoreCoefficient
-    );
     const ilHealthScoreCoefficient = toScaledNumber(
       tokenData.ilHealthScoreCoefficient
+    );
+    const poolCoefficient = toScaledNumber(
+      pool.assetInfo.healthScoreCoefficient
     );
     const poolLpTokens = toScaledNumber(pool.liquidityTokenSupply);
     const lpTokens = toScaledNumber(position.liquidityTokenValue);
     const claimableRatio = lpTokens / poolLpTokens;
 
-    const collateral =
-      toScaledNumber(comet.totalCollateralAmount) + collateralChange;
+    const currentCollateral = toScaledNumber(comet.totalCollateralAmount);
+    let newCollateralAmount = currentCollateral + collateralChange;
 
     const initData = await this.calculateEditCometSinglePoolWithUsdiBorrowed(
       cometIndex,
@@ -3204,18 +3204,8 @@ export class Incept {
       positionBorrowedUsdi += usdiBorrowedChange;
       positionBorrowedIasset += iassetBorrowedChange;
 
-      const currentCollateral = toScaledNumber(comet.totalCollateralAmount);
-      let newCollateralAmount = currentCollateral + collateralChange;
-
       let newPoolUsdi = poolUsdi + usdiBorrowedChange;
       let newPooliAsset = poolIasset + iassetBorrowedChange;
-
-      const ilHealthScoreCoefficient = toScaledNumber(
-        tokenData.ilHealthScoreCoefficient
-      );
-      const poolCoefficient = toScaledNumber(
-        pool.assetInfo.healthScoreCoefficient
-      );
 
       const positionLoss = poolCoefficient * positionBorrowedUsdi;
 
@@ -3396,6 +3386,59 @@ export class Incept {
       usdiClaim: claimableRatio * toScaledNumber(pool.usdiAmount),
       iAssetClaim: claimableRatio * toScaledNumber(pool.iassetAmount),
     };
+  }
+
+  public async payIldWithCollateral(
+    cometPositionIndex: number,
+    cometCollateralUsdiIndex: number,
+    collateralAmount: BN,
+    forManager: boolean = false
+  ) {
+    const instruction = await this.payIldWithCollateralInstruction(
+      cometPositionIndex,
+      cometCollateralUsdiIndex,
+      collateralAmount,
+      forManager
+    );
+    await this.provider.send(new Transaction().add(instruction));
+  }
+
+  public async payIldWithCollateralInstruction(
+    cometPositionIndex: number,
+    cometCollateralUsdiIndex: number,
+    collateralAmount: BN,
+    forManager: boolean
+  ) {
+    const [managerAddress, managerNonce] = this.managerAddress;
+    let userAccount = await this.getUserAccount();
+    let comet = await this.getComet(forManager);
+    let position = comet.positions[cometPositionIndex];
+    let tokenData = await this.getTokenData();
+    let pool = tokenData.pools[position.poolIndex];
+    let usdiCollateralIndex =
+      comet.collaterals[cometCollateralUsdiIndex].collateralIndex;
+    let usdiCollateral = tokenData.collaterals[usdiCollateralIndex];
+
+    return await this.program.instruction.payIldWithCollateral(
+      managerNonce,
+      cometPositionIndex,
+      cometCollateralUsdiIndex,
+      collateralAmount,
+      {
+        accounts: {
+          user: this.provider.wallet.publicKey,
+          manager: managerAddress,
+          tokenData: this.manager!.tokenData,
+          comet: forManager ? userAccount.cometManager : userAccount.comet,
+          usdiMint: this.manager!.usdiMint,
+          iassetMint: pool.assetInfo.iassetMint,
+          ammUsdiTokenAccount: pool.usdiTokenAccount,
+          ammIassetTokenAccount: pool.iassetTokenAccount,
+          vault: usdiCollateral.vault,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    );
   }
 }
 
