@@ -21,6 +21,7 @@ import { sleep, toScaledNumber, toScaledPercent, div, mul } from "./utils";
 import {
   MintPositionsUninitialized,
   SinglePoolCometUninitialized,
+  CalculationError,
 } from "./error";
 import { assert } from "chai";
 
@@ -3031,7 +3032,7 @@ export class Incept {
     };
   }
 
-  public async calculateEditCometSinglePool(
+  public async calculateEditCometSinglePoolWithUsdiBorrowed(
     cometIndex: number,
     collateralChange: number,
     usdiBorrowedChange: number
@@ -3134,6 +3135,166 @@ export class Incept {
       maxUsdiPosition: maxUsdiPosition,
       lowerPrice: lowerPrice,
       upperPrice: upperPrice,
+    };
+  }
+
+  public async calculateEditCometSinglePoolWithRange(
+    cometIndex: number,
+    collateralChange: number,
+    price: number,
+    isLowerPrice: boolean
+  ): Promise<{
+    maxCollateralWithdrawable: number;
+    usdiPosition: number;
+    healthScore: number;
+    lowerPrice: number;
+    upperPrice: number;
+  }> {
+    const tolerance = 1e-6;
+    const maxIter = 100000;
+    const comet = await this.getSinglePoolComet(cometIndex);
+    const tokenData = await this.getTokenData();
+    const position = comet.positions[0];
+    const currentUsdiPosition = toScaledNumber(position.borrowedUsdi);
+    const currentIassetPosition = toScaledNumber(position.borrowedIasset);
+    const pool = tokenData.pools[position.poolIndex];
+    const poolUsdi = toScaledNumber(pool.usdiAmount);
+    const poolIasset = toScaledNumber(pool.iassetAmount);
+    const poolPrice = poolUsdi / poolIasset;
+    const poolCoefficient = toScaledNumber(
+      pool.assetInfo.healthScoreCoefficient
+    );
+    const ilHealthScoreCoefficient = toScaledNumber(
+      tokenData.ilHealthScoreCoefficient
+    );
+    const poolLpTokens = toScaledNumber(pool.liquidityTokenSupply);
+    const lpTokens = toScaledNumber(position.liquidityTokenValue);
+    const claimableRatio = lpTokens / poolLpTokens;
+
+    const collateral =
+      toScaledNumber(comet.totalCollateralAmount) + collateralChange;
+
+    const initData = await this.calculateEditCometSinglePoolWithUsdiBorrowed(
+      cometIndex,
+      collateralChange,
+      0
+    );
+
+    const priceRange = (
+      usdPosition: number
+    ): { lower: number; upper: number } => {
+      const usdiBorrowedChange = usdPosition - currentUsdiPosition;
+      let positionBorrowedUsdi = currentUsdiPosition;
+      let positionBorrowedIasset = currentIassetPosition;
+      const iassetBorrowedChange = usdiBorrowedChange / poolPrice;
+
+      let newClaimableRatio = claimableRatio;
+      // Calculate total lp tokens
+      if (usdiBorrowedChange > 0) {
+        newClaimableRatio +=
+          usdiBorrowedChange / (usdiBorrowedChange + poolUsdi);
+      } else if (usdiBorrowedChange < 0) {
+        const claimableUsdi = claimableRatio * poolUsdi;
+        const newLpTokens =
+          (lpTokens * (positionBorrowedUsdi + usdiBorrowedChange)) /
+          claimableUsdi;
+        newClaimableRatio =
+          newLpTokens / (poolLpTokens - lpTokens + newLpTokens);
+      }
+      positionBorrowedUsdi += usdiBorrowedChange;
+      positionBorrowedIasset += iassetBorrowedChange;
+
+      const currentCollateral = toScaledNumber(comet.totalCollateralAmount);
+      let newCollateralAmount = currentCollateral + collateralChange;
+
+      let newPoolUsdi = poolUsdi + usdiBorrowedChange;
+      let newPooliAsset = poolIasset + iassetBorrowedChange;
+
+      const ilHealthScoreCoefficient = toScaledNumber(
+        tokenData.ilHealthScoreCoefficient
+      );
+      const poolCoefficient = toScaledNumber(
+        pool.assetInfo.healthScoreCoefficient
+      );
+
+      const positionLoss = poolCoefficient * positionBorrowedUsdi;
+
+      const maxILD =
+        (100 * newCollateralAmount - positionLoss) / ilHealthScoreCoefficient;
+
+      const newInvariant = newPoolUsdi * newPooliAsset;
+
+      // Solution 1: Price goes down, IL is in USDi
+      let y1 = (positionBorrowedUsdi - maxILD) / newClaimableRatio;
+      const lowerPrice = (y1 * y1) / newInvariant;
+
+      // Solution 2: Price goes up, IL is in iAsset
+      let a = positionBorrowedIasset / newInvariant;
+      let b = -newClaimableRatio;
+      let c = -maxILD;
+      let y2 = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+      const upperPrice = (y2 * y2) / newInvariant;
+
+      // Max USDi borrowed position possible before health = 0
+      a = ilHealthScoreCoefficient + poolCoefficient;
+      b = poolCoefficient * newPoolUsdi - 100 * newCollateralAmount;
+      c = -100 * newCollateralAmount * newPoolUsdi;
+
+      return { lower: lowerPrice, upper: upperPrice };
+    };
+
+    let startSearch = 0;
+    let stopSearch = initData.maxUsdiPosition;
+    let positionGuess;
+    let iter = 0;
+    while (iter < maxIter) {
+      positionGuess = (startSearch + stopSearch) * 0.5;
+
+      let range = priceRange(positionGuess);
+
+      if (isLowerPrice) {
+        let diff = range.lower - price;
+        if (Math.abs(diff) < tolerance) {
+          break;
+        }
+
+        if (diff < 0) {
+          // Increase position to increase lower
+          startSearch = positionGuess;
+        } else {
+          stopSearch = positionGuess;
+        }
+      } else {
+        let diff = range.upper - price;
+        if (Math.abs(diff) < tolerance) {
+          break;
+        }
+
+        if (diff < 0) {
+          // Reduce position to increase upper
+          stopSearch = positionGuess;
+        } else {
+          startSearch = positionGuess;
+        }
+      }
+      iter += 1;
+    }
+
+    if (iter === maxIter) {
+      throw new CalculationError("Max iterations reached!");
+    }
+
+    const finalData = await this.calculateEditCometSinglePoolWithUsdiBorrowed(
+      cometIndex,
+      collateralChange,
+      positionGuess - currentUsdiPosition
+    );
+    return {
+      maxCollateralWithdrawable: finalData.maxCollateralWithdrawable,
+      usdiPosition: positionGuess,
+      healthScore: finalData.healthScore,
+      lowerPrice: isLowerPrice ? price : finalData.lowerPrice,
+      upperPrice: !isLowerPrice ? price : finalData.upperPrice,
     };
   }
 

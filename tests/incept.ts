@@ -1045,11 +1045,8 @@ describe("incept", async () => {
       );
 
     // Estimate using edit.
-    const estimation = await inceptClient.calculateEditCometSinglePool(
-      0,
-      -5,
-      0
-    );
+    const estimation =
+      await inceptClient.calculateEditCometSinglePoolWithUsdiBorrowed(0, -5, 0);
 
     await inceptClient.withdrawCollateralFromSinglePoolComet(
       mockUSDCTokenAccountInfo.address,
@@ -1091,10 +1088,43 @@ describe("incept", async () => {
       );
 
     // Estimate using edit.
-    const estimation = await inceptClient.calculateEditCometSinglePool(
-      0,
-      0,
-      510
+    const estimation =
+      await inceptClient.calculateEditCometSinglePoolWithUsdiBorrowed(
+        0,
+        0,
+        510
+      );
+
+    const comet = await inceptClient.getSinglePoolComet(0);
+    const position = comet.positions[0];
+    let positionBorrowedUsdi = toScaledNumber(position.borrowedUsdi) + 510;
+
+    const estimationWithLowerPrice =
+      await inceptClient.calculateEditCometSinglePoolWithRange(
+        0,
+        0,
+        estimation.lowerPrice,
+        true
+      );
+
+    assert.closeTo(
+      positionBorrowedUsdi,
+      estimationWithLowerPrice.usdiPosition,
+      1e-3
+    );
+
+    const estimationWithUpperPrice =
+      await inceptClient.calculateEditCometSinglePoolWithRange(
+        0,
+        0,
+        estimation.upperPrice,
+        false
+      );
+
+    assert.closeTo(
+      positionBorrowedUsdi,
+      estimationWithUpperPrice.usdiPosition,
+      1e-3
     );
 
     await inceptClient.addLiquidityToSinglePoolComet(new BN(51000000000), 0);
@@ -1145,12 +1175,44 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         pool.assetInfo.iassetMint
       );
+    const comet = await inceptClient.getSinglePoolComet(0);
+    const position = comet.positions[0];
+    let positionBorrowedUsdi = toScaledNumber(position.borrowedUsdi);
 
     // Estimate using edit.
-    const estimation = await inceptClient.calculateEditCometSinglePool(
-      0,
-      0,
-      -10
+    const estimation =
+      await inceptClient.calculateEditCometSinglePoolWithUsdiBorrowed(
+        0,
+        0,
+        -10
+      );
+
+    const estimationWithLowerPrice =
+      await inceptClient.calculateEditCometSinglePoolWithRange(
+        0,
+        0,
+        estimation.lowerPrice,
+        true
+      );
+
+    assert.closeTo(
+      positionBorrowedUsdi - 10,
+      estimationWithLowerPrice.usdiPosition,
+      1e-3
+    );
+
+    const estimationWithUpperPrice =
+      await inceptClient.calculateEditCometSinglePoolWithRange(
+        0,
+        0,
+        estimation.upperPrice,
+        false
+      );
+
+    assert.closeTo(
+      positionBorrowedUsdi - 10,
+      estimationWithUpperPrice.usdiPosition,
+      1e-3
     );
 
     await inceptClient.withdrawLiquidityFromSinglePoolComet(
@@ -1945,10 +2007,6 @@ describe("incept", async () => {
     );
 
     const comet = await inceptClient.getComet();
-    assert.equal(
-      Number(comet.numPositions),
-      0,
-      "check comet position"
-    );
+    assert.equal(Number(comet.numPositions), 0, "check comet position");
   });
 });
