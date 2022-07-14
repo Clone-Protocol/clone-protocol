@@ -3239,7 +3239,7 @@ export class Incept {
 
     let startSearch = 0;
     let stopSearch = initData.maxUsdiPosition;
-    let positionGuess;
+    let positionGuess = (startSearch + stopSearch) * 0.5;
     let iter = 0;
     while (iter < maxIter) {
       positionGuess = (startSearch + stopSearch) * 0.5;
