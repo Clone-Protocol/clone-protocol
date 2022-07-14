@@ -1599,27 +1599,17 @@ describe("incept", async () => {
     const tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[0];
 
-    const usdiAccountBalance =
-      await inceptClient.connection.getTokenAccountBalance(
-        pool.usdiTokenAccount,
-        "recent"
-      );
-
-    assert.equal(
-      usdiAccountBalance.value!.uiAmount,
+    assert.closeTo(
+      toScaledNumber(pool.usdiAmount),
       510735.16146549,
+      1e-6,
       "check usdi pool balance"
     );
 
-    const iassetTokenBalance =
-      await inceptClient.connection.getTokenAccountBalance(
-        pool.iassetTokenAccount,
-        "recent"
-      );
-
-    assert.equal(
-      iassetTokenBalance.value!.uiAmount,
+    assert.closeTo(
+      toScaledNumber(pool.iassetAmount),
       80910.92477586,
+      1e-6,
       "check iasset pool balance"
     );
   });
@@ -1627,7 +1617,7 @@ describe("incept", async () => {
   it("comet health check", async () => {
     let healthScore = await inceptClient.getHealthScore();
 
-    assert.equal(healthScore, 99.99995158817026, "check health score.");
+    assert.equal(healthScore, 99.99995158818079, "check health score.");
 
     await inceptClient.updatePoolHealthScoreCoefficient(
       healthScoreCoefficient * 2,
@@ -1638,7 +1628,7 @@ describe("incept", async () => {
     );
 
     healthScore = await inceptClient.getHealthScore();
-    assert.equal(healthScore, 99.99990317634052, "check health score.");
+    assert.equal(healthScore, 99.99990317636158, "check health score.");
 
     const totalILD = await inceptClient.getILD();
     const poolILD = await inceptClient.getILD(0);
