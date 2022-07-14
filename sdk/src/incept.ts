@@ -2988,6 +2988,7 @@ export class Incept {
     healthScore: number;
     lowerPrice: number;
     upperPrice: number;
+    maxUsdiPosition: number;
   }> {
     const tokenData = await this.getTokenData();
     const pool = tokenData.pools[poolIndex];
@@ -3025,10 +3026,13 @@ export class Incept {
     let y2 = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
     const upperPrice = (y2 * y2) / invariant;
 
+    let maxUsdiPosition = (100 * collateralProvided) / poolCoefficient;
+
     return {
       healthScore: healhScore,
       lowerPrice: lowerPrice,
       upperPrice: upperPrice,
+      maxUsdiPosition: maxUsdiPosition,
     };
   }
 
@@ -3123,11 +3127,11 @@ export class Incept {
     const upperPrice = (y2 * y2) / newInvariant;
 
     // Max USDi borrowed position possible before health = 0
-    a = ilHealthScoreCoefficient + poolCoefficient;
-    b = poolCoefficient * newPoolUsdi - 100 * newCollateralAmount;
-    c = -100 * newCollateralAmount * newPoolUsdi;
-
-    let maxUsdiPosition = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+    let maxUsdiPosition = Math.max(
+      0,
+      (100 * newCollateralAmount - ilHealthScoreCoefficient * ILD) /
+        poolCoefficient
+    );
 
     return {
       maxCollateralWithdrawable: maxCollateralWithdrawable,
