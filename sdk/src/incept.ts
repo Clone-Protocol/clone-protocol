@@ -2980,7 +2980,7 @@ export class Incept {
     );
   }
 
-  public async calculateNewSinglePoolComet(
+  public async calculateNewSinglePoolCometFromUsdiBorrowed(
     poolIndex: number,
     collateralProvided: number,
     usdiBorrowed: number
@@ -2996,6 +2996,8 @@ export class Incept {
     const poolUsdi = toScaledNumber(pool.usdiAmount);
     const poolIasset = toScaledNumber(pool.iassetAmount);
     const poolPrice = poolUsdi / poolIasset;
+
+    const iassetBorrowed = usdiBorrowed / poolPrice;
 
     const claimableRatio = usdiBorrowed / (usdiBorrowed + poolUsdi);
 
@@ -3013,7 +3015,7 @@ export class Incept {
 
     const maxILD = (100 * collateralProvided - loss) / ilHealthScoreCoefficient;
 
-    const invariant = poolUsdi * poolIasset;
+    const invariant = (poolUsdi + usdiBorrowed) * (poolIasset + iassetBorrowed);
 
     // Solution 1: Price goes down, IL is in USDi
     let y1 = (usdiBorrowed - maxILD) / claimableRatio;
@@ -3034,6 +3036,115 @@ export class Incept {
       upperPrice: upperPrice,
       maxUsdiPosition: maxUsdiPosition,
     };
+  }
+
+  public async calculateNewSinglePoolCometFromRange(
+    poolIndex: number,
+    collateralProvided: number,
+    price: number,
+    isLowerPrice: boolean
+  ): Promise<{
+    healthScore: number;
+    lowerPrice: number;
+    upperPrice: number;
+    usdiBorrowed: number;
+    maxUsdiPosition: number;
+  }> {
+    const tokenData = await this.getTokenData();
+    const pool = tokenData.pools[poolIndex];
+
+    const poolUsdi = toScaledNumber(pool.usdiAmount);
+    const poolIasset = toScaledNumber(pool.iassetAmount);
+    const poolPrice = poolUsdi / poolIasset;
+
+    const poolCoefficient = toScaledNumber(
+      pool.assetInfo.healthScoreCoefficient
+    );
+    const ilHealthScoreCoefficient = toScaledNumber(
+      tokenData.ilHealthScoreCoefficient
+    );
+
+    let maxUsdiPosition = (100 * collateralProvided) / poolCoefficient;
+
+    const priceRange = (usdiBorrowed: number): number => {
+      const claimableRatio = usdiBorrowed / (usdiBorrowed + poolUsdi);
+
+      const loss = poolCoefficient * usdiBorrowed;
+
+      const healthScore = 100 - loss / collateralProvided;
+
+      const maxILD =
+        (100 * collateralProvided - loss) / ilHealthScoreCoefficient;
+
+      const iassetBorrowed = usdiBorrowed / poolPrice;
+
+      const invariant =
+        (poolUsdi + usdiBorrowed) * (poolIasset + iassetBorrowed);
+
+      // Solution 1: Price goes down, IL is in USDi
+      let y1 = (usdiBorrowed - maxILD) / claimableRatio;
+      const lowerPrice = (y1 * y1) / invariant;
+      // Solution 2: Price goes up, IL is in iAsset
+      let a = usdiBorrowed / poolPrice / invariant;
+      let b = -claimableRatio;
+      let c = -maxILD;
+      let y2 = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+      const upperPrice = (y2 * y2) / invariant;
+
+      return isLowerPrice ? lowerPrice : upperPrice;
+    };
+
+    let maxIter = 1000;
+    let tolerance = 1e-9;
+    let startSearch = 0;
+    let stopSearch = maxUsdiPosition;
+    let positionGuess = (startSearch + stopSearch) * 0.5;
+    let iter = 0;
+    let range = priceRange(positionGuess);
+    while (iter < maxIter) {
+      positionGuess = (startSearch + stopSearch) * 0.5;
+
+      let estPrice = priceRange(positionGuess);
+
+      if (isLowerPrice) {
+        let diff = estPrice - price;
+        if (Math.abs(diff) < tolerance) {
+          break;
+        }
+
+        if (diff < 0) {
+          // Increase position to increase lower
+          startSearch = positionGuess;
+        } else {
+          stopSearch = positionGuess;
+        }
+      } else {
+        let diff = estPrice - price;
+        if (Math.abs(diff) < tolerance) {
+          break;
+        }
+
+        if (diff < 0) {
+          // Reduce position to increase upper
+          stopSearch = positionGuess;
+        } else {
+          startSearch = positionGuess;
+        }
+      }
+      iter += 1;
+    }
+
+    if (iter === maxIter) {
+      throw new CalculationError("Max iterations reached!");
+    }
+
+    const results = await this.calculateNewSinglePoolCometFromUsdiBorrowed(
+      poolIndex,
+      collateralProvided,
+      positionGuess
+    );
+
+    return { ...results, usdiBorrowed: positionGuess };
   }
 
   public async calculateEditCometSinglePoolWithUsdiBorrowed(
@@ -3154,7 +3265,7 @@ export class Incept {
     lowerPrice: number;
     upperPrice: number;
   }> {
-    const tolerance = 1e-6;
+    const tolerance = 1e-9;
     const maxIter = 100000;
     const comet = await this.getSinglePoolComet(cometIndex);
     const tokenData = await this.getTokenData();

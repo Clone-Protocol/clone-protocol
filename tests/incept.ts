@@ -1127,6 +1127,50 @@ describe("incept", async () => {
       1e-3
     );
 
+    const estimationWithNewComet =
+      await inceptClient.calculateNewSinglePoolCometFromUsdiBorrowed(
+        0,
+        250,
+        510
+      );
+
+    const estimationWithNewCometAndLowerRange =
+      await inceptClient.calculateNewSinglePoolCometFromRange(
+        0,
+        250,
+        estimationWithNewComet.lowerPrice,
+        true
+      );
+
+    const estimationWithNewCometAndUpperRange =
+      await inceptClient.calculateNewSinglePoolCometFromRange(
+        0,
+        250,
+        estimationWithNewComet.upperPrice,
+        false
+      );
+
+    assert.closeTo(
+      estimationWithNewComet.healthScore,
+      estimation.healthScore,
+      1e-6,
+      "check health score estimations"
+    );
+
+    assert.closeTo(
+      estimationWithNewCometAndLowerRange.usdiBorrowed,
+      510,
+      1e-6,
+      "check lower range estimations"
+    );
+
+    assert.closeTo(
+      estimationWithNewCometAndUpperRange.usdiBorrowed,
+      510,
+      1e-6,
+      "check upper range estimations"
+    );
+
     await inceptClient.addLiquidityToSinglePoolComet(new BN(51000000000), 0);
 
     await sleep(200);
