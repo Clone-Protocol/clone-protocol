@@ -1576,6 +1576,12 @@ pub mod incept {
         let comet_position = comet.positions[comet_position_index as usize];
 
         let liquidity_token_value = Value::new(liquidity_token_amount.into(), DEVNET_TOKEN_SCALE);
+
+        require!(
+            liquidity_token_value.lte(comet_position.liquidity_token_value)?,
+            InceptError::InvalidTokenAccountBalance
+        );
+
         let iasset_amm_value = Value::new(
             ctx.accounts.amm_iasset_token_account.amount.into(),
             DEVNET_TOKEN_SCALE,
@@ -1600,29 +1606,24 @@ pub mod incept {
                 liquidity_token_supply,
             )?;
 
-        // update comet position data
-        comet.positions[comet_position_index as usize].borrowed_usdi = comet_position
-            .borrowed_usdi
-            .sub(usdi_liquidity_value)
-            .unwrap();
-        comet.positions[comet_position_index as usize].borrowed_iasset = comet_position
-            .borrowed_iasset
-            .sub(iasset_liquidity_value)
-            .unwrap();
-        comet.positions[comet_position_index as usize].liquidity_token_value = comet_position
-            .liquidity_token_value
-            .sub(liquidity_token_value)
-            .unwrap();
+        let lp_position_claimable_ratio =
+            liquidity_token_value.div(comet_position.liquidity_token_value);
 
         // calculate initial comet pool price
         let initial_comet_price =
             calculate_amm_price(comet_position.borrowed_iasset, comet_position.borrowed_usdi);
         // calculate current pool price
         let current_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
-
-        // check if price has increased since comet was initialized
-        if initial_comet_price.lt(current_price).unwrap() {
-            let iasset_burn_value = initial_comet_price.mul(iasset_liquidity_value);
+        // check if price has decreased since comet was initialized
+        if initial_comet_price.gt(current_price)? {
+            // IL is in USDi, reward in iasset
+            let mut iasset_burn_value =
+                lp_position_claimable_ratio.mul(comet_position.borrowed_iasset);
+            iasset_burn_value = if iasset_burn_value.gt(iasset_liquidity_value)? {
+                iasset_liquidity_value
+            } else {
+                iasset_burn_value
+            };
             // burn liquidity from amm
             let cpi_accounts = Burn {
                 mint: ctx.accounts.usdi_mint.to_account_info().clone(),
@@ -1681,8 +1682,18 @@ pub mod incept {
                     .unwrap()
                     .to_u64(),
             )?;
-        } else if initial_comet_price.gt(current_price).unwrap() {
-            let usdi_burn_value = usdi_liquidity_value.div(initial_comet_price);
+            // update comet position data
+            comet.positions[comet_position_index as usize].borrowed_usdi =
+                comet_position.borrowed_usdi.sub(usdi_liquidity_value)?;
+            comet.positions[comet_position_index as usize].borrowed_iasset =
+                comet_position.borrowed_iasset.sub(iasset_burn_value)?;
+        } else if initial_comet_price.lt(current_price)? {
+            let mut usdi_burn_value = lp_position_claimable_ratio.mul(comet_position.borrowed_usdi);
+            usdi_burn_value = if usdi_burn_value.gt(usdi_liquidity_value)? {
+                usdi_liquidity_value
+            } else {
+                usdi_burn_value
+            };
             // burn liquidity from amm
             let cpi_accounts = Burn {
                 mint: ctx.accounts.usdi_mint.to_account_info().clone(),
@@ -1736,8 +1747,13 @@ pub mod incept {
             );
             token::transfer(
                 transfer_usdi_context,
-                usdi_liquidity_value.sub(usdi_burn_value).unwrap().to_u64(),
+                usdi_liquidity_value.sub(usdi_burn_value)?.to_u64(),
             )?;
+            // update comet position data
+            comet.positions[comet_position_index as usize].borrowed_usdi =
+                comet_position.borrowed_usdi.sub(usdi_burn_value)?;
+            comet.positions[comet_position_index as usize].borrowed_iasset =
+                comet_position.borrowed_iasset.sub(iasset_liquidity_value)?;
         } else {
             // burn liquidity from amm
             let cpi_accounts = Burn {
@@ -1770,6 +1786,11 @@ pub mod incept {
                 seeds,
             );
             token::burn(burn_iasset_context, iasset_liquidity_value.to_u64())?;
+
+            comet.positions[comet_position_index as usize].borrowed_usdi =
+                comet_position.borrowed_usdi.sub(usdi_liquidity_value)?;
+            comet.positions[comet_position_index as usize].borrowed_iasset =
+                comet_position.borrowed_iasset.sub(iasset_liquidity_value)?;
         }
         // burn liquidity tokens from comet
         let cpi_accounts = Burn {
@@ -1791,6 +1812,11 @@ pub mod incept {
             burn_liquidity_tokens_to_comet_context,
             liquidity_token_value.to_u64(),
         )?;
+
+        // update comet position data
+        comet.positions[comet_position_index as usize].liquidity_token_value = comet_position
+            .liquidity_token_value
+            .sub(liquidity_token_value)?;
 
         // update pool data
         ctx.accounts.amm_iasset_token_account.reload()?;
