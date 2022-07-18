@@ -381,7 +381,9 @@ pub fn calculate_health_score(
         loss = loss.add(impermanent_loss_term)?.add(position_term)?;
     }
 
-    let score = 100f64 - loss.div(comet.total_collateral_amount).to_scaled_f64();
+    let total_collateral_value = comet.calculate_effective_collateral_value(token_data);
+
+    let score = 100f64 - loss.div(total_collateral_value).to_scaled_f64();
 
     if score > 0f64 {
         Ok(HealthScore::Healthy { score })

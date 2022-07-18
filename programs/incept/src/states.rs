@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::value::*;
 use anchor_lang::prelude::*;
 
 #[derive(PartialEq, Debug, Clone, Copy, AnchorDeserialize, AnchorSerialize)]
@@ -268,6 +269,37 @@ impl Comet {
     pub fn add_position(&mut self, new_pool: CometPosition) {
         self.positions[(self.num_positions) as usize] = new_pool;
         self.num_positions += 1;
+    }
+
+    pub fn calculate_effective_collateral_value(&self, token_data: &TokenData) -> Value {
+        let mut total_value = Value::new(0, DEVNET_TOKEN_SCALE);
+
+        self.collaterals[0..(self.num_collaterals as usize)]
+            .iter()
+            .for_each(|comet_collateral| {
+                let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
+                let collateral_value = if collateral.stable == 1 {
+                    comet_collateral
+                        .collateral_amount
+                        .scale_to(DEVNET_TOKEN_SCALE)
+                } else {
+                    let pool = token_data.pools[collateral.pool_index as usize];
+                    let pool_price = pool.usdi_amount.div(pool.iasset_amount);
+                    let eval_price = if pool_price.lt(pool.asset_info.price).unwrap() {
+                        pool_price
+                    } else {
+                        pool.asset_info.price
+                    };
+                    comet_collateral
+                        .collateral_amount
+                        .scale_to(DEVNET_TOKEN_SCALE)
+                        .mul(eval_price.scale_to(DEVNET_TOKEN_SCALE))
+                        .div(collateral.collateralization_ratio)
+                };
+                total_value = total_value.add(collateral_value).unwrap();
+            });
+
+        total_value
     }
 }
 
