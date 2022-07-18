@@ -161,14 +161,14 @@ pub struct Collateral {
 #[account]
 #[derive(Default)]
 pub struct User {
-    // 200
+    // 208
     pub is_manager: u64,             // 8
     pub authority: Pubkey,           // 32
     pub single_pool_comets: Pubkey,  // 32
     pub mint_positions: Pubkey,      // 32
     pub liquidity_positions: Pubkey, // 32
     pub comet: Pubkey,               // 32
-    pub comet_manager: Pubkey,       // 32
+    pub comet_manager: CometManager, // 40
 }
 
 #[account(zero_copy)]
@@ -318,6 +318,14 @@ pub struct CometLiquidation {
     pub status: u64,                    // 8
     pub excess_token_type_is_usdi: u64, // 8
     pub excess_token_amount: Value,     // 24
+}
+
+#[zero_copy]
+#[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
+pub struct CometManager {
+    // 40
+    pub membership_token_mint: Pubkey, // 8
+    pub comet: Pubkey,                 // 32
 }
 
 #[account(zero_copy)]

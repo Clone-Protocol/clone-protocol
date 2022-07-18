@@ -998,7 +998,7 @@ pub struct InitializeCometManager<'info> {
         bump = manager_nonce,
         has_one = admin
     )]
-    pub manager: Account<'info, Manager>,
+    pub manager: Account<'info, Manager>,g
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
         bump = user_nonce
@@ -1006,6 +1006,16 @@ pub struct InitializeCometManager<'info> {
     pub user_account: Box<Account<'info, User>>,
     #[account(zero)]
     pub comet_manager: AccountLoader<'info, Comet>,
+    #[account(
+        init,
+        mint::decimals = 8,
+        mint::authority = manager,
+        payer = user
+    )]
+    pub membership_token_mint: Box<Account<'info, Mint>>,
+    pub rent: Sysvar<'info, Rent>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
