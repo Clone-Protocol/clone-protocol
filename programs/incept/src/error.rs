@@ -163,6 +163,10 @@ pub enum InceptError {
     /// 39. Invalid Recenter
     #[error("Invalid Recenter")]
     InvalidRecenter,
+
+    /// 40. Non-zero collateralization ratio required
+    #[error("Non-zero collateralization ratio required")]
+    NonZeroCollateralizationRatioRequired,
 }
 
 impl From<InceptError> for ProgramError {

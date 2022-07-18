@@ -35,12 +35,12 @@ pub struct Manager {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 175,592
+    // 181,712
     pub manager: Pubkey,                    // 32
     pub num_pools: u64,                     // 8
     pub num_collaterals: u64,               // 8
     pub pools: [Pool; 255],                 // 255 * 536 = 136,680
-    pub collaterals: [Collateral; 255],     // 255 * 152 = 38,760
+    pub collaterals: [Collateral; 255],     // 255 * 176 = 44,880
     pub chainlink_program: Pubkey,          // 32
     pub il_health_score_coefficient: Value, // 24
     pub il_health_score_cutoff: Value,      // 24
@@ -148,14 +148,15 @@ pub struct Pool {
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct Collateral {
-    // 152
-    pub pool_index: u64,           // 8
-    pub mint: Pubkey,              // 32
-    pub vault: Pubkey,             // 32
-    pub vault_usdi_supply: Value,  // 24
-    pub vault_mint_supply: Value,  // 24
-    pub vault_comet_supply: Value, // 24
-    pub stable: u64,               // 8
+    // 176
+    pub pool_index: u64,                // 8
+    pub mint: Pubkey,                   // 32
+    pub vault: Pubkey,                  // 32
+    pub vault_usdi_supply: Value,       // 24
+    pub vault_mint_supply: Value,       // 24
+    pub vault_comet_supply: Value,      // 24
+    pub stable: u64,                    // 8
+    pub collateralization_ratio: Value, // 24
 }
 
 #[account]

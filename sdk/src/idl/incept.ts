@@ -356,6 +356,10 @@ export type Incept = {
         {
           "name": "stable",
           "type": "u8"
+        },
+        {
+          "name": "collateralizationRatio",
+          "type": "u64"
         }
       ]
     },
@@ -2670,6 +2674,12 @@ export type Incept = {
           {
             "name": "stable",
             "type": "u64"
+          },
+          {
+            "name": "collateralizationRatio",
+            "type": {
+              "defined": "Value"
+            }
           }
         ]
       }
@@ -2936,6 +2946,9 @@ export type Incept = {
           },
           {
             "name": "InvalidRecenter"
+          },
+          {
+            "name": "NonZeroCollateralizationRatioRequired"
           }
         ]
       }
@@ -3348,6 +3361,10 @@ export const IDL: Incept = {
         {
           "name": "stable",
           "type": "u8"
+        },
+        {
+          "name": "collateralizationRatio",
+          "type": "u64"
         }
       ]
     },
@@ -5662,6 +5679,12 @@ export const IDL: Incept = {
           {
             "name": "stable",
             "type": "u64"
+          },
+          {
+            "name": "collateralizationRatio",
+            "type": {
+              "defined": "Value"
+            }
           }
         ]
       }
@@ -5928,6 +5951,9 @@ export const IDL: Incept = {
           },
           {
             "name": "InvalidRecenter"
+          },
+          {
+            "name": "NonZeroCollateralizationRatioRequired"
           }
         ]
       }

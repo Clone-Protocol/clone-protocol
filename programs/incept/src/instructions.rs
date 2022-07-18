@@ -141,7 +141,7 @@ pub struct InitializeComet<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, scale: u8, stable: u8)]
+#[instruction(manager_nonce: u8, scale: u8, stable: u8, collateralization_ratio: u64)]
 pub struct AddCollateral<'info> {
     #[account(address = manager.admin)]
     pub admin: Signer<'info>,

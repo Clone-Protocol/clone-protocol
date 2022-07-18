@@ -156,7 +156,19 @@ pub mod incept {
         _manager_nonce: u8,
         scale: u8,
         stable: u8,
+        collateralization_ratio: u64,
     ) -> ProgramResult {
+        msg!("WTF");
+        require!(
+            if stable == 0 {
+                collateralization_ratio > 0
+            } else {
+                true
+            },
+            InceptError::NonZeroCollateralizationRatioRequired
+        );
+        msg!("WTF");
+
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
         let mut pool_index: u8 = u8::MAX;
 
@@ -191,6 +203,7 @@ pub mod incept {
             vault_mint_supply: Value::new(0, scale),
             vault_comet_supply: Value::new(0, scale),
             stable: stable as u64,
+            collateralization_ratio: Value::new(collateralization_ratio.into(), DEVNET_TOKEN_SCALE),
         });
 
         Ok(())

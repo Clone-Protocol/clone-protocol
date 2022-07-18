@@ -33,7 +33,7 @@ export const toDevnetScale = (x: number) => {
   return new BN(x * 10 ** DEVNET_TOKEN_SCALE);
 };
 
-const TOKEN_DATA_SIZE = 175600;
+const TOKEN_DATA_SIZE = 181720;//175600;
 const SINGLE_POOL_COMET_SIZE = 8208;
 const MINT_POSITIONS_SIZE = 24528;
 const LIQUIDITY_POSITIONS_SIZE = 16368;
@@ -152,7 +152,8 @@ export class Incept {
     admin: PublicKey,
     scale: number,
     stable: number,
-    collateral_mint: PublicKey
+    collateral_mint: PublicKey,
+    collateralization_ratio: number = 0
   ) {
     const vaultAccount = anchor.web3.Keypair.generate();
 
@@ -160,6 +161,7 @@ export class Incept {
       this.managerAddress[1],
       scale,
       stable,
+      toDevnetScale(collateralization_ratio),
       {
         accounts: {
           admin: admin,
