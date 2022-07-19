@@ -1162,7 +1162,8 @@ export class Incept {
     cometIndex: number,
     signers?: Array<Keypair>
   ) {
-    const updatePricesIx = await this.updatePricesInstruction();
+    const pool = await this.getSinglePoolComet(cometIndex);
+    const updatePricesIx = await this.updatePricesInstruction(pool.positions[0].poolIndex);
     const withdrawCollateralFromCometIx =
       await this.withdrawCollateralFromSinglePoolCometInstruction(
         userCollateralTokenAccount,
