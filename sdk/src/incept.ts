@@ -33,7 +33,7 @@ export const toDevnetScale = (x: number) => {
   return new BN(x * 10 ** DEVNET_TOKEN_SCALE);
 };
 
-const TOKEN_DATA_SIZE = 181720;//175600;
+const TOKEN_DATA_SIZE = 181720; //175600;
 const SINGLE_POOL_COMET_SIZE = 8208;
 const MINT_POSITIONS_SIZE = 24528;
 const LIQUIDITY_POSITIONS_SIZE = 16368;
@@ -2427,12 +2427,12 @@ export class Incept {
       let totalCollateralAmount = toScaledNumber(
         singlePoolComet.totalCollateralAmount
       );
-      let range = await this.calculateRangeFromUSDiAndCollateral(
-        collateralIndex,
-        poolIndex,
-        totalCollateralAmount,
-        borrowedUsdi
+      let data = await this.calculateEditCometSinglePoolWithUsdiBorrowed(
+        i,
+        0,
+        0
       );
+      let range = [data.lowerPrice, data.upperPrice];
       let lowerPriceRange = range[0];
       let upperPriceRange = range[1];
       let minGap = Math.min(
@@ -2514,130 +2514,6 @@ export class Incept {
       iassetInfo.push([i, price, liquidity]);
     }
     return iassetInfo;
-  }
-
-  public async calculateRangeFromUSDiAndCollateral(
-    collateralIndex: number,
-    poolIndex: number,
-    collateralAmount: number,
-    usdiAmount: number
-  ) {
-    let collateral = await this.getCollateral(collateralIndex);
-    if (!collateral.stable) {
-      throw new Error("Non-stable collateral not yet supported!");
-    }
-
-    let pool = await this.getPool(poolIndex);
-
-    let liquidityTokenSupplyBeforeComet = (
-      await this.connection.getTokenSupply(pool.liquidityTokenMint, "confirmed")
-    ).value!.uiAmount;
-
-    if (liquidityTokenSupplyBeforeComet === null) {
-      throw new Error("Couldn't get token supply");
-    }
-
-    let balances = await this.getPoolBalances(poolIndex);
-
-    let cometLiquidityTokenAmount =
-      (usdiAmount * liquidityTokenSupplyBeforeComet) / balances[1];
-    let updatedliquidityTokenSupply =
-      liquidityTokenSupplyBeforeComet + cometLiquidityTokenAmount;
-    let yUnder =
-      (Math.max(usdiAmount - collateralAmount, 0) *
-        updatedliquidityTokenSupply) /
-      cometLiquidityTokenAmount;
-    let iassetAmount = usdiAmount / (balances[1] / balances[0]);
-    let invariant = (balances[1] + usdiAmount) * (balances[0] + iassetAmount);
-    let xUnder = invariant / yUnder;
-    let pLower = (yUnder / xUnder) * 2;
-
-    let a = collateralAmount / invariant;
-    let b = cometLiquidityTokenAmount / updatedliquidityTokenSupply;
-    let c = iassetAmount;
-    let xUpper = (Math.sqrt(b ** 2 + 4 * a * c) - b) / (2 * a);
-    let yUpper = invariant / xUpper;
-    let pUpper = ((yUpper / xUpper) * 2) / 3;
-
-    return [pLower, pUpper];
-  }
-
-  public async calculateUSDiAmountFromRange(
-    collateralIndex: number,
-    poolIndex: number,
-    collateralAmount: number,
-    rangePrice: number,
-    isLowerRange: boolean
-  ) {
-    let collateral = await this.getCollateral(collateralIndex);
-    if (!collateral.stable) {
-      throw new Error("Non-stable collateral not yet supported!");
-    }
-
-    let pool = await this.getPool(poolIndex);
-
-    let liquidityTokenSupplyBeforeComet = (
-      await this.connection.getTokenSupply(pool.liquidityTokenMint, "confirmed")
-    ).value!.uiAmount;
-
-    if (liquidityTokenSupplyBeforeComet === null) {
-      throw new Error("Couldn't get token supply");
-    }
-
-    let [iAssetBalance, usdiBalance] = await this.getPoolBalances(poolIndex);
-
-    const invariant = iAssetBalance * usdiBalance;
-    const poolPrice = usdiBalance / iAssetBalance;
-
-    const a = 1;
-    let b;
-    let c;
-    let adjustedPrice;
-    if (isLowerRange) {
-      adjustedPrice = rangePrice / 2;
-      b = usdiBalance - Math.sqrt(invariant * adjustedPrice) - collateralAmount;
-      c = -usdiBalance * collateralAmount;
-    } else {
-      adjustedPrice = (rangePrice * 3) / 2;
-      b =
-        iAssetBalance -
-        Math.sqrt(invariant / adjustedPrice) -
-        collateralAmount / adjustedPrice;
-      c = (-iAssetBalance * collateralAmount) / adjustedPrice;
-    }
-    let borrowAmountUsdi = Math.max(
-      0,
-      (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a)
-    );
-
-    if (!isLowerRange) {
-      borrowAmountUsdi *= poolPrice;
-    }
-
-    return borrowAmountUsdi;
-  }
-
-  public async calculateMaxUSDiAmountFromCollateral(
-    poolIndex: number,
-    collateralAmount: number
-  ) {
-    const [iAssetBalance, usdiBalance] = await this.getPoolBalances(poolIndex);
-    const price = usdiBalance / iAssetBalance;
-    const usdiLowerLimit = await this.calculateUSDiAmountFromRange(
-      0,
-      0,
-      collateralAmount,
-      price,
-      true
-    );
-    const usdiUpperLimit = await this.calculateUSDiAmountFromRange(
-      0,
-      0,
-      collateralAmount,
-      price,
-      false
-    );
-    return Math.min(usdiLowerLimit, usdiUpperLimit);
   }
 
   public async updateILHealthScoreCoefficient(coefficient: number) {
@@ -3020,7 +2896,7 @@ export class Incept {
     const invariant = (poolUsdi + usdiBorrowed) * (poolIasset + iassetBorrowed);
 
     // Solution 1: Price goes down, IL is in USDi
-    let y1 = (usdiBorrowed - maxILD) / claimableRatio;
+    let y1 = Math.max((usdiBorrowed - maxILD) / claimableRatio, 0);
     const lowerPrice = (y1 * y1) / invariant;
 
     // Solution 2: Price goes up, IL is in iAsset
@@ -3084,7 +2960,7 @@ export class Incept {
         (poolUsdi + usdiBorrowed) * (poolIasset + iassetBorrowed);
 
       // Solution 1: Price goes down, IL is in USDi
-      let y1 = (usdiBorrowed - maxILD) / claimableRatio;
+      let y1 = Math.max((usdiBorrowed - maxILD) / claimableRatio, 0);
       const lowerPrice = (y1 * y1) / invariant;
       // Solution 2: Price goes up, IL is in iAsset
       let a = usdiBorrowed / poolPrice / invariant;
@@ -3229,7 +3105,7 @@ export class Incept {
     const newInvariant = newPoolUsdi * newPooliAsset;
 
     // Solution 1: Price goes down, IL is in USDi
-    let y1 = (positionBorrowedUsdi - maxILD) / newClaimableRatio;
+    let y1 = Math.max((positionBorrowedUsdi - maxILD) / newClaimableRatio, 0);
     const lowerPrice = (y1 * y1) / newInvariant;
 
     // Solution 2: Price goes up, IL is in iAsset
@@ -3332,7 +3208,7 @@ export class Incept {
       const newInvariant = newPoolUsdi * newPooliAsset;
 
       // Solution 1: Price goes down, IL is in USDi
-      let y1 = (positionBorrowedUsdi - maxILD) / newClaimableRatio;
+      let y1 = Math.max((positionBorrowedUsdi - maxILD) / newClaimableRatio, 0);
       const lowerPrice = (y1 * y1) / newInvariant;
 
       // Solution 2: Price goes up, IL is in iAsset
@@ -3470,7 +3346,7 @@ export class Incept {
     const maxILD = (100 * newCollateral - positionLoss) / ilCoefficient;
 
     // Solution 1: Price goes down, IL is in USDi
-    let y1 = (newBorrowedUsdi - maxILD) / claimableRatio;
+    let y1 = Math.max((newBorrowedUsdi - maxILD) / claimableRatio, 0);
 
     // Solution 2: Price goes up, IL is in iAsset
     let a = newBorrowedIasset / invariant;
