@@ -2319,9 +2319,33 @@ pub mod incept {
         let mut comet = ctx.accounts.comet.load_mut()?;
         let comet_position = comet.positions[comet_position_index as usize];
 
-        if comet_position.borrowed_usdi.val == 0 && comet_position.borrowed_iasset.val == 0 {
-            // No debt to be paid
-        } else if comet_position.borrowed_usdi.val == 0 {
+        if comet_position.liquidity_token_value.val > 0 {
+            return Err(InceptError::LiquidityNotWithdrawn.into());
+        }
+
+        if comet_position.borrowed_usdi.val > 0 {
+            // Burn the usdi debt from the user
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                to: ctx
+                    .accounts
+                    .user_usdi_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.user.to_account_info().clone(),
+            };
+            let burn_user_usdi_context = CpiContext::new(
+                ctx.accounts.token_program.to_account_info().clone(),
+                cpi_accounts,
+            );
+
+            token::burn(
+                burn_user_usdi_context,
+                comet_position.borrowed_usdi.to_u64(),
+            )?;
+        }
+
+        if comet_position.borrowed_iasset.val > 0 {
             // Burn the iAsset debt from the user
             let cpi_accounts = Burn {
                 mint: ctx.accounts.iasset_mint.to_account_info().clone(),
@@ -2341,28 +2365,6 @@ pub mod incept {
                 burn_user_iasset_context,
                 comet_position.borrowed_iasset.to_u64(),
             )?;
-        } else if comet_position.borrowed_iasset.val == 0 {
-            // Burn the usdi debt from the user
-            let cpi_accounts = Burn {
-                mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                to: ctx
-                    .accounts
-                    .user_iasset_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.user.to_account_info().clone(),
-            };
-            let burn_user_usdi_context = CpiContext::new(
-                ctx.accounts.token_program.to_account_info().clone(),
-                cpi_accounts,
-            );
-
-            token::burn(
-                burn_user_usdi_context,
-                comet_position.borrowed_usdi.to_u64(),
-            )?;
-        } else {
-            return Err(InceptError::LiquidityNotWithdrawn.into());
         }
 
         comet.remove_position(comet_position_index as usize);
