@@ -3332,7 +3332,7 @@ export class Incept {
     } else {
       // calculate extra iAsset comet can claim, usdi debt that comet cannot claim, and amount of usdi gained from trading iasset.
       let extraUsdiFromIasset =
-        poolIassetAmount - invariant / (poolIassetAmount + iAssetDebt);
+        poolUsdiAmount - invariant / (poolIassetAmount + iAssetDebt);
       usdiCost = usdiDebt - extraUsdiFromIasset;
     }
 
