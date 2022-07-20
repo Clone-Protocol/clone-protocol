@@ -158,7 +158,6 @@ pub mod incept {
         stable: u8,
         collateralization_ratio: u64,
     ) -> ProgramResult {
-        msg!("WTF");
         require!(
             if stable == 0 {
                 collateralization_ratio > 0
@@ -167,7 +166,6 @@ pub mod incept {
             },
             InceptError::NonZeroCollateralizationRatioRequired
         );
-        msg!("WTF");
 
         let token_data = &mut ctx.accounts.token_data.load_mut()?;
         let mut pool_index: u8 = u8::MAX;
@@ -2343,6 +2341,9 @@ pub mod incept {
                 burn_user_usdi_context,
                 comet_position.borrowed_usdi.to_u64(),
             )?;
+
+            comet.positions[comet_position_index as usize].borrowed_usdi =
+                Value::new(0, comet_position.borrowed_usdi.scale.try_into().unwrap());
         }
 
         if comet_position.borrowed_iasset.val > 0 {
@@ -2365,9 +2366,10 @@ pub mod incept {
                 burn_user_iasset_context,
                 comet_position.borrowed_iasset.to_u64(),
             )?;
-        }
 
-        comet.remove_position(comet_position_index as usize);
+            comet.positions[comet_position_index as usize].borrowed_iasset =
+                Value::new(0, comet_position.borrowed_iasset.scale.try_into().unwrap());
+        }
 
         Ok(())
     }
