@@ -2442,7 +2442,7 @@ export class Incept {
         upperPriceRange - oraclePrice,
         upperPriceRange - ammPrice
       );
-      let indicatorPrice: number;
+      let indicatorPrice: number = undefined;
       switch (minGap) {
         case oraclePrice - lowerPriceRange:
           indicatorPrice = oraclePrice;
@@ -2457,7 +2457,7 @@ export class Incept {
           indicatorPrice = ammPrice;
           break;
         default:
-          throw new Error("Not supported");
+          break;
       }
       let centerPrice =
         toScaledNumber(cometPosition.borrowedUsdi) /
