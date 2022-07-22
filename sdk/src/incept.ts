@@ -22,6 +22,7 @@ import {
   MintPositionsUninitialized,
   SinglePoolCometUninitialized,
   CalculationError,
+  LiquidityPositionsUninitialized
 } from "./error";
 import { assert } from "chai";
 
@@ -323,6 +324,9 @@ export class Incept {
 
   public async getLiquidityPositions() {
     const userAccountData = (await this.getUserAccount()) as User;
+    if (userAccountData.liquidityPositions.equals(anchor.web3.PublicKey.default)) {
+      throw new LiquidityPositionsUninitialized();
+    }
     return (await this.program.account.liquidityPositions.fetch(
       userAccountData.liquidityPositions
     )) as LiquidityPositions;
