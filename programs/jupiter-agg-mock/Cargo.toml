@@ -1,0 +1,25 @@
+[package]
+name = "jupiter-agg-mock"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "jupiter_agg_mock"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = "0.20.1"
+anchor-spl = "0.20.1"
+solana-program = "1.9.5"
+bytemuck = "1.7.3"
+pyth = { path = "../pyth", version = "0.1.0", features = ["cpi"] }
+rust_decimal = "1.25"
+rust_decimal_macros = "1.25"
