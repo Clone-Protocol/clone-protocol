@@ -2710,7 +2710,7 @@ pub mod incept {
             // if there is no debt, close the position
             comet.remove_position(comet_position_index.into());
             return Ok(());
-        } else if comet_position.borrowed_usdi.val == 0 {
+        } else if comet_position.borrowed_iasset.val == 0 {
             // if usdi, update collateral and reduce borrowed amount
             if collateral_reduction_value
                 .gt(comet_position.borrowed_usdi)
@@ -2722,7 +2722,7 @@ pub mod incept {
             comet.positions[comet_position_index as usize].borrowed_usdi = comet_position
                 .borrowed_usdi
                 .sub(collateral_reduction_value)?;
-        } else if comet_position.borrowed_iasset.val == 0 {
+        } else if comet_position.borrowed_usdi.val == 0 {
             // if iAsset, calculate iAsset from usdi amount, mint usdi to amm, burn iAsset amount from pool.
             let invariant = pool.usdi_amount.mul(pool.iasset_amount);
             let new_usdi_pool_amount = pool.usdi_amount.add(collateral_reduction_value)?;
@@ -2791,7 +2791,7 @@ pub mod incept {
             let burn_usdi_context = CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info().clone(),
                 cpi_accounts,
-                seeds
+                seeds,
             );
             token::burn(burn_usdi_context, collateral_reduction_value.to_u64())?;
         } else {

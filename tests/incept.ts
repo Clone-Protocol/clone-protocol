@@ -1916,7 +1916,7 @@ describe("incept", async () => {
   it("Pay ILD using collateral", async () => {
     const comet1 = await inceptClient.getComet();
     const healthScore1 = await inceptClient.getHealthScore();
-    await inceptClient.payCometILD(0, 0, 1, false);
+    await inceptClient.payCometILD(0, 0, toDevnetScale(1).toNumber(), false);
     const comet2 = await inceptClient.getComet();
     const healthScore2 = await inceptClient.getHealthScore();
     assert.isAbove(healthScore2, healthScore1, "health score should increase");

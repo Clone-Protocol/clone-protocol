@@ -194,8 +194,8 @@ pub fn calculate_recentering_values_with_iasset_surplus(
         .sub(liquidity_proportion.mul(invariant.div(new_iasset_amm_value)))
         .unwrap();
 
-    let usdi_burned = usdi_amm_value.sub(invariant
-        .div(new_iasset_amm_value))
+    let usdi_burned = usdi_amm_value
+        .sub(invariant.div(new_iasset_amm_value))
         .unwrap();
 
     return (iasset_surplus, usdi_burned, usdi_debt);
