@@ -8,8 +8,8 @@ export enum Network {
 }
 
 export const LOCAL_NET = {
-  incept: new PublicKey("7EJgijJbPFcDeqTweGQrdsQWdBp6SaQgJoAU6MUF5dQx"),
-  oracle: new PublicKey("D9kEkbz9P2M9UwQW9CsVim38S5hdxTKVYWswQQYjK2N9"),
+  incept: new PublicKey("3j5wcCkkjns9wibgXVNAay3gzjZiVvYUbW66vqvjEaS7"),
+  oracle: new PublicKey("9MZD2G6NXoYpHiTECYvxWa5cDpCJ6bbyuucxEaGvhAtY"),
   exchangeAuthority: new PublicKey(
     "DmhNzyGk93utgYYR41hRJWJzKtFKUYt4UR3bZFbVAD4i"
   ),

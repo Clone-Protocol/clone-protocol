@@ -164,49 +164,6 @@ pub fn calculate_recentering_values_with_usdi_surplus(
     return (usdi_surplus, usdi_amount, iasset_debt);
 }
 
-pub fn calculate_partial_recentering_values_with_usdi_surplus(
-    comet_iasset_borrowed: Value,
-    comet_usdi_borrowed: Value,
-    iasset_amm_value: Value,
-    usdi_amm_value: Value,
-    liquidity_token_value: Value,
-    liquidity_token_supply: Value,
-    iasset_debt: Value,
-) -> Result<(Value, Value, Value), InceptError> {
-    let invariant = calculate_invariant(iasset_amm_value, usdi_amm_value);
-    let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
-        liquidity_token_value,
-        liquidity_token_supply,
-    );
-    let inverse_liquidity_proportion =
-        Value::new(u128::pow(10, DEVNET_TOKEN_SCALE.into()), DEVNET_TOKEN_SCALE)
-            .sub(liquidity_proportion)
-            .unwrap();
-
-    let total_iasset_debt = comet_iasset_borrowed
-        .sub(liquidity_proportion.mul(iasset_amm_value))
-        .unwrap()
-        .div(inverse_liquidity_proportion);
-
-    if total_iasset_debt.lt(iasset_debt).unwrap() {
-        return Err(InceptError::InvalidRecenter);
-    }
-
-    let new_iasset_amm_value = iasset_amm_value.sub(iasset_debt).unwrap();
-
-    let usdi_surplus = liquidity_proportion
-        .mul(invariant.div(new_iasset_amm_value))
-        .sub(comet_usdi_borrowed)
-        .unwrap();
-
-    let usdi_amount = invariant
-        .div(new_iasset_amm_value)
-        .sub(usdi_amm_value)
-        .unwrap();
-
-    return Ok((usdi_surplus, usdi_amount, iasset_debt));
-}
-
 pub fn calculate_recentering_values_with_iasset_surplus(
     comet_iasset_borrowed: Value,
     comet_usdi_borrowed: Value,
@@ -225,67 +182,23 @@ pub fn calculate_recentering_values_with_iasset_surplus(
             .sub(liquidity_proportion)
             .unwrap();
 
+    let iasset_surplus = liquidity_proportion
+        .mul(iasset_amm_value)
+        .sub(comet_iasset_borrowed)
+        .unwrap()
+        .div(inverse_liquidity_proportion);
+
+    let new_iasset_amm_value = iasset_amm_value.add(iasset_surplus).unwrap();
+
     let usdi_debt = comet_usdi_borrowed
-        .sub(liquidity_proportion.mul(usdi_amm_value))
-        .unwrap()
-        .div(inverse_liquidity_proportion);
-
-    let new_usdi_amm_value = iasset_amm_value.sub(usdi_debt).unwrap();
-
-    let iasset_surplus = liquidity_proportion
-        .mul(invariant.div(new_usdi_amm_value))
-        .sub(comet_iasset_borrowed)
+        .sub(liquidity_proportion.mul(invariant.div(new_iasset_amm_value)))
         .unwrap();
 
-    let iasset_amount = invariant
-        .div(new_usdi_amm_value)
-        .sub(iasset_amm_value)
+    let usdi_burned = usdi_amm_value.sub(invariant
+        .div(new_iasset_amm_value))
         .unwrap();
 
-    return (iasset_surplus, iasset_amount, usdi_debt);
-}
-
-pub fn calculate_partial_recentering_values_with_iasset_surplus(
-    comet_iasset_borrowed: Value,
-    comet_usdi_borrowed: Value,
-    iasset_amm_value: Value,
-    usdi_amm_value: Value,
-    liquidity_token_value: Value,
-    liquidity_token_supply: Value,
-    usdi_debt: Value,
-) -> Result<(Value, Value, Value), InceptError> {
-    let invariant = calculate_invariant(iasset_amm_value, usdi_amm_value);
-    let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
-        liquidity_token_value,
-        liquidity_token_supply,
-    );
-    let inverse_liquidity_proportion =
-        Value::new(u128::pow(10, DEVNET_TOKEN_SCALE.into()), DEVNET_TOKEN_SCALE)
-            .sub(liquidity_proportion)
-            .unwrap();
-
-    let total_usdi_debt = comet_usdi_borrowed
-        .sub(liquidity_proportion.mul(usdi_amm_value))
-        .unwrap()
-        .div(inverse_liquidity_proportion);
-
-    if total_usdi_debt.lt(usdi_debt).unwrap() {
-        return Err(InceptError::InvalidRecenter);
-    }
-
-    let new_usdi_amm_value = iasset_amm_value.sub(usdi_debt).unwrap();
-
-    let iasset_surplus = liquidity_proportion
-        .mul(invariant.div(new_usdi_amm_value))
-        .sub(comet_iasset_borrowed)
-        .unwrap();
-
-    let iasset_amount = invariant
-        .div(new_usdi_amm_value)
-        .sub(iasset_amm_value)
-        .unwrap();
-
-    return Ok((iasset_surplus, iasset_amount, usdi_debt));
+    return (iasset_surplus, usdi_burned, usdi_debt);
 }
 
 pub fn check_mint_collateral_sufficient(

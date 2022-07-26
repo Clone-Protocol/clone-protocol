@@ -1,9 +1,9 @@
 [programs.localnet]
-incept = "7EJgijJbPFcDeqTweGQrdsQWdBp6SaQgJoAU6MUF5dQx"
-pyth = "D9kEkbz9P2M9UwQW9CsVim38S5hdxTKVYWswQQYjK2N9"
-mock_usdc = "EFtjrR6dE75Dvx5szQT5uTaZ9zP4zWktSRQvDkfc7VHQ"
-store = "FAoMvXLgh3dgkgsg1JMwprZKKQLvijiRLj8j4Q6Ruv7Z"
-access_controller = "3mV5QbyTnyYiUTGT3fn4EG94YaKwAQFmV1zPBWxq9M3U"
+incept = "3j5wcCkkjns9wibgXVNAay3gzjZiVvYUbW66vqvjEaS7"
+pyth = "9MZD2G6NXoYpHiTECYvxWa5cDpCJ6bbyuucxEaGvhAtY"
+mock_usdc = "7eVp48XnmRJQdmodYdBKKFih361mAiRmTY4h23juzKjm"
+store = "CRsracw46HP9wkaMUXDZzkMv1xuyMUpwtbu5nR2xcEco"
+access_controller = "3gdS3X6nSNZmB4ZbYCcaWQcCi5vTR7WQXchsZgCyWjT8"
 
 [registry]
 url = "https://anchor.projectserum.com"
