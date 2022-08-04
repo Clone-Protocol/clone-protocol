@@ -24,3 +24,5 @@ pyth-client = "0.2.2"
 thiserror = "1.0.24"
 pyth = { path = "../pyth", version = "0.1.0", features = ["cpi"] }
 chainlink_solana = { path = "../../crates/chainlink-solana", version = "1.0.0"}
+rust_decimal = "1.25.0"
+rust_decimal_macros = "1.25.0"

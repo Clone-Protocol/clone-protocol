@@ -1,15 +1,40 @@
-const SIGN_MASK = 0x8000_0000;
-const SCALE_MASK = 0x00ff_0000;
-const SCALE_SHIFT = 16;
+const SIGN_MASK = BigInt(0x8000_0000);
+const SCALE_MASK = BigInt(0x00ff_0000);
+const SCALE_SHIFT = BigInt(16);
 
 export class Decimal {
   /**
    * Stripped down version of the rust-decimal library.
    */
-  flags: number;
-  lo: number;
-  mid: number;
-  hi: number;
+  flags: bigint;
+  lo: bigint;
+  mid: bigint;
+  hi: bigint;
+
+  public constructor(data: Array<number>) {
+    let bytes = data.map(BigInt);
+    this.flags =
+      (bytes[0] |
+        (bytes[1] << BigInt(8)) |
+        (bytes[2] << BigInt(16)) |
+        (bytes[3] << BigInt(24))) &
+      BigInt(0x801f_0000);
+    this.lo =
+      bytes[4] |
+      (bytes[5] << BigInt(8)) |
+      (bytes[6] << BigInt(16)) |
+      (bytes[7] << BigInt(24));
+    this.mid =
+      bytes[8] |
+      (bytes[9] << BigInt(8)) |
+      (bytes[10] << BigInt(16)) |
+      (bytes[11] << BigInt(24));
+    this.hi =
+      bytes[12] |
+      (bytes[13] << BigInt(8)) |
+      (bytes[14] << BigInt(16)) |
+      (bytes[15] << BigInt(24));
+  }
 
   public isNegative(): boolean {
     return (this.flags & SIGN_MASK) > 0;
@@ -23,43 +48,25 @@ export class Decimal {
     return this.isNegative() ? -base : base;
   }
 
-  public scale(): number {
+  public scale(): bigint {
     return (this.flags & SCALE_MASK) >> SCALE_SHIFT;
   }
 
   public toNumber(): number {
-    return Number(this.mantissa()) * 10 ** -this.scale();
+    return Number(this.mantissa()) * 10 ** -Number(this.scale());
   }
 }
 
-export class RawDecimal {
-  /**
-   * Class for holding the raw bytes data of the Decimal type.
-   * Added methods to easily convert to Decimal or number.
-   */
+export interface RawDecimal {
   data: Array<number>;
-
-  constructor(data: Array<number>) {
-    this.data = data;
-  }
-
-  public toDecimal(): Decimal {
-    const bytes = this.data;
-    let result = new Decimal();
-
-    result.flags =
-      (bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24)) &
-      0x801f_0000;
-    result.lo =
-      bytes[4] | (bytes[5] << 8) | (bytes[6] << 16) | (bytes[7] << 24);
-    result.mid =
-      bytes[8] | (bytes[9] << 8) | (bytes[10] << 16) | (bytes[11] << 24);
-    result.hi =
-      bytes[12] | (bytes[13] << 8) | (bytes[14] << 16) | (bytes[15] << 24);
-    return result;
-  }
-
-  public toNumber(): number {
-    return this.toDecimal().toNumber();
-  }
 }
+
+export const toDecimal = (raw: RawDecimal): Decimal => {
+  return new Decimal(raw.data);
+};
+export const toNumber = (raw: RawDecimal): number => {
+  return toDecimal(raw).toNumber();
+};
+export const getMantissa = (raw: RawDecimal): number => {
+  return Number(toDecimal(raw).mantissa());
+};

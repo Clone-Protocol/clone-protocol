@@ -1,20 +1,10 @@
 use crate::error::*;
 use crate::value::*;
 use anchor_lang::prelude::*;
+use rust_decimal::prelude::*;
+use std::convert::TryInto;
 
-#[derive(PartialEq, Debug, Clone, Copy, AnchorDeserialize, AnchorSerialize)]
-pub enum LiquidationStatus {
-    Healthy,
-    Partially,
-    Fully,
-}
-
-impl Default for LiquidationStatus {
-    fn default() -> Self {
-        LiquidationStatus::Healthy
-    }
-}
-use crate::value::DEVNET_TOKEN_SCALE;
+pub const DEVNET_TOKEN_SCALE: u32 = 8;
 
 #[zero_copy]
 #[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
@@ -22,6 +12,40 @@ pub struct Value {
     // 24
     pub val: u128,  // 16
     pub scale: u64, // 8
+}
+
+#[zero_copy]
+#[derive(PartialEq, Debug, AnchorDeserialize, AnchorSerialize)]
+pub struct RawDecimal {
+    // 16
+    data: [u8; 16],
+}
+
+impl RawDecimal {
+    pub fn new(num: i64, scale: u32) -> Self {
+        Self::from(Decimal::new(num, scale))
+    }
+    pub fn from(decimal: Decimal) -> Self {
+        RawDecimal {
+            data: decimal.serialize(),
+        }
+    }
+    pub fn to_decimal(&self) -> Decimal {
+        Decimal::deserialize(self.data)
+    }
+
+    pub fn to_u64(&self) -> u64 {
+        self.to_decimal().mantissa().try_into().unwrap()
+    }
+    pub fn from_percent(percent: u16) -> Self {
+        Self::new(percent.into(), PERCENT_SCALE.into())
+    }
+}
+
+impl Default for RawDecimal {
+    fn default() -> Self {
+        Self::from(Decimal::zero())
+    }
 }
 
 #[account]
@@ -36,16 +60,16 @@ pub struct Manager {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 181,712
-    pub manager: Pubkey,                    // 32
-    pub num_pools: u64,                     // 8
-    pub num_collaterals: u64,               // 8
-    pub pools: [Pool; 255],                 // 255 * 536 = 136,680
-    pub collaterals: [Collateral; 255],     // 255 * 176 = 44,880
-    pub chainlink_program: Pubkey,          // 32
-    pub il_health_score_coefficient: Value, // 24
-    pub il_health_score_cutoff: Value,      // 24
-    pub il_liquidation_reward_pct: Value,   // 24
+    // 151,088
+    pub manager: Pubkey,                         // 32
+    pub num_pools: u64,                          // 8
+    pub num_collaterals: u64,                    // 8
+    pub pools: [Pool; 255],                      // 255 * 448 = 114,240
+    pub collaterals: [Collateral; 255],          // 255 * 144 = 36,720
+    pub chainlink_program: Pubkey,               // 32
+    pub il_health_score_coefficient: RawDecimal, // 16
+    pub il_health_score_cutoff: RawDecimal,      // 16
+    pub il_liquidation_reward_pct: RawDecimal,   // 16
 }
 
 impl Default for TokenData {
@@ -57,9 +81,9 @@ impl Default for TokenData {
             pools: [Pool::default(); 255],
             collaterals: [Collateral::default(); 255],
             chainlink_program: Pubkey::default(),
-            il_health_score_coefficient: Value::default(),
-            il_health_score_cutoff: Value::default(),
-            il_liquidation_reward_pct: Value::default(),
+            il_health_score_coefficient: RawDecimal::default(),
+            il_health_score_cutoff: RawDecimal::default(),
+            il_liquidation_reward_pct: RawDecimal::default(),
         };
     }
 }
@@ -116,48 +140,48 @@ impl TokenData {
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct AssetInfo {
-    // 256
-    pub iasset_mint: Pubkey,               // 32
-    pub price_feed_addresses: [Pubkey; 2], // 64
-    pub price: Value,                      // 24
-    pub twap: Value,                       // 24
-    pub confidence: Value,                 // 24
-    pub status: u64,                       // 8
-    pub last_update: u64,                  // 8
-    pub stable_collateral_ratio: Value,    // 24
-    pub crypto_collateral_ratio: Value,    // 24
-    pub health_score_coefficient: Value,   // 24
+    // 208
+    pub iasset_mint: Pubkey,                  // 32
+    pub price_feed_addresses: [Pubkey; 2],    // 64
+    pub price: RawDecimal,                    // 16
+    pub twap: RawDecimal,                     // 16
+    pub confidence: RawDecimal,               // 16
+    pub status: u64,                          // 8
+    pub last_update: u64,                     // 8
+    pub stable_collateral_ratio: RawDecimal,  // 16
+    pub crypto_collateral_ratio: RawDecimal,  // 16
+    pub health_score_coefficient: RawDecimal, // 16
 }
 
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct Pool {
-    // 536
+    // 448
     pub iasset_token_account: Pubkey,             // 32
     pub usdi_token_account: Pubkey,               // 32
     pub liquidity_token_mint: Pubkey,             // 32
     pub liquidation_iasset_token_account: Pubkey, // 32
     pub comet_liquidity_token_account: Pubkey,    // 32
-    pub iasset_amount: Value,                     // 24
-    pub usdi_amount: Value,                       // 24
-    pub liquidity_token_supply: Value,            // 24
-    pub treasury_trading_fee: Value,              // 24
-    pub liquidity_trading_fee: Value,             // 24
-    pub asset_info: AssetInfo,                    // 256
+    pub iasset_amount: RawDecimal,                // 16
+    pub usdi_amount: RawDecimal,                  // 16
+    pub liquidity_token_supply: RawDecimal,       // 16
+    pub treasury_trading_fee: RawDecimal,         // 16
+    pub liquidity_trading_fee: RawDecimal,        // 16
+    pub asset_info: AssetInfo,                    // 208
 }
 
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct Collateral {
-    // 176
-    pub pool_index: u64,                // 8
-    pub mint: Pubkey,                   // 32
-    pub vault: Pubkey,                  // 32
-    pub vault_usdi_supply: Value,       // 24
-    pub vault_mint_supply: Value,       // 24
-    pub vault_comet_supply: Value,      // 24
-    pub stable: u64,                    // 8
-    pub collateralization_ratio: Value, // 24
+    // 144
+    pub pool_index: u64,                     // 8
+    pub mint: Pubkey,                        // 32
+    pub vault: Pubkey,                       // 32
+    pub vault_usdi_supply: RawDecimal,       // 16
+    pub vault_mint_supply: RawDecimal,       // 16
+    pub vault_comet_supply: RawDecimal,      // 16
+    pub stable: u64,                         // 8
+    pub collateralization_ratio: RawDecimal, // 16
 }
 
 #[account]
@@ -201,14 +225,14 @@ impl SinglePoolComets {
 
 #[account(zero_copy)]
 pub struct Comet {
-    // 55152
+    // 46,992
     pub is_single_pool: u64,                 // 8
     pub owner: Pubkey,                       // 32
     pub num_positions: u64,                  // 8
     pub num_collaterals: u64,                // 8
-    pub total_collateral_amount: Value,      // 24
-    pub positions: [CometPosition; 255],     // 255 * 144 = 38760
-    pub collaterals: [CometCollateral; 255], // 255 * 64 = 16320
+    pub total_collateral_amount: RawDecimal, // 16
+    pub positions: [CometPosition; 255],     // 255 * 120 = 30,600
+    pub collaterals: [CometCollateral; 255], // 255 * 64 = 16,320
 }
 
 impl Default for Comet {
@@ -218,7 +242,7 @@ impl Default for Comet {
             owner: Pubkey::default(),
             num_positions: 0,
             num_collaterals: 0,
-            total_collateral_amount: Value::new(0, DEVNET_TOKEN_SCALE),
+            total_collateral_amount: RawDecimal::from(Decimal::new(0, DEVNET_TOKEN_SCALE.into())),
             positions: [CometPosition::default(); 255],
             collaterals: [CometCollateral::default(); 255],
         };
@@ -271,32 +295,28 @@ impl Comet {
         self.num_positions += 1;
     }
 
-    pub fn calculate_effective_collateral_value(&self, token_data: &TokenData) -> Value {
-        let mut total_value = Value::new(0, DEVNET_TOKEN_SCALE);
+    pub fn calculate_effective_collateral_value(&self, token_data: &TokenData) -> Decimal {
+        let mut total_value = Decimal::new(0, DEVNET_TOKEN_SCALE.into());
 
         self.collaterals[0..(self.num_collaterals as usize)]
             .iter()
             .for_each(|comet_collateral| {
                 let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
                 let collateral_value = if collateral.stable == 1 {
-                    comet_collateral
-                        .collateral_amount
-                        .scale_to(DEVNET_TOKEN_SCALE)
+                    comet_collateral.collateral_amount.to_decimal()
                 } else {
                     let pool = token_data.pools[collateral.pool_index as usize];
-                    let pool_price = pool.usdi_amount.div(pool.iasset_amount);
-                    let eval_price = if pool_price.lt(pool.asset_info.price).unwrap() {
+                    let pool_price =
+                        pool.usdi_amount.to_decimal() / pool.iasset_amount.to_decimal();
+                    let eval_price = if pool_price < pool.asset_info.price.to_decimal() {
                         pool_price
                     } else {
-                        pool.asset_info.price
+                        pool.asset_info.price.to_decimal()
                     };
-                    comet_collateral
-                        .collateral_amount
-                        .scale_to(DEVNET_TOKEN_SCALE)
-                        .mul(eval_price.scale_to(DEVNET_TOKEN_SCALE))
-                        .div(collateral.collateralization_ratio)
+                    comet_collateral.collateral_amount.to_decimal() * eval_price
+                        / collateral.collateralization_ratio.to_decimal()
                 };
-                total_value = total_value.add(collateral_value).unwrap();
+                total_value += collateral_value;
             });
 
         total_value
@@ -305,22 +325,22 @@ impl Comet {
 
 #[zero_copy]
 pub struct CometPosition {
-    // 152
+    // 120
     pub authority: Pubkey,                   // 32
     pub pool_index: u64,                     // 8
-    pub borrowed_usdi: Value,                // 24
-    pub borrowed_iasset: Value,              // 24
-    pub liquidity_token_value: Value,        // 24
-    pub comet_liquidation: CometLiquidation, // 40
+    pub borrowed_usdi: RawDecimal,           // 16
+    pub borrowed_iasset: RawDecimal,         // 16
+    pub liquidity_token_value: RawDecimal,   // 16
+    pub comet_liquidation: CometLiquidation, // 32
 }
 impl Default for CometPosition {
     fn default() -> Self {
         return Self {
             authority: Pubkey::default(),
             pool_index: u8::MAX.into(),
-            borrowed_usdi: Value::new(0, DEVNET_TOKEN_SCALE),
-            borrowed_iasset: Value::new(0, DEVNET_TOKEN_SCALE),
-            liquidity_token_value: Value::new(0, DEVNET_TOKEN_SCALE),
+            borrowed_usdi: RawDecimal::default(),
+            borrowed_iasset: RawDecimal::default(),
+            liquidity_token_value: RawDecimal::default(),
             comet_liquidation: CometLiquidation::default(),
         };
     }
@@ -330,15 +350,15 @@ impl Default for CometPosition {
 #[derive(Debug)]
 pub struct CometCollateral {
     // 64
-    pub authority: Pubkey,        // 32
-    pub collateral_amount: Value, // 24
-    pub collateral_index: u64,    // 8
+    pub authority: Pubkey,             // 32
+    pub collateral_amount: RawDecimal, // 24
+    pub collateral_index: u64,         // 8
 }
 impl Default for CometCollateral {
     fn default() -> Self {
         return Self {
             authority: Pubkey::default(),
-            collateral_amount: Value::new(0, DEVNET_TOKEN_SCALE),
+            collateral_amount: RawDecimal::default(),
             collateral_index: u8::MAX.into(),
         };
     }
@@ -347,18 +367,18 @@ impl Default for CometCollateral {
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct CometLiquidation {
-    // 40
-    pub status: u64,                    // 8
-    pub excess_token_type_is_usdi: u64, // 8
-    pub excess_token_amount: Value,     // 24
+    // 32
+    pub status: u64,                     // 8
+    pub excess_token_type_is_usdi: u64,  // 8
+    pub excess_token_amount: RawDecimal, // 16
 }
 
 #[account(zero_copy)]
 pub struct LiquidityPositions {
-    // 16,360
+    // 14,320
     pub owner: Pubkey,                                 // 32
     pub num_positions: u64,                            // 8
-    pub liquidity_positions: [LiquidityPosition; 255], // 255 * 64 = 16,320
+    pub liquidity_positions: [LiquidityPosition; 255], // 255 * 56 = 14,280
 }
 
 impl Default for LiquidityPositions {
@@ -385,18 +405,18 @@ impl LiquidityPositions {
 #[zero_copy]
 #[derive(Default)]
 pub struct LiquidityPosition {
-    // 64
-    pub authority: Pubkey,            // 32
-    pub liquidity_token_value: Value, // 24
-    pub pool_index: u64,              // 8
+    // 56
+    pub authority: Pubkey,                 // 32
+    pub liquidity_token_value: RawDecimal, // 16
+    pub pool_index: u64,                   // 8
 }
 
 #[account(zero_copy)]
 pub struct MintPositions {
-    // 24,520
+    // 20,440
     pub owner: Pubkey,                       // 32
     pub num_positions: u64,                  // 8
-    pub mint_positions: [MintPosition; 255], // 255 * 96 = 24,480
+    pub mint_positions: [MintPosition; 255], // 255 * 80 = 20,400
 }
 
 impl Default for MintPositions {
@@ -422,10 +442,10 @@ impl MintPositions {
 #[zero_copy]
 #[derive(Default)]
 pub struct MintPosition {
-    // 96
-    pub authority: Pubkey,        // 32
-    pub collateral_amount: Value, // 24
-    pub pool_index: u64,          // 8
-    pub collateral_index: u64,    // 8
-    pub borrowed_iasset: Value,   // 24
+    // 80
+    pub authority: Pubkey,             // 32
+    pub collateral_amount: RawDecimal, // 16
+    pub pool_index: u64,               // 8
+    pub collateral_index: u64,         // 8
+    pub borrowed_iasset: RawDecimal,   // 16
 }

@@ -20,11 +20,12 @@ import {
 } from "@solana/web3.js";
 import { toDevnetScale } from "../sdk/src/incept";
 import { assert } from "chai";
+import { Decimal } from "../sdk/src/decimal";
 
 describe("jupiter mock aggregator", async () => {
   // const provider = anchor.Provider.local();
   // anchor.setProvider(provider);
-  let jupiterProgram = anchor.workspace
+    let jupiterProgram = anchor.workspace
     .JupiterAggMock as Program<JupiterAggMock>;
   let pythProgram = anchor.workspace.Pyth as Program<Pyth>;
 
@@ -49,6 +50,19 @@ describe("jupiter mock aggregator", async () => {
       instructions: [],
       signers: [usdcMint],
     });
+
+    await jupiterProgram.rpc.stressTest(nonce, 10, {
+        accounts: {
+            jupiterAccount: jupiterAddress
+        }
+    });
+
+    let jupiterAccount = await jupiterProgram.account.jupiter.fetch(
+        jupiterAddress
+      );
+
+    let answer = new Decimal(jupiterAccount.answer.data);
+
   });
 
   it("create iasset", async () => {
@@ -180,7 +194,6 @@ describe("jupiter mock aggregator", async () => {
     let jupiterAccount = await jupiterProgram.account.jupiter.fetch(
       jupiterAddress
     );
-    console.log(jupiterAccount);
 
     await jupiterProgram.rpc.swap(
       nonce,

@@ -34,7 +34,9 @@ export const sleep = async (ms: number) => {
 
 export const mul = (value1: Value, value2: Value) => {
   return {
-    val: value1.val.mul(value2.val).div(new BN(Math.pow(10, value2.scale.toNumber()))),
+    val: value1.val
+      .mul(value2.val)
+      .div(new BN(Math.pow(10, value2.scale.toNumber()))),
     scale: value1.scale,
   } as Value;
 };
@@ -43,7 +45,9 @@ export const div = (value1: Value, value2: Value) => {
   return value2.val.eqn(0)
     ? ({ val: new BN(0), scale: value1.scale } as Value)
     : ({
-        val: value1.val.mul(new BN(Math.pow(10, value2.scale.toNumber()))).div(value2.val),
+        val: value1.val
+          .mul(new BN(Math.pow(10, value2.scale.toNumber())))
+          .div(value2.val),
         scale: value1.scale,
       } as Value);
 };

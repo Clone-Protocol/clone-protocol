@@ -2304,19 +2304,19 @@ export type Incept = {
           {
             "name": "ilHealthScoreCoefficient",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "ilHealthScoreCutoff",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "ilLiquidationRewardPct",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           }
         ]
@@ -2407,7 +2407,7 @@ export type Incept = {
           {
             "name": "totalCollateralAmount",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -2508,6 +2508,23 @@ export type Incept = {
       }
     },
     {
+      "name": "RawDecimal",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "AssetInfo",
       "type": {
         "kind": "struct",
@@ -2528,19 +2545,19 @@ export type Incept = {
           {
             "name": "price",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "twap",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "confidence",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -2554,19 +2571,19 @@ export type Incept = {
           {
             "name": "stableCollateralRatio",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "cryptoCollateralRatio",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "healthScoreCoefficient",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           }
         ]
@@ -2600,31 +2617,31 @@ export type Incept = {
           {
             "name": "iassetAmount",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "usdiAmount",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "liquidityTokenSupply",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "treasuryTradingFee",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "liquidityTradingFee",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -2656,19 +2673,19 @@ export type Incept = {
           {
             "name": "vaultUsdiSupply",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "vaultMintSupply",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "vaultCometSupply",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -2678,7 +2695,7 @@ export type Incept = {
           {
             "name": "collateralizationRatio",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           }
         ]
@@ -2700,19 +2717,19 @@ export type Incept = {
           {
             "name": "borrowedUsdi",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "borrowedIasset",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "liquidityTokenValue",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -2736,7 +2753,7 @@ export type Incept = {
           {
             "name": "collateralAmount",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -2762,7 +2779,7 @@ export type Incept = {
           {
             "name": "excessTokenAmount",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           }
         ]
@@ -2780,7 +2797,7 @@ export type Incept = {
           {
             "name": "liquidityTokenValue",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -2802,7 +2819,7 @@ export type Incept = {
           {
             "name": "collateralAmount",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -2816,7 +2833,7 @@ export type Incept = {
           {
             "name": "borrowedIasset",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           }
         ]
@@ -2979,23 +2996,6 @@ export type Incept = {
                 }
               }
             ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "LiquidationStatus",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Healthy"
-          },
-          {
-            "name": "Partially"
-          },
-          {
-            "name": "Fully"
           }
         ]
       }
@@ -5309,19 +5309,19 @@ export const IDL: Incept = {
           {
             "name": "ilHealthScoreCoefficient",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "ilHealthScoreCutoff",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "ilLiquidationRewardPct",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           }
         ]
@@ -5412,7 +5412,7 @@ export const IDL: Incept = {
           {
             "name": "totalCollateralAmount",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -5513,6 +5513,23 @@ export const IDL: Incept = {
       }
     },
     {
+      "name": "RawDecimal",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "AssetInfo",
       "type": {
         "kind": "struct",
@@ -5533,19 +5550,19 @@ export const IDL: Incept = {
           {
             "name": "price",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "twap",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "confidence",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -5559,19 +5576,19 @@ export const IDL: Incept = {
           {
             "name": "stableCollateralRatio",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "cryptoCollateralRatio",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "healthScoreCoefficient",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           }
         ]
@@ -5605,31 +5622,31 @@ export const IDL: Incept = {
           {
             "name": "iassetAmount",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "usdiAmount",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "liquidityTokenSupply",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "treasuryTradingFee",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "liquidityTradingFee",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -5661,19 +5678,19 @@ export const IDL: Incept = {
           {
             "name": "vaultUsdiSupply",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "vaultMintSupply",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "vaultCometSupply",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -5683,7 +5700,7 @@ export const IDL: Incept = {
           {
             "name": "collateralizationRatio",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           }
         ]
@@ -5705,19 +5722,19 @@ export const IDL: Incept = {
           {
             "name": "borrowedUsdi",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "borrowedIasset",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
             "name": "liquidityTokenValue",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -5741,7 +5758,7 @@ export const IDL: Incept = {
           {
             "name": "collateralAmount",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -5767,7 +5784,7 @@ export const IDL: Incept = {
           {
             "name": "excessTokenAmount",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           }
         ]
@@ -5785,7 +5802,7 @@ export const IDL: Incept = {
           {
             "name": "liquidityTokenValue",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -5807,7 +5824,7 @@ export const IDL: Incept = {
           {
             "name": "collateralAmount",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           },
           {
@@ -5821,7 +5838,7 @@ export const IDL: Incept = {
           {
             "name": "borrowedIasset",
             "type": {
-              "defined": "Value"
+              "defined": "RawDecimal"
             }
           }
         ]
@@ -5984,23 +6001,6 @@ export const IDL: Incept = {
                 }
               }
             ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "LiquidationStatus",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Healthy"
-          },
-          {
-            "name": "Partially"
-          },
-          {
-            "name": "Fully"
           }
         ]
       }

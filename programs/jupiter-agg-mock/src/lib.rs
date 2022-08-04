@@ -16,13 +16,14 @@ const NUM_IASSETS: usize = 10;
 pub mod jupiter_agg_mock {
     use super::*;
     pub fn initialize(ctx: Context<Initialize>, _nonce: u8) -> ProgramResult {
-        ctx.accounts.jupiter_account.usdc_mint = *ctx.accounts.usdc_mint.to_account_info().key;
+        let jupiter_account = &mut ctx.accounts.jupiter_account;
+        jupiter_account.usdc_mint = *ctx.accounts.usdc_mint.to_account_info().key;
         Ok(())
     }
 
     pub fn create_iasset(ctx: Context<CreateIasset>, pyth_oracle: Pubkey) -> ProgramResult {
-        let jupiter = &mut ctx.accounts.jupiter_account;
-        jupiter.add_iasset(*ctx.accounts.iasset_mint.to_account_info().key, pyth_oracle);
+        let jupiter_account = &mut ctx.accounts.jupiter_account;
+        jupiter_account.add_iasset(*ctx.accounts.iasset_mint.to_account_info().key, pyth_oracle);
         Ok(())
     }
 
@@ -77,11 +78,12 @@ pub mod jupiter_agg_mock {
         let seeds = &[&[b"jupiter", bytemuck::bytes_of(&nonce)][..]];
         // Get oracle price
         let price_feed = Price::load(&ctx.accounts.pyth_oracle)?;
-        let price = Decimal::new(
+        let price = rust_decimal::Decimal::new(
             price_feed.agg.price.try_into().unwrap(),
             price_feed.expo.abs().try_into().unwrap(),
         );
-        let amount_decimal = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE.into());
+        let amount_decimal =
+            rust_decimal::Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE.into());
         let mut usdc_amount = amount_decimal * price;
         usdc_amount.rescale(USDC_TOKEN_SCALE.into());
 
@@ -163,6 +165,27 @@ pub mod jupiter_agg_mock {
 
         Ok(())
     }
+
+    pub fn stress_test(ctx: Context<StressTest>, nonce: u8, iterations: u8) -> ProgramResult {
+        //let mut val = 100u64;
+        //let additive = 10u64;
+        // let mut val = Value::new(10000000000, 8);
+        // let additive = Value::new(1000000000, 8);
+        let mut val = Decimal::new(100_0000_0000, 8);
+        // let mut raw: RawDecimal = RawDecimal::from(&val);
+        // // let additive = Decimal::new(10_0000_0000, 8);
+        // for _ in 0..iterations {
+        //     //val = val - additive;
+        //     raw = RawDecimal::from(&val);
+        //     val = raw.to_decimal();
+        // }
+        msg!("{:?}, {:?}", val.unpack(), val.mantissa());
+        let jupiter = &mut ctx.accounts.jupiter_account;
+        jupiter.answer = RawDecimal::from(&val);
+        //assert!(false);
+        //ans += rust_decimal::Decimal::new(10_0000_0000, 8);
+        Ok(())
+    }
 }
 
 /// Instructions
@@ -173,7 +196,7 @@ pub struct Initialize<'info> {
     #[account(
         init,
         payer = admin,
-        space = 8 + 673,
+        space = 8 + 689,
         seeds = [b"jupiter".as_ref()],
         bump = nonce,
     )]
@@ -277,6 +300,17 @@ pub struct Swap<'info> {
     pub token_program: AccountInfo<'info>,
 }
 
+#[derive(Accounts)]
+#[instruction(nonce: u8, iterations: u8)]
+pub struct StressTest<'info> {
+    #[account(
+        mut,
+        seeds = [b"jupiter".as_ref()],
+        bump = nonce,
+    )]
+    pub jupiter_account: Account<'info, Jupiter>,
+}
+
 // TODO: Write a wrapper around this.
 // pub struct RaydiumSwap<'info> {
 //     pub token_program: AccountInfo<'info>,
@@ -300,15 +334,44 @@ pub struct Swap<'info> {
 // }
 
 /// States
+#[zero_copy]
+#[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
+pub struct RawDecimal {
+    data: [u8; 16],
+}
+
+impl RawDecimal {
+    pub fn from(decimal: &Decimal) -> Self {
+        RawDecimal {
+            data: decimal.serialize(),
+        }
+    }
+    pub fn to_decimal(&self) -> Decimal {
+        Decimal::deserialize(self.data)
+    }
+}
+
 #[account]
 #[derive(Default)]
 pub struct Jupiter {
-    // 673
+    // 673, 689
     pub usdc_mint: Pubkey,                   // 32
     pub iasset_mints: [Pubkey; NUM_IASSETS], // 32 * 10 = 320
     pub oracles: [Pubkey; NUM_IASSETS],      // 32 * 10 = 320
     pub n_iassets: u8,                       // 1
+    pub answer: RawDecimal,                  // 16
 }
+
+// impl Default for Jupiter {
+//     fn default() -> Self {
+//         Jupiter { usdc_mint: Pubkey::default(),
+//              iasset_mints: [Pubkey::default(); NUM_IASSETS],
+//              oracles: [Pubkey::default(); NUM_IASSETS],
+//              n_iassets: 0,
+//              answer:
+//         }
+//     }
+// }
 
 impl Jupiter {
     pub fn add_iasset(&mut self, mint_address: Pubkey, oracle: Pubkey) {

@@ -10,302 +10,251 @@ pub fn check_feed_update(asset_info: AssetInfo, slot: u64) -> ProgramResult {
 }
 
 pub fn calculate_price_from_iasset(
-    iasset_amount_value: Value,
-    iasset_amm_value: Value,
-    usdi_amm_value: Value,
+    iasset_amount_value: Decimal,
+    iasset_amm_value: Decimal,
+    usdi_amm_value: Decimal,
     buy: bool,
-) -> Result<Value, InceptError> {
+) -> Result<Decimal, InceptError> {
     let invariant = calculate_invariant(iasset_amm_value, usdi_amm_value);
     if buy {
-        let new_iasset_amm_value = iasset_amm_value.sub(iasset_amount_value)?;
-        return invariant.div(new_iasset_amm_value).sub(usdi_amm_value);
+        let new_iasset_amm_value = iasset_amm_value - iasset_amount_value;
+        return Ok(invariant / new_iasset_amm_value - usdi_amm_value);
     }
-    let new_iasset_amm_value = iasset_amm_value.add(iasset_amount_value)?;
-    return usdi_amm_value.sub(invariant.div(new_iasset_amm_value));
+    return Ok(usdi_amm_value - invariant / (iasset_amm_value + iasset_amount_value));
 }
 
-pub fn check_price_confidence(price: Value, confidence: Value) -> Result<(), InceptError> {
-    let confidence_40x = confidence.mul(40);
-    if confidence_40x.gte(price)? {
+pub fn check_price_confidence(price: Decimal, confidence: Decimal) -> Result<(), InceptError> {
+    let confidence_40x = confidence * Decimal::new(40, 0);
+    if confidence_40x >= price {
         return Err(InceptError::OracleConfidenceOutOfRange.into());
     };
     Ok(())
 }
 
 pub fn calculate_liquidity_provider_values_from_iasset(
-    iasset_liquidity_value: Value,
-    iasset_amm_value: Value,
-    usdi_amm_value: Value,
-    liquidity_token_supply: Value,
-) -> Result<(Value, Value), InceptError> {
-    let usdi_liquidity_value: Value;
-    let liquidity_tokens_value: Value;
+    iasset_liquidity_value: Decimal,
+    iasset_amm_value: Decimal,
+    usdi_amm_value: Decimal,
+    liquidity_token_supply: Decimal,
+) -> Result<(Decimal, Decimal), InceptError> {
+    let usdi_liquidity_value: Decimal;
+    let liquidity_tokens_value: Decimal;
     // check to see if the market is empty
-    if iasset_amm_value.to_u64() == 0 {
+    if iasset_amm_value.mantissa() == 0 {
         // choose arbtrary amount of usdi to provide and liquidity tokens to recieve
         usdi_liquidity_value = iasset_liquidity_value;
-        liquidity_tokens_value = iasset_liquidity_value.mul(10);
+        liquidity_tokens_value = iasset_liquidity_value * Decimal::new(10, 0);
     } else {
         // calculate arbtrary amount of usdi to provide and liquidity tokens to recieve
         usdi_liquidity_value =
-            calculate_amm_price(iasset_amm_value, usdi_amm_value).mul(iasset_liquidity_value);
-        liquidity_tokens_value = liquidity_token_supply.mul(
-            calculate_liquidity_proportion_from_usdi(usdi_liquidity_value, usdi_amm_value)?,
-        );
+            calculate_amm_price(iasset_amm_value, usdi_amm_value) * iasset_liquidity_value;
+        liquidity_tokens_value = liquidity_token_supply
+            * calculate_liquidity_proportion_from_usdi(usdi_liquidity_value, usdi_amm_value)?;
     }
 
     return Ok((usdi_liquidity_value, liquidity_tokens_value));
 }
 
 pub fn calculate_liquidity_provider_values_from_usdi(
-    usdi_liquidity_value: Value,
-    iasset_amm_value: Value,
-    usdi_amm_value: Value,
-    liquidity_token_supply: Value,
-) -> Result<(Value, Value), InceptError> {
+    usdi_liquidity_value: Decimal,
+    iasset_amm_value: Decimal,
+    usdi_amm_value: Decimal,
+    liquidity_token_supply: Decimal,
+) -> Result<(Decimal, Decimal), InceptError> {
     let liquidity_proportion =
         calculate_liquidity_proportion_from_usdi(usdi_liquidity_value, usdi_amm_value)?;
-    let inverse_liquidity_proportion =
-        Value::new(u128::pow(10, DEVNET_TOKEN_SCALE.into()), DEVNET_TOKEN_SCALE)
-            .sub(liquidity_proportion)?;
-    let iasset_liquidity_value: Value;
-    let liquidity_tokens_value: Value;
+    let inverse_liquidity_proportion = Decimal::one() - liquidity_proportion;
+    let iasset_liquidity_value: Decimal;
+    let liquidity_tokens_value: Decimal;
     // check to see if the market is empty
-    if iasset_amm_value.to_u64() == 0 {
+    if iasset_amm_value.mantissa() == 0 {
         // choose arbtrary amount of usdi to provide and liquidity tokens to recieve
         iasset_liquidity_value = usdi_liquidity_value;
-        liquidity_tokens_value = usdi_liquidity_value.mul(10);
+        liquidity_tokens_value = usdi_liquidity_value * Decimal::new(10, 0);
     } else {
         // calculate arbtrary amount of usdi to provide and liquidity tokens to recieve
         iasset_liquidity_value =
-            usdi_liquidity_value.div(calculate_amm_price(iasset_amm_value, usdi_amm_value));
-        liquidity_tokens_value = liquidity_proportion
-            .mul(liquidity_token_supply)
-            .div(inverse_liquidity_proportion);
+            usdi_liquidity_value / calculate_amm_price(iasset_amm_value, usdi_amm_value);
+        liquidity_tokens_value =
+            liquidity_proportion * liquidity_token_supply / inverse_liquidity_proportion;
     }
 
     return Ok((iasset_liquidity_value, liquidity_tokens_value));
 }
 
 pub fn calculate_liquidity_provider_values_from_liquidity_tokens(
-    liquidity_token_value: Value,
-    iasset_amm_value: Value,
-    usdi_amm_value: Value,
-    liquidity_token_supply: Value,
-) -> Result<(Value, Value), InceptError> {
+    liquidity_token_value: Decimal,
+    iasset_amm_value: Decimal,
+    usdi_amm_value: Decimal,
+    liquidity_token_supply: Decimal,
+) -> Result<(Decimal, Decimal), InceptError> {
     let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
         liquidity_token_value,
         liquidity_token_supply,
     );
 
-    let iasset_value = iasset_amm_value.mul(liquidity_proportion);
-    let usdi_value = usdi_amm_value.mul(liquidity_proportion);
+    let iasset_value = iasset_amm_value * liquidity_proportion;
+    let usdi_value = usdi_amm_value * liquidity_proportion;
 
     return Ok((iasset_value, usdi_value));
 }
 
-pub fn calculate_amm_price(iasset_value: Value, usdi_value: Value) -> Value {
-    return usdi_value.div(iasset_value);
+pub fn calculate_amm_price(iasset_value: Decimal, usdi_value: Decimal) -> Decimal {
+    return usdi_value / iasset_value;
 }
 
-pub fn calculate_invariant(iasset_value: Value, usdi_value: Value) -> Value {
-    return usdi_value.mul(iasset_value);
+pub fn calculate_invariant(iasset_value: Decimal, usdi_value: Decimal) -> Decimal {
+    return usdi_value * iasset_value;
 }
 
 pub fn calculate_liquidity_proportion_from_liquidity_tokens(
-    liquidity_token_value: Value,
-    liquidity_token_supply: Value,
-) -> Value {
-    return liquidity_token_value.div(liquidity_token_supply);
+    liquidity_token_value: Decimal,
+    liquidity_token_supply: Decimal,
+) -> Decimal {
+    return liquidity_token_value / liquidity_token_supply;
 }
 
 pub fn calculate_liquidity_proportion_from_usdi(
-    usdi_liquidity_value: Value,
-    usdi_amm_value: Value,
-) -> Result<Value, InceptError> {
-    return Ok(usdi_liquidity_value.div(usdi_amm_value.add(usdi_liquidity_value)?));
+    usdi_liquidity_value: Decimal,
+    usdi_amm_value: Decimal,
+) -> Result<Decimal, InceptError> {
+    return Ok(usdi_liquidity_value / (usdi_amm_value + usdi_liquidity_value));
 }
 
 pub fn calculate_recentering_values_with_usdi_surplus(
-    comet_iasset_borrowed: Value,
-    comet_usdi_borrowed: Value,
-    iasset_amm_value: Value,
-    usdi_amm_value: Value,
-    liquidity_token_value: Value,
-    liquidity_token_supply: Value,
-) -> (Value, Value, Value) {
+    comet_iasset_borrowed: Decimal,
+    comet_usdi_borrowed: Decimal,
+    iasset_amm_value: Decimal,
+    usdi_amm_value: Decimal,
+    liquidity_token_value: Decimal,
+    liquidity_token_supply: Decimal,
+) -> (Decimal, Decimal, Decimal) {
     let invariant = calculate_invariant(iasset_amm_value, usdi_amm_value);
     let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
         liquidity_token_value,
         liquidity_token_supply,
     );
-    let inverse_liquidity_proportion =
-        Value::new(u128::pow(10, DEVNET_TOKEN_SCALE.into()), DEVNET_TOKEN_SCALE)
-            .sub(liquidity_proportion)
-            .unwrap();
+    let inverse_liquidity_proportion = Decimal::one() - liquidity_proportion;
 
-    let iasset_debt = comet_iasset_borrowed
-        .sub(liquidity_proportion.mul(iasset_amm_value))
-        .unwrap()
-        .div(inverse_liquidity_proportion);
+    let iasset_debt = (comet_iasset_borrowed - liquidity_proportion * iasset_amm_value)
+        / inverse_liquidity_proportion;
 
-    let new_iasset_amm_value = iasset_amm_value.sub(iasset_debt).unwrap();
+    let new_iasset_amm_value = iasset_amm_value - iasset_debt;
 
-    let usdi_surplus = liquidity_proportion
-        .mul(invariant.div(new_iasset_amm_value))
-        .sub(comet_usdi_borrowed)
-        .unwrap();
+    let usdi_surplus =
+        liquidity_proportion * invariant / new_iasset_amm_value - comet_usdi_borrowed;
 
-    let usdi_amount = invariant
-        .div(new_iasset_amm_value)
-        .sub(usdi_amm_value)
-        .unwrap();
+    let usdi_amount = invariant / new_iasset_amm_value - usdi_amm_value;
 
     return (usdi_surplus, usdi_amount, iasset_debt);
 }
 
 pub fn calculate_partial_recentering_values_with_usdi_surplus(
-    comet_iasset_borrowed: Value,
-    comet_usdi_borrowed: Value,
-    iasset_amm_value: Value,
-    usdi_amm_value: Value,
-    liquidity_token_value: Value,
-    liquidity_token_supply: Value,
-    iasset_debt: Value,
-) -> Result<(Value, Value, Value), InceptError> {
+    comet_iasset_borrowed: Decimal,
+    comet_usdi_borrowed: Decimal,
+    iasset_amm_value: Decimal,
+    usdi_amm_value: Decimal,
+    liquidity_token_value: Decimal,
+    liquidity_token_supply: Decimal,
+    iasset_debt: Decimal,
+) -> Result<(Decimal, Decimal, Decimal), InceptError> {
     let invariant = calculate_invariant(iasset_amm_value, usdi_amm_value);
     let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
         liquidity_token_value,
         liquidity_token_supply,
     );
-    let inverse_liquidity_proportion =
-        Value::new(u128::pow(10, DEVNET_TOKEN_SCALE.into()), DEVNET_TOKEN_SCALE)
-            .sub(liquidity_proportion)
-            .unwrap();
+    let inverse_liquidity_proportion = Decimal::one() - liquidity_proportion;
 
-    let total_iasset_debt = comet_iasset_borrowed
-        .sub(liquidity_proportion.mul(iasset_amm_value))
-        .unwrap()
-        .div(inverse_liquidity_proportion);
+    let total_iasset_debt = (comet_iasset_borrowed - liquidity_proportion * iasset_amm_value)
+        / inverse_liquidity_proportion;
 
-    if total_iasset_debt.lt(iasset_debt).unwrap() {
+    if total_iasset_debt < iasset_debt {
         return Err(InceptError::InvalidRecenter);
     }
 
-    let new_iasset_amm_value = iasset_amm_value.sub(iasset_debt).unwrap();
+    let new_iasset_amm_value = iasset_amm_value - iasset_debt;
 
-    let usdi_surplus = liquidity_proportion
-        .mul(invariant.div(new_iasset_amm_value))
-        .sub(comet_usdi_borrowed)
-        .unwrap();
+    let usdi_surplus =
+        liquidity_proportion * invariant / new_iasset_amm_value - comet_usdi_borrowed;
 
-    let usdi_amount = invariant
-        .div(new_iasset_amm_value)
-        .sub(usdi_amm_value)
-        .unwrap();
+    let usdi_amount = invariant / new_iasset_amm_value - usdi_amm_value;
 
     return Ok((usdi_surplus, usdi_amount, iasset_debt));
 }
 
 pub fn calculate_recentering_values_with_iasset_surplus(
-    comet_iasset_borrowed: Value,
-    comet_usdi_borrowed: Value,
-    iasset_amm_value: Value,
-    usdi_amm_value: Value,
-    liquidity_token_value: Value,
-    liquidity_token_supply: Value,
-) -> (Value, Value, Value) {
+    comet_iasset_borrowed: Decimal,
+    comet_usdi_borrowed: Decimal,
+    iasset_amm_value: Decimal,
+    usdi_amm_value: Decimal,
+    liquidity_token_value: Decimal,
+    liquidity_token_supply: Decimal,
+) -> (Decimal, Decimal, Decimal) {
     let invariant = calculate_invariant(iasset_amm_value, usdi_amm_value);
     let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
         liquidity_token_value,
         liquidity_token_supply,
     );
-    let inverse_liquidity_proportion =
-        Value::new(u128::pow(10, DEVNET_TOKEN_SCALE.into()), DEVNET_TOKEN_SCALE)
-            .sub(liquidity_proportion)
-            .unwrap();
+    let inverse_liquidity_proportion = Decimal::one() - liquidity_proportion;
 
-    let usdi_debt = comet_usdi_borrowed
-        .sub(liquidity_proportion.mul(usdi_amm_value))
-        .unwrap()
-        .div(inverse_liquidity_proportion);
+    let usdi_debt = (comet_usdi_borrowed - liquidity_proportion * usdi_amm_value)
+        / inverse_liquidity_proportion;
 
-    let new_usdi_amm_value = iasset_amm_value.sub(usdi_debt).unwrap();
+    let new_usdi_amm_value = iasset_amm_value - usdi_debt;
 
-    let iasset_surplus = liquidity_proportion
-        .mul(invariant.div(new_usdi_amm_value))
-        .sub(comet_iasset_borrowed)
-        .unwrap();
+    let iasset_surplus =
+        liquidity_proportion * invariant / new_usdi_amm_value - comet_iasset_borrowed;
 
-    let iasset_amount = invariant
-        .div(new_usdi_amm_value)
-        .sub(iasset_amm_value)
-        .unwrap();
+    let iasset_amount = invariant / new_usdi_amm_value - iasset_amm_value;
 
     return (iasset_surplus, iasset_amount, usdi_debt);
 }
 
 pub fn calculate_partial_recentering_values_with_iasset_surplus(
-    comet_iasset_borrowed: Value,
-    comet_usdi_borrowed: Value,
-    iasset_amm_value: Value,
-    usdi_amm_value: Value,
-    liquidity_token_value: Value,
-    liquidity_token_supply: Value,
-    usdi_debt: Value,
-) -> Result<(Value, Value, Value), InceptError> {
+    comet_iasset_borrowed: Decimal,
+    comet_usdi_borrowed: Decimal,
+    iasset_amm_value: Decimal,
+    usdi_amm_value: Decimal,
+    liquidity_token_value: Decimal,
+    liquidity_token_supply: Decimal,
+    usdi_debt: Decimal,
+) -> Result<(Decimal, Decimal, Decimal), InceptError> {
     let invariant = calculate_invariant(iasset_amm_value, usdi_amm_value);
     let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
         liquidity_token_value,
         liquidity_token_supply,
     );
-    let inverse_liquidity_proportion =
-        Value::new(u128::pow(10, DEVNET_TOKEN_SCALE.into()), DEVNET_TOKEN_SCALE)
-            .sub(liquidity_proportion)
-            .unwrap();
+    let inverse_liquidity_proportion = Decimal::one() - liquidity_proportion;
 
-    let total_usdi_debt = comet_usdi_borrowed
-        .sub(liquidity_proportion.mul(usdi_amm_value))
-        .unwrap()
-        .div(inverse_liquidity_proportion);
+    let total_usdi_debt = (comet_usdi_borrowed - liquidity_proportion * usdi_amm_value)
+        / inverse_liquidity_proportion;
 
-    if total_usdi_debt.lt(usdi_debt).unwrap() {
+    if total_usdi_debt < usdi_debt {
         return Err(InceptError::InvalidRecenter);
     }
 
-    let new_usdi_amm_value = iasset_amm_value.sub(usdi_debt).unwrap();
+    let new_usdi_amm_value = iasset_amm_value - usdi_debt;
 
-    let iasset_surplus = liquidity_proportion
-        .mul(invariant.div(new_usdi_amm_value))
-        .sub(comet_iasset_borrowed)
-        .unwrap();
+    let iasset_surplus =
+        liquidity_proportion * invariant / new_usdi_amm_value - comet_iasset_borrowed;
 
-    let iasset_amount = invariant
-        .div(new_usdi_amm_value)
-        .sub(iasset_amm_value)
-        .unwrap();
+    let iasset_amount = invariant / new_usdi_amm_value - iasset_amm_value;
 
     return Ok((iasset_surplus, iasset_amount, usdi_debt));
 }
 
 pub fn check_mint_collateral_sufficient(
     asset_info: AssetInfo,
-    asset_amount_borrowed: Value,
-    collateral_ratio: Value,
-    collateral_amount: Value,
+    asset_amount_borrowed: Decimal,
+    collateral_ratio: Decimal,
+    collateral_amount: Decimal,
     slot: u64,
 ) -> Result<(), InceptError> {
     if check_feed_update(asset_info, slot).is_err() {
         return Err(InceptError::OutdatedOracle);
     }
-
-    if asset_info
-        .price
-        .scale_to(collateral_amount.scale as u8)
-        .mul(asset_amount_borrowed)
-        .mul(collateral_ratio)
-        .gt(collateral_amount)
-        .unwrap()
+    if (asset_info.price.to_decimal() * asset_amount_borrowed * collateral_ratio)
+        > collateral_amount
     {
         return Err(InceptError::InvalidMintCollateralRatio.into());
     }
@@ -323,7 +272,7 @@ pub fn calculate_health_score(
     token_data: &TokenData,
 ) -> Result<HealthScore, InceptError> {
     let slot = Clock::get().expect("Failed to get slot.").slot;
-    let mut loss = Value::new(0, DEVNET_TOKEN_SCALE);
+    let mut loss = Decimal::zero();
 
     for index in 0..comet.num_positions {
         let comet_position = comet.positions[index as usize];
@@ -334,60 +283,62 @@ pub fn calculate_health_score(
         }
 
         let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
-            comet_position.liquidity_token_value,
-            pool.liquidity_token_supply,
+            comet_position.liquidity_token_value.to_decimal(),
+            pool.liquidity_token_supply.to_decimal(),
         );
-        let pool_price = pool.usdi_amount.div(pool.iasset_amount);
-        let effective_price = if pool_price.gt(pool.asset_info.price)? {
+        let pool_usdi = pool.usdi_amount.to_decimal();
+        let pool_iasset = pool.iasset_amount.to_decimal();
+        let pool_price = pool_usdi / pool_iasset;
+        let effective_price = if pool_price > pool.asset_info.price.to_decimal() {
             pool_price
         } else {
-            pool.asset_info.price
+            pool.asset_info.price.to_decimal()
         };
+
+        let borrowed_usdi = comet_position.borrowed_usdi.to_decimal();
+        let borrowed_iasset = comet_position.borrowed_iasset.to_decimal();
 
         let impermanent_loss;
 
-        if liquidity_proportion.val == 0u128 {
-            if comet_position
-                .borrowed_usdi
-                .gt(comet_position.borrowed_iasset)?
+        if liquidity_proportion.mantissa() == 0 {
+            if comet_position.borrowed_usdi.to_decimal()
+                > comet_position.borrowed_iasset.to_decimal()
             {
-                impermanent_loss = comet_position.borrowed_usdi;
+                impermanent_loss = borrowed_usdi;
             } else {
-                impermanent_loss = comet_position.borrowed_iasset.mul(effective_price);
+                impermanent_loss = borrowed_iasset * effective_price;
             }
         } else {
-            let claimable_usdi = liquidity_proportion.mul(pool.usdi_amount);
-            let claimable_iasset = liquidity_proportion.mul(pool.iasset_amount);
-            let init_price = comet_position
-                .borrowed_usdi
-                .div(comet_position.borrowed_iasset);
+            let claimable_usdi = liquidity_proportion * pool_usdi;
+            let claimable_iasset = liquidity_proportion * pool_iasset;
+            let init_price = borrowed_usdi / borrowed_iasset;
 
-            if pool_price.lt(init_price)? {
-                impermanent_loss = comet_position.borrowed_usdi.sub(claimable_usdi)?;
-            } else if pool_price.gt(init_price)? {
-                impermanent_loss =
-                    effective_price.mul(comet_position.borrowed_iasset.sub(claimable_iasset)?);
+            if pool_price < init_price {
+                impermanent_loss = borrowed_usdi - claimable_usdi;
+            } else if pool_price > init_price {
+                impermanent_loss = effective_price * borrowed_iasset - claimable_iasset;
             } else {
-                impermanent_loss = Value::new(0u128, DEVNET_TOKEN_SCALE);
+                impermanent_loss = Decimal::zero();
             }
         }
 
-        let impermanent_loss_term = impermanent_loss.mul(token_data.il_health_score_coefficient);
-
-        let position_term = comet_position
-            .borrowed_usdi
-            .mul(pool.asset_info.health_score_coefficient);
-
-        loss = loss.add(impermanent_loss_term)?.add(position_term)?;
+        let impermanent_loss_term =
+            impermanent_loss * token_data.il_health_score_coefficient.to_decimal();
+        let position_term = borrowed_usdi * pool.asset_info.health_score_coefficient.to_decimal();
+        loss += impermanent_loss_term + position_term;
     }
 
     let total_collateral_value = comet.calculate_effective_collateral_value(token_data);
 
-    let score = 100f64 - loss.div(total_collateral_value).to_scaled_f64();
+    let score = Decimal::new(100, 0) - loss / total_collateral_value;
 
-    if score > 0f64 {
-        Ok(HealthScore::Healthy { score })
+    if score.is_sign_positive() {
+        Ok(HealthScore::Healthy {
+            score: score.to_f64().unwrap(),
+        })
     } else {
-        Ok(HealthScore::SubjectToLiquidation { score })
+        Ok(HealthScore::SubjectToLiquidation {
+            score: score.to_f64().unwrap(),
+        })
     }
 }

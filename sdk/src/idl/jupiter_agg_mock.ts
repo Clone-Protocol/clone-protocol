@@ -114,6 +114,10 @@ export type JupiterAggMock = {
           "type": "u8"
         },
         {
+          "name": "iassetIndex",
+          "type": "u8"
+        },
+        {
           "name": "amount",
           "type": "u64"
         }
@@ -204,12 +208,36 @@ export type JupiterAggMock = {
           "type": "u8"
         },
         {
+          "name": "iassetIndex",
+          "type": "u8"
+        },
+        {
           "name": "buy",
           "type": "bool"
         },
         {
           "name": "amount",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "stressTest",
+      "accounts": [
+        {
+          "name": "jupiterAccount",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "nonce",
+          "type": "u8"
+        },
+        {
+          "name": "iterations",
+          "type": "u8"
         }
       ]
     }
@@ -245,6 +273,31 @@ export type JupiterAggMock = {
           {
             "name": "nIassets",
             "type": "u8"
+          },
+          {
+            "name": "answer",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "RawDecimal",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
           }
         ]
       }
@@ -368,6 +421,10 @@ export const IDL: JupiterAggMock = {
           "type": "u8"
         },
         {
+          "name": "iassetIndex",
+          "type": "u8"
+        },
+        {
           "name": "amount",
           "type": "u64"
         }
@@ -458,12 +515,36 @@ export const IDL: JupiterAggMock = {
           "type": "u8"
         },
         {
+          "name": "iassetIndex",
+          "type": "u8"
+        },
+        {
           "name": "buy",
           "type": "bool"
         },
         {
           "name": "amount",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "stressTest",
+      "accounts": [
+        {
+          "name": "jupiterAccount",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "nonce",
+          "type": "u8"
+        },
+        {
+          "name": "iterations",
+          "type": "u8"
         }
       ]
     }
@@ -499,6 +580,31 @@ export const IDL: JupiterAggMock = {
           {
             "name": "nIassets",
             "type": "u8"
+          },
+          {
+            "name": "answer",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "RawDecimal",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
           }
         ]
       }
