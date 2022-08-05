@@ -2247,9 +2247,10 @@ pub mod incept {
                     to: ctx.accounts.vault.to_account_info().clone(),
                     authority: ctx.accounts.manager.to_account_info().clone(),
                 };
-                let burn_usdi_context = CpiContext::new(
+                let burn_usdi_context = CpiContext::new_with_signer(
                     ctx.accounts.token_program.to_account_info().clone(),
                     cpi_accounts,
+                    seeds,
                 );
                 token::burn(
                     burn_usdi_context,

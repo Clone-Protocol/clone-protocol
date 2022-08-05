@@ -1821,7 +1821,7 @@ describe("incept", async () => {
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      5327243.89456298,
+      5327251.60126519,
       "check user usdi balance"
     );
     assert.equal(
