@@ -1,5 +1,4 @@
 use crate::states::*;
-use crate::value::{Add, Compare, Div, Mul, Sub, DEVNET_TOKEN_SCALE};
 use crate::*;
 
 pub fn check_feed_update(asset_info: AssetInfo, slot: u64) -> ProgramResult {
@@ -149,39 +148,6 @@ pub fn calculate_recentering_values_with_usdi_surplus(
     return (usdi_surplus, usdi_amount, iasset_debt);
 }
 
-pub fn calculate_partial_recentering_values_with_usdi_surplus(
-    comet_iasset_borrowed: Decimal,
-    comet_usdi_borrowed: Decimal,
-    iasset_amm_value: Decimal,
-    usdi_amm_value: Decimal,
-    liquidity_token_value: Decimal,
-    liquidity_token_supply: Decimal,
-    iasset_debt: Decimal,
-) -> Result<(Decimal, Decimal, Decimal), InceptError> {
-    let invariant = calculate_invariant(iasset_amm_value, usdi_amm_value);
-    let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
-        liquidity_token_value,
-        liquidity_token_supply,
-    );
-    let inverse_liquidity_proportion = Decimal::one() - liquidity_proportion;
-
-    let total_iasset_debt = (comet_iasset_borrowed - liquidity_proportion * iasset_amm_value)
-        / inverse_liquidity_proportion;
-
-    if total_iasset_debt < iasset_debt {
-        return Err(InceptError::InvalidRecenter);
-    }
-
-    let new_iasset_amm_value = iasset_amm_value - iasset_debt;
-
-    let usdi_surplus =
-        liquidity_proportion * invariant / new_iasset_amm_value - comet_usdi_borrowed;
-
-    let usdi_amount = invariant / new_iasset_amm_value - usdi_amm_value;
-
-    return Ok((usdi_surplus, usdi_amount, iasset_debt));
-}
-
 pub fn calculate_recentering_values_with_iasset_surplus(
     comet_iasset_borrowed: Decimal,
     comet_usdi_borrowed: Decimal,
@@ -197,50 +163,18 @@ pub fn calculate_recentering_values_with_iasset_surplus(
     );
     let inverse_liquidity_proportion = Decimal::one() - liquidity_proportion;
 
-    let usdi_debt = (comet_usdi_borrowed - liquidity_proportion * usdi_amm_value)
+    let iasset_surplus = (liquidity_proportion * iasset_amm_value - comet_iasset_borrowed)
         / inverse_liquidity_proportion;
 
-    let new_usdi_amm_value = iasset_amm_value - usdi_debt;
+    let new_iasset_amm_value = iasset_amm_value + iasset_surplus;
 
-    let iasset_surplus =
-        liquidity_proportion * invariant / new_usdi_amm_value - comet_iasset_borrowed;
+    let new_usdi_amm_value = invariant / new_iasset_amm_value;
 
-    let iasset_amount = invariant / new_usdi_amm_value - iasset_amm_value;
+    let usdi_debt = comet_usdi_borrowed - liquidity_proportion * new_usdi_amm_value;
 
-    return (iasset_surplus, iasset_amount, usdi_debt);
-}
+    let usdi_burned = usdi_amm_value - new_usdi_amm_value;
 
-pub fn calculate_partial_recentering_values_with_iasset_surplus(
-    comet_iasset_borrowed: Decimal,
-    comet_usdi_borrowed: Decimal,
-    iasset_amm_value: Decimal,
-    usdi_amm_value: Decimal,
-    liquidity_token_value: Decimal,
-    liquidity_token_supply: Decimal,
-    usdi_debt: Decimal,
-) -> Result<(Decimal, Decimal, Decimal), InceptError> {
-    let invariant = calculate_invariant(iasset_amm_value, usdi_amm_value);
-    let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
-        liquidity_token_value,
-        liquidity_token_supply,
-    );
-    let inverse_liquidity_proportion = Decimal::one() - liquidity_proportion;
-
-    let total_usdi_debt = (comet_usdi_borrowed - liquidity_proportion * usdi_amm_value)
-        / inverse_liquidity_proportion;
-
-    if total_usdi_debt < usdi_debt {
-        return Err(InceptError::InvalidRecenter);
-    }
-
-    let new_usdi_amm_value = iasset_amm_value - usdi_debt;
-
-    let iasset_surplus =
-        liquidity_proportion * invariant / new_usdi_amm_value - comet_iasset_borrowed;
-
-    let iasset_amount = invariant / new_usdi_amm_value - iasset_amm_value;
-
-    return Ok((iasset_surplus, iasset_amount, usdi_debt));
+    return (iasset_surplus, usdi_burned, usdi_debt);
 }
 
 pub fn check_mint_collateral_sufficient(

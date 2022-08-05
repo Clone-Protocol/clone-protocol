@@ -143,15 +143,15 @@ describe("incept", async () => {
     // console.log(r);
   });
 
-  it("usdi added as a collateral!", async () => {
-    await inceptClient.addCollateral(
-      walletPubkey,
-      8,
-      1,
-      inceptClient.manager!.usdiMint
-    );
-    await sleep(200);
-  });
+  // it("usdi added as a collateral!", async () => {
+  //   await inceptClient.addCollateral(
+  //     walletPubkey,
+  //     8,
+  //     1,
+  //     inceptClient.manager!.usdiMint
+  //   );
+  //   await sleep(200);
+  // });
 
   it("mock usdc added as a collateral!", async () => {
     await inceptClient.addCollateral(
@@ -184,8 +184,12 @@ describe("incept", async () => {
       tokenData.manager.equals(inceptClient.managerAddress[0]),
       "wrong manager!"
     );
-    assert(tokenData.numPools.eq(new BN(1)), "num pools incorrect");
-    assert(tokenData.numCollaterals.eq(new BN(2)), "num collaterals incorrect");
+    assert.equal(tokenData.numPools.toNumber(), 1, "num pools incorrect");
+    assert.equal(
+      tokenData.numCollaterals.toNumber(),
+      2,
+      "num collaterals incorrect"
+    );
 
     const first_pool = tokenData.pools[0];
     assert(
@@ -194,11 +198,11 @@ describe("incept", async () => {
     );
     assert(
       !first_pool.usdiTokenAccount.equals(anchor.web3.PublicKey.default),
-      "check iassetTokenAccount"
+      "check usdiTokenAccount"
     );
     assert(
       !first_pool.liquidityTokenMint.equals(anchor.web3.PublicKey.default),
-      "check iassetTokenAccount"
+      "check liquidityTokenMint"
     );
     assert(
       !first_pool.liquidationIassetTokenAccount.equals(
@@ -1231,7 +1235,6 @@ describe("incept", async () => {
       );
     const comet = await inceptClient.getSinglePoolComet(0);
     const position = comet.positions[0];
-    let positionBorrowedUsdi = toNumber(position.borrowedUsdi);
 
     // // Estimate using edit.
     // const estimation =
@@ -1393,11 +1396,7 @@ describe("incept", async () => {
     // const recenterEstimation =
     //   await inceptClient.calculateCometRecenterSinglePool(0);
 
-    await inceptClient.recenterSinglePoolComet(
-      usdiTokenAccountInfo.address,
-      iassetTokenAccountInfo.address,
-      0
-    );
+    await inceptClient.recenterSinglePoolComet(0);
 
     await sleep(200);
 
@@ -1493,7 +1492,7 @@ describe("incept", async () => {
 
     assert.equal(
       Number(mockUSDCTokenAccountInfo.amount) / 10000000,
-      999979000000,
+      999978999992.3718,
       "check user usdc balance"
     );
     assert.equal(
@@ -1550,7 +1549,7 @@ describe("incept", async () => {
     );
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      389268.86183181,
+      389276.4901017,
       "check user USDi"
     );
 
@@ -1588,7 +1587,7 @@ describe("incept", async () => {
     );
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      399268.86183181,
+      399276.4901017,
       "check user USDi"
     );
 
@@ -1757,7 +1756,7 @@ describe("incept", async () => {
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      5327243.9729953,
+      5327251.60126519,
       "check user usdi balance."
     );
     assert.equal(
@@ -1808,13 +1807,7 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
-    //await inceptClient.recenterComet(0, 0, false);
-    await inceptClient.recenterComet(
-      usdiTokenAccountInfo.address,
-      iassetTokenAccountInfo.address,
-      0,
-      false
-    );
+    await inceptClient.recenterComet(0, 0, false);
 
     await sleep(200);
 
@@ -1945,17 +1938,8 @@ describe("incept", async () => {
 
   it("Pay ILD using collateral", async () => {
     const comet1 = await inceptClient.getComet();
-    const tokenData = await inceptClient.getTokenData();
-    usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
-      inceptClient.manager!.usdiMint
-    );
-    iassetTokenAccountInfo =
-      await inceptClient.getOrCreateAssociatedTokenAccount(
-        tokenData.pools[comet1.positions[0].poolIndex].assetInfo.iassetMint
-      );
-
     const healthScore1 = await inceptClient.getHealthScore();
-    await inceptClient.payIldWithCollateral(0, 0, toDevnetScale(1));
+    await inceptClient.payCometILD(0, 0, toDevnetScale(1).toNumber(), false);
     const comet2 = await inceptClient.getComet();
     const healthScore2 = await inceptClient.getHealthScore();
     assert.isAbove(healthScore2, healthScore1, "health score should increase");
