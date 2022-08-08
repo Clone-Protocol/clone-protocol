@@ -159,9 +159,27 @@ export class Incept {
     scale: number,
     stable: number,
     collateral_mint: PublicKey,
-    collateralization_ratio: number = 0
+    collateralization_ratio: number = 0,
+    pythOracle?: PublicKey,
+    chainlinkOracle?: PublicKey
   ) {
     const vaultAccount = anchor.web3.Keypair.generate();
+
+    let remainingAccounts =
+      pythOracle && chainlinkOracle
+        ? [
+            {
+              pubkey: pythOracle,
+              isWritable: false,
+              isSigner: false,
+            },
+            {
+              pubkey: chainlinkOracle,
+              isWritable: false,
+              isSigner: false,
+            },
+          ]
+        : [];
 
     await this.program.rpc.addCollateral(
       this.managerAddress[1],
@@ -169,6 +187,7 @@ export class Incept {
       stable,
       toDevnetScale(collateralization_ratio),
       {
+        remainingAccounts: remainingAccounts,
         accounts: {
           admin: admin,
           manager: this.managerAddress[0],
