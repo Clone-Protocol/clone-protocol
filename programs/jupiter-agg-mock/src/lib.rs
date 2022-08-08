@@ -5,7 +5,7 @@ use pyth::pc::Price;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("9NBxCzqY2o9GrtjJeKc1LLnufbDqq1kDSZZwNDjvzhGn");
 
 const DEVNET_TOKEN_SCALE: u8 = 8;
 const USDC_TOKEN_SCALE: u8 = 7;
