@@ -2289,7 +2289,7 @@ export class Incept {
         upperPriceRange - oraclePrice,
         upperPriceRange - ammPrice
       );
-      let indicatorPrice: number = undefined;
+      let indicatorPrice: number;
       switch (minGap) {
         case oraclePrice - lowerPriceRange:
           indicatorPrice = oraclePrice;
@@ -2304,6 +2304,7 @@ export class Incept {
           indicatorPrice = ammPrice;
           break;
         default:
+          throw new Error("Couldn't get indicator price");
           break;
       }
       let centerPrice =
