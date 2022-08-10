@@ -4,7 +4,9 @@ import { Incept } from "../sdk/src/idl/incept";
 import { Pyth } from "../sdk/src/idl/pyth";
 import { MockUsdc } from "../sdk/src/idl/mock_usdc";
 import { Store } from "../sdk/src/idl/store";
+import { JupiterAggMock } from "../sdk/src/idl/jupiter_agg_mock";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { PublicKey } from "@solana/web3.js";
 import { assert } from "chai";
 import {
   Incept as InceptConnection,
@@ -36,17 +38,19 @@ describe("incept", async () => {
 
   let inceptProgram = anchor.workspace.Incept as Program<Incept>;
   let pythProgram = anchor.workspace.Pyth as Program<Pyth>;
-  let mockUSDCProgram = anchor.workspace.MockUsdc as Program<MockUsdc>;
+  //let mockUSDCProgram = anchor.workspace.MockUsdc as Program<MockUsdc>;
   let walletPubkey = inceptProgram.provider.wallet.publicKey;
   let storeProgram = anchor.workspace.Store as Program<Store>;
+  let jupiterProgram = anchor.workspace
+    .JupiterAggMock as Program<JupiterAggMock>;
 
   let chainlink; //= new ChainLinkOracle(storeProgram);
 
   const mockUSDCMint = anchor.web3.Keypair.generate();
-  const mockUSDCAccount = await anchor.web3.PublicKey.findProgramAddress(
-    [Buffer.from("mock_usdc")],
-    mockUSDCProgram.programId
-  );
+  // const mockUSDCAccount = await anchor.web3.PublicKey.findProgramAddress(
+  //   [Buffer.from("mock_usdc")],
+  //   mockUSDCProgram.programId
+  // );
 
   const healthScoreCoefficient = 1.059;
   const ilHealthScoreCoefficient = 128.288;
@@ -64,19 +68,43 @@ describe("incept", async () => {
     provider
   ) as InceptConnection;
 
-  it("mock usdc initialized!", async () => {
-    await mockUSDCProgram.rpc.initialize(mockUSDCAccount[1], {
-      accounts: {
-        admin: walletPubkey,
-        mockUsdcMint: mockUSDCMint.publicKey,
-        mockUsdcAccount: mockUSDCAccount[0],
-        rent: RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SYSTEM_PROGRAM_ID,
-      },
-      signers: [mockUSDCMint],
-    });
-  });
+  const mockAssetMint = anchor.web3.Keypair.generate();
+  let [jupiterAddress, jupiterNonce] = await PublicKey.findProgramAddress(
+    [Buffer.from("jupiter")],
+    jupiterProgram.programId
+  );
+
+  it!(
+    "mock jupiter agg initialized + mock usdc initialized + mock asset initialized!",
+    async () => {
+      await jupiterProgram.rpc.initialize(jupiterNonce, {
+        accounts: {
+          admin: jupiterProgram.provider.wallet.publicKey,
+          jupiterAccount: jupiterAddress,
+          usdcMint: mockUSDCMint.publicKey,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        },
+        instructions: [],
+        signers: [mockUSDCMint],
+      });
+    }
+  );
+
+  // it("mock usdc initialized!", async () => {
+  //   await mockUSDCProgram.rpc.initialize(mockUSDCAccount[1], {
+  //     accounts: {
+  //       admin: walletPubkey,
+  //       mockUsdcMint: mockUSDCMint.publicKey,
+  //       mockUsdcAccount: mockUSDCAccount[0],
+  //       rent: RENT_PUBKEY,
+  //       tokenProgram: TOKEN_PROGRAM_ID,
+  //       systemProgram: SYSTEM_PROGRAM_ID,
+  //     },
+  //     signers: [mockUSDCMint],
+  //   });
+  // });
 
   it("manager initialized!", async () => {
     await inceptClient.initializeManager(
@@ -114,7 +142,7 @@ describe("incept", async () => {
     );
   });
 
-  it("change feed price", async () => {
+  it("change feed price + mock asset created", async () => {
     let price = 10;
     const expo = -7;
     const conf = new BN((price / 10) * 10 ** -expo);
@@ -138,20 +166,22 @@ describe("incept", async () => {
 
     await sleep(200);
 
+    await jupiterProgram.rpc.createAsset(priceFeed, {
+      accounts: {
+        payer: jupiterProgram.provider.wallet.publicKey,
+        assetMint: mockAssetMint.publicKey,
+        jupiterAccount: jupiterAddress,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [mockAssetMint],
+    });
+
     // let r = await chainlink.fetchAnswer();
 
     // console.log(r);
   });
-
-  // it("usdi added as a collateral!", async () => {
-  //   await inceptClient.addCollateral(
-  //     walletPubkey,
-  //     8,
-  //     1,
-  //     inceptClient.manager!.usdiMint
-  //   );
-  //   await sleep(200);
-  // });
 
   it("mock usdc added as a collateral!", async () => {
     await inceptClient.addCollateral(
@@ -175,6 +205,19 @@ describe("incept", async () => {
     );
   });
 
+  it("non-stable mock asset added as a collateral!", async () => {
+    await inceptClient.addCollateral(
+      walletPubkey,
+      8,
+      0,
+      mockAssetMint.publicKey,
+      200,
+      priceFeed,
+      chainlink.priceFeedPubkey()
+    );
+    await sleep(200);
+  });
+
   it("token data initialization check", async () => {
     const tokenData = (await inceptProgram.account.tokenData.fetch(
       inceptClient.manager!.tokenData
@@ -187,7 +230,7 @@ describe("incept", async () => {
     assert.equal(tokenData.numPools.toNumber(), 1, "num pools incorrect");
     assert.equal(
       tokenData.numCollaterals.toNumber(),
-      2,
+      3,
       "num collaterals incorrect"
     );
 
@@ -252,21 +295,30 @@ describe("incept", async () => {
   });
 
   it("mock usdc minted!", async () => {
+    const usdcMintAmount = new BN("10000000000000000000");
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
       );
-    for (let i = 0; i < 1; i++) {
-      await mockUSDCProgram.rpc.mintMockUsdc(mockUSDCAccount[1], {
-        accounts: {
-          mockUsdcMint: mockUSDCMint.publicKey,
-          mockUsdcTokenAccount: mockUSDCTokenAccountInfo.address,
-          mockUsdcAccount: mockUSDCAccount[0],
-          tokenProgram: TOKEN_PROGRAM_ID,
-        },
-        signers: [],
-      });
-    }
+    await jupiterProgram.rpc.mintUsdc(jupiterNonce, usdcMintAmount, {
+      accounts: {
+        usdcMint: mockUSDCMint.publicKey,
+        usdcTokenAccount: mockUSDCTokenAccountInfo.address,
+        jupiterAccount: jupiterAddress,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      },
+    });
+    // for (let i = 0; i < 1; i++) {
+    //   await mockUSDCProgram.rpc.mintMockUsdc(mockUSDCAccount[1], {
+    //     accounts: {
+    //       mockUsdcMint: mockUSDCMint.publicKey,
+    //       mockUsdcTokenAccount: mockUSDCTokenAccountInfo.address,
+    //       mockUsdcAccount: mockUSDCAccount[0],
+    //       tokenProgram: TOKEN_PROGRAM_ID,
+    //     },
+    //     signers: [],
+    //   });
+    // }
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
@@ -1924,7 +1976,10 @@ describe("incept", async () => {
       inceptClient.provider.wallet.publicKey,
       0,
       0,
-      0.2
+      0.2,
+      jupiterProgram.programId,
+      jupiterAddress,
+      jupiterNonce
     );
 
     let healthScore4 = await inceptClient.getHealthScore();

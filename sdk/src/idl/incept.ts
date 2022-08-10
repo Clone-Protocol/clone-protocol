@@ -2019,6 +2019,36 @@ export type Incept = {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "jupiterProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "jupiterAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "usdcVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "assetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdcMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "pythOracle",
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": [
@@ -2031,11 +2061,19 @@ export type Incept = {
           "type": "u8"
         },
         {
-          "name": "cometCollateralUsdiIndex",
+          "name": "jupiterNonce",
           "type": "u8"
         },
         {
           "name": "positionIndex",
+          "type": "u8"
+        },
+        {
+          "name": "assetIndex",
+          "type": "u8"
+        },
+        {
+          "name": "cometCollateralIndex",
           "type": "u8"
         },
         {
@@ -4927,6 +4965,36 @@ export const IDL: Incept = {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "jupiterProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "jupiterAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "usdcVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "assetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdcMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "pythOracle",
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": [
@@ -4939,11 +5007,19 @@ export const IDL: Incept = {
           "type": "u8"
         },
         {
-          "name": "cometCollateralUsdiIndex",
+          "name": "jupiterNonce",
           "type": "u8"
         },
         {
           "name": "positionIndex",
+          "type": "u8"
+        },
+        {
+          "name": "assetIndex",
+          "type": "u8"
+        },
+        {
+          "name": "cometCollateralIndex",
           "type": "u8"
         },
         {

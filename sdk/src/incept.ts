@@ -9,6 +9,7 @@ import {
   TokenAccountNotFoundError,
 } from "@solana/spl-token";
 import { Incept as InceptProgram, IDL } from "./idl/incept";
+import { JupiterAggMock, IDL as JupiterIDL } from "./idl/jupiter_agg_mock";
 import {
   PublicKey,
   Connection,
@@ -2659,8 +2660,11 @@ export class Incept {
   public async liquidateCometPositionILInstruction(
     liquidateeAddress: PublicKey,
     positionIndex: number,
-    usdiCometCollateralIndex: number,
-    reductionAmount: number
+    cometCollateralIndex: number,
+    reductionAmount: number,
+    jupiterMockProgramId: PublicKey,
+    jupiterAddress: PublicKey,
+    jupiterNonce: number
   ) {
     const { userPubkey, bump } = await this.getUserAddress(liquidateeAddress);
     let userAccount = await this.getUserAccount(userPubkey);
@@ -2668,17 +2672,46 @@ export class Incept {
     let position = comet.positions[positionIndex];
     let tokenData = await this.getTokenData();
     let pool = tokenData.pools[position.poolIndex];
-    let usdiCollateralIndex =
-      comet.collaterals[usdiCometCollateralIndex].collateralIndex;
-    let usdiCollateral = tokenData.collaterals[usdiCollateralIndex];
+    let collateralIndex =
+      comet.collaterals[cometCollateralIndex].collateralIndex;
+    let collateral = tokenData.collaterals[collateralIndex];
     const liquidatorUsdiTokenAccount =
       await this.getOrCreateAssociatedTokenAccount(this.manager!.usdiMint);
+    // let [jupiterAddress, nonce] = await PublicKey.findProgramAddress(
+    //     [Buffer.from("jupiter")],
+    //     jupiterMockProgramId
+    //   );
+
+    let jupiterProgram = new Program<JupiterAggMock>(
+      JupiterIDL,
+      jupiterMockProgramId,
+      this.provider
+    );
+    let jupiterAccount = await jupiterProgram.account.jupiter.fetch(
+      jupiterAddress
+    );
+    // Get asset data from Jupiter and match it with the comets oracle.
+    let oraclePK = pool.assetInfo.priceFeedAddresses[0];
+    let assetIndex: number = -1;
+
+    for (let index = 0; index < jupiterAccount.oracles.length; index++) {
+      let pk = jupiterAccount.oracles[index];
+      if (oraclePK.equals(pk)) {
+        assetIndex = index;
+        break;
+      }
+    }
+    if (assetIndex < 0) {
+      throw new Error("Couldn't find assetIndex");
+    }
 
     return await this.program.instruction.liquidateCometIlReduction(
       this.managerAddress[1],
       bump,
+      jupiterNonce,
       positionIndex,
-      usdiCometCollateralIndex,
+      assetIndex,
+      cometCollateralIndex,
       toDevnetScale(reductionAmount),
       {
         accounts: {
@@ -2689,7 +2722,7 @@ export class Incept {
           userAccount: userPubkey,
           comet: userAccount.comet,
           usdiMint: this.manager!.usdiMint,
-          vault: usdiCollateral.vault,
+          vault: collateral.vault,
           iassetMint: pool.assetInfo.iassetMint,
           ammUsdiTokenAccount: pool.usdiTokenAccount,
           ammIassetTokenAccount: pool.iassetTokenAccount,
@@ -2697,6 +2730,12 @@ export class Incept {
           cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
           liquidatorUsdiTokenAccount: liquidatorUsdiTokenAccount.address,
           tokenProgram: TOKEN_PROGRAM_ID,
+          jupiterProgram: jupiterMockProgramId,
+          jupiterAccount: jupiterAddress,
+          usdcVault: tokenData.collaterals[1].vault,
+          assetMint: jupiterAccount.assetMints[assetIndex],
+          usdcMint: jupiterAccount.usdcMint,
+          pythOracle: oraclePK,
         },
       }
     );
@@ -2706,14 +2745,20 @@ export class Incept {
     liquidateeAddress: PublicKey,
     positionIndex: number,
     usdiCometCollateralIndex: number,
-    reductionAmount: number
+    reductionAmount: number,
+    jupiterMockProgramId: PublicKey,
+    jupiterAddress: PublicKey,
+    jupiterNonce: number
   ) {
     let updatePricesIx = await this.updatePricesInstruction();
     let ix = await this.liquidateCometPositionILInstruction(
       liquidateeAddress,
       positionIndex,
       usdiCometCollateralIndex,
-      reductionAmount
+      reductionAmount,
+      jupiterMockProgramId,
+      jupiterAddress,
+      jupiterNonce
     );
     return await this.provider.send(
       new Transaction().add(updatePricesIx).add(ix)

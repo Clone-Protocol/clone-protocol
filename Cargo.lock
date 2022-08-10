@@ -678,6 +678,7 @@ dependencies = [
  "anchor-spl",
  "bytemuck",
  "chainlink_solana",
+ "jupiter-agg-mock",
  "pyth",
  "pyth-client",
  "rust_decimal",

@@ -4,6 +4,8 @@ use anchor_spl::token::{self, Burn, MintTo, Transfer};
 use chainlink_solana as chainlink;
 use error::*;
 use instructions::*;
+use jupiter_agg_mock::cpi::accounts::Swap;
+use jupiter_agg_mock::cpi::swap as CpiJupiterSwap;
 use pyth::pc::Price;
 use rust_decimal::prelude::*;
 use states::{
@@ -2838,8 +2840,10 @@ pub mod incept {
         ctx: Context<LiquidateCometILReduction>,
         manager_nonce: u8,
         _user_nonce: u8,
-        comet_collateral_usdi_index: u8,
+        jupiter_nonce: u8,
         position_index: u8,
+        asset_index: u8,
+        comet_collateral_index: u8,
         il_reduction_amount: u64,
     ) -> ProgramResult {
         let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
@@ -2883,7 +2887,10 @@ pub mod incept {
             return Err(error::InceptError::NotSubjectToILLiquidation.into());
         }
 
-        let collateral = comet.collaterals[comet_collateral_usdi_index as usize];
+        let comet_collateral = comet.collaterals[comet_collateral_index as usize];
+        let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
+
+        let is_stable_collateral = collateral.stable == 1;
 
         if position_is_usdi_il {
             let impermanent_loss_usdi = position.borrowed_usdi.to_decimal();
@@ -2897,36 +2904,92 @@ pub mod incept {
                 il_reduction_amount.try_into().unwrap(),
                 impermanent_loss_usdi.scale().try_into().unwrap(),
             );
-            let total_usdi_required =
+            let mut total_usdi_required =
                 liquidation_value * token_data.il_liquidation_reward_pct.to_decimal();
             let usdi_reward = total_usdi_required - liquidation_value;
 
             // remove total_usdi_required from comet, comet collateral and token data
-            comet.collaterals[comet_collateral_usdi_index as usize].collateral_amount =
-                RawDecimal::from(collateral.collateral_amount.to_decimal() - total_usdi_required);
-            comet.total_collateral_amount =
-                RawDecimal::from(comet.total_collateral_amount.to_decimal() - total_usdi_required);
-            token_data.collaterals[collateral.collateral_index as usize].vault_comet_supply =
-                RawDecimal::from(
-                    token_data.collaterals[collateral.collateral_index as usize]
-                        .vault_comet_supply
-                        .to_decimal()
-                        - total_usdi_required,
+            if is_stable_collateral {
+                comet.collaterals[comet_collateral_index as usize].collateral_amount =
+                    RawDecimal::from(
+                        comet_collateral.collateral_amount.to_decimal() - total_usdi_required,
+                    );
+                comet.total_collateral_amount = RawDecimal::from(
+                    comet.total_collateral_amount.to_decimal() - total_usdi_required,
                 );
-            // Vault usdi supply
-            // Burn USDi from vault.
-            token::burn(
-                CpiContext::new_with_signer(
-                    ctx.accounts.token_program.to_account_info().clone(),
-                    Burn {
-                        mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                        to: ctx.accounts.vault.to_account_info().clone(),
-                        authority: ctx.accounts.manager.to_account_info().clone(),
-                    },
-                    seeds,
-                ),
-                total_usdi_required.mantissa().try_into().unwrap(),
-            )?;
+                token_data.collaterals[comet_collateral.collateral_index as usize]
+                    .vault_comet_supply = RawDecimal::from(
+                    collateral.vault_comet_supply.to_decimal() - total_usdi_required,
+                );
+
+                // Vault usdi supply
+                // Burn USDi from vault.
+                token::burn(
+                    CpiContext::new_with_signer(
+                        ctx.accounts.token_program.to_account_info().clone(),
+                        Burn {
+                            mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                            to: ctx.accounts.vault.to_account_info().clone(),
+                            authority: ctx.accounts.manager.to_account_info().clone(),
+                        },
+                        seeds,
+                    ),
+                    total_usdi_required.mantissa().try_into().unwrap(),
+                )?;
+            } else {
+                // Trade users non-stable collateral for usdc,
+                // Using non-stable collateral vault and the usdc vault:
+                // Swap as much collateral out of vault needed to get total_required_usdi amount of usdc into usdc vault.
+                msg!("HERE.");
+                let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
+                let starting_vault_collateral = Decimal::new(
+                    ctx.accounts.vault.amount.try_into().unwrap(),
+                    collateral_scale,
+                );
+
+                let mut signer_manager = ctx.accounts.manager.to_account_info().clone();
+                signer_manager.is_signer = true;
+
+                let cpi_program = ctx.accounts.jupiter_program.to_account_info();
+                let cpi_accounts = Swap {
+                    user: signer_manager,
+                    jupiter_account: ctx.accounts.jupiter_account.to_account_info().clone(),
+                    asset_mint: ctx.accounts.asset_mint.to_account_info().clone(),
+                    usdc_mint: ctx.accounts.usdc_mint.to_account_info().clone(),
+                    user_asset_token_account: ctx.accounts.vault.to_account_info().clone(),
+                    user_usdc_token_account: ctx.accounts.usdc_vault.to_account_info().clone(),
+                    pyth_oracle: ctx.accounts.pyth_oracle.to_account_info().clone(),
+                    token_program: ctx.accounts.token_program.to_account_info().clone(),
+                };
+                let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds);
+                total_usdi_required.rescale(DEVNET_TOKEN_SCALE);
+                CpiJupiterSwap(
+                    cpi_ctx,
+                    jupiter_nonce,
+                    asset_index,
+                    false,
+                    false,
+                    total_usdi_required.mantissa().try_into().unwrap(),
+                )?;
+
+                ctx.accounts.vault.reload()?;
+
+                let final_vault_collateral = Decimal::new(
+                    ctx.accounts.vault.amount.try_into().unwrap(),
+                    collateral_scale,
+                );
+                let collateral_reduction = starting_vault_collateral - final_vault_collateral;
+
+                comet.collaterals[comet_collateral_index as usize].collateral_amount =
+                    RawDecimal::from(
+                        comet_collateral.collateral_amount.to_decimal() - collateral_reduction,
+                    );
+
+                token_data.collaterals[comet_collateral.collateral_index as usize]
+                    .vault_comet_supply = RawDecimal::from(
+                    collateral.vault_comet_supply.to_decimal() - collateral_reduction,
+                );
+            }
 
             // reduce borrowed_usdi by il value
             comet.positions[position_index as usize].borrowed_usdi =
@@ -2974,41 +3037,90 @@ pub mod incept {
                 impermanent_loss_usdi * token_data.il_liquidation_reward_pct.to_decimal();
             let mut usdi_reward = total_usdi_required - impermanent_loss_usdi;
 
-            let mut new_collateral_amount =
-                collateral.collateral_amount.to_decimal() - total_usdi_required;
-            new_collateral_amount.rescale(DEVNET_TOKEN_SCALE);
-            comet.collaterals[comet_collateral_usdi_index as usize].collateral_amount =
-                RawDecimal::from(new_collateral_amount);
+            if is_stable_collateral {
+                let mut new_collateral_amount =
+                    comet_collateral.collateral_amount.to_decimal() - total_usdi_required;
+                new_collateral_amount.rescale(DEVNET_TOKEN_SCALE);
+                comet.collaterals[comet_collateral_index as usize].collateral_amount =
+                    RawDecimal::from(new_collateral_amount);
 
-            let mut new_total_collateral =
-                comet.total_collateral_amount.to_decimal() - total_usdi_required;
-            new_total_collateral.rescale(DEVNET_TOKEN_SCALE);
-            comet.total_collateral_amount = RawDecimal::from(new_total_collateral);
+                let mut new_total_collateral =
+                    comet.total_collateral_amount.to_decimal() - total_usdi_required;
+                new_total_collateral.rescale(DEVNET_TOKEN_SCALE);
+                comet.total_collateral_amount = RawDecimal::from(new_total_collateral);
 
-            let mut new_vault_comet_supply = token_data.collaterals
-                [collateral.collateral_index as usize]
-                .vault_comet_supply
-                .to_decimal()
-                - total_usdi_required;
-            new_vault_comet_supply.rescale(DEVNET_TOKEN_SCALE);
+                let mut new_vault_comet_supply =
+                    collateral.vault_comet_supply.to_decimal() - total_usdi_required;
+                new_vault_comet_supply.rescale(DEVNET_TOKEN_SCALE);
 
-            token_data.collaterals[collateral.collateral_index as usize].vault_comet_supply =
-                RawDecimal::from(new_vault_comet_supply);
+                token_data.collaterals[comet_collateral.collateral_index as usize]
+                    .vault_comet_supply = RawDecimal::from(new_vault_comet_supply);
 
-            total_usdi_required.rescale(DEVNET_TOKEN_SCALE);
-            // Burn USDi from vault.
-            token::burn(
-                CpiContext::new_with_signer(
-                    ctx.accounts.token_program.to_account_info().clone(),
-                    Burn {
-                        mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                        to: ctx.accounts.vault.to_account_info().clone(),
-                        authority: ctx.accounts.manager.to_account_info().clone(),
-                    },
-                    seeds,
-                ),
-                total_usdi_required.mantissa().try_into().unwrap(),
-            )?;
+                total_usdi_required.rescale(DEVNET_TOKEN_SCALE);
+                // Burn USDi from vault.
+                token::burn(
+                    CpiContext::new_with_signer(
+                        ctx.accounts.token_program.to_account_info().clone(),
+                        Burn {
+                            mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                            to: ctx.accounts.vault.to_account_info().clone(),
+                            authority: ctx.accounts.manager.to_account_info().clone(),
+                        },
+                        seeds,
+                    ),
+                    total_usdi_required.mantissa().try_into().unwrap(),
+                )?;
+            } else {
+                let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
+                let starting_vault_collateral = Decimal::new(
+                    ctx.accounts.vault.amount.try_into().unwrap(),
+                    collateral_scale,
+                );
+                msg!("HERE.");
+
+                let mut signer_manager = ctx.accounts.manager.to_account_info().clone();
+                signer_manager.is_signer = true;
+
+                let cpi_program = ctx.accounts.jupiter_program.to_account_info();
+                let cpi_accounts = Swap {
+                    user: signer_manager,
+                    jupiter_account: ctx.accounts.jupiter_account.to_account_info().clone(),
+                    asset_mint: ctx.accounts.asset_mint.to_account_info().clone(),
+                    usdc_mint: ctx.accounts.usdc_mint.to_account_info().clone(),
+                    user_asset_token_account: ctx.accounts.vault.to_account_info().clone(),
+                    user_usdc_token_account: ctx.accounts.usdc_vault.to_account_info().clone(),
+                    pyth_oracle: ctx.accounts.pyth_oracle.to_account_info().clone(),
+                    token_program: ctx.accounts.token_program.to_account_info().clone(),
+                };
+                let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds);
+                total_usdi_required.rescale(DEVNET_TOKEN_SCALE);
+                CpiJupiterSwap(
+                    cpi_ctx,
+                    jupiter_nonce,
+                    asset_index,
+                    false,
+                    false,
+                    total_usdi_required.mantissa().try_into().unwrap(),
+                )?;
+
+                ctx.accounts.vault.reload()?;
+
+                let final_vault_collateral = Decimal::new(
+                    ctx.accounts.vault.amount.try_into().unwrap(),
+                    collateral_scale,
+                );
+                let collateral_reduction = starting_vault_collateral - final_vault_collateral;
+
+                comet.collaterals[comet_collateral_index as usize].collateral_amount =
+                    RawDecimal::from(
+                        comet_collateral.collateral_amount.to_decimal() - collateral_reduction,
+                    );
+
+                token_data.collaterals[comet_collateral.collateral_index as usize]
+                    .vault_comet_supply = RawDecimal::from(
+                    collateral.vault_comet_supply.to_decimal() - collateral_reduction,
+                );
+            }
 
             // Mint USDi into AMM
             impermanent_loss_usdi.rescale(DEVNET_TOKEN_SCALE);

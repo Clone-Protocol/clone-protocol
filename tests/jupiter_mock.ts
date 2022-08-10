@@ -25,7 +25,7 @@ import { Decimal } from "../sdk/src/decimal";
 describe("jupiter mock aggregator", async () => {
   // const provider = anchor.Provider.local();
   // anchor.setProvider(provider);
-    let jupiterProgram = anchor.workspace
+  let jupiterProgram = anchor.workspace
     .JupiterAggMock as Program<JupiterAggMock>;
   let pythProgram = anchor.workspace.Pyth as Program<Pyth>;
 
@@ -35,7 +35,7 @@ describe("jupiter mock aggregator", async () => {
   );
   let usdcMint = anchor.web3.Keypair.generate();
   //let jupiterAccountAddress = anchor.web3.Keypair.generate();
-  let iAssetMint = anchor.web3.Keypair.generate();
+  let assetMint = anchor.web3.Keypair.generate();
 
   it("initialize", async () => {
     await jupiterProgram.rpc.initialize(nonce, {
@@ -52,35 +52,34 @@ describe("jupiter mock aggregator", async () => {
     });
 
     await jupiterProgram.rpc.stressTest(nonce, 10, {
-        accounts: {
-            jupiterAccount: jupiterAddress
-        }
+      accounts: {
+        jupiterAccount: jupiterAddress,
+      },
     });
 
     let jupiterAccount = await jupiterProgram.account.jupiter.fetch(
-        jupiterAddress
-      );
+      jupiterAddress
+    );
 
     let answer = new Decimal(jupiterAccount.answer.data);
-
   });
 
-  it("create iasset", async () => {
+  it("create mock asset", async () => {
     let price = 10;
     const expo = -7;
     const conf = new BN((price / 10) * 10 ** -expo);
     let priceFeedKey = await createPriceFeed(pythProgram, price, expo, conf);
 
-    await jupiterProgram.rpc.createIasset(priceFeedKey, {
+    await jupiterProgram.rpc.createAsset(priceFeedKey, {
       accounts: {
         payer: jupiterProgram.provider.wallet.publicKey,
-        iassetMint: iAssetMint.publicKey,
+        assetMint: assetMint.publicKey,
         jupiterAccount: jupiterAddress,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
-      signers: [iAssetMint],
+      signers: [assetMint],
     });
   });
 
@@ -126,11 +125,11 @@ describe("jupiter mock aggregator", async () => {
     assert.equal(Number(usdcTokenAccount.amount) / 10000000, usdcMintAmount);
   });
 
-  it("mint iAsset", async () => {
-    let iAssetMintAmount = 10;
+  it("mint asset", async () => {
+    let assetMintAmount = 10;
 
-    let iAssetAssociatedTokenAddress = await getAssociatedTokenAddress(
-      iAssetMint.publicKey,
+    let assetAssociatedTokenAddress = await getAssociatedTokenAddress(
+      assetMint.publicKey,
       jupiterProgram.provider.wallet.publicKey,
       false,
       TOKEN_PROGRAM_ID,
@@ -140,43 +139,40 @@ describe("jupiter mock aggregator", async () => {
     let tx = new Transaction().add(
       createAssociatedTokenAccountInstruction(
         jupiterProgram.provider.wallet.publicKey, // payer
-        iAssetAssociatedTokenAddress, // ata
+        assetAssociatedTokenAddress, // ata
         jupiterProgram.provider.wallet.publicKey, // owner
-        iAssetMint.publicKey // mint
+        assetMint.publicKey // mint
       )
     );
 
     await jupiterProgram.provider.send(tx);
 
-    await jupiterProgram.rpc.mintIasset(
+    await jupiterProgram.rpc.mintAsset(
       nonce,
       0,
-      new BN(iAssetMintAmount * 100000000),
+      new BN(assetMintAmount * 100000000),
       {
         accounts: {
-          iassetMint: iAssetMint.publicKey,
-          iassetTokenAccount: iAssetAssociatedTokenAddress,
+          assetMint: assetMint.publicKey,
+          assetTokenAccount: assetAssociatedTokenAddress,
           jupiterAccount: jupiterAddress,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
     );
 
-    let iAssetTokenAccount = await getAccount(
+    let assetTokenAccount = await getAccount(
       jupiterProgram.provider.connection,
-      iAssetAssociatedTokenAddress
+      assetAssociatedTokenAddress
     );
-    assert.equal(
-      Number(iAssetTokenAccount.amount) / 100000000,
-      iAssetMintAmount
-    );
+    assert.equal(Number(assetTokenAccount.amount) / 100000000, assetMintAmount);
   });
 
-  it("swap buy iAsset", async () => {
-    let buyAmount = 10;
+  it("swap asset", async () => {
+    let amount = 10;
 
-    let iAssetAssociatedTokenAddress = await getAssociatedTokenAddress(
-      iAssetMint.publicKey,
+    let assetAssociatedTokenAddress = await getAssociatedTokenAddress(
+      assetMint.publicKey,
       jupiterProgram.provider.wallet.publicKey,
       false,
       TOKEN_PROGRAM_ID,
@@ -194,19 +190,53 @@ describe("jupiter mock aggregator", async () => {
     let jupiterAccount = await jupiterProgram.account.jupiter.fetch(
       jupiterAddress
     );
+    // Swap 10 asset out.
+    await jupiterProgram.rpc.swap(
+      nonce,
+      0,
+      false,
+      true,
+      new BN(amount * 100000000),
+      {
+        accounts: {
+          user: jupiterProgram.provider.wallet.publicKey,
+          jupiterAccount: jupiterAddress,
+          assetMint: assetMint.publicKey,
+          usdcMint: usdcMint.publicKey,
+          userAssetTokenAccount: assetAssociatedTokenAddress,
+          userUsdcTokenAccount: usdcAssociatedTokenAddress,
+          pythOracle: jupiterAccount.oracles[0],
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    );
 
+    let assetTokenAccount = await getAccount(
+      jupiterProgram.provider.connection,
+      assetAssociatedTokenAddress
+    );
+    let usdcTokenAccount = await getAccount(
+      jupiterProgram.provider.connection,
+      usdcAssociatedTokenAddress
+    );
+
+    assert.equal(Number(assetTokenAccount.amount) / 100000000, 10 + 10);
+    assert.equal(Number(usdcTokenAccount.amount) / 10000000, 1000 - 100);
+
+    // Swap 10 asset in.
     await jupiterProgram.rpc.swap(
       nonce,
       0,
       true,
-      new BN(buyAmount * 100000000),
+      true,
+      new BN(amount * 100000000),
       {
         accounts: {
           user: jupiterProgram.provider.wallet.publicKey,
           jupiterAccount: jupiterAddress,
-          iassetMint: iAssetMint.publicKey,
+          assetMint: assetMint.publicKey,
           usdcMint: usdcMint.publicKey,
-          userIassetTokenAccount: iAssetAssociatedTokenAddress,
+          userAssetTokenAccount: assetAssociatedTokenAddress,
           userUsdcTokenAccount: usdcAssociatedTokenAddress,
           pythOracle: jupiterAccount.oracles[0],
           tokenProgram: TOKEN_PROGRAM_ID,
@@ -214,24 +244,24 @@ describe("jupiter mock aggregator", async () => {
       }
     );
 
-    let iAssetTokenAccount = await getAccount(
+    assetTokenAccount = await getAccount(
       jupiterProgram.provider.connection,
-      iAssetAssociatedTokenAddress
+      assetAssociatedTokenAddress
     );
-    let usdcTokenAccount = await getAccount(
+    usdcTokenAccount = await getAccount(
       jupiterProgram.provider.connection,
       usdcAssociatedTokenAddress
     );
 
-    assert.equal(Number(iAssetTokenAccount.amount) / 100000000, 10 + 10);
-    assert.equal(Number(usdcTokenAccount.amount) / 10000000, 1000 - 100);
+    assert.equal(Number(assetTokenAccount.amount) / 100000000, 10);
+    assert.equal(Number(usdcTokenAccount.amount) / 10000000, 1000);
   });
 
-  it("swap sell iAsset", async () => {
-    let sellAmount = 10;
+  it("swap usdc", async () => {
+    let amount = 100;
 
-    let iAssetAssociatedTokenAddress = await getAssociatedTokenAddress(
-      iAssetMint.publicKey,
+    let assetAssociatedTokenAddress = await getAssociatedTokenAddress(
+      assetMint.publicKey,
       jupiterProgram.provider.wallet.publicKey,
       false,
       TOKEN_PROGRAM_ID,
@@ -250,18 +280,20 @@ describe("jupiter mock aggregator", async () => {
       jupiterAddress
     );
 
+    // Swap 100 usdc out
     await jupiterProgram.rpc.swap(
       nonce,
       0,
       false,
-      new BN(sellAmount * 100000000),
+      false,
+      new BN(amount * 10000000),
       {
         accounts: {
           user: jupiterProgram.provider.wallet.publicKey,
           jupiterAccount: jupiterAddress,
-          iassetMint: iAssetMint.publicKey,
+          assetMint: assetMint.publicKey,
           usdcMint: usdcMint.publicKey,
-          userIassetTokenAccount: iAssetAssociatedTokenAddress,
+          userAssetTokenAccount: assetAssociatedTokenAddress,
           userUsdcTokenAccount: usdcAssociatedTokenAddress,
           pythOracle: jupiterAccount.oracles[0],
           tokenProgram: TOKEN_PROGRAM_ID,
@@ -269,16 +301,49 @@ describe("jupiter mock aggregator", async () => {
       }
     );
 
-    let iAssetTokenAccount = await getAccount(
+    let assetTokenAccount = await getAccount(
       jupiterProgram.provider.connection,
-      iAssetAssociatedTokenAddress
+      assetAssociatedTokenAddress
     );
     let usdcTokenAccount = await getAccount(
       jupiterProgram.provider.connection,
       usdcAssociatedTokenAddress
     );
 
-    assert.equal(Number(iAssetTokenAccount.amount) / 100000000, 10);
+    assert.equal(Number(assetTokenAccount.amount) / 100000000, 10 - 10);
+    assert.equal(Number(usdcTokenAccount.amount) / 10000000, 1000 + 100);
+
+    // Swap 100 usdc in
+    await jupiterProgram.rpc.swap(
+      nonce,
+      0,
+      true,
+      false,
+      new BN(amount * 10000000),
+      {
+        accounts: {
+          user: jupiterProgram.provider.wallet.publicKey,
+          jupiterAccount: jupiterAddress,
+          assetMint: assetMint.publicKey,
+          usdcMint: usdcMint.publicKey,
+          userAssetTokenAccount: assetAssociatedTokenAddress,
+          userUsdcTokenAccount: usdcAssociatedTokenAddress,
+          pythOracle: jupiterAccount.oracles[0],
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    );
+
+    assetTokenAccount = await getAccount(
+      jupiterProgram.provider.connection,
+      assetAssociatedTokenAddress
+    );
+    usdcTokenAccount = await getAccount(
+      jupiterProgram.provider.connection,
+      usdcAssociatedTokenAddress
+    );
+
+    assert.equal(Number(assetTokenAccount.amount) / 100000000, 10);
     assert.equal(Number(usdcTokenAccount.amount) / 10000000, 1000);
   });
 });

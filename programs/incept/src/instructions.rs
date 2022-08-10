@@ -4,6 +4,11 @@ use crate::states::{
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
+use jupiter_agg_mock::program::JupiterAggMock;
+use jupiter_agg_mock::{Jupiter, Swap};
+//use jupiter_agg_mock::instruction::Swap;
+
+const USDC_COLLATERAL_INDEX: usize = 1;
 
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, il_health_score_coefficient: u64, il_health_score_cutoff: u64, il_liquidation_reward_pct: u64)]
@@ -1495,7 +1500,7 @@ pub struct LiquidateCometPositionReduction<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, user_nonce: u8, position_index: u8, comet_collateral_usdi_index: u8, il_reduction_amount: u64)]
+#[instruction(manager_nonce: u8, user_nonce: u8, jupiter_nonce: u8, position_index: u8, asset_index: u8, comet_collateral_index: u8, il_reduction_amount: u64)]
 pub struct LiquidateCometILReduction<'info> {
     pub liquidator: Signer<'info>,
     #[account(
@@ -1559,11 +1564,29 @@ pub struct LiquidateCometILReduction<'info> {
     pub liquidator_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.collaterals[comet.load()?.collaterals[comet_collateral_usdi_index as usize].collateral_index as usize].vault,
-        constraint = &vault.mint == &usdi_mint.key()
+        address = token_data.load()?.collaterals[comet.load()?.collaterals[comet_collateral_index as usize].collateral_index as usize].vault,
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
+    pub jupiter_program: Program<'info, JupiterAggMock>,
+    pub jupiter_account: Box<Account<'info, Jupiter>>,
+    #[account(
+        mut,
+        address = token_data.load()?.collaterals[USDC_COLLATERAL_INDEX].vault,
+   )]
+    pub usdc_vault: Box<Account<'info, TokenAccount>>,
+    #[account(mut,
+        address = jupiter_account.asset_mints[asset_index as usize],
+    )]
+    pub asset_mint: Account<'info, Mint>,
+    #[account(mut,
+        address = jupiter_account.usdc_mint
+    )]
+    pub usdc_mint: Account<'info, Mint>,
+    #[account(
+        address = jupiter_account.oracles[asset_index as usize]
+    )]
+    pub pyth_oracle: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
