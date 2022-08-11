@@ -215,7 +215,6 @@ describe("incept", async () => {
       priceFeed,
       chainlink.priceFeedPubkey()
     );
-    await sleep(200);
   });
 
   it("token data initialization check", async () => {
@@ -379,6 +378,39 @@ describe("incept", async () => {
       "confirmed"
     );
     assert.equal(vault.value!.uiAmount, 1000000, "check usdc vault amount");
+  });
+
+  it("mint mock asset", async () => {
+    let assetMintAmount = 1000;
+
+    let mockAssetAssociatedTokenAddress =
+      await inceptClient.getOrCreateAssociatedTokenAccount(
+        mockAssetMint.publicKey
+      );
+
+    await jupiterProgram.rpc.mintAsset(
+      jupiterNonce,
+      0,
+      new BN(assetMintAmount * 100000000),
+      {
+        accounts: {
+          assetMint: mockAssetMint.publicKey,
+          assetTokenAccount: mockAssetAssociatedTokenAddress.address,
+          jupiterAccount: jupiterAddress,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    );
+
+    mockAssetAssociatedTokenAddress =
+      await inceptClient.getOrCreateAssociatedTokenAccount(
+        mockAssetMint.publicKey
+      );
+
+    assert.equal(
+      Number(mockAssetAssociatedTokenAddress.amount) / 100000000,
+      assetMintAmount
+    );
   });
 
   it("iasset minted!", async () => {
@@ -1611,6 +1643,36 @@ describe("incept", async () => {
     );
 
     assert.equal(vault.value!.uiAmount, 100000, "check vault balance");
+
+    let mockAssetAssociatedTokenAddress =
+      await inceptClient.getOrCreateAssociatedTokenAccount(
+        mockAssetMint.publicKey
+      );
+
+    const nonStableCollateral = tokenData.collaterals[2];
+
+    // Add non-stable collateral
+    await inceptClient.addCollateralToComet(
+      mockAssetAssociatedTokenAddress.address,
+      toDevnetScale(100),
+      2,
+      false
+    );
+
+    const nonStableVault = await inceptClient.connection.getTokenAccountBalance(
+      nonStableCollateral.vault,
+      "recent"
+    );
+
+    assert.equal(
+      nonStableVault.value!.uiAmount,
+      100,
+      "check non-stable vault balance"
+    );
+
+    comet = await inceptClient.getComet();
+
+    assert.equal(comet.numCollaterals.toNumber(), 2, "check num collaterals");
   });
 
   it("comet collateral withdrawn!", async () => {
@@ -1648,6 +1710,10 @@ describe("incept", async () => {
       "recent"
     );
     assert.equal(vault.value!.uiAmount, 100000 - 10000, "check vault balance");
+
+    comet = await inceptClient.getComet();
+
+    assert.equal(comet.numCollaterals.toNumber(), 2, "check num collaterals");
   });
 
   it("comet liquidity added!", async () => {
@@ -1680,7 +1746,7 @@ describe("incept", async () => {
   it("comet health check", async () => {
     let healthScore = await inceptClient.getHealthScore();
 
-    assert.closeTo(healthScore, 99.99995293331263, 1e-6, "check health score.");
+    assert.closeTo(healthScore, 99.99995293331263, 1e-4, "check health score.");
 
     await inceptClient.updatePoolHealthScoreCoefficient(
       healthScoreCoefficient * 2,
@@ -1691,7 +1757,7 @@ describe("incept", async () => {
     );
 
     healthScore = await inceptClient.getHealthScore();
-    assert.closeTo(healthScore, 99.99990586662526, 1e-6, "check health score.");
+    assert.closeTo(healthScore, 99.99990586662526, 1e-4, "check health score.");
 
     const totalILD = await inceptClient.getILD();
     const poolILD = await inceptClient.getILD(0);
@@ -1971,7 +2037,7 @@ describe("incept", async () => {
 
     let healthScore3 = await inceptClient.getHealthScore();
 
-    // Reduce IL liquidation
+    // Reduce IL liquidation using stable collateral.
     await inceptClient.liquidateCometILReduction(
       inceptClient.provider.wallet.publicKey,
       0,
@@ -1987,6 +2053,29 @@ describe("incept", async () => {
     assert.isAbove(
       healthScore4,
       healthScore3,
+      "check liquidation for reducing IL"
+    );
+
+    await inceptClient.updateILHealthScoreCoefficient(130000);
+
+    let healthScore5 = await inceptClient.getHealthScore();
+
+    // Reduce IL liquidation using non-stable collateral.
+    await inceptClient.liquidateCometILReduction(
+      inceptClient.provider.wallet.publicKey,
+      0,
+      1,
+      0.02,
+      jupiterProgram.programId,
+      jupiterAddress,
+      jupiterNonce
+    );
+
+    let healthScore6 = await inceptClient.getHealthScore();
+
+    assert.isAbove(
+      healthScore6,
+      healthScore5,
       "check liquidation for reducing IL"
     );
   });

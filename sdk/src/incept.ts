@@ -2184,7 +2184,7 @@ export class Incept {
         collateralRatio = collateralAmount / (price * borrowedIasset);
         minCollateralRatio = toNumber(assetInfo.stableCollateralRatio);
       } else {
-        let collateralAssetInfo = await this.getAssetInfo(collateral.poolIndex);
+        let collateralAssetInfo = await this.getAssetInfo(collateral.poolIndex.toNumber());
         let collateralPrice = toNumber(collateralAssetInfo.price);
         let collateralAmount = toNumber(mintPosition.collateralAmount);
         collateralRatio =
@@ -2220,7 +2220,7 @@ export class Incept {
       collateralRatio = collateralAmount / (price * borrowedIasset);
       minCollateralRatio = toNumber(assetInfo.stableCollateralRatio);
     } else {
-      let collateralAssetInfo = await this.getAssetInfo(collateral.poolIndex);
+      let collateralAssetInfo = await this.getAssetInfo(collateral.poolIndex.toNumber());
       let collateralPrice = toNumber(collateralAssetInfo.price);
       let collateralAmount = toNumber(mintPosition.collateralAmount);
       collateralRatio =
@@ -2419,11 +2419,34 @@ export class Incept {
     );
   }
 
+  public async getEffectiveUSDCollateralValue() {
+    const tokenData = await this.getTokenData();
+    const comet = await this.getComet();
+
+    // Iterate through collaterals.
+    let effectiveUSDCollateral = 0;
+
+    comet.collaterals.slice(0, comet.numCollaterals.toNumber()).forEach((cometCollateral => {
+      const collateral = tokenData.collaterals[cometCollateral.collateralIndex];
+      if (collateral.stable.toNumber() === 1) {
+        effectiveUSDCollateral += toNumber(cometCollateral.collateralAmount);
+      } else {
+        const pool = tokenData.pools[collateral.poolIndex.toNumber()];
+        const oraclePrice = toNumber(pool.assetInfo.price);
+        effectiveUSDCollateral += oraclePrice * toNumber(cometCollateral.collateralAmount) / toNumber(pool.assetInfo.cryptoCollateralRatio);
+      }
+    }));
+
+    return effectiveUSDCollateral;
+
+  }
+
   public async getHealthScore() {
     const tokenData = await this.getTokenData();
     const comet = await this.getComet();
 
-    const totalCollateralAmount = toNumber(comet.totalCollateralAmount);
+    // TODO: Update this using getEffectiveUSDCollateralValue.
+    const totalCollateralAmount = await this.getEffectiveUSDCollateralValue();//toNumber(comet.totalCollateralAmount);
 
     const loss =
       comet.positions
@@ -2681,6 +2704,7 @@ export class Incept {
     //     [Buffer.from("jupiter")],
     //     jupiterMockProgramId
     //   );
+    let assetIndex: number = 0;
 
     let jupiterProgram = new Program<JupiterAggMock>(
       JupiterIDL,
@@ -2692,17 +2716,18 @@ export class Incept {
     );
     // Get asset data from Jupiter and match it with the comets oracle.
     let oraclePK = pool.assetInfo.priceFeedAddresses[0];
-    let assetIndex: number = -1;
+    let assetIndexFound = false;
 
     for (let index = 0; index < jupiterAccount.oracles.length; index++) {
       let pk = jupiterAccount.oracles[index];
       if (oraclePK.equals(pk)) {
         assetIndex = index;
+        assetIndexFound = true;
         break;
       }
     }
-    if (assetIndex < 0) {
-      throw new Error("Couldn't find assetIndex");
+    if (!assetIndexFound && collateral.stable.toNumber() === 0) {
+      throw new Error("Couldn't find assetIndex for non-stable asset");
     }
 
     return await this.program.instruction.liquidateCometIlReduction(
@@ -2744,7 +2769,7 @@ export class Incept {
   public async liquidateCometILReduction(
     liquidateeAddress: PublicKey,
     positionIndex: number,
-    usdiCometCollateralIndex: number,
+    cometCollateralIndex: number,
     reductionAmount: number,
     jupiterMockProgramId: PublicKey,
     jupiterAddress: PublicKey,
@@ -2754,7 +2779,7 @@ export class Incept {
     let ix = await this.liquidateCometPositionILInstruction(
       liquidateeAddress,
       positionIndex,
-      usdiCometCollateralIndex,
+      cometCollateralIndex,
       reductionAmount,
       jupiterMockProgramId,
       jupiterAddress,
@@ -3413,11 +3438,11 @@ export interface Pool {
 }
 
 export interface Collateral {
-  poolIndex: number;
+  poolIndex: BN;
   mint: PublicKey;
   vault: PublicKey;
   vaultUsdiSupply: RawDecimal;
   vaultMintSupply: RawDecimal;
   vaultCometSupply: RawDecimal;
-  stable: number;
+  stable: BN;
 }

@@ -369,23 +369,23 @@ pub struct Swap<'info> {
     #[account(mut,
         address = jupiter_account.asset_mints[asset_index as usize]
     )]
-    pub asset_mint: Account<'info, Mint>,
+    pub asset_mint: Box<Account<'info, Mint>>,
     #[account(mut,
         address = jupiter_account.usdc_mint
     )]
-    pub usdc_mint: Account<'info, Mint>,
+    pub usdc_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        associated_token::mint = asset_mint,
-        associated_token::authority = user,
+        constraint = user_asset_token_account.mint == asset_mint.key(),
+        constraint = user_asset_token_account.owner == user.key()
     )]
-    pub user_asset_token_account: Account<'info, TokenAccount>,
+    pub user_asset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        associated_token::mint = jupiter_account.usdc_mint,
-        associated_token::authority = user,
+        constraint = user_usdc_token_account.mint == jupiter_account.usdc_mint.key(),
+        constraint = user_asset_token_account.owner == user.key()
     )]
-    pub user_usdc_token_account: Account<'info, TokenAccount>,
+    pub user_usdc_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         address = jupiter_account.oracles[asset_index as usize]
     )]

@@ -2241,8 +2241,6 @@ pub mod incept {
                 RawDecimal::from(new_borrowed_usdi);
 
             if comet_collateral.collateral_index as usize == USDI_COLLATERAL_INDEX {
-                msg!("1");
-
                 // burn usdi from vault
                 let cpi_accounts = Burn {
                     mint: ctx.accounts.usdi_mint.to_account_info().clone(),
@@ -2940,7 +2938,6 @@ pub mod incept {
                 // Trade users non-stable collateral for usdc,
                 // Using non-stable collateral vault and the usdc vault:
                 // Swap as much collateral out of vault needed to get total_required_usdi amount of usdc into usdc vault.
-                msg!("HERE.");
                 let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
                 let starting_vault_collateral = Decimal::new(
                     ctx.accounts.vault.amount.try_into().unwrap(),
@@ -2953,13 +2950,13 @@ pub mod incept {
                 let cpi_program = ctx.accounts.jupiter_program.to_account_info();
                 let cpi_accounts = Swap {
                     user: signer_manager,
-                    jupiter_account: ctx.accounts.jupiter_account.to_account_info().clone(),
-                    asset_mint: ctx.accounts.asset_mint.to_account_info().clone(),
-                    usdc_mint: ctx.accounts.usdc_mint.to_account_info().clone(),
-                    user_asset_token_account: ctx.accounts.vault.to_account_info().clone(),
-                    user_usdc_token_account: ctx.accounts.usdc_vault.to_account_info().clone(),
-                    pyth_oracle: ctx.accounts.pyth_oracle.to_account_info().clone(),
-                    token_program: ctx.accounts.token_program.to_account_info().clone(),
+                    jupiter_account: ctx.accounts.jupiter_account.to_account_info(),
+                    asset_mint: ctx.accounts.asset_mint.to_account_info(),
+                    usdc_mint: ctx.accounts.usdc_mint.to_account_info(),
+                    user_asset_token_account: ctx.accounts.vault.to_account_info(),
+                    user_usdc_token_account: ctx.accounts.usdc_vault.to_account_info(),
+                    pyth_oracle: ctx.accounts.pyth_oracle.to_account_info(),
+                    token_program: ctx.accounts.token_program.to_account_info(),
                 };
                 let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds);
                 total_usdi_required.rescale(DEVNET_TOKEN_SCALE);
@@ -3076,7 +3073,6 @@ pub mod incept {
                     ctx.accounts.vault.amount.try_into().unwrap(),
                     collateral_scale,
                 );
-                msg!("HERE.");
 
                 let mut signer_manager = ctx.accounts.manager.to_account_info().clone();
                 signer_manager.is_signer = true;
@@ -3084,13 +3080,13 @@ pub mod incept {
                 let cpi_program = ctx.accounts.jupiter_program.to_account_info();
                 let cpi_accounts = Swap {
                     user: signer_manager,
-                    jupiter_account: ctx.accounts.jupiter_account.to_account_info().clone(),
-                    asset_mint: ctx.accounts.asset_mint.to_account_info().clone(),
-                    usdc_mint: ctx.accounts.usdc_mint.to_account_info().clone(),
-                    user_asset_token_account: ctx.accounts.vault.to_account_info().clone(),
-                    user_usdc_token_account: ctx.accounts.usdc_vault.to_account_info().clone(),
-                    pyth_oracle: ctx.accounts.pyth_oracle.to_account_info().clone(),
-                    token_program: ctx.accounts.token_program.to_account_info().clone(),
+                    jupiter_account: ctx.accounts.jupiter_account.to_account_info(),
+                    asset_mint: ctx.accounts.asset_mint.to_account_info(),
+                    usdc_mint: ctx.accounts.usdc_mint.to_account_info(),
+                    user_asset_token_account: ctx.accounts.vault.to_account_info(),
+                    user_usdc_token_account: ctx.accounts.usdc_vault.to_account_info(),
+                    pyth_oracle: ctx.accounts.pyth_oracle.to_account_info(),
+                    token_program: ctx.accounts.token_program.to_account_info(),
                 };
                 let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds);
                 total_usdi_required.rescale(DEVNET_TOKEN_SCALE);
