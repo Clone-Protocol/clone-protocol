@@ -5,8 +5,7 @@ use crate::states::{
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use jupiter_agg_mock::program::JupiterAggMock;
-use jupiter_agg_mock::{Jupiter, Swap};
-//use jupiter_agg_mock::instruction::Swap;
+use jupiter_agg_mock::Jupiter;
 
 const USDC_COLLATERAL_INDEX: usize = 1;
 
