@@ -4,7 +4,7 @@ pyth = "9MZD2G6NXoYpHiTECYvxWa5cDpCJ6bbyuucxEaGvhAtY"
 mock_usdc = "7eVp48XnmRJQdmodYdBKKFih361mAiRmTY4h23juzKjm"
 store = "CRsracw46HP9wkaMUXDZzkMv1xuyMUpwtbu5nR2xcEco"
 access_controller = "3gdS3X6nSNZmB4ZbYCcaWQcCi5vTR7WQXchsZgCyWjT8"
-jupiter_agg_mock = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+jupiter_agg_mock = "9NBxCzqY2o9GrtjJeKc1LLnufbDqq1kDSZZwNDjvzhGn"
 
 [registry]
 url = "https://anchor.projectserum.com"

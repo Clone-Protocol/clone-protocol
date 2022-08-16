@@ -44,7 +44,7 @@ export type JupiterAggMock = {
       ]
     },
     {
-      "name": "createIasset",
+      "name": "createAsset",
       "accounts": [
         {
           "name": "payer",
@@ -52,7 +52,7 @@ export type JupiterAggMock = {
           "isSigner": true
         },
         {
-          "name": "iassetMint",
+          "name": "assetMint",
           "isMut": true,
           "isSigner": true
         },
@@ -85,15 +85,15 @@ export type JupiterAggMock = {
       ]
     },
     {
-      "name": "mintIasset",
+      "name": "mintAsset",
       "accounts": [
         {
-          "name": "iassetMint",
+          "name": "assetMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "iassetTokenAccount",
+          "name": "assetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -114,7 +114,7 @@ export type JupiterAggMock = {
           "type": "u8"
         },
         {
-          "name": "iassetIndex",
+          "name": "assetIndex",
           "type": "u8"
         },
         {
@@ -172,7 +172,7 @@ export type JupiterAggMock = {
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "assetMint",
           "isMut": true,
           "isSigner": false
         },
@@ -182,7 +182,7 @@ export type JupiterAggMock = {
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
+          "name": "userAssetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -208,11 +208,15 @@ export type JupiterAggMock = {
           "type": "u8"
         },
         {
-          "name": "iassetIndex",
+          "name": "assetIndex",
           "type": "u8"
         },
         {
-          "name": "buy",
+          "name": "isAmountInput",
+          "type": "bool"
+        },
+        {
+          "name": "isAmountAsset",
           "type": "bool"
         },
         {
@@ -253,7 +257,7 @@ export type JupiterAggMock = {
             "type": "publicKey"
           },
           {
-            "name": "iassetMints",
+            "name": "assetMints",
             "type": {
               "array": [
                 "publicKey",
@@ -271,7 +275,7 @@ export type JupiterAggMock = {
             }
           },
           {
-            "name": "nIassets",
+            "name": "nAssets",
             "type": "u8"
           },
           {
@@ -351,7 +355,7 @@ export const IDL: JupiterAggMock = {
       ]
     },
     {
-      "name": "createIasset",
+      "name": "createAsset",
       "accounts": [
         {
           "name": "payer",
@@ -359,7 +363,7 @@ export const IDL: JupiterAggMock = {
           "isSigner": true
         },
         {
-          "name": "iassetMint",
+          "name": "assetMint",
           "isMut": true,
           "isSigner": true
         },
@@ -392,15 +396,15 @@ export const IDL: JupiterAggMock = {
       ]
     },
     {
-      "name": "mintIasset",
+      "name": "mintAsset",
       "accounts": [
         {
-          "name": "iassetMint",
+          "name": "assetMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "iassetTokenAccount",
+          "name": "assetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -421,7 +425,7 @@ export const IDL: JupiterAggMock = {
           "type": "u8"
         },
         {
-          "name": "iassetIndex",
+          "name": "assetIndex",
           "type": "u8"
         },
         {
@@ -479,7 +483,7 @@ export const IDL: JupiterAggMock = {
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "assetMint",
           "isMut": true,
           "isSigner": false
         },
@@ -489,7 +493,7 @@ export const IDL: JupiterAggMock = {
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
+          "name": "userAssetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -515,11 +519,15 @@ export const IDL: JupiterAggMock = {
           "type": "u8"
         },
         {
-          "name": "iassetIndex",
+          "name": "assetIndex",
           "type": "u8"
         },
         {
-          "name": "buy",
+          "name": "isAmountInput",
+          "type": "bool"
+        },
+        {
+          "name": "isAmountAsset",
           "type": "bool"
         },
         {
@@ -560,7 +568,7 @@ export const IDL: JupiterAggMock = {
             "type": "publicKey"
           },
           {
-            "name": "iassetMints",
+            "name": "assetMints",
             "type": {
               "array": [
                 "publicKey",
@@ -578,7 +586,7 @@ export const IDL: JupiterAggMock = {
             }
           },
           {
-            "name": "nIassets",
+            "name": "nAssets",
             "type": "u8"
           },
           {

@@ -9,6 +9,7 @@ import {
   TokenAccountNotFoundError,
 } from "@solana/spl-token";
 import { Incept as InceptProgram, IDL } from "./idl/incept";
+import { JupiterAggMock, IDL as JupiterIDL } from "./idl/jupiter_agg_mock";
 import {
   PublicKey,
   Connection,
@@ -155,9 +156,27 @@ export class Incept {
     scale: number,
     stable: number,
     collateral_mint: PublicKey,
-    collateralization_ratio: number = 0
+    collateralization_ratio: number = 0,
+    pythOracle?: PublicKey,
+    chainlinkOracle?: PublicKey
   ) {
     const vaultAccount = anchor.web3.Keypair.generate();
+
+    let remainingAccounts =
+      pythOracle && chainlinkOracle
+        ? [
+            {
+              pubkey: pythOracle,
+              isWritable: false,
+              isSigner: false,
+            },
+            {
+              pubkey: chainlinkOracle,
+              isWritable: false,
+              isSigner: false,
+            },
+          ]
+        : [];
 
     await this.program.rpc.addCollateral(
       this.managerAddress[1],
@@ -165,6 +184,7 @@ export class Incept {
       stable,
       toDevnetScale(collateralization_ratio),
       {
+        remainingAccounts: remainingAccounts,
         accounts: {
           admin: admin,
           manager: this.managerAddress[0],
@@ -380,15 +400,6 @@ export class Incept {
     return (await this.program.account.comet.fetch(
       forManager ? userAccountData.cometManager.comet : userAccountData.comet
     )) as Comet;
-  }
-
-  public async calculateTotalCometCollateral(forManager?: boolean, address?: PublicKey) {
-    const comet = await this.getComet(forManager, address);
-    let totalCollateralAmount = 0;
-    for (let i = 0; i < Number(comet.numCollaterals); i++) {
-      totalCollateralAmount += toNumber(comet.collaterals[i].collateralAmount)
-    }
-    return totalCollateralAmount
   }
 
   public async getManagerAddress() {
@@ -2158,7 +2169,7 @@ export class Incept {
         collateralRatio = collateralAmount / (price * borrowedIasset);
         minCollateralRatio = toNumber(assetInfo.stableCollateralRatio);
       } else {
-        let collateralAssetInfo = await this.getAssetInfo(collateral.poolIndex);
+        let collateralAssetInfo = await this.getAssetInfo(collateral.poolIndex.toNumber());
         let collateralPrice = toNumber(collateralAssetInfo.price);
         let collateralAmount = toNumber(mintPosition.collateralAmount);
         collateralRatio =
@@ -2194,7 +2205,7 @@ export class Incept {
       collateralRatio = collateralAmount / (price * borrowedIasset);
       minCollateralRatio = toNumber(assetInfo.stableCollateralRatio);
     } else {
-      let collateralAssetInfo = await this.getAssetInfo(collateral.poolIndex);
+      let collateralAssetInfo = await this.getAssetInfo(collateral.poolIndex.toNumber());
       let collateralPrice = toNumber(collateralAssetInfo.price);
       let collateralAmount = toNumber(mintPosition.collateralAmount);
       collateralRatio =
@@ -2281,7 +2292,7 @@ export class Incept {
         upperPriceRange - oraclePrice,
         upperPriceRange - ammPrice
       );
-      let indicatorPrice: number = undefined;
+      let indicatorPrice: number;
       switch (minGap) {
         case oraclePrice - lowerPriceRange:
           indicatorPrice = oraclePrice;
@@ -2296,6 +2307,7 @@ export class Incept {
           indicatorPrice = ammPrice;
           break;
         default:
+          throw new Error("Couldn't get indicator price");
           break;
       }
       let centerPrice =
@@ -2390,11 +2402,33 @@ export class Incept {
     );
   }
 
+  public async getEffectiveUSDCollateralValue() {
+    const tokenData = await this.getTokenData();
+    const comet = await this.getComet();
+
+    // Iterate through collaterals.
+    let effectiveUSDCollateral = 0;
+
+    comet.collaterals.slice(0, comet.numCollaterals.toNumber()).forEach((cometCollateral => {
+      const collateral = tokenData.collaterals[cometCollateral.collateralIndex];
+      if (collateral.stable.toNumber() === 1) {
+        effectiveUSDCollateral += toNumber(cometCollateral.collateralAmount);
+      } else {
+        const pool = tokenData.pools[collateral.poolIndex.toNumber()];
+        const oraclePrice = toNumber(pool.assetInfo.price);
+        effectiveUSDCollateral += oraclePrice * toNumber(cometCollateral.collateralAmount) / toNumber(pool.assetInfo.cryptoCollateralRatio);
+      }
+    }));
+
+    return effectiveUSDCollateral;
+
+  }
+
   public async getHealthScore() {
     const tokenData = await this.getTokenData();
     const comet = await this.getComet();
 
-    const totalCollateralAmount = await this.calculateTotalCometCollateral();
+    const totalCollateralAmount = await this.getEffectiveUSDCollateralValue();
 
     const loss =
       comet.positions
@@ -2631,8 +2665,11 @@ export class Incept {
   public async liquidateCometPositionILInstruction(
     liquidateeAddress: PublicKey,
     positionIndex: number,
-    usdiCometCollateralIndex: number,
-    reductionAmount: number
+    cometCollateralIndex: number,
+    reductionAmount: number,
+    jupiterMockProgramId: PublicKey,
+    jupiterAddress: PublicKey,
+    jupiterNonce: number
   ) {
     const { userPubkey, bump } = await this.getUserAddress(liquidateeAddress);
     let userAccount = await this.getUserAccount(userPubkey);
@@ -2640,16 +2677,48 @@ export class Incept {
     let position = comet.positions[positionIndex];
     let tokenData = await this.getTokenData();
     let pool = tokenData.pools[position.poolIndex];
-    let usdiCollateralIndex =
-      comet.collaterals[usdiCometCollateralIndex].collateralIndex;
-    let usdiCollateral = tokenData.collaterals[usdiCollateralIndex];
+    let collateralIndex =
+      comet.collaterals[cometCollateralIndex].collateralIndex;
+    let collateral = tokenData.collaterals[collateralIndex];
     const liquidatorUsdiTokenAccount =
       await this.getOrCreateAssociatedTokenAccount(this.manager!.usdiMint);
+    // let [jupiterAddress, nonce] = await PublicKey.findProgramAddress(
+    //     [Buffer.from("jupiter")],
+    //     jupiterMockProgramId
+    //   );
+    let assetIndex: number = 0;
+
+    let jupiterProgram = new Program<JupiterAggMock>(
+      JupiterIDL,
+      jupiterMockProgramId,
+      this.provider
+    );
+    let jupiterAccount = await jupiterProgram.account.jupiter.fetch(
+      jupiterAddress
+    );
+    // Get asset data from Jupiter and match it with the comets oracle.
+    let oraclePK = pool.assetInfo.priceFeedAddresses[0];
+    let assetIndexFound = false;
+
+    for (let index = 0; index < jupiterAccount.oracles.length; index++) {
+      let pk = jupiterAccount.oracles[index];
+      if (oraclePK.equals(pk)) {
+        assetIndex = index;
+        assetIndexFound = true;
+        break;
+      }
+    }
+    if (!assetIndexFound && collateral.stable.toNumber() === 0) {
+      throw new Error("Couldn't find assetIndex for non-stable asset");
+    }
 
     return await this.program.instruction.liquidateCometIlReduction(
       this.managerAddress[1],
       bump,
+      jupiterNonce,
       positionIndex,
+      assetIndex,
+      cometCollateralIndex,
       toDevnetScale(reductionAmount),
       {
         accounts: {
@@ -2660,7 +2729,7 @@ export class Incept {
           userAccount: userPubkey,
           comet: userAccount.comet,
           usdiMint: this.manager!.usdiMint,
-          vault: usdiCollateral.vault,
+          vault: collateral.vault,
           iassetMint: pool.assetInfo.iassetMint,
           ammUsdiTokenAccount: pool.usdiTokenAccount,
           ammIassetTokenAccount: pool.iassetTokenAccount,
@@ -2668,6 +2737,12 @@ export class Incept {
           cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
           liquidatorUsdiTokenAccount: liquidatorUsdiTokenAccount.address,
           tokenProgram: TOKEN_PROGRAM_ID,
+          jupiterProgram: jupiterMockProgramId,
+          jupiterAccount: jupiterAddress,
+          usdcVault: tokenData.collaterals[1].vault,
+          assetMint: jupiterAccount.assetMints[assetIndex],
+          usdcMint: jupiterAccount.usdcMint,
+          pythOracle: oraclePK,
         },
       }
     );
@@ -2676,15 +2751,21 @@ export class Incept {
   public async liquidateCometILReduction(
     liquidateeAddress: PublicKey,
     positionIndex: number,
-    usdiCometCollateralIndex: number,
-    reductionAmount: number
+    cometCollateralIndex: number,
+    reductionAmount: number,
+    jupiterMockProgramId: PublicKey,
+    jupiterAddress: PublicKey,
+    jupiterNonce: number
   ) {
     let updatePricesIx = await this.updatePricesInstruction();
     let ix = await this.liquidateCometPositionILInstruction(
       liquidateeAddress,
       positionIndex,
-      usdiCometCollateralIndex,
-      reductionAmount
+      cometCollateralIndex,
+      reductionAmount,
+      jupiterMockProgramId,
+      jupiterAddress,
+      jupiterNonce
     );
     return await this.provider.send(
       new Transaction().add(updatePricesIx).add(ix)
@@ -3337,11 +3418,11 @@ export interface Pool {
 }
 
 export interface Collateral {
-  poolIndex: number;
+  poolIndex: BN;
   mint: PublicKey;
   vault: PublicKey;
   vaultUsdiSupply: RawDecimal;
   vaultMintSupply: RawDecimal;
   vaultCometSupply: RawDecimal;
-  stable: number;
+  stable: BN;
 }
