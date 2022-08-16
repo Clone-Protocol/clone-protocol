@@ -1018,6 +1018,7 @@ describe("incept", async () => {
   });
 
   it("single pool comet collateral added!", async () => {
+    
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
@@ -1053,6 +1054,7 @@ describe("incept", async () => {
   });
 
   it("single pool comet collateral withdrawn!", async () => {
+    
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
@@ -1096,6 +1098,7 @@ describe("incept", async () => {
   });
 
   it("single pool comet liquidity added!", async () => {
+    
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
@@ -1222,6 +1225,7 @@ describe("incept", async () => {
   });
 
   it("single pool comet liquidity subtracted!", async () => {
+    
     let poolIndex = 0;
     const tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[poolIndex];
@@ -1273,8 +1277,6 @@ describe("incept", async () => {
     // );
 
     await inceptClient.withdrawLiquidityFromSinglePoolComet(
-      iassetTokenAccountInfo.address,
-      usdiTokenAccountInfo.address,
       new BN(10000000000),
       0
     );
@@ -1380,6 +1382,8 @@ describe("incept", async () => {
     const pool = tokenData.pools[poolIndex];
     const collateral = tokenData.collaterals[1];
 
+    
+
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
@@ -1397,6 +1401,7 @@ describe("incept", async () => {
     //   await inceptClient.calculateCometRecenterSinglePool(0);
 
     await inceptClient.recenterSinglePoolComet(0);
+    
 
     await sleep(200);
 
@@ -1466,8 +1471,6 @@ describe("incept", async () => {
       );
 
     await inceptClient.withdrawLiquidityAndPaySinglePoolCometILD(
-      usdiTokenAccountInfo.address,
-      iassetTokenAccountInfo.address,
       0
     );
 
@@ -1937,15 +1940,15 @@ describe("incept", async () => {
   });
 
   it("Pay ILD using collateral", async () => {
-    const comet1 = await inceptClient.getComet();
+    const comet1TotalCollateral = await inceptClient.calculateTotalCometCollateral();
     const healthScore1 = await inceptClient.getHealthScore();
     await inceptClient.payCometILD(0, 0, toDevnetScale(1).toNumber(), false);
-    const comet2 = await inceptClient.getComet();
+    const comet2TotalCollateral = await inceptClient.calculateTotalCometCollateral();
     const healthScore2 = await inceptClient.getHealthScore();
     assert.isAbove(healthScore2, healthScore1, "health score should increase");
     assert.equal(
-      toNumber(comet1.totalCollateralAmount) - 1,
-      toNumber(comet2.totalCollateralAmount),
+      comet1TotalCollateral - 1,
+      comet2TotalCollateral,
       "collateral should decrease"
     );
   });

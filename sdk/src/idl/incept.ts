@@ -26,11 +26,6 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "liquidatedCometUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
           "name": "tokenData",
           "isMut": true,
           "isSigner": false
@@ -1585,16 +1580,6 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "userUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "usdiMint",
           "isMut": true,
           "isSigner": false
@@ -1621,6 +1606,11 @@ export type Incept = {
         },
         {
           "name": "cometLiquidityTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
           "isMut": true,
           "isSigner": false
         },
@@ -2031,10 +2021,6 @@ export type Incept = {
           "type": "u8"
         },
         {
-          "name": "cometCollateralUsdiIndex",
-          "type": "u8"
-        },
-        {
           "name": "positionIndex",
           "type": "u8"
         },
@@ -2126,10 +2112,6 @@ export type Incept = {
         "fields": [
           {
             "name": "usdiMint",
-            "type": "publicKey"
-          },
-          {
-            "name": "liquidatedCometUsdi",
             "type": "publicKey"
           },
           {
@@ -2290,12 +2272,6 @@ export type Incept = {
           {
             "name": "numCollaterals",
             "type": "u64"
-          },
-          {
-            "name": "totalCollateralAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
           },
           {
             "name": "positions",
@@ -2934,11 +2910,6 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "liquidatedCometUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
           "name": "tokenData",
           "isMut": true,
           "isSigner": false
@@ -4493,16 +4464,6 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "userUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "usdiMint",
           "isMut": true,
           "isSigner": false
@@ -4529,6 +4490,11 @@ export const IDL: Incept = {
         },
         {
           "name": "cometLiquidityTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
           "isMut": true,
           "isSigner": false
         },
@@ -4939,10 +4905,6 @@ export const IDL: Incept = {
           "type": "u8"
         },
         {
-          "name": "cometCollateralUsdiIndex",
-          "type": "u8"
-        },
-        {
           "name": "positionIndex",
           "type": "u8"
         },
@@ -5034,10 +4996,6 @@ export const IDL: Incept = {
         "fields": [
           {
             "name": "usdiMint",
-            "type": "publicKey"
-          },
-          {
-            "name": "liquidatedCometUsdi",
             "type": "publicKey"
           },
           {
@@ -5198,12 +5156,6 @@ export const IDL: Incept = {
           {
             "name": "numCollaterals",
             "type": "u64"
-          },
-          {
-            "name": "totalCollateralAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
           },
           {
             "name": "positions",

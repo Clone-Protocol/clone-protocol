@@ -22,13 +22,13 @@ pub fn calculate_price_from_iasset(
     return Ok(usdi_amm_value - invariant / (iasset_amm_value + iasset_amount_value));
 }
 
-pub fn check_price_confidence(price: Decimal, confidence: Decimal) -> Result<(), InceptError> {
-    let confidence_40x = confidence * Decimal::new(40, 0);
-    if confidence_40x >= price {
-        return Err(InceptError::OracleConfidenceOutOfRange.into());
-    };
-    Ok(())
-}
+// pub fn check_price_confidence(price: Decimal, confidence: Decimal) -> Result<(), InceptError> {
+//     let confidence_40x = confidence * Decimal::new(40, 0);
+//     if confidence_40x >= price {
+//         return Err(InceptError::OracleConfidenceOutOfRange.into());
+//     };
+//     Ok(())
+// }
 
 pub fn calculate_liquidity_provider_values_from_iasset(
     iasset_liquidity_value: Decimal,

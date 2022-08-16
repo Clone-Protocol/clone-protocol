@@ -51,9 +51,8 @@ impl Default for RawDecimal {
 #[account]
 #[derive(Default)]
 pub struct Manager {
-    // 128
+    // 96
     pub usdi_mint: Pubkey,             // 32
-    pub liquidated_comet_usdi: Pubkey, // 32
     pub token_data: Pubkey,            // 32
     pub admin: Pubkey,                 // 32
 }
@@ -225,12 +224,11 @@ impl SinglePoolComets {
 
 #[account(zero_copy)]
 pub struct Comet {
-    // 46,992
+    // 46,976
     pub is_single_pool: u64,                 // 8
     pub owner: Pubkey,                       // 32
     pub num_positions: u64,                  // 8
     pub num_collaterals: u64,                // 8
-    pub total_collateral_amount: RawDecimal, // 16
     pub positions: [CometPosition; 255],     // 255 * 120 = 30,600
     pub collaterals: [CometCollateral; 255], // 255 * 64 = 16,320
 }
@@ -242,7 +240,6 @@ impl Default for Comet {
             owner: Pubkey::default(),
             num_positions: 0,
             num_collaterals: 0,
-            total_collateral_amount: RawDecimal::from(Decimal::new(0, DEVNET_TOKEN_SCALE.into())),
             positions: [CometPosition::default(); 255],
             collaterals: [CometCollateral::default(); 255],
         };
@@ -285,6 +282,14 @@ impl Comet {
             }
         }
         return index;
+    }
+    // TODO: update to work with nonstables
+    pub fn get_total_collateral_amount(&self) -> Decimal {
+        let mut sum = Decimal::new(0, DEVNET_TOKEN_SCALE);
+        for i in 0..self.num_collaterals {
+            sum = sum + self.collaterals[i as usize].collateral_amount.to_decimal();
+        }
+        return sum;
     }
     pub fn add_collateral(&mut self, new_collateral: CometCollateral) {
         self.collaterals[(self.num_collaterals) as usize] = new_collateral;
