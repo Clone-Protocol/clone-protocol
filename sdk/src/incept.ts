@@ -98,11 +98,7 @@ export class Incept {
         instructions: [
           await this.program.account.tokenData.createInstruction(tokenData),
         ],
-        signers: [
-          usdiMint,
-          usdiVault,
-          tokenData,
-        ],
+        signers: [usdiMint, usdiVault, tokenData],
       }
     );
 
@@ -1309,9 +1305,8 @@ export class Incept {
     let singlePoolComet = await this.getSinglePoolComet(cometIndex);
     let position = singlePoolComet.positions[0];
 
-    return (await this.program.instruction.withdrawLiquidityFromComet(
+    return (await this.program.instruction.withdrawLiquidityFromSinglePoolComet(
       this.managerAddress[1],
-      0,
       liquidityTokenAmount,
       {
         accounts: {
@@ -1320,7 +1315,7 @@ export class Incept {
           tokenData: this.manager!.tokenData,
           usdiMint: this.manager!.usdiMint,
           iassetMint: tokenData.pools[position.poolIndex].assetInfo.iassetMint,
-          comet: cometAddress,
+          singlePoolComet: cometAddress,
           ammUsdiTokenAccount:
             tokenData.pools[position.poolIndex].usdiTokenAccount,
           ammIassetTokenAccount:
@@ -1330,7 +1325,9 @@ export class Incept {
           cometLiquidityTokenAccount:
             tokenData.pools[position.poolIndex].cometLiquidityTokenAccount,
           vault:
-            tokenData.collaterals[0].vault,
+            tokenData.collaterals[
+              singlePoolComet.collaterals[0].collateralIndex
+            ].vault,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
@@ -2169,7 +2166,9 @@ export class Incept {
         collateralRatio = collateralAmount / (price * borrowedIasset);
         minCollateralRatio = toNumber(assetInfo.stableCollateralRatio);
       } else {
-        let collateralAssetInfo = await this.getAssetInfo(collateral.poolIndex.toNumber());
+        let collateralAssetInfo = await this.getAssetInfo(
+          collateral.poolIndex.toNumber()
+        );
         let collateralPrice = toNumber(collateralAssetInfo.price);
         let collateralAmount = toNumber(mintPosition.collateralAmount);
         collateralRatio =
@@ -2205,7 +2204,9 @@ export class Incept {
       collateralRatio = collateralAmount / (price * borrowedIasset);
       minCollateralRatio = toNumber(assetInfo.stableCollateralRatio);
     } else {
-      let collateralAssetInfo = await this.getAssetInfo(collateral.poolIndex.toNumber());
+      let collateralAssetInfo = await this.getAssetInfo(
+        collateral.poolIndex.toNumber()
+      );
       let collateralPrice = toNumber(collateralAssetInfo.price);
       let collateralAmount = toNumber(mintPosition.collateralAmount);
       collateralRatio =
@@ -2277,7 +2278,9 @@ export class Incept {
       let oraclePrice = toNumber(assetInfo.price);
       let borrowedIasset = toNumber(cometPosition.borrowedIasset);
       let borrowedUsdi = toNumber(cometPosition.borrowedIasset);
-      let totalCollateralAmount = toNumber(singlePoolComet.collaterals[0].collateralAmount);
+      let totalCollateralAmount = toNumber(
+        singlePoolComet.collaterals[0].collateralAmount
+      );
       let data = await this.calculateEditCometSinglePoolWithUsdiBorrowed(
         i,
         0,
@@ -2409,19 +2412,23 @@ export class Incept {
     // Iterate through collaterals.
     let effectiveUSDCollateral = 0;
 
-    comet.collaterals.slice(0, comet.numCollaterals.toNumber()).forEach((cometCollateral => {
-      const collateral = tokenData.collaterals[cometCollateral.collateralIndex];
-      if (collateral.stable.toNumber() === 1) {
-        effectiveUSDCollateral += toNumber(cometCollateral.collateralAmount);
-      } else {
-        const pool = tokenData.pools[collateral.poolIndex.toNumber()];
-        const oraclePrice = toNumber(pool.assetInfo.price);
-        effectiveUSDCollateral += oraclePrice * toNumber(cometCollateral.collateralAmount) / toNumber(pool.assetInfo.cryptoCollateralRatio);
-      }
-    }));
+    comet.collaterals
+      .slice(0, comet.numCollaterals.toNumber())
+      .forEach((cometCollateral) => {
+        const collateral =
+          tokenData.collaterals[cometCollateral.collateralIndex];
+        if (collateral.stable.toNumber() === 1) {
+          effectiveUSDCollateral += toNumber(cometCollateral.collateralAmount);
+        } else {
+          const pool = tokenData.pools[collateral.poolIndex.toNumber()];
+          const oraclePrice = toNumber(pool.assetInfo.price);
+          effectiveUSDCollateral +=
+            (oraclePrice * toNumber(cometCollateral.collateralAmount)) /
+            toNumber(pool.assetInfo.cryptoCollateralRatio);
+        }
+      });
 
     return effectiveUSDCollateral;
-
   }
 
   public async getHealthScore() {
@@ -2519,7 +2526,8 @@ export class Incept {
       tokenData.pools[position.poolIndex].assetInfo.healthScoreCoefficient
     );
     let totalLoss = ilCoefficient * ILD + assetCoefficient * borrowedUsdi;
-    const healthScore = 100 - totalLoss / toNumber(comet.collaterals[0].collateralAmount);
+    const healthScore =
+      100 - totalLoss / toNumber(comet.collaterals[0].collateralAmount);
 
     return { healthScore: healthScore, ILD: ILD, ildInUsdi: isUsdi };
   }
