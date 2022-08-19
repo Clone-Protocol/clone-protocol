@@ -732,7 +732,7 @@ pub mod incept {
             )?;
 
         // check to see if the pool is currently empty
-        if iasset_amm_value.mantissa() == 0 && usdi_amm_value.mantissa() == 0 {
+        if iasset_amm_value.is_zero() && usdi_amm_value.is_zero() {
             let price = token_data.pools[pool_index as usize]
                 .asset_info
                 .price
@@ -1545,10 +1545,9 @@ pub mod incept {
             if comet.collaterals[comet_collateral_index as usize]
                 .collateral_amount
                 .to_decimal()
-                .mantissa()
-                == 0
+                .is_zero()
             {
-                comet.remove_collateral(comet_collateral_index as usize)
+                comet.remove_collateral(comet_collateral_index as usize);
             }
 
             // send collateral from vault to user
@@ -1721,8 +1720,6 @@ pub mod incept {
             cpi_accounts,
             seeds,
         );
-
-        msg!("{:?}", liquidity_token_value.scale());
 
         token::mint_to(
             mint_liquidity_tokens_to_comet_context,

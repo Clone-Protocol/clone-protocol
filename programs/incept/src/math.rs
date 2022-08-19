@@ -39,7 +39,7 @@ pub fn calculate_liquidity_provider_values_from_iasset(
     let usdi_liquidity_value: Decimal;
     let liquidity_tokens_value: Decimal;
     // check to see if the market is empty
-    if iasset_amm_value.mantissa() == 0 {
+    if iasset_amm_value.is_zero() {
         // choose arbtrary amount of usdi to provide and liquidity tokens to recieve
         usdi_liquidity_value = iasset_liquidity_value;
         liquidity_tokens_value = iasset_liquidity_value * Decimal::new(10, 0);
@@ -66,7 +66,7 @@ pub fn calculate_liquidity_provider_values_from_usdi(
     let iasset_liquidity_value: Decimal;
     let liquidity_tokens_value: Decimal;
     // check to see if the market is empty
-    if iasset_amm_value.mantissa() == 0 {
+    if iasset_amm_value.is_zero() {
         // choose arbtrary amount of usdi to provide and liquidity tokens to recieve
         iasset_liquidity_value = usdi_liquidity_value;
         liquidity_tokens_value = usdi_liquidity_value * Decimal::new(10, 0);
@@ -234,7 +234,7 @@ pub fn calculate_health_score(
 
         let impermanent_loss;
 
-        if liquidity_proportion.mantissa() == 0 {
+        if liquidity_proportion.is_zero() {
             if comet_position.borrowed_usdi.to_decimal()
                 > comet_position.borrowed_iasset.to_decimal()
             {
