@@ -250,7 +250,7 @@ pub fn calculate_health_score(
             if pool_price < init_price {
                 impermanent_loss = borrowed_usdi - claimable_usdi;
             } else if pool_price > init_price {
-                impermanent_loss = effective_price * borrowed_iasset - claimable_iasset;
+                impermanent_loss = effective_price * (borrowed_iasset - claimable_iasset);
             } else {
                 impermanent_loss = Decimal::zero();
             }
