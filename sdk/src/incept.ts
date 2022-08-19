@@ -1742,8 +1742,8 @@ export class Incept {
   }
 
   public async withdrawLiquidityFromComet(
-    userIassetTokenAccount: PublicKey,
-    userUsdiTokenAccount: PublicKey,
+    // userIassetTokenAccount: PublicKey,
+    // userUsdiTokenAccount: PublicKey,
     liquidityTokenAmount: BN,
     cometPositionIndex: number,
     forManager: boolean,
@@ -1751,8 +1751,8 @@ export class Incept {
   ) {
     const withdrawLiquidityFromCometIx =
       await this.withdrawLiquidityFromCometInstruction(
-        userIassetTokenAccount,
-        userUsdiTokenAccount,
+        // userIassetTokenAccount,
+        // userUsdiTokenAccount,
         liquidityTokenAmount,
         cometPositionIndex,
         forManager
@@ -1763,8 +1763,8 @@ export class Incept {
     );
   }
   public async withdrawLiquidityFromCometInstruction(
-    userIassetTokenAccount: PublicKey,
-    userUsdiTokenAccount: PublicKey,
+    // userIassetTokenAccount: PublicKey,
+    // userUsdiTokenAccount: PublicKey,
     liquidityTokenAmount: BN,
     cometPositionIndex: number,
     forManager: boolean
@@ -2431,11 +2431,12 @@ export class Incept {
     return effectiveUSDCollateral;
   }
 
-  public async getHealthScore() {
+  public async getHealthScore() : Promise<{healthScore: number; ildHealthImpact: number;}> {
     const tokenData = await this.getTokenData();
     const comet = await this.getComet();
 
     const totalCollateralAmount = await this.getEffectiveUSDCollateralValue();
+    let totalIldHealthImpact = 0;
 
     const loss =
       comet.positions
@@ -2481,12 +2482,13 @@ export class Incept {
               ilHealthScoreCoefficient;
           }
           let positionHealthImpact = poolHealthScoreCoefficient * borrowedUsdi;
+          totalIldHealthImpact += ilHealthImpact;
 
           return positionHealthImpact + ilHealthImpact;
         })
         .reduce((partialSum, a) => partialSum + a, 0) / totalCollateralAmount;
 
-    return 100 - loss;
+    return {healthScore: 100 - loss, ildHealthImpact: totalIldHealthImpact / totalCollateralAmount};
   }
 
   public async getSinglePoolHealthScore(

@@ -1135,6 +1135,8 @@ describe("incept", async () => {
     );
 
     assert.equal(vault.value!.uiAmount, 21000255, "check vault balance");
+
+    const singlePoolComet = await inceptClient.getSinglePoolComet(0);
   });
 
   it("single pool comet collateral withdrawn!", async () => {
@@ -1179,6 +1181,7 @@ describe("incept", async () => {
     );
 
     assert.equal(vault.value!.uiAmount, 21000250, "check vault balance");
+    const singlePoolComet = await inceptClient.getSinglePoolComet(0);
   });
 
   it("single pool comet liquidity added!", async () => {
@@ -1306,6 +1309,7 @@ describe("incept", async () => {
       91012.29090819,
       "check iasset pool balance"
     );
+    const singlePoolComet = await inceptClient.getSinglePoolComet(0);
   });
 
   it("single pool comet liquidity subtracted!", async () => {
@@ -1359,6 +1363,7 @@ describe("incept", async () => {
     //   estimationWithUpperPrice.usdiPosition,
     //   1e-3
     // );
+    let singlePoolComet = await inceptClient.getSinglePoolComet(0);
 
     await inceptClient.withdrawLiquidityFromSinglePoolComet(
       new BN(10000000000),
@@ -1392,6 +1397,7 @@ describe("incept", async () => {
       91010.29090819,
       "check iasset pool balance"
     );
+    singlePoolComet = await inceptClient.getSinglePoolComet(0);
   });
 
   it("iasset bought!", async () => {
@@ -1535,12 +1541,15 @@ describe("incept", async () => {
       80999.29105339,
       "check pool iAsset"
     );
+    const singlePoolComet = await inceptClient.getSinglePoolComet(0);
   });
 
   it("single pool comet closed! (liquidity withdrawn, ILD payed, collateral withdrawn, and comet closed)", async () => {
     let poolIndex = 0;
     const tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[poolIndex];
+
+    const singlePoolComet = await inceptClient.getSinglePoolComet(0);
 
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
@@ -1749,7 +1758,7 @@ describe("incept", async () => {
   it("comet health check", async () => {
     let healthScore = await inceptClient.getHealthScore();
 
-    assert.closeTo(healthScore, 99.99995293331263, 1e-4, "check health score.");
+    assert.closeTo(healthScore.healthScore, 99.99995293331263, 1e-4, "check health score.");
 
     await inceptClient.updatePoolHealthScoreCoefficient(
       healthScoreCoefficient * 2,
@@ -1760,7 +1769,7 @@ describe("incept", async () => {
     );
 
     healthScore = await inceptClient.getHealthScore();
-    assert.closeTo(healthScore, 99.99990586662526, 1e-4, "check health score.");
+    assert.closeTo(healthScore.healthScore, 99.99990586662526, 1e-4, "check health score.");
 
     const totalILD = await inceptClient.getILD();
     const poolILD = await inceptClient.getILD(0);
@@ -1786,8 +1795,8 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
     await inceptClient.withdrawLiquidityFromComet(
-      iassetTokenAccountInfo.address,
-      usdiTokenAccountInfo.address,
+      // iassetTokenAccountInfo.address,
+      // usdiTokenAccountInfo.address,
       new BN(50000000),
       0,
       false
@@ -2031,8 +2040,8 @@ describe("incept", async () => {
     let healthScore2 = await inceptClient.getHealthScore();
 
     assert.isAbove(
-      healthScore2,
-      healthScore1,
+      healthScore2.healthScore,
+      healthScore1.healthScore,
       "check liquidation for reducing position"
     );
     // Reduce IL.
@@ -2054,8 +2063,8 @@ describe("incept", async () => {
     let healthScore4 = await inceptClient.getHealthScore();
 
     assert.isAbove(
-      healthScore4,
-      healthScore3,
+      healthScore4.healthScore,
+      healthScore3.healthScore,
       "check liquidation for reducing IL"
     );
 
@@ -2077,8 +2086,8 @@ describe("incept", async () => {
     let healthScore6 = await inceptClient.getHealthScore();
 
     assert.isAbove(
-      healthScore6,
-      healthScore5,
+      healthScore6.healthScore,
+      healthScore5.healthScore,
       "check liquidation for reducing IL"
     );
   });
@@ -2089,7 +2098,7 @@ describe("incept", async () => {
     await inceptClient.payCometILD(0, 0, toDevnetScale(1).toNumber(), false);
     const comet2TotalCollateral = await inceptClient.getEffectiveUSDCollateralValue();
     const healthScore2 = await inceptClient.getHealthScore();
-    assert.isAbove(healthScore2, healthScore1, "health score should increase");
+    assert.isAbove(healthScore2.healthScore, healthScore1.healthScore, "health score should increase");
     assert.equal(
       comet1TotalCollateral - 1,
       comet2TotalCollateral,
