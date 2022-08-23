@@ -64,24 +64,6 @@ pub struct InitializeLiquidityPosition<'info> {
     pub liquidity_token_mint: Box<Account<'info, Mint>>,
     pub token_program: Program<'info, Token>,
 }
-impl<'a, 'b, 'c, 'info> From<&InitializeLiquidityPosition<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, MintTo<'info>>
-{
-    fn from(
-        accounts: &InitializeLiquidityPosition<'info>,
-    ) -> CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
-        let cpi_accounts = MintTo {
-            mint: accounts.liquidity_token_mint.to_account_info().clone(),
-            to: accounts
-                .user_liquidity_token_account
-                .to_account_info()
-                .clone(),
-            authority: accounts.manager.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
-}
 
 pub fn execute(
     ctx: Context<InitializeLiquidityPosition>,
@@ -184,9 +166,18 @@ pub fn execute(
     liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
 
     // mint liquidity tokens to user
-    let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
+    let cpi_accounts = MintTo {
+        mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
+        to: ctx
+            .accounts
+            .user_liquidity_token_account
+            .to_account_info()
+            .clone(),
+        authority: ctx.accounts.manager.to_account_info().clone(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
     token::mint_to(
-        cpi_ctx,
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
         liquidity_token_value.mantissa().try_into().unwrap(),
     )?;
 

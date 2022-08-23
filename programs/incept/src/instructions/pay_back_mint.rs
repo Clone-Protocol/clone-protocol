@@ -69,8 +69,17 @@ pub fn execute(
     let mint_position = mint_positions.mint_positions[mint_index as usize];
 
     // burn user iasset to pay back mint position
-    let cpi_ctx_burn: CpiContext<Burn> = CpiContext::from(&*ctx.accounts);
-    token::burn(cpi_ctx_burn, amount)?;
+    let cpi_accounts = Burn {
+        mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+        to: ctx
+            .accounts
+            .user_iasset_token_account
+            .to_account_info()
+            .clone(),
+        authority: ctx.accounts.user.to_account_info().clone(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+    token::burn(CpiContext::new(cpi_program, cpi_accounts), amount)?;
 
     // update total amount of borrowed iasset
     let updated_borrowed_iasset = mint_position.borrowed_iasset.to_decimal() - amount_value;

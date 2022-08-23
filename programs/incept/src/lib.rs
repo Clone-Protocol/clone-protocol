@@ -3,8 +3,8 @@ use error::*;
 use rust_decimal::prelude::*;
 
 mod error;
-mod math;
 mod instructions;
+mod math;
 mod states;
 mod value;
 

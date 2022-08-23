@@ -44,32 +44,6 @@ pub struct MintUSDI<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-impl<'a, 'b, 'c, 'info> From<&MintUSDI<'info>> for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-    fn from(accounts: &MintUSDI<'info>) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
-            from: accounts
-                .user_collateral_token_account
-                .to_account_info()
-                .clone(),
-            to: accounts.vault.to_account_info().clone(),
-            authority: accounts.user.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
-}
-impl<'a, 'b, 'c, 'info> From<&MintUSDI<'info>> for CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
-    fn from(accounts: &MintUSDI<'info>) -> CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
-        let cpi_accounts = MintTo {
-            mint: accounts.usdi_mint.to_account_info().clone(),
-            to: accounts.user_usdi_token_account.to_account_info().clone(),
-            authority: accounts.manager.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
-}
-
 pub fn execute(ctx: Context<MintUSDI>, manager_nonce: u8, amount: u64) -> ProgramResult {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
@@ -113,12 +87,36 @@ pub fn execute(ctx: Context<MintUSDI>, manager_nonce: u8, amount: u64) -> Progra
 
     // transfer user collateral to vault
     usdi_value.rescale(collateral_scale.try_into().unwrap());
-    let cpi_ctx_transfer: CpiContext<Transfer> = CpiContext::from(&*ctx.accounts);
-    token::transfer(cpi_ctx_transfer, usdi_value.mantissa().try_into().unwrap())?;
+    let cpi_accounts = Transfer {
+        from: ctx
+            .accounts
+            .user_collateral_token_account
+            .to_account_info()
+            .clone(),
+        to: ctx.accounts.vault.to_account_info().clone(),
+        authority: ctx.accounts.user.to_account_info().clone(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+    token::transfer(
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
+        usdi_value.mantissa().try_into().unwrap(),
+    )?;
 
     // mint usdi to user
-    let cpi_ctx_mint: CpiContext<MintTo> = CpiContext::from(&*ctx.accounts).with_signer(seeds);
-    token::mint_to(cpi_ctx_mint, amount)?;
+    let cpi_accounts = MintTo {
+        mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+        to: ctx
+            .accounts
+            .user_usdi_token_account
+            .to_account_info()
+            .clone(),
+        authority: ctx.accounts.manager.to_account_info().clone(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+    token::mint_to(
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
+        amount,
+    )?;
 
     Ok(())
 }

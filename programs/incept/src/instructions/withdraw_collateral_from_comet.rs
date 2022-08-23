@@ -49,24 +49,6 @@ pub struct WithdrawCollateralFromComet<'info> {
     pub user_collateral_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
-impl<'a, 'b, 'c, 'info> From<&WithdrawCollateralFromComet<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
-{
-    fn from(
-        accounts: &WithdrawCollateralFromComet<'info>,
-    ) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
-            from: accounts.vault.to_account_info().clone(),
-            to: accounts
-                .user_collateral_token_account
-                .to_account_info()
-                .clone(),
-            authority: accounts.manager.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
-}
 
 pub fn execute(
     ctx: Context<WithdrawCollateralFromComet>,
@@ -120,8 +102,20 @@ pub fn execute(
         }
 
         // send collateral from vault to user
-        let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
-        token::transfer(cpi_ctx, collateral_amount)?;
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.vault.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .user_collateral_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        token::transfer(
+            CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
+            collateral_amount,
+        )?;
 
         // check to see if the comet is empty and should be closed
         if comet.num_collaterals == 0 {

@@ -41,24 +41,6 @@ pub struct AddCollateralToMint<'info> {
     pub user_collateral_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
-impl<'a, 'b, 'c, 'info> From<&AddCollateralToMint<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
-{
-    fn from(
-        accounts: &AddCollateralToMint<'info>,
-    ) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
-            from: accounts
-                .user_collateral_token_account
-                .to_account_info()
-                .clone(),
-            to: accounts.vault.to_account_info().clone(),
-            authority: accounts.user.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
-}
 
 pub fn execute(
     ctx: Context<AddCollateralToMint>,
@@ -94,8 +76,18 @@ pub fn execute(
         RawDecimal::from(mint_position.collateral_amount.to_decimal() + amount_value);
 
     // send collateral to vault
-    let cpi_ctx = CpiContext::from(&*ctx.accounts);
-    token::transfer(cpi_ctx, amount)?;
+    let cpi_accounts = Transfer {
+        from: ctx
+            .accounts
+            .user_collateral_token_account
+            .to_account_info()
+            .clone(),
+        to: ctx.accounts.vault.to_account_info().clone(),
+        authority: ctx.accounts.user.to_account_info().clone(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+
+    token::transfer(CpiContext::new(cpi_program, cpi_accounts), amount)?;
 
     Ok(())
 }

@@ -32,27 +32,25 @@ pub struct MintUSDIHackathon<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-impl<'a, 'b, 'c, 'info> From<&MintUSDIHackathon<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, MintTo<'info>>
-{
-    fn from(accounts: &MintUSDIHackathon<'info>) -> CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
-        let cpi_accounts = MintTo {
-            mint: accounts.usdi_mint.to_account_info().clone(),
-            to: accounts.user_usdi_token_account.to_account_info().clone(),
-            authority: accounts.manager.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
-}
-
 pub fn execute(ctx: Context<MintUSDIHackathon>, manager_nonce: u8, amount: u64) -> ProgramResult {
     //This instruction is for hackathon use ONLY!!!!
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 
     // mint usdi to user
-    let cpi_ctx_mint: CpiContext<MintTo> = CpiContext::from(&*ctx.accounts).with_signer(seeds);
-    mint_to(cpi_ctx_mint, amount)?;
+    let cpi_accounts = MintTo {
+        mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+        to: ctx
+            .accounts
+            .user_usdi_token_account
+            .to_account_info()
+            .clone(),
+        authority: ctx.accounts.manager.to_account_info().clone(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+    mint_to(
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
+        amount,
+    )?;
 
     Ok(())
 }

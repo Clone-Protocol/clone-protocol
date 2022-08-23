@@ -48,39 +48,6 @@ pub struct InitializeMintPosition<'info> {
     pub oracle: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
 }
-impl<'a, 'b, 'c, 'info> From<&InitializeMintPosition<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
-{
-    fn from(
-        accounts: &InitializeMintPosition<'info>,
-    ) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
-            from: accounts
-                .user_collateral_token_account
-                .to_account_info()
-                .clone(),
-            to: accounts.vault.to_account_info().clone(),
-            authority: accounts.user.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
-}
-impl<'a, 'b, 'c, 'info> From<&InitializeMintPosition<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, MintTo<'info>>
-{
-    fn from(
-        accounts: &InitializeMintPosition<'info>,
-    ) -> CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
-        let cpi_accounts = MintTo {
-            mint: accounts.iasset_mint.to_account_info().clone(),
-            to: accounts.user_iasset_token_account.to_account_info().clone(),
-            authority: accounts.manager.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
-}
 
 pub fn execute(
     ctx: Context<InitializeMintPosition>,
@@ -136,12 +103,37 @@ pub fn execute(
     )?;
 
     // lock user collateral in vault
-    let cpi_ctx_transfer: CpiContext<Transfer> = CpiContext::from(&*ctx.accounts);
-    token::transfer(cpi_ctx_transfer, collateral_amount)?;
+    let cpi_accounts = Transfer {
+        from: ctx
+            .accounts
+            .user_collateral_token_account
+            .to_account_info()
+            .clone(),
+        to: ctx.accounts.vault.to_account_info().clone(),
+        authority: ctx.accounts.user.to_account_info().clone(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+
+    token::transfer(
+        CpiContext::new(cpi_program, cpi_accounts),
+        collateral_amount,
+    )?;
 
     // mint iasset to user
-    let cpi_ctx_mint: CpiContext<MintTo> = CpiContext::from(&*ctx.accounts).with_signer(seeds);
-    token::mint_to(cpi_ctx_mint, iasset_amount)?;
+    let cpi_accounts = MintTo {
+        mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+        to: ctx
+            .accounts
+            .user_iasset_token_account
+            .to_account_info()
+            .clone(),
+        authority: ctx.accounts.manager.to_account_info().clone(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+    token::mint_to(
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
+        iasset_amount,
+    )?;
 
     // set mint position data
     let mut mint_positions = ctx.accounts.mint_positions.load_mut()?;

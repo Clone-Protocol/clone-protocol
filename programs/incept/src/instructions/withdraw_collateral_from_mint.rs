@@ -43,24 +43,6 @@ pub struct WithdrawCollateralFromMint<'info> {
     pub user_collateral_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
-impl<'a, 'b, 'c, 'info> From<&WithdrawCollateralFromMint<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
-{
-    fn from(
-        accounts: &WithdrawCollateralFromMint<'info>,
-    ) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
-            from: accounts.vault.to_account_info().clone(),
-            to: accounts
-                .user_collateral_token_account
-                .to_account_info()
-                .clone(),
-            authority: accounts.manager.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
-}
 
 pub fn execute(
     ctx: Context<WithdrawCollateralFromMint>,
@@ -113,8 +95,20 @@ pub fn execute(
     .unwrap();
 
     // send collateral back to user
-    let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
-    token::transfer(cpi_ctx, amount)?;
+    let cpi_accounts = Transfer {
+        from: ctx.accounts.vault.to_account_info().clone(),
+        to: ctx
+            .accounts
+            .user_collateral_token_account
+            .to_account_info()
+            .clone(),
+        authority: ctx.accounts.manager.to_account_info().clone(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+    token::transfer(
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
+        amount,
+    )?;
 
     // check to see if mint is empty, if so remove
     if mint_positions.mint_positions[mint_index as usize]

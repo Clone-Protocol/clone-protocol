@@ -131,8 +131,21 @@ pub fn execute(
     usdi_value.rescale(DEVNET_TOKEN_SCALE);
 
     // burn user liquidity tokens
-    let cpi_ctx = CpiContext::from(&*ctx.accounts);
-    token::burn(cpi_ctx, liquidity_token_amount)?;
+    let cpi_accounts = Burn {
+        mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
+        to: ctx
+            .accounts
+            .user_liquidity_token_account
+            .to_account_info()
+            .clone(),
+        authority: ctx.accounts.user.to_account_info().clone(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+
+    token::burn(
+        CpiContext::new(cpi_program, cpi_accounts),
+        liquidity_token_amount,
+    )?;
 
     // transfer usdi to user from amm
     let cpi_accounts = Transfer {

@@ -42,19 +42,6 @@ pub struct AddiAssetToMint<'info> {
     pub iasset_mint: Box<Account<'info, Mint>>,
     pub token_program: Program<'info, Token>,
 }
-impl<'a, 'b, 'c, 'info> From<&AddiAssetToMint<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, MintTo<'info>>
-{
-    fn from(accounts: &AddiAssetToMint<'info>) -> CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
-        let cpi_accounts = MintTo {
-            mint: accounts.iasset_mint.to_account_info().clone(),
-            to: accounts.user_iasset_token_account.to_account_info().clone(),
-            authority: accounts.manager.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
-}
 
 pub fn execute(
     ctx: Context<AddiAssetToMint>,
@@ -93,8 +80,20 @@ pub fn execute(
     .unwrap();
 
     // mint iasset to the user
-    let cpi_ctx = CpiContext::from(&*ctx.accounts).with_signer(seeds);
-    token::mint_to(cpi_ctx, amount)?;
+    let cpi_accounts = MintTo {
+        mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+        to: ctx
+            .accounts
+            .user_iasset_token_account
+            .to_account_info()
+            .clone(),
+        authority: ctx.accounts.manager.to_account_info().clone(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+    token::mint_to(
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
+        amount,
+    )?;
 
     Ok(())
 }
