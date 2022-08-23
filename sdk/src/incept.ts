@@ -1502,7 +1502,7 @@ export class Incept {
     signers?: Array<Keypair>
   ) {
     let singlePoolComet = await this.getSinglePoolComet(cometIndex);
-    if (toNumber(singlePoolComet.positions[0].liquidityTokenValue) != 0) {
+    if (getMantissa(singlePoolComet.positions[0].liquidityTokenValue) != 0) {
       return;
     }
     if (Number(singlePoolComet.numCollaterals) != 0) {
