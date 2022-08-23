@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
 use std::convert::TryInto;
 
-use crate::*;
+use crate::error::*;
+use crate::states::Value;
 
 pub const DEVNET_TOKEN_SCALE: u8 = 8;
 pub const PERCENT_SCALE: u8 = 2;

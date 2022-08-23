@@ -5,6 +5,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 pub const DEVNET_TOKEN_SCALE: u32 = 8;
+pub const USDI_COLLATERAL_INDEX: usize = 0;
 
 #[zero_copy]
 #[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
@@ -52,9 +53,9 @@ impl Default for RawDecimal {
 #[derive(Default)]
 pub struct Manager {
     // 96
-    pub usdi_mint: Pubkey,             // 32
-    pub token_data: Pubkey,            // 32
-    pub admin: Pubkey,                 // 32
+    pub usdi_mint: Pubkey,  // 32
+    pub token_data: Pubkey, // 32
+    pub admin: Pubkey,      // 32
 }
 
 #[account(zero_copy)]
