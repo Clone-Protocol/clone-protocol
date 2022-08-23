@@ -1,0 +1,124 @@
+use crate::error::*;
+//use crate::instructions::MintUSDI;
+use crate::states::*;
+use anchor_lang::prelude::*;
+use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
+use rust_decimal::prelude::*;
+use std::convert::TryInto;
+
+#[derive(Accounts)]
+#[instruction(manager_nonce: u8, amount: u64)]
+pub struct MintUSDI<'info> {
+    pub user: Signer<'info>,
+    #[account(
+        seeds = [b"manager".as_ref()],
+        bump = manager_nonce,
+        has_one = usdi_mint,
+        has_one = token_data
+    )]
+    pub manager: Account<'info, Manager>,
+    #[account(
+        mut,
+        has_one = manager
+    )]
+    pub token_data: AccountLoader<'info, TokenData>,
+    #[account(mut)]
+    pub vault: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        address = manager.usdi_mint
+    )]
+    pub usdi_mint: Account<'info, Mint>,
+    #[account(
+        mut,
+        associated_token::mint = usdi_mint,
+        associated_token::authority = user
+    )]
+    pub user_usdi_token_account: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        associated_token::mint = vault.mint,
+        associated_token::authority = user
+    )]
+    pub user_collateral_token_account: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+}
+
+impl<'a, 'b, 'c, 'info> From<&MintUSDI<'info>> for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
+    fn from(accounts: &MintUSDI<'info>) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
+        let cpi_accounts = Transfer {
+            from: accounts
+                .user_collateral_token_account
+                .to_account_info()
+                .clone(),
+            to: accounts.vault.to_account_info().clone(),
+            authority: accounts.user.to_account_info().clone(),
+        };
+        let cpi_program = accounts.token_program.to_account_info();
+        CpiContext::new(cpi_program, cpi_accounts)
+    }
+}
+impl<'a, 'b, 'c, 'info> From<&MintUSDI<'info>> for CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
+    fn from(accounts: &MintUSDI<'info>) -> CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
+        let cpi_accounts = MintTo {
+            mint: accounts.usdi_mint.to_account_info().clone(),
+            to: accounts.user_usdi_token_account.to_account_info().clone(),
+            authority: accounts.manager.to_account_info().clone(),
+        };
+        let cpi_program = accounts.token_program.to_account_info();
+        CpiContext::new(cpi_program, cpi_accounts)
+    }
+}
+
+pub fn execute(ctx: Context<MintUSDI>, manager_nonce: u8, amount: u64) -> ProgramResult {
+    let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+    let token_data = &mut ctx.accounts.token_data.load_mut()?;
+
+    let (collateral, collateral_index) =
+        TokenData::get_collateral_tuple(token_data, *ctx.accounts.vault.to_account_info().key)
+            .unwrap();
+    let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
+
+    let mut usdi_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+
+    let collateral_value = Decimal::from_str(
+        &ctx.accounts
+            .user_collateral_token_account
+            .amount
+            .to_string(),
+    )
+    .unwrap()
+        / Decimal::new(1, collateral_scale.try_into().unwrap());
+
+    // check to see if the collateral used to mint usdi is stable
+    let is_stable: Result<bool, InceptError> = match collateral.stable {
+        0 => Ok(false),
+        1 => Ok(true),
+        _ => Err(InceptError::InvalidBool),
+    };
+
+    // if collateral is not stable, we throw an error
+    if !(is_stable.unwrap()) {
+        return Err(InceptError::InvalidCollateralType.into());
+    }
+
+    // check if their is sufficient collateral to mint
+    if usdi_value > collateral_value {
+        return Err(InceptError::InsufficientCollateral.into());
+    }
+
+    // add collateral amount to vault supply
+    token_data.collaterals[collateral_index].vault_usdi_supply =
+        RawDecimal::from(collateral.vault_usdi_supply.to_decimal() + collateral_value);
+
+    // transfer user collateral to vault
+    usdi_value.rescale(collateral_scale.try_into().unwrap());
+    let cpi_ctx_transfer: CpiContext<Transfer> = CpiContext::from(&*ctx.accounts);
+    token::transfer(cpi_ctx_transfer, usdi_value.mantissa().try_into().unwrap())?;
+
+    // mint usdi to user
+    let cpi_ctx_mint: CpiContext<MintTo> = CpiContext::from(&*ctx.accounts).with_signer(seeds);
+    token::mint_to(cpi_ctx_mint, amount)?;
+
+    Ok(())
+}

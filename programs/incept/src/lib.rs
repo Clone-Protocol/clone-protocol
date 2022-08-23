@@ -1,15 +1,14 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, MintTo};
 use error::*;
-use instructions::*;
 use rust_decimal::prelude::*;
 
 mod error;
-mod instructions;
 mod math;
-mod procedures;
+mod instructions;
 mod states;
 mod value;
+
+use instructions::*;
 
 declare_id!("3j5wcCkkjns9wibgXVNAay3gzjZiVvYUbW66vqvjEaS7");
 
@@ -24,7 +23,7 @@ pub mod incept {
         il_health_score_cutoff: u64,
         il_liquidation_reward_pct: u64,
     ) -> ProgramResult {
-        procedures::initialize_manager::execute(
+        instructions::initialize_manager::execute(
             ctx,
             manager_nonce,
             il_health_score_coefficient,
@@ -38,7 +37,7 @@ pub mod incept {
         manager_nonce: u8,
         il_health_score_coefficient: u64,
     ) -> ProgramResult {
-        procedures::update_il_health_score_coefficient::execute(
+        instructions::update_il_health_score_coefficient::execute(
             ctx,
             manager_nonce,
             il_health_score_coefficient,
@@ -46,32 +45,32 @@ pub mod incept {
     }
 
     pub fn initialize_user(ctx: Context<InitializeUser>, user_nonce: u8) -> ProgramResult {
-        procedures::initialize_user::execute(ctx, user_nonce)
+        instructions::initialize_user::execute(ctx, user_nonce)
     }
 
     pub fn initialize_single_pool_comets(
         ctx: Context<InitializeSinglePoolComets>,
         user_nonce: u8,
     ) -> ProgramResult {
-        procedures::initialize_single_pool_comets::execute(ctx, user_nonce)
+        instructions::initialize_single_pool_comets::execute(ctx, user_nonce)
     }
 
     pub fn initialize_mint_positions(
         ctx: Context<InitializeMintPositions>,
         user_nonce: u8,
     ) -> ProgramResult {
-        procedures::initialize_mint_positions::execute(ctx, user_nonce)
+        instructions::initialize_mint_positions::execute(ctx, user_nonce)
     }
 
     pub fn initialize_liquidity_positions(
         ctx: Context<InitializeLiquidityPositions>,
         user_nonce: u8,
     ) -> ProgramResult {
-        procedures::initialize_liquidity_positions::execute(ctx, user_nonce)
+        instructions::initialize_liquidity_positions::execute(ctx, user_nonce)
     }
 
     pub fn initialize_comet(ctx: Context<InitializeComet>, user_nonce: u8) -> ProgramResult {
-        procedures::initialize_comet::execute(ctx, user_nonce)
+        instructions::initialize_comet::execute(ctx, user_nonce)
     }
 
     pub fn add_collateral(
@@ -81,7 +80,7 @@ pub mod incept {
         stable: u8,
         collateralization_ratio: u64,
     ) -> ProgramResult {
-        procedures::add_collateral::execute(
+        instructions::add_collateral::execute(
             ctx,
             manager_nonce,
             scale,
@@ -98,7 +97,7 @@ pub mod incept {
         liquidity_trading_fee: u16,
         health_score_coefficient: u64,
     ) -> ProgramResult {
-        procedures::initialize_pool::execute(
+        instructions::initialize_pool::execute(
             ctx,
             manager_nonce,
             stable_collateral_ratio,
@@ -114,7 +113,7 @@ pub mod incept {
         pool_index: u8,
         health_score_coefficient: u64,
     ) -> ProgramResult {
-        procedures::update_pool_health_score_coefficient::execute(
+        instructions::update_pool_health_score_coefficient::execute(
             ctx,
             manager_nonce,
             pool_index,
@@ -126,11 +125,11 @@ pub mod incept {
         ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
         manager_nonce: u8,
     ) -> ProgramResult {
-        procedures::update_prices::execute(ctx, manager_nonce)
+        instructions::update_prices::execute(ctx, manager_nonce)
     }
 
     pub fn mint_usdi(ctx: Context<MintUSDI>, manager_nonce: u8, amount: u64) -> ProgramResult {
-        procedures::mint_usdi::execute(ctx, manager_nonce, amount)
+        instructions::mint_usdi::execute(ctx, manager_nonce, amount)
     }
 
     pub fn initialize_mint_position(
@@ -139,7 +138,7 @@ pub mod incept {
         iasset_amount: u64,
         collateral_amount: u64,
     ) -> ProgramResult {
-        procedures::initialize_mint_position::execute(
+        instructions::initialize_mint_position::execute(
             ctx,
             manager_nonce,
             iasset_amount,
@@ -153,7 +152,7 @@ pub mod incept {
         mint_index: u8,
         amount: u64,
     ) -> ProgramResult {
-        procedures::add_collateral_to_mint::execute(ctx, manager_nonce, mint_index, amount)
+        instructions::add_collateral_to_mint::execute(ctx, manager_nonce, mint_index, amount)
     }
 
     pub fn withdraw_collateral_from_mint(
@@ -162,7 +161,7 @@ pub mod incept {
         mint_index: u8,
         amount: u64,
     ) -> ProgramResult {
-        procedures::withdraw_collateral_from_mint::execute(ctx, manager_nonce, mint_index, amount)
+        instructions::withdraw_collateral_from_mint::execute(ctx, manager_nonce, mint_index, amount)
     }
 
     pub fn pay_back_mint(
@@ -171,7 +170,7 @@ pub mod incept {
         mint_index: u8,
         amount: u64,
     ) -> ProgramResult {
-        procedures::pay_back_mint::execute(ctx, manager_nonce, mint_index, amount)
+        instructions::pay_back_mint::execute(ctx, manager_nonce, mint_index, amount)
     }
 
     pub fn add_iasset_to_mint(
@@ -180,7 +179,7 @@ pub mod incept {
         mint_index: u8,
         amount: u64,
     ) -> ProgramResult {
-        procedures::add_iasset_to_mint::execute(ctx, manager_nonce, mint_index, amount)
+        instructions::add_iasset_to_mint::execute(ctx, manager_nonce, mint_index, amount)
     }
 
     pub fn initialize_liquidity_position(
@@ -189,7 +188,7 @@ pub mod incept {
         pool_index: u8,
         iasset_amount: u64,
     ) -> ProgramResult {
-        procedures::initialize_liquidity_position::execute(
+        instructions::initialize_liquidity_position::execute(
             ctx,
             manager_nonce,
             pool_index,
@@ -203,7 +202,7 @@ pub mod incept {
         liquidity_position_index: u8,
         iasset_amount: u64,
     ) -> ProgramResult {
-        procedures::provide_liquidity::execute(
+        instructions::provide_liquidity::execute(
             ctx,
             manager_nonce,
             liquidity_position_index,
@@ -217,7 +216,7 @@ pub mod incept {
         liquidity_position_index: u8,
         liquidity_token_amount: u64,
     ) -> ProgramResult {
-        procedures::withdraw_liquidity::execute(
+        instructions::withdraw_liquidity::execute(
             ctx,
             manager_nonce,
             liquidity_position_index,
@@ -231,7 +230,7 @@ pub mod incept {
         pool_index: u8,
         amount: u64,
     ) -> ProgramResult {
-        procedures::buy_synth::execute(ctx, manager_nonce, pool_index, amount)
+        instructions::buy_synth::execute(ctx, manager_nonce, pool_index, amount)
     }
 
     pub fn sell_synth(
@@ -240,7 +239,7 @@ pub mod incept {
         pool_index: u8,
         amount: u64,
     ) -> ProgramResult {
-        procedures::sell_synth::execute(ctx, manager_nonce, pool_index, amount)
+        instructions::sell_synth::execute(ctx, manager_nonce, pool_index, amount)
     }
 
     pub fn initialize_single_pool_comet(
@@ -248,7 +247,7 @@ pub mod incept {
         manager_nonce: u8,
         pool_index: u8,
     ) -> ProgramResult {
-        procedures::initialize_single_pool_comet::execute(ctx, manager_nonce, pool_index)
+        instructions::initialize_single_pool_comet::execute(ctx, manager_nonce, pool_index)
     }
 
     pub fn close_single_pool_comet(
@@ -256,7 +255,7 @@ pub mod incept {
         user_nonce: u8,
         comet_index: u8,
     ) -> ProgramResult {
-        procedures::close_single_pool_comet::execute(ctx, user_nonce, comet_index)
+        instructions::close_single_pool_comet::execute(ctx, user_nonce, comet_index)
     }
 
     pub fn initialize_comet_manager(
@@ -264,7 +263,7 @@ pub mod incept {
         manager_nonce: u8,
         user_nonce: u8,
     ) -> ProgramResult {
-        procedures::initialize_comet_manager::execute(ctx, manager_nonce, user_nonce)
+        instructions::initialize_comet_manager::execute(ctx, manager_nonce, user_nonce)
     }
 
     pub fn add_collateral_to_comet(
@@ -273,7 +272,7 @@ pub mod incept {
         collateral_index: u8,
         collateral_amount: u64,
     ) -> ProgramResult {
-        procedures::add_collateral_to_comet::execute(
+        instructions::add_collateral_to_comet::execute(
             ctx,
             manager_nonce,
             collateral_index,
@@ -288,7 +287,7 @@ pub mod incept {
         comet_collateral_index: u8,
         collateral_amount: u64,
     ) -> ProgramResult {
-        procedures::withdraw_collateral_from_comet::execute(
+        instructions::withdraw_collateral_from_comet::execute(
             ctx,
             manager_nonce,
             user_nonce,
@@ -303,7 +302,7 @@ pub mod incept {
         pool_index: u8,
         usdi_amount: u64,
     ) -> ProgramResult {
-        procedures::add_liquidity_to_comet::execute(ctx, manager_nonce, pool_index, usdi_amount)
+        instructions::add_liquidity_to_comet::execute(ctx, manager_nonce, pool_index, usdi_amount)
     }
 
     pub fn withdraw_liquidity_from_comet(
@@ -312,7 +311,7 @@ pub mod incept {
         comet_position_index: u8,
         liquidity_token_amount: u64,
     ) -> ProgramResult {
-        procedures::withdraw_liquidity_from_comet::execute(
+        instructions::withdraw_liquidity_from_comet::execute(
             ctx,
             manager_nonce,
             comet_position_index,
@@ -325,7 +324,7 @@ pub mod incept {
         manager_nonce: u8,
         liquidity_token_amount: u64,
     ) -> ProgramResult {
-        procedures::withdraw_liquidity_from_single_pool_comet::execute(
+        instructions::withdraw_liquidity_from_single_pool_comet::execute(
             ctx,
             manager_nonce,
             liquidity_token_amount,
@@ -338,7 +337,7 @@ pub mod incept {
         comet_position_index: u8,
         comet_collateral_index: u8,
     ) -> ProgramResult {
-        procedures::recenter_comet::execute(
+        instructions::recenter_comet::execute(
             ctx,
             manager_nonce,
             comet_position_index,
@@ -351,14 +350,7 @@ pub mod incept {
         manager_nonce: u8,
         amount: u64,
     ) -> ProgramResult {
-        //This instruction is for hackathon use ONLY!!!!
-        let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
-
-        // mint usdi to user
-        let cpi_ctx_mint: CpiContext<MintTo> = CpiContext::from(&*ctx.accounts).with_signer(seeds);
-        token::mint_to(cpi_ctx_mint, amount)?;
-
-        Ok(())
+        instructions::mint_usdi_hackathon::execute(ctx, manager_nonce, amount)
     }
 
     pub fn liquidate_mint_position(
@@ -366,7 +358,7 @@ pub mod incept {
         manager_nonce: u8,
         mint_index: u8,
     ) -> ProgramResult {
-        procedures::liquidate_mint_position::execute(ctx, manager_nonce, mint_index)
+        instructions::liquidate_mint_position::execute(ctx, manager_nonce, mint_index)
     }
 
     pub fn liquidate_comet_position_reduction(
@@ -376,7 +368,7 @@ pub mod incept {
         position_index: u8,
         lp_token_reduction: u64,
     ) -> ProgramResult {
-        procedures::liquidate_comet_position_reduction::execute(
+        instructions::liquidate_comet_position_reduction::execute(
             ctx,
             manager_nonce,
             user_nonce,
@@ -395,7 +387,7 @@ pub mod incept {
         comet_collateral_index: u8,
         il_reduction_amount: u64,
     ) -> ProgramResult {
-        procedures::liquidate_comet_il_reduction::execute(
+        instructions::liquidate_comet_il_reduction::execute(
             ctx,
             manager_nonce,
             user_nonce,
@@ -414,7 +406,7 @@ pub mod incept {
         comet_collateral_index: u8,
         collateral_amount: u64,
     ) -> ProgramResult {
-        procedures::pay_impermanent_loss_debt::execute(
+        instructions::pay_impermanent_loss_debt::execute(
             ctx,
             manager_nonce,
             comet_position_index,
