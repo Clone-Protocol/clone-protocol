@@ -17,6 +17,7 @@ import {
   TransactionInstruction,
   Transaction,
   Keypair,
+  ComputeBudgetProgram,
 } from "@solana/web3.js";
 import { sleep, toScaledNumber, toScaledPercent, div, mul } from "./utils";
 import {
@@ -31,6 +32,7 @@ import { RawDecimal, toNumber, toDecimal, getMantissa } from "./decimal";
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 export const DEVNET_TOKEN_SCALE = 8;
+export const MAX_PRICE_SIZE = 128;
 
 export const toDevnetScale = (x: number) => {
   return new BN(x * 10 ** DEVNET_TOKEN_SCALE);
@@ -289,45 +291,60 @@ export class Incept {
     return tokenData.pools[poolIndex].assetInfo as AssetInfo;
   }
 
-  public async updatePrices(signers?: Array<Keypair>, poolIndex?: number) {
-    const updatePricesIx = await this.updatePricesInstruction(poolIndex);
-    await this.provider.send(new Transaction().add(updatePricesIx), signers);
+  public async updatePrices(
+    poolIndices?: number[],
+    signers?: Array<Keypair>
+  ) {
+    let txn = new Transaction();
+    const additionalComputeBudgetInstruction =
+      ComputeBudgetProgram.requestUnits({
+        units: 400000,
+        additionalFee: 0,
+      });
+    txn.add(additionalComputeBudgetInstruction);
+    let updatePricesIx = await this.updatePricesInstruction(
+      poolIndices
+    );
+    txn.add(updatePricesIx);
+
+    await this.provider.send(txn, signers);
   }
 
-  //NOTE: It seems like with too many pools (10) the maximum number of allowed transactions can be exceeded.
-  public async updatePricesInstruction(poolIndex?: number) {
+  public async updatePricesInstruction(poolIndices?: number[]) {
     const tokenData = await this.getTokenData();
+    let arr = [];
+    for (let i = 0; i < tokenData.numPools.toNumber(); i++) {
+      arr.push(i);
+    }
+    let indices = poolIndices ? poolIndices : arr;
 
     let priceFeeds: Array<{
       pubkey: PublicKey;
       isWritable: boolean;
       isSigner: boolean;
     }> = [];
-    tokenData.pools.slice(0, Number(tokenData.numPools)).forEach((pool) => {
+    
+    indices.forEach((index) => {
       priceFeeds.push({
-        pubkey: pool.assetInfo.priceFeedAddresses[0],
-        isWritable: false,
-        isSigner: false,
-      });
-      priceFeeds.push({
-        pubkey: pool.assetInfo.priceFeedAddresses[1],
+        pubkey: tokenData.pools[index].assetInfo.priceFeedAddresses[0],
         isWritable: false,
         isSigner: false,
       });
     });
 
-    if (typeof poolIndex !== "undefined") {
-      priceFeeds = priceFeeds.slice(2 * poolIndex, 2 * poolIndex + 2);
+    let zero_padding = MAX_PRICE_SIZE - indices.length;
+    for (let i = 0; i < zero_padding; i++) {
+      indices.push(0);
     }
 
     return (await this.program.instruction.updatePrices(
       this.managerAddress[1],
+      { indices: indices },
       {
         remainingAccounts: priceFeeds,
         accounts: {
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
-          chainlinkProgram: tokenData.chainlinkProgram,
         },
       }
     )) as TransactionInstruction;
@@ -482,7 +499,7 @@ export class Incept {
     collateralIndex: number,
     signers?: Array<Keypair>
   ) {
-    const updatePricesIx = await this.updatePricesInstruction(poolIndex);
+    const updatePricesIx = await this.updatePricesInstruction();
     const initializeMintPositionIx =
       await this.initializeMintPositionInstruction(
         userCollateralTokenAccount,
@@ -754,9 +771,7 @@ export class Incept {
         new BN(getMantissa(mintPosition.collateralAmount))
       );
 
-    const updatePricesIx = await this.updatePricesInstruction(
-      mintPosition.poolIndex
-    );
+    const updatePricesIx = await this.updatePricesInstruction();
 
     await this.provider.send(
       new Transaction()
@@ -1047,7 +1062,7 @@ export class Incept {
     signers?: Array<Keypair>
   ) {
     await this.initializeSinglePoolComet(poolIndex, collateralIndex);
-    const updatePricesIx = await this.updatePricesInstruction(poolIndex);
+    const updatePricesIx = await this.updatePricesInstruction();
     const singlePoolComets = await this.getSinglePoolComets();
 
     const addCollateralToSinglePoolCometIx =
@@ -1181,9 +1196,9 @@ export class Incept {
     signers?: Array<Keypair>
   ) {
     const pool = await this.getSinglePoolComet(cometIndex);
-    const updatePricesIx = await this.updatePricesInstruction(
-      pool.positions[0].poolIndex
-    );
+    const updatePricesIx = await this.updatePricesInstruction([
+      pool.positions[0].poolIndex,
+    ]);
     const withdrawCollateralFromCometIx =
       await this.withdrawCollateralFromSinglePoolCometInstruction(
         userCollateralTokenAccount,
@@ -1696,7 +1711,7 @@ export class Incept {
     forManager: boolean,
     signers?: Array<Keypair>
   ) {
-    const updatePricesIx = await this.updatePricesInstruction(poolIndex);
+    const updatePricesIx = await this.updatePricesInstruction();
     const addLiquidityToCometIx = await this.addLiquidityToCometInstruction(
       usdiAmount,
       poolIndex,
@@ -2431,7 +2446,10 @@ export class Incept {
     return effectiveUSDCollateral;
   }
 
-  public async getHealthScore() : Promise<{healthScore: number; ildHealthImpact: number;}> {
+  public async getHealthScore(): Promise<{
+    healthScore: number;
+    ildHealthImpact: number;
+  }> {
     const tokenData = await this.getTokenData();
     const comet = await this.getComet();
 
@@ -2488,7 +2506,10 @@ export class Incept {
         })
         .reduce((partialSum, a) => partialSum + a, 0) / totalCollateralAmount;
 
-    return {healthScore: 100 - loss, ildHealthImpact: totalIldHealthImpact / totalCollateralAmount};
+    return {
+      healthScore: 100 - loss,
+      ildHealthImpact: totalIldHealthImpact / totalCollateralAmount,
+    };
   }
 
   public async getSinglePoolHealthScore(

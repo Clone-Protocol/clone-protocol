@@ -124,8 +124,9 @@ pub mod incept {
     pub fn update_prices<'info>(
         ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
         manager_nonce: u8,
+        pool_indices: PoolIndices,
     ) -> ProgramResult {
-        instructions::update_prices::execute(ctx, manager_nonce)
+        instructions::update_prices::execute(ctx, manager_nonce, pool_indices)
     }
 
     pub fn mint_usdi(ctx: Context<MintUSDI>, manager_nonce: u8, amount: u64) -> ProgramResult {

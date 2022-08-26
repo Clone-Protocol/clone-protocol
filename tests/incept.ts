@@ -35,7 +35,6 @@ const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 describe("incept", async () => {
   const provider = anchor.Provider.local();
   anchor.setProvider(provider);
-
   let inceptProgram = anchor.workspace.Incept as Program<Incept>;
   let pythProgram = anchor.workspace.Pyth as Program<Pyth>;
   //let mockUSDCProgram = anchor.workspace.MockUsdc as Program<MockUsdc>;
@@ -43,7 +42,6 @@ describe("incept", async () => {
   let storeProgram = anchor.workspace.Store as Program<Store>;
   let jupiterProgram = anchor.workspace
     .JupiterAggMock as Program<JupiterAggMock>;
-
   let chainlink; //= new ChainLinkOracle(storeProgram);
 
   const mockUSDCMint = anchor.web3.Keypair.generate();
@@ -62,7 +60,6 @@ describe("incept", async () => {
   let usdiTokenAccountInfo;
   let iassetTokenAccountInfo;
   let liquidityTokenAccountInfo;
-
   let inceptClient = new InceptConnection(
     inceptProgram.programId,
     provider
@@ -73,24 +70,20 @@ describe("incept", async () => {
     [Buffer.from("jupiter")],
     jupiterProgram.programId
   );
-
-  it!(
-    "mock jupiter agg initialized + mock usdc initialized + mock asset initialized!",
-    async () => {
-      await jupiterProgram.rpc.initialize(jupiterNonce, {
-        accounts: {
-          admin: jupiterProgram.provider.wallet.publicKey,
-          jupiterAccount: jupiterAddress,
-          usdcMint: mockUSDCMint.publicKey,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        },
-        instructions: [],
-        signers: [mockUSDCMint],
-      });
-    }
-  );
+  it("mock jupiter agg initialized + mock usdc initialized + mock asset initialized!", async () => {
+    await jupiterProgram.rpc.initialize(jupiterNonce, {
+      accounts: {
+        admin: jupiterProgram.provider.wallet.publicKey,
+        jupiterAccount: jupiterAddress,
+        usdcMint: mockUSDCMint.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      instructions: [],
+      signers: [mockUSDCMint],
+    });
+  });
 
   // it("mock usdc initialized!", async () => {
   //   await mockUSDCProgram.rpc.initialize(mockUSDCAccount[1], {
@@ -289,7 +282,7 @@ describe("incept", async () => {
   it("price updated!", async () => {
     // @ts-ignore
     let signers: Array<Signer> = [provider.wallet.payer];
-    await inceptClient.updatePrices(signers);
+    await inceptClient.updatePrices(undefined, signers);
     await sleep(200);
   });
 
@@ -1102,7 +1095,6 @@ describe("incept", async () => {
   });
 
   it("single pool comet collateral added!", async () => {
-    
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
@@ -1140,7 +1132,6 @@ describe("incept", async () => {
   });
 
   it("single pool comet collateral withdrawn!", async () => {
-    
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
@@ -1185,7 +1176,6 @@ describe("incept", async () => {
   });
 
   it("single pool comet liquidity added!", async () => {
-    
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
@@ -1313,7 +1303,6 @@ describe("incept", async () => {
   });
 
   it("single pool comet liquidity subtracted!", async () => {
-    
     let poolIndex = 0;
     const tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[poolIndex];
@@ -1472,8 +1461,6 @@ describe("incept", async () => {
     const pool = tokenData.pools[poolIndex];
     const collateral = tokenData.collaterals[1];
 
-    
-
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
@@ -1491,7 +1478,6 @@ describe("incept", async () => {
     //   await inceptClient.calculateCometRecenterSinglePool(0);
 
     await inceptClient.recenterSinglePoolComet(0);
-    
 
     await sleep(200);
 
@@ -1563,9 +1549,7 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
-    await inceptClient.withdrawLiquidityAndPaySinglePoolCometILD(
-      0
-    );
+    await inceptClient.withdrawLiquidityAndPaySinglePoolCometILD(0);
 
     await inceptClient.withdrawCollateralAndCloseSinglePoolComet(
       mockUSDCTokenAccountInfo.address,
@@ -1758,7 +1742,12 @@ describe("incept", async () => {
   it("comet health check", async () => {
     let healthScore = await inceptClient.getHealthScore();
 
-    assert.closeTo(healthScore.healthScore, 99.99995293331263, 1e-4, "check health score.");
+    assert.closeTo(
+      healthScore.healthScore,
+      99.99995293331263,
+      1e-4,
+      "check health score."
+    );
 
     await inceptClient.updatePoolHealthScoreCoefficient(
       healthScoreCoefficient * 2,
@@ -1769,7 +1758,12 @@ describe("incept", async () => {
     );
 
     healthScore = await inceptClient.getHealthScore();
-    assert.closeTo(healthScore.healthScore, 99.99990586662526, 1e-4, "check health score.");
+    assert.closeTo(
+      healthScore.healthScore,
+      99.99990586662526,
+      1e-4,
+      "check health score."
+    );
 
     const totalILD = await inceptClient.getILD();
     const poolILD = await inceptClient.getILD(0);
@@ -2093,12 +2087,18 @@ describe("incept", async () => {
   });
 
   it("Pay ILD using collateral", async () => {
-    const comet1TotalCollateral = await inceptClient.getEffectiveUSDCollateralValue();
+    const comet1TotalCollateral =
+      await inceptClient.getEffectiveUSDCollateralValue();
     const healthScore1 = await inceptClient.getHealthScore();
     await inceptClient.payCometILD(0, 0, toDevnetScale(1).toNumber(), false);
-    const comet2TotalCollateral = await inceptClient.getEffectiveUSDCollateralValue();
+    const comet2TotalCollateral =
+      await inceptClient.getEffectiveUSDCollateralValue();
     const healthScore2 = await inceptClient.getHealthScore();
-    assert.isAbove(healthScore2.healthScore, healthScore1.healthScore, "health score should increase");
+    assert.isAbove(
+      healthScore2.healthScore,
+      healthScore1.healthScore,
+      "health score should increase"
+    );
     assert.equal(
       comet1TotalCollateral - 1,
       comet2TotalCollateral,
