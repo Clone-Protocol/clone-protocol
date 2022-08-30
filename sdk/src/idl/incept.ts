@@ -511,17 +511,18 @@ export type Incept = {
           "name": "tokenData",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "chainlinkProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
         {
           "name": "managerNonce",
           "type": "u8"
+        },
+        {
+          "name": "poolIndices",
+          "type": {
+            "defined": "PoolIndices"
+          }
         }
       ]
     },
@@ -2836,6 +2837,23 @@ export type Incept = {
       }
     },
     {
+      "name": "PoolIndices",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "indices",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "InceptError",
       "type": {
         "kind": "enum",
@@ -2962,6 +2980,9 @@ export type Incept = {
           },
           {
             "name": "NonZeroCollateralizationRatioRequired"
+          },
+          {
+            "name": "IncorrectOracleAddress"
           }
         ]
       }
@@ -3512,17 +3533,18 @@ export const IDL: Incept = {
           "name": "tokenData",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "chainlinkProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
         {
           "name": "managerNonce",
           "type": "u8"
+        },
+        {
+          "name": "poolIndices",
+          "type": {
+            "defined": "PoolIndices"
+          }
         }
       ]
     },
@@ -5837,6 +5859,23 @@ export const IDL: Incept = {
       }
     },
     {
+      "name": "PoolIndices",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "indices",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "InceptError",
       "type": {
         "kind": "enum",
@@ -5963,6 +6002,9 @@ export const IDL: Incept = {
           },
           {
             "name": "NonZeroCollateralizationRatioRequired"
+          },
+          {
+            "name": "IncorrectOracleAddress"
           }
         ]
       }

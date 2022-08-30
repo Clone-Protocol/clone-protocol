@@ -167,6 +167,10 @@ pub enum InceptError {
     /// 40. Non-zero collateralization ratio required
     #[error("Non-zero collateralization ratio required")]
     NonZeroCollateralizationRatioRequired,
+
+    /// 41. Incorrect Oracle Address
+    #[error("Incorrect oracle address provided")]
+    IncorrectOracleAddress,
 }
 
 impl From<InceptError> for ProgramError {
