@@ -104,6 +104,7 @@ pub fn execute(
             liquidity_token_supply,
         )?;
 
+    let mut lp_tokens_to_mint;
     // find the index of the position within the comet position
     let comet_position_index = comet.get_pool_index(pool_index);
 
@@ -126,6 +127,7 @@ pub fn execute(
                 ..Default::default()
             },
         });
+        lp_tokens_to_mint = liquidity_token_value;
     } else {
         let position = comet.positions[comet_position_index];
         // update comet position data
@@ -138,6 +140,11 @@ pub fn execute(
         liquidity_token_value += position.liquidity_token_value.to_decimal();
         liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
 
+        lp_tokens_to_mint = liquidity_token_value
+            - comet.positions[comet_position_index]
+                .liquidity_token_value
+                .to_decimal();
+
         comet.positions[comet_position_index].borrowed_usdi = RawDecimal::from(borrowed_usdi);
         comet.positions[comet_position_index].borrowed_iasset = RawDecimal::from(borrowed_iasset);
         comet.positions[comet_position_index].liquidity_token_value =
@@ -146,6 +153,7 @@ pub fn execute(
 
     iasset_liquidity_value.rescale(DEVNET_TOKEN_SCALE);
     liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
+    lp_tokens_to_mint.rescale(DEVNET_TOKEN_SCALE);
 
     // mint liquidity into amm
     let cpi_accounts = MintTo {
@@ -200,7 +208,7 @@ pub fn execute(
 
     token::mint_to(
         mint_liquidity_tokens_to_comet_context,
-        liquidity_token_value.mantissa().try_into().unwrap(),
+        lp_tokens_to_mint.mantissa().try_into().unwrap(),
     )?;
 
     // update pool data
