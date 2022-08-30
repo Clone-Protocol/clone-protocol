@@ -10,13 +10,13 @@ pub struct InitializeCometManager<'info> {
     #[account(address = manager.admin)]
     pub admin: Signer<'info>,
     #[account(
-        mut,
         seeds = [b"manager".as_ref()],
         bump = manager_nonce,
         has_one = admin
     )]
     pub manager: Account<'info, Manager>,
     #[account(
+        mut,
         seeds = [b"user".as_ref(), user.key.as_ref()],
         bump = user_nonce
     )]

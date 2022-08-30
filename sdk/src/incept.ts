@@ -291,10 +291,7 @@ export class Incept {
     return tokenData.pools[poolIndex].assetInfo as AssetInfo;
   }
 
-  public async updatePrices(
-    poolIndices?: number[],
-    signers?: Array<Keypair>
-  ) {
+  public async updatePrices(poolIndices?: number[], signers?: Array<Keypair>) {
     let txn = new Transaction();
     const additionalComputeBudgetInstruction =
       ComputeBudgetProgram.requestUnits({
@@ -302,9 +299,7 @@ export class Incept {
         additionalFee: 0,
       });
     txn.add(additionalComputeBudgetInstruction);
-    let updatePricesIx = await this.updatePricesInstruction(
-      poolIndices
-    );
+    let updatePricesIx = await this.updatePricesInstruction(poolIndices);
     txn.add(updatePricesIx);
 
     await this.provider.send(txn, signers);
@@ -323,7 +318,7 @@ export class Incept {
       isWritable: boolean;
       isSigner: boolean;
     }> = [];
-    
+
     indices.forEach((index) => {
       priceFeeds.push({
         pubkey: tokenData.pools[index].assetInfo.priceFeedAddresses[0],
@@ -1547,7 +1542,7 @@ export class Incept {
     }
   }
 
-  public async initializeCometManager(user = this.provider.wallet.publicKey) {
+  public async initializeCometManager() {
     const { userPubkey, bump } = await this.getUserAddress();
 
     const cometManagerAccount = anchor.web3.Keypair.generate();
@@ -1558,7 +1553,7 @@ export class Incept {
       bump,
       {
         accounts: {
-          user: user,
+          user: this.provider.wallet.publicKey,
           admin: this.provider.wallet.publicKey,
           manager: this.managerAddress[0],
           userAccount: userPubkey,
@@ -1573,7 +1568,7 @@ export class Incept {
             cometManagerAccount
           ),
         ],
-        signers: [cometManagerAccount],
+        signers: [cometManagerAccount, memberShipTokenMintAccount],
       }
     );
   }
@@ -2420,9 +2415,9 @@ export class Incept {
     );
   }
 
-  public async getEffectiveUSDCollateralValue() {
+  public async getEffectiveUSDCollateralValue(forManager: boolean = false) {
     const tokenData = await this.getTokenData();
-    const comet = await this.getComet();
+    const comet = await this.getComet(forManager);
 
     // Iterate through collaterals.
     let effectiveUSDCollateral = 0;
@@ -2446,14 +2441,16 @@ export class Incept {
     return effectiveUSDCollateral;
   }
 
-  public async getHealthScore(): Promise<{
+  public async getHealthScore(forManager: boolean = false): Promise<{
     healthScore: number;
     ildHealthImpact: number;
   }> {
     const tokenData = await this.getTokenData();
-    const comet = await this.getComet();
+    const comet = await this.getComet(forManager);
 
-    const totalCollateralAmount = await this.getEffectiveUSDCollateralValue();
+    const totalCollateralAmount = await this.getEffectiveUSDCollateralValue(
+      forManager
+    );
     let totalIldHealthImpact = 0;
 
     const loss =
