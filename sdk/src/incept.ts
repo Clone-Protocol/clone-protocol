@@ -2283,11 +2283,29 @@ export class Incept {
 
     for (let i = 0; i < Number(singlePoolComets.numComets); i++) {
       try {
-
-        
         let singlePoolComet = await this.getSinglePoolComet(i);
         let cometPosition = singlePoolComet.positions[0];
         let poolIndex = cometPosition.poolIndex;
+        if (poolIndex === 255) {
+          cometInfos.push([
+            poolIndex,
+            singlePoolComet.collaterals[0].collateralIndex,
+            null,
+            null,
+            null,
+            null,
+            toNumber(
+              singlePoolComet.collaterals[0].collateralAmount
+            ),
+            null,
+            null,
+            0,
+            0,
+            0,
+            false
+          ]);
+          continue;
+        }
         let pool = await this.getPool(poolIndex);
         let collateralIndex = singlePoolComet.collaterals[0].collateralIndex;
         let assetInfo = await this.getAssetInfo(poolIndex);
@@ -2371,6 +2389,7 @@ export class Incept {
           borrowedIasset,
           borrowedUsdi,
           liquidityTokenAmount,
+          true
         ]);
       } catch (e) {
         console.log(e);
