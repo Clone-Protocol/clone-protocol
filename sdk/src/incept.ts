@@ -2282,93 +2282,99 @@ export class Incept {
     }
 
     for (let i = 0; i < Number(singlePoolComets.numComets); i++) {
-      let singlePoolComet = await this.getSinglePoolComet(i);
-      let cometPosition = singlePoolComet.positions[0];
-      let poolIndex = cometPosition.poolIndex;
-      let pool = await this.getPool(poolIndex);
-      let collateralIndex = singlePoolComet.collaterals[0].collateralIndex;
-      let assetInfo = await this.getAssetInfo(poolIndex);
-      let poolBalances = await this.getPoolBalances(poolIndex);
-      let ammPrice = poolBalances[1] / poolBalances[0];
-      let oraclePrice = toNumber(assetInfo.price);
-      let borrowedIasset = toNumber(cometPosition.borrowedIasset);
-      let borrowedUsdi = toNumber(cometPosition.borrowedIasset);
-      let totalCollateralAmount = toNumber(
-        singlePoolComet.collaterals[0].collateralAmount
-      );
-      let data = await this.calculateEditCometSinglePoolWithUsdiBorrowed(
-        i,
-        0,
-        0
-      );
-      let range = [data.lowerPrice, data.upperPrice];
-      let lowerPriceRange = range[0];
-      let upperPriceRange = range[1];
-      let minGap = Math.min(
-        oraclePrice - lowerPriceRange,
-        ammPrice - lowerPriceRange,
-        upperPriceRange - oraclePrice,
-        upperPriceRange - ammPrice
-      );
-      let indicatorPrice: number;
-      switch (minGap) {
-        case oraclePrice - lowerPriceRange:
-          indicatorPrice = oraclePrice;
-          break;
-        case ammPrice - lowerPriceRange:
-          indicatorPrice = ammPrice;
-          break;
-        case upperPriceRange - oraclePrice:
-          indicatorPrice = oraclePrice;
-          break;
-        case upperPriceRange - ammPrice:
-          indicatorPrice = ammPrice;
-          break;
-        default:
-          throw new Error("Couldn't get indicator price");
-          break;
-      }
-      let centerPrice =
-        toNumber(cometPosition.borrowedUsdi) /
-        toNumber(cometPosition.borrowedIasset);
+      try {
 
-      let liquidityTokenAmount = toNumber(cometPosition.liquidityTokenValue);
-      let liquidityTokenSupply = (
-        await this.connection.getTokenSupply(pool.liquidityTokenMint)
-      ).value!.uiAmount;
-      if (liquidityTokenSupply === null) {
-        throw new Error("Couldn't get token supply");
+        
+        let singlePoolComet = await this.getSinglePoolComet(i);
+        let cometPosition = singlePoolComet.positions[0];
+        let poolIndex = cometPosition.poolIndex;
+        let pool = await this.getPool(poolIndex);
+        let collateralIndex = singlePoolComet.collaterals[0].collateralIndex;
+        let assetInfo = await this.getAssetInfo(poolIndex);
+        let poolBalances = await this.getPoolBalances(poolIndex);
+        let ammPrice = poolBalances[1] / poolBalances[0];
+        let oraclePrice = toNumber(assetInfo.price);
+        let borrowedIasset = toNumber(cometPosition.borrowedIasset);
+        let borrowedUsdi = toNumber(cometPosition.borrowedIasset);
+        let totalCollateralAmount = toNumber(
+          singlePoolComet.collaterals[0].collateralAmount
+        );
+        let data = await this.calculateEditCometSinglePoolWithUsdiBorrowed(
+          i,
+          0,
+          0
+        );
+        let range = [data.lowerPrice, data.upperPrice];
+        let lowerPriceRange = range[0];
+        let upperPriceRange = range[1];
+        let minGap = Math.min(
+          oraclePrice - lowerPriceRange,
+          ammPrice - lowerPriceRange,
+          upperPriceRange - oraclePrice,
+          upperPriceRange - ammPrice
+        );
+        let indicatorPrice: number;
+        switch (minGap) {
+          case oraclePrice - lowerPriceRange:
+            indicatorPrice = oraclePrice;
+            break;
+          case ammPrice - lowerPriceRange:
+            indicatorPrice = ammPrice;
+            break;
+          case upperPriceRange - oraclePrice:
+            indicatorPrice = oraclePrice;
+            break;
+          case upperPriceRange - ammPrice:
+            indicatorPrice = ammPrice;
+            break;
+          default:
+            throw new Error("Couldn't get indicator price");
+            break;
+        }
+        let centerPrice =
+          toNumber(cometPosition.borrowedUsdi) /
+          toNumber(cometPosition.borrowedIasset);
+
+        let liquidityTokenAmount = toNumber(cometPosition.liquidityTokenValue);
+        let liquidityTokenSupply = (
+          await this.connection.getTokenSupply(pool.liquidityTokenMint)
+        ).value!.uiAmount;
+        if (liquidityTokenSupply === null) {
+          throw new Error("Couldn't get token supply");
+        }
+        let iassetValue =
+          (poolBalances[0] * liquidityTokenAmount) / liquidityTokenSupply;
+        let usdiValue =
+          (poolBalances[0] * liquidityTokenAmount) / liquidityTokenSupply;
+        let ildIsIasset: boolean;
+        let ild: number;
+        if (borrowedIasset > iassetValue) {
+          ildIsIasset = true;
+          ild = borrowedIasset - iassetValue;
+        } else if (borrowedUsdi > usdiValue) {
+          ildIsIasset = false;
+          ild = borrowedUsdi - usdiValue;
+        } else {
+          ildIsIasset = false;
+          ild = 0;
+        }
+        cometInfos.push([
+          poolIndex,
+          collateralIndex,
+          indicatorPrice,
+          centerPrice,
+          lowerPriceRange,
+          upperPriceRange,
+          totalCollateralAmount,
+          ildIsIasset,
+          ild,
+          borrowedIasset,
+          borrowedUsdi,
+          liquidityTokenAmount,
+        ]);
+      } catch (e) {
+        console.log(e);
       }
-      let iassetValue =
-        (poolBalances[0] * liquidityTokenAmount) / liquidityTokenSupply;
-      let usdiValue =
-        (poolBalances[0] * liquidityTokenAmount) / liquidityTokenSupply;
-      let ildIsIasset: boolean;
-      let ild: number;
-      if (borrowedIasset > iassetValue) {
-        ildIsIasset = true;
-        ild = borrowedIasset - iassetValue;
-      } else if (borrowedUsdi > usdiValue) {
-        ildIsIasset = false;
-        ild = borrowedUsdi - usdiValue;
-      } else {
-        ildIsIasset = false;
-        ild = 0;
-      }
-      cometInfos.push([
-        poolIndex,
-        collateralIndex,
-        indicatorPrice,
-        centerPrice,
-        lowerPriceRange,
-        upperPriceRange,
-        totalCollateralAmount,
-        ildIsIasset,
-        ild,
-        borrowedIasset,
-        borrowedUsdi,
-        liquidityTokenAmount,
-      ]);
     }
     return cometInfos;
   }
