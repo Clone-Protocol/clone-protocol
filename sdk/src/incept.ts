@@ -2286,7 +2286,7 @@ export class Incept {
         let singlePoolComet = await this.getSinglePoolComet(i);
         let cometPosition = singlePoolComet.positions[0];
         let poolIndex = cometPosition.poolIndex;
-        if (poolIndex === 255) {
+        if (Number(poolIndex) === 255) {
           cometInfos.push([
             poolIndex,
             singlePoolComet.collaterals[0].collateralIndex,
