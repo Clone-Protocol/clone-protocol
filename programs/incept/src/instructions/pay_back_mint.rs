@@ -49,7 +49,7 @@ impl<'a, 'b, 'c, 'info> From<&PayBackiAssetToMint<'info>>
     fn from(accounts: &PayBackiAssetToMint<'info>) -> CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
         let cpi_accounts = Burn {
             mint: accounts.iasset_mint.to_account_info().clone(),
-            to: accounts.user_iasset_token_account.to_account_info().clone(),
+            from: accounts.user_iasset_token_account.to_account_info().clone(),
             authority: accounts.user.to_account_info().clone(),
         };
         let cpi_program = accounts.token_program.to_account_info();
@@ -62,7 +62,7 @@ pub fn execute(
     _manager_nonce: u8,
     mint_index: u8,
     amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
     let mint_positions = &mut ctx.accounts.mint_positions.load_mut()?;
@@ -71,7 +71,7 @@ pub fn execute(
     // burn user iasset to pay back mint position
     let cpi_accounts = Burn {
         mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-        to: ctx
+        from: ctx
             .accounts
             .user_iasset_token_account
             .to_account_info()

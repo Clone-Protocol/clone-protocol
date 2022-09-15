@@ -34,7 +34,7 @@ pub fn execute<'info>(
     ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
     _manager_nonce: u8,
     pool_indices: PoolIndices,
-) -> ProgramResult {
+) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let n_accounts = ctx.remaining_accounts.iter().len();
 

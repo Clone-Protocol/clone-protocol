@@ -7,7 +7,7 @@ export type Incept = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -105,7 +105,7 @@ export type Incept = {
       "accounts": [
         {
           "name": "user",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -305,7 +305,7 @@ export type Incept = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -368,7 +368,7 @@ export type Incept = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -1311,7 +1311,7 @@ export type Incept = {
       "accounts": [
         {
           "name": "user",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -2239,6 +2239,10 @@ export type Incept = {
           {
             "name": "admin",
             "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
@@ -2472,6 +2476,23 @@ export type Incept = {
     }
   ],
   "types": [
+    {
+      "name": "PoolIndices",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "indices",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
     {
       "name": "Value",
       "type": {
@@ -2837,157 +2858,6 @@ export type Incept = {
       }
     },
     {
-      "name": "PoolIndices",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "indices",
-            "type": {
-              "array": [
-                "u8",
-                128
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "InceptError",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "InvalidMintCollateralRatio"
-          },
-          {
-            "name": "InvalidCometCollateralRatio"
-          },
-          {
-            "name": "DifferentScale"
-          },
-          {
-            "name": "MathError"
-          },
-          {
-            "name": "OracleConfidenceOutOfRange"
-          },
-          {
-            "name": "AssetInfoNotFound"
-          },
-          {
-            "name": "CollateralNotFound"
-          },
-          {
-            "name": "PoolNotFound"
-          },
-          {
-            "name": "InvalidCollateralType"
-          },
-          {
-            "name": "InvalidTokenAmount"
-          },
-          {
-            "name": "InvalidBool"
-          },
-          {
-            "name": "InsufficientCollateral"
-          },
-          {
-            "name": "NoPriceDeviationDetected"
-          },
-          {
-            "name": "OutdatedOracle"
-          },
-          {
-            "name": "CometAlreadyLiquidated"
-          },
-          {
-            "name": "CometNotYetLiquidated"
-          },
-          {
-            "name": "CometUnableToLiquidate"
-          },
-          {
-            "name": "NonStablesNotSupported"
-          },
-          {
-            "name": "MintPositionUnableToLiquidate"
-          },
-          {
-            "name": "NoSuchCollateralPosition"
-          },
-          {
-            "name": "InvalidHealthScoreCoefficient"
-          },
-          {
-            "name": "FailedImpermanentLossCalculation"
-          },
-          {
-            "name": "HealthScoreTooLow"
-          },
-          {
-            "name": "InsufficientUSDiCollateral"
-          },
-          {
-            "name": "AttemptedToAddNewPoolToSingleComet"
-          },
-          {
-            "name": "AttemptedToAddNewCollateralToSingleComet"
-          },
-          {
-            "name": "InvalidInputMintAccount"
-          },
-          {
-            "name": "InvalidInputCollateralAccount"
-          },
-          {
-            "name": "InvalidAccountLoaderOwner"
-          },
-          {
-            "name": "InvalidInputPositionIndex"
-          },
-          {
-            "name": "InvalidTokenAccountBalance"
-          },
-          {
-            "name": "InequalityComparisonViolated"
-          },
-          {
-            "name": "NotSinglePoolComet"
-          },
-          {
-            "name": "SinglePoolCometNotEmpty"
-          },
-          {
-            "name": "LiquidityNotWithdrawn"
-          },
-          {
-            "name": "NotSubjectToLiquidation"
-          },
-          {
-            "name": "NotSubjectToILLiquidation"
-          },
-          {
-            "name": "LiquidationAmountTooLarge"
-          },
-          {
-            "name": "NoRemainingAccountsSupplied"
-          },
-          {
-            "name": "InvalidRecenter"
-          },
-          {
-            "name": "NonZeroCollateralizationRatioRequired"
-          },
-          {
-            "name": "IncorrectOracleAddress"
-          }
-        ]
-      }
-    },
-    {
       "name": "HealthScore",
       "type": {
         "kind": "enum",
@@ -2997,9 +2867,7 @@ export type Incept = {
             "fields": [
               {
                 "name": "score",
-                "type": {
-                  "defined": "f64"
-                }
+                "type": "f64"
               }
             ]
           },
@@ -3008,14 +2876,224 @@ export type Incept = {
             "fields": [
               {
                 "name": "score",
-                "type": {
-                  "defined": "f64"
-                }
+                "type": "f64"
               }
             ]
           }
         ]
       }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidMintCollateralRatio",
+      "msg": "Invalid Mint Collateral Ratio"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidCometCollateralRatio",
+      "msg": "Invalid Comet Collateral Ratio"
+    },
+    {
+      "code": 6002,
+      "name": "DifferentScale",
+      "msg": "Different Scale"
+    },
+    {
+      "code": 6003,
+      "name": "MathError",
+      "msg": "Math Error"
+    },
+    {
+      "code": 6004,
+      "name": "OracleConfidenceOutOfRange",
+      "msg": "Oracle Confidence Out Of Range"
+    },
+    {
+      "code": 6005,
+      "name": "AssetInfoNotFound",
+      "msg": "Asset Info Not Found"
+    },
+    {
+      "code": 6006,
+      "name": "CollateralNotFound",
+      "msg": "Collateral Not Found"
+    },
+    {
+      "code": 6007,
+      "name": "PoolNotFound",
+      "msg": "Pool Not Found"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidCollateralType",
+      "msg": "Invalid Collateral Type"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidTokenAmount",
+      "msg": "Invalid Token Amount"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidBool",
+      "msg": "Invalid Bool"
+    },
+    {
+      "code": 6011,
+      "name": "InsufficientCollateral",
+      "msg": "Insufficient Collateral"
+    },
+    {
+      "code": 6012,
+      "name": "NoPriceDeviationDetected",
+      "msg": "No Price Deviation Detected"
+    },
+    {
+      "code": 6013,
+      "name": "OutdatedOracle",
+      "msg": "Outdated Oracle"
+    },
+    {
+      "code": 6014,
+      "name": "CometAlreadyLiquidated",
+      "msg": "Comet Already Liquidated"
+    },
+    {
+      "code": 6015,
+      "name": "CometNotYetLiquidated",
+      "msg": "Comet Not Yet Liquidated"
+    },
+    {
+      "code": 6016,
+      "name": "CometUnableToLiquidate",
+      "msg": "Comet Unable to Liquidate"
+    },
+    {
+      "code": 6017,
+      "name": "NonStablesNotSupported",
+      "msg": "Non-stables Not Supported"
+    },
+    {
+      "code": 6018,
+      "name": "MintPositionUnableToLiquidate",
+      "msg": "Mint Position Unable to Liquidate"
+    },
+    {
+      "code": 6019,
+      "name": "NoSuchCollateralPosition",
+      "msg": "No Such Collateral Position"
+    },
+    {
+      "code": 6020,
+      "name": "InvalidHealthScoreCoefficient",
+      "msg": "Invalid Health Score Coefficient"
+    },
+    {
+      "code": 6021,
+      "name": "FailedImpermanentLossCalculation",
+      "msg": "Failed Impermanent Loss Calculation"
+    },
+    {
+      "code": 6022,
+      "name": "HealthScoreTooLow",
+      "msg": "Health Score Too Low"
+    },
+    {
+      "code": 6023,
+      "name": "InsufficientUSDiCollateral",
+      "msg": "Insufficient USDi Collateral"
+    },
+    {
+      "code": 6024,
+      "name": "AttemptedToAddNewPoolToSingleComet",
+      "msg": "Attempted To Add New Pool To Single Comet"
+    },
+    {
+      "code": 6025,
+      "name": "AttemptedToAddNewCollateralToSingleComet",
+      "msg": "Attempted To Add New Collateral To Single Comet"
+    },
+    {
+      "code": 6026,
+      "name": "InvalidInputMintAccount",
+      "msg": "Invalid input mint account"
+    },
+    {
+      "code": 6027,
+      "name": "InvalidInputCollateralAccount",
+      "msg": "Invalid input collateral account"
+    },
+    {
+      "code": 6028,
+      "name": "InvalidAccountLoaderOwner",
+      "msg": "Invalid Account loader owner"
+    },
+    {
+      "code": 6029,
+      "name": "InvalidInputPositionIndex",
+      "msg": "Invalid input position index"
+    },
+    {
+      "code": 6030,
+      "name": "InvalidTokenAccountBalance",
+      "msg": "Invalid token account balance"
+    },
+    {
+      "code": 6031,
+      "name": "InequalityComparisonViolated",
+      "msg": "Inequality comparison violated"
+    },
+    {
+      "code": 6032,
+      "name": "NotSinglePoolComet",
+      "msg": "Not Single Pool Comet"
+    },
+    {
+      "code": 6033,
+      "name": "SinglePoolCometNotEmpty",
+      "msg": "Single Pool Comet Not Empty"
+    },
+    {
+      "code": 6034,
+      "name": "LiquidityNotWithdrawn",
+      "msg": "Liquidity Not Withdrawn"
+    },
+    {
+      "code": 6035,
+      "name": "NotSubjectToLiquidation",
+      "msg": "Not Subject to Liquidation"
+    },
+    {
+      "code": 6036,
+      "name": "NotSubjectToILLiquidation",
+      "msg": "Not Subject to IL liquidation"
+    },
+    {
+      "code": 6037,
+      "name": "LiquidationAmountTooLarge",
+      "msg": "Liquidation amount too large"
+    },
+    {
+      "code": 6038,
+      "name": "NoRemainingAccountsSupplied",
+      "msg": "No remaining accounts supplied"
+    },
+    {
+      "code": 6039,
+      "name": "InvalidRecenter",
+      "msg": "Invalid Recenter"
+    },
+    {
+      "code": 6040,
+      "name": "NonZeroCollateralizationRatioRequired",
+      "msg": "Non-zero collateralization ratio required"
+    },
+    {
+      "code": 6041,
+      "name": "IncorrectOracleAddress",
+      "msg": "Incorrect oracle address provided"
     }
   ]
 };
@@ -3029,7 +3107,7 @@ export const IDL: Incept = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -3127,7 +3205,7 @@ export const IDL: Incept = {
       "accounts": [
         {
           "name": "user",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -3327,7 +3405,7 @@ export const IDL: Incept = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -3390,7 +3468,7 @@ export const IDL: Incept = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -4333,7 +4411,7 @@ export const IDL: Incept = {
       "accounts": [
         {
           "name": "user",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -5261,6 +5339,10 @@ export const IDL: Incept = {
           {
             "name": "admin",
             "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
@@ -5494,6 +5576,23 @@ export const IDL: Incept = {
     }
   ],
   "types": [
+    {
+      "name": "PoolIndices",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "indices",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
     {
       "name": "Value",
       "type": {
@@ -5859,157 +5958,6 @@ export const IDL: Incept = {
       }
     },
     {
-      "name": "PoolIndices",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "indices",
-            "type": {
-              "array": [
-                "u8",
-                128
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "InceptError",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "InvalidMintCollateralRatio"
-          },
-          {
-            "name": "InvalidCometCollateralRatio"
-          },
-          {
-            "name": "DifferentScale"
-          },
-          {
-            "name": "MathError"
-          },
-          {
-            "name": "OracleConfidenceOutOfRange"
-          },
-          {
-            "name": "AssetInfoNotFound"
-          },
-          {
-            "name": "CollateralNotFound"
-          },
-          {
-            "name": "PoolNotFound"
-          },
-          {
-            "name": "InvalidCollateralType"
-          },
-          {
-            "name": "InvalidTokenAmount"
-          },
-          {
-            "name": "InvalidBool"
-          },
-          {
-            "name": "InsufficientCollateral"
-          },
-          {
-            "name": "NoPriceDeviationDetected"
-          },
-          {
-            "name": "OutdatedOracle"
-          },
-          {
-            "name": "CometAlreadyLiquidated"
-          },
-          {
-            "name": "CometNotYetLiquidated"
-          },
-          {
-            "name": "CometUnableToLiquidate"
-          },
-          {
-            "name": "NonStablesNotSupported"
-          },
-          {
-            "name": "MintPositionUnableToLiquidate"
-          },
-          {
-            "name": "NoSuchCollateralPosition"
-          },
-          {
-            "name": "InvalidHealthScoreCoefficient"
-          },
-          {
-            "name": "FailedImpermanentLossCalculation"
-          },
-          {
-            "name": "HealthScoreTooLow"
-          },
-          {
-            "name": "InsufficientUSDiCollateral"
-          },
-          {
-            "name": "AttemptedToAddNewPoolToSingleComet"
-          },
-          {
-            "name": "AttemptedToAddNewCollateralToSingleComet"
-          },
-          {
-            "name": "InvalidInputMintAccount"
-          },
-          {
-            "name": "InvalidInputCollateralAccount"
-          },
-          {
-            "name": "InvalidAccountLoaderOwner"
-          },
-          {
-            "name": "InvalidInputPositionIndex"
-          },
-          {
-            "name": "InvalidTokenAccountBalance"
-          },
-          {
-            "name": "InequalityComparisonViolated"
-          },
-          {
-            "name": "NotSinglePoolComet"
-          },
-          {
-            "name": "SinglePoolCometNotEmpty"
-          },
-          {
-            "name": "LiquidityNotWithdrawn"
-          },
-          {
-            "name": "NotSubjectToLiquidation"
-          },
-          {
-            "name": "NotSubjectToILLiquidation"
-          },
-          {
-            "name": "LiquidationAmountTooLarge"
-          },
-          {
-            "name": "NoRemainingAccountsSupplied"
-          },
-          {
-            "name": "InvalidRecenter"
-          },
-          {
-            "name": "NonZeroCollateralizationRatioRequired"
-          },
-          {
-            "name": "IncorrectOracleAddress"
-          }
-        ]
-      }
-    },
-    {
       "name": "HealthScore",
       "type": {
         "kind": "enum",
@@ -6019,9 +5967,7 @@ export const IDL: Incept = {
             "fields": [
               {
                 "name": "score",
-                "type": {
-                  "defined": "f64"
-                }
+                "type": "f64"
               }
             ]
           },
@@ -6030,14 +5976,224 @@ export const IDL: Incept = {
             "fields": [
               {
                 "name": "score",
-                "type": {
-                  "defined": "f64"
-                }
+                "type": "f64"
               }
             ]
           }
         ]
       }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidMintCollateralRatio",
+      "msg": "Invalid Mint Collateral Ratio"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidCometCollateralRatio",
+      "msg": "Invalid Comet Collateral Ratio"
+    },
+    {
+      "code": 6002,
+      "name": "DifferentScale",
+      "msg": "Different Scale"
+    },
+    {
+      "code": 6003,
+      "name": "MathError",
+      "msg": "Math Error"
+    },
+    {
+      "code": 6004,
+      "name": "OracleConfidenceOutOfRange",
+      "msg": "Oracle Confidence Out Of Range"
+    },
+    {
+      "code": 6005,
+      "name": "AssetInfoNotFound",
+      "msg": "Asset Info Not Found"
+    },
+    {
+      "code": 6006,
+      "name": "CollateralNotFound",
+      "msg": "Collateral Not Found"
+    },
+    {
+      "code": 6007,
+      "name": "PoolNotFound",
+      "msg": "Pool Not Found"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidCollateralType",
+      "msg": "Invalid Collateral Type"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidTokenAmount",
+      "msg": "Invalid Token Amount"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidBool",
+      "msg": "Invalid Bool"
+    },
+    {
+      "code": 6011,
+      "name": "InsufficientCollateral",
+      "msg": "Insufficient Collateral"
+    },
+    {
+      "code": 6012,
+      "name": "NoPriceDeviationDetected",
+      "msg": "No Price Deviation Detected"
+    },
+    {
+      "code": 6013,
+      "name": "OutdatedOracle",
+      "msg": "Outdated Oracle"
+    },
+    {
+      "code": 6014,
+      "name": "CometAlreadyLiquidated",
+      "msg": "Comet Already Liquidated"
+    },
+    {
+      "code": 6015,
+      "name": "CometNotYetLiquidated",
+      "msg": "Comet Not Yet Liquidated"
+    },
+    {
+      "code": 6016,
+      "name": "CometUnableToLiquidate",
+      "msg": "Comet Unable to Liquidate"
+    },
+    {
+      "code": 6017,
+      "name": "NonStablesNotSupported",
+      "msg": "Non-stables Not Supported"
+    },
+    {
+      "code": 6018,
+      "name": "MintPositionUnableToLiquidate",
+      "msg": "Mint Position Unable to Liquidate"
+    },
+    {
+      "code": 6019,
+      "name": "NoSuchCollateralPosition",
+      "msg": "No Such Collateral Position"
+    },
+    {
+      "code": 6020,
+      "name": "InvalidHealthScoreCoefficient",
+      "msg": "Invalid Health Score Coefficient"
+    },
+    {
+      "code": 6021,
+      "name": "FailedImpermanentLossCalculation",
+      "msg": "Failed Impermanent Loss Calculation"
+    },
+    {
+      "code": 6022,
+      "name": "HealthScoreTooLow",
+      "msg": "Health Score Too Low"
+    },
+    {
+      "code": 6023,
+      "name": "InsufficientUSDiCollateral",
+      "msg": "Insufficient USDi Collateral"
+    },
+    {
+      "code": 6024,
+      "name": "AttemptedToAddNewPoolToSingleComet",
+      "msg": "Attempted To Add New Pool To Single Comet"
+    },
+    {
+      "code": 6025,
+      "name": "AttemptedToAddNewCollateralToSingleComet",
+      "msg": "Attempted To Add New Collateral To Single Comet"
+    },
+    {
+      "code": 6026,
+      "name": "InvalidInputMintAccount",
+      "msg": "Invalid input mint account"
+    },
+    {
+      "code": 6027,
+      "name": "InvalidInputCollateralAccount",
+      "msg": "Invalid input collateral account"
+    },
+    {
+      "code": 6028,
+      "name": "InvalidAccountLoaderOwner",
+      "msg": "Invalid Account loader owner"
+    },
+    {
+      "code": 6029,
+      "name": "InvalidInputPositionIndex",
+      "msg": "Invalid input position index"
+    },
+    {
+      "code": 6030,
+      "name": "InvalidTokenAccountBalance",
+      "msg": "Invalid token account balance"
+    },
+    {
+      "code": 6031,
+      "name": "InequalityComparisonViolated",
+      "msg": "Inequality comparison violated"
+    },
+    {
+      "code": 6032,
+      "name": "NotSinglePoolComet",
+      "msg": "Not Single Pool Comet"
+    },
+    {
+      "code": 6033,
+      "name": "SinglePoolCometNotEmpty",
+      "msg": "Single Pool Comet Not Empty"
+    },
+    {
+      "code": 6034,
+      "name": "LiquidityNotWithdrawn",
+      "msg": "Liquidity Not Withdrawn"
+    },
+    {
+      "code": 6035,
+      "name": "NotSubjectToLiquidation",
+      "msg": "Not Subject to Liquidation"
+    },
+    {
+      "code": 6036,
+      "name": "NotSubjectToILLiquidation",
+      "msg": "Not Subject to IL liquidation"
+    },
+    {
+      "code": 6037,
+      "name": "LiquidationAmountTooLarge",
+      "msg": "Liquidation amount too large"
+    },
+    {
+      "code": 6038,
+      "name": "NoRemainingAccountsSupplied",
+      "msg": "No remaining accounts supplied"
+    },
+    {
+      "code": 6039,
+      "name": "InvalidRecenter",
+      "msg": "Invalid Recenter"
+    },
+    {
+      "code": 6040,
+      "name": "NonZeroCollateralizationRatioRequired",
+      "msg": "Non-zero collateralization ratio required"
+    },
+    {
+      "code": 6041,
+      "name": "IncorrectOracleAddress",
+      "msg": "Incorrect oracle address provided"
     }
   ]
 };

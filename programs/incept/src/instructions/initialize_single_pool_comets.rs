@@ -20,7 +20,7 @@ pub struct InitializeSinglePoolComets<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<InitializeSinglePoolComets>, _user_nonce: u8) -> ProgramResult {
+pub fn execute(ctx: Context<InitializeSinglePoolComets>, _user_nonce: u8) -> Result<()> {
     let mut single_pool_comets = ctx.accounts.single_pool_comets.load_init()?;
 
     // set user data

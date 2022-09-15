@@ -111,7 +111,7 @@ pub struct Price {
 
 impl Price {
     #[inline]
-    pub fn load<'a>(price_feed: &'a AccountInfo) -> Result<RefMut<'a, Price>, ProgramError> {
+    pub fn load<'a>(price_feed: &'a AccountInfo) -> Result<RefMut<'a, Price>> {
         let account_data: RefMut<'a, [u8]>;
         let state: RefMut<'a, Self>;
 

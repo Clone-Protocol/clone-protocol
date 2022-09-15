@@ -66,7 +66,7 @@ pub fn execute(
     _manager_nonce: u8,
     collateral_index: u8,
     collateral_amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
 
@@ -92,7 +92,9 @@ pub fn execute(
     // check to see if a new collateral must be added to the position
     if comet_collateral_index == usize::MAX {
         if comet.is_single_pool == 1 {
-            return Err(InceptError::AttemptedToAddNewCollateralToSingleComet.into());
+            return Err(error!(
+                InceptError::AttemptedToAddNewCollateralToSingleComet
+            ));
         }
         comet.add_collateral(CometCollateral {
             authority: *ctx.accounts.user.to_account_info().key,

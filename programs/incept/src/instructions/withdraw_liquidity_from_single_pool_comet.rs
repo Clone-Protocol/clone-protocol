@@ -70,7 +70,7 @@ pub fn execute(
     ctx: Context<WithdrawLiquidityFromSinglePoolComet>,
     manager_nonce: u8,
     liquidity_token_amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut single_pool_comet = ctx.accounts.single_pool_comet.load_mut()?;
@@ -150,7 +150,7 @@ pub fn execute(
         // burn liquidity from amm
         let cpi_accounts = Burn {
             mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-            to: ctx
+            from: ctx
                 .accounts
                 .amm_iasset_token_account
                 .to_account_info()
@@ -179,7 +179,7 @@ pub fn execute(
         if comet_collateral.collateral_index == 0 {
             let cpi_accounts = Burn {
                 mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                to: ctx
+                from: ctx
                     .accounts
                     .amm_usdi_token_account
                     .to_account_info()
@@ -220,7 +220,7 @@ pub fn execute(
         } else {
             let cpi_accounts = Burn {
                 mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                to: ctx
+                from: ctx
                     .accounts
                     .amm_usdi_token_account
                     .to_account_info()
@@ -286,7 +286,7 @@ pub fn execute(
         // burn liquidity from amm
         let cpi_accounts = Burn {
             mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-            to: ctx
+            from: ctx
                 .accounts
                 .amm_iasset_token_account
                 .to_account_info()
@@ -307,7 +307,7 @@ pub fn execute(
         if comet_collateral.collateral_index == 0 {
             let cpi_accounts = Burn {
                 mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                to: ctx
+                from: ctx
                     .accounts
                     .amm_usdi_token_account
                     .to_account_info()
@@ -347,7 +347,7 @@ pub fn execute(
         } else {
             let cpi_accounts = Burn {
                 mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                to: ctx
+                from: ctx
                     .accounts
                     .amm_usdi_token_account
                     .to_account_info()
@@ -401,7 +401,7 @@ pub fn execute(
         // burn liquidity from amm
         let cpi_accounts = Burn {
             mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-            to: ctx
+            from: ctx
                 .accounts
                 .amm_usdi_token_account
                 .to_account_info()
@@ -420,7 +420,7 @@ pub fn execute(
         )?;
         let cpi_accounts = Burn {
             mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-            to: ctx
+            from: ctx
                 .accounts
                 .amm_iasset_token_account
                 .to_account_info()
@@ -451,7 +451,7 @@ pub fn execute(
     // burn liquidity tokens from comet
     let cpi_accounts = Burn {
         mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
-        to: ctx
+        from: ctx
             .accounts
             .comet_liquidity_token_account
             .to_account_info()

@@ -33,12 +33,13 @@ const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 
 describe("incept", async () => {
-  const provider = anchor.Provider.local();
+  const provider = anchor.AnchorProvider.local();
   anchor.setProvider(provider);
   let inceptProgram = anchor.workspace.Incept as Program<Incept>;
   let pythProgram = anchor.workspace.Pyth as Program<Pyth>;
   //let mockUSDCProgram = anchor.workspace.MockUsdc as Program<MockUsdc>;
-  let walletPubkey = inceptProgram.provider.wallet.publicKey;
+  //let walletPubkey = inceptProgram.provider.wallet.publicKey;
+  let walletPubkey = inceptProgram.provider.publicKey!;
   let storeProgram = anchor.workspace.Store as Program<Store>;
   let jupiterProgram = anchor.workspace
     .JupiterAggMock as Program<JupiterAggMock>;
@@ -67,22 +68,22 @@ describe("incept", async () => {
 
   const mockAssetMint = anchor.web3.Keypair.generate();
   let [jupiterAddress, jupiterNonce] = await PublicKey.findProgramAddress(
-    [Buffer.from("jupiter")],
+    [anchor.utils.bytes.utf8.encode("jupiter")], //, jupiterProgram.provider.wallet.publicKey.toBuffer()],
     jupiterProgram.programId
   );
   it("mock jupiter agg initialized + mock usdc initialized + mock asset initialized!", async () => {
-    await jupiterProgram.rpc.initialize(jupiterNonce, {
-      accounts: {
-        admin: jupiterProgram.provider.wallet.publicKey,
+    await jupiterProgram.methods
+      .initialize()
+      .accounts({
+        admin: jupiterProgram.provider.publicKey!,
         jupiterAccount: jupiterAddress,
         usdcMint: mockUSDCMint.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: anchor.web3.SystemProgram.programId,
-      },
-      instructions: [],
-      signers: [mockUSDCMint],
-    });
+      })
+      .signers([mockUSDCMint])
+      .rpc();
   });
 
   // it("mock usdc initialized!", async () => {
@@ -159,17 +160,18 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    await jupiterProgram.rpc.createAsset(priceFeed, {
-      accounts: {
-        payer: jupiterProgram.provider.wallet.publicKey,
+    await jupiterProgram.methods
+      .createAsset(priceFeed)
+      .accounts({
+        payer: jupiterProgram.provider.publicKey!,
         assetMint: mockAssetMint.publicKey,
         jupiterAccount: jupiterAddress,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: anchor.web3.SystemProgram.programId,
-      },
-      signers: [mockAssetMint],
-    });
+      })
+      .signers([mockAssetMint])
+      .rpc();
 
     // let r = await chainlink.fetchAnswer();
 
@@ -292,14 +294,15 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
       );
-    await jupiterProgram.rpc.mintUsdc(jupiterNonce, usdcMintAmount, {
-      accounts: {
+    await jupiterProgram.methods
+      .mintUsdc(jupiterNonce, usdcMintAmount)
+      .accounts({
         usdcMint: mockUSDCMint.publicKey,
         usdcTokenAccount: mockUSDCTokenAccountInfo.address,
         jupiterAccount: jupiterAddress,
         tokenProgram: TOKEN_PROGRAM_ID,
-      },
-    });
+      })
+      .rpc();
     // for (let i = 0; i < 1; i++) {
     //   await mockUSDCProgram.rpc.mintMockUsdc(mockUSDCAccount[1], {
     //     accounts: {
@@ -381,19 +384,15 @@ describe("incept", async () => {
         mockAssetMint.publicKey
       );
 
-    await jupiterProgram.rpc.mintAsset(
-      jupiterNonce,
-      0,
-      new BN(assetMintAmount * 100000000),
-      {
-        accounts: {
-          assetMint: mockAssetMint.publicKey,
-          assetTokenAccount: mockAssetAssociatedTokenAddress.address,
-          jupiterAccount: jupiterAddress,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        },
-      }
-    );
+    await jupiterProgram.methods
+      .mintAsset(jupiterNonce, 0, new BN(assetMintAmount * 100000000))
+      .accounts({
+        assetMint: mockAssetMint.publicKey,
+        assetTokenAccount: mockAssetAssociatedTokenAddress.address,
+        jupiterAccount: jupiterAddress,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
 
     mockAssetAssociatedTokenAddress =
       await inceptClient.getOrCreateAssociatedTokenAccount(
@@ -650,22 +649,18 @@ describe("incept", async () => {
     let userAccountData = await inceptClient.getUserAccount();
     let assetInfo = await inceptClient.getAssetInfo(0);
 
-    await inceptProgram.rpc.payBackMint(
-      inceptClient.managerAddress[1],
-      new BN(0),
-      new BN(5000000),
-      {
-        accounts: {
-          user: walletPubkey,
-          manager: inceptClient.managerAddress[0],
-          tokenData: inceptClient.manager!.tokenData,
-          userIassetTokenAccount: iassetTokenAccountInfo.address,
-          mintPositions: userAccountData.mintPositions,
-          iassetMint: assetInfo.iassetMint,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        },
-      }
-    );
+    await inceptProgram.methods
+      .payBackMint(inceptClient.managerAddress[1], new BN(0), new BN(5000000))
+      .accounts({
+        user: walletPubkey,
+        manager: inceptClient.managerAddress[0],
+        tokenData: inceptClient.manager!.tokenData,
+        userIassetTokenAccount: iassetTokenAccountInfo.address,
+        mintPositions: userAccountData.mintPositions,
+        iassetMint: assetInfo.iassetMint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
 
     iassetTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
@@ -1880,7 +1875,8 @@ describe("incept", async () => {
       );
 
     assert.closeTo(
-      usdiAccountBalance.value!.uiAmount,
+      usdiAccountBalance.value.uiAmount!,
+      //usdiAccountBalance.value!.uiAmount,
       510735.08198851,
       1e-6,
       "check usdi pool balance"
@@ -2108,7 +2104,7 @@ describe("incept", async () => {
     let healthScore1 = await inceptClient.getHealthScore();
 
     await inceptClient.liquidateCometPositionReduction(
-      inceptClient.provider.wallet.publicKey,
+      inceptClient.provider.publicKey!,
       0,
       toNumber(comet.positions[0].liquidityTokenValue)
     );
@@ -2129,7 +2125,7 @@ describe("incept", async () => {
 
     // Reduce IL liquidation using stable collateral.
     await inceptClient.liquidateCometILReduction(
-      inceptClient.provider.wallet.publicKey,
+      inceptClient.provider.publicKey!,
       0,
       0,
       0.2,
@@ -2152,7 +2148,7 @@ describe("incept", async () => {
 
     // Reduce IL liquidation using non-stable collateral.
     await inceptClient.liquidateCometILReduction(
-      inceptClient.provider.wallet.publicKey,
+      inceptClient.provider.publicKey!,
       0,
       1,
       0.02,

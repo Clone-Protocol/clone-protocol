@@ -36,7 +36,7 @@ pub fn execute(
     ctx: Context<InitializeSinglePoolComet>,
     _manager_nonce: u8,
     pool_index: u8,
-) -> ProgramResult {
+) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let (_, collateral_index) = token_data

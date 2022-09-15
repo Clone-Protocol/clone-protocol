@@ -19,7 +19,7 @@ pub struct InitializeLiquidityPositions<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<InitializeLiquidityPositions>, _user_nonce: u8) -> ProgramResult {
+pub fn execute(ctx: Context<InitializeLiquidityPositions>, _user_nonce: u8) -> Result<()> {
     let mut liquidity_positions = ctx.accounts.liquidity_positions.load_init()?;
 
     // set user data

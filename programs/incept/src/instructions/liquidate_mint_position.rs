@@ -74,7 +74,7 @@ pub fn execute(
     ctx: Context<LiquidateMintPosition>,
     manager_nonce: u8,
     mint_index: u8,
-) -> ProgramResult {
+) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 
     let token_data = &mut ctx.accounts.token_data.load()?;
@@ -111,7 +111,7 @@ pub fn execute(
     // Burn the iAsset from the liquidator
     let cpi_accounts = Burn {
         mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-        to: ctx
+        from: ctx
             .accounts
             .liquidator_iasset_token_account
             .to_account_info()

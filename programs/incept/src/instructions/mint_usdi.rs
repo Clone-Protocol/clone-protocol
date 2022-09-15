@@ -44,7 +44,7 @@ pub struct MintUSDI<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(ctx: Context<MintUSDI>, manager_nonce: u8, amount: u64) -> ProgramResult {
+pub fn execute(ctx: Context<MintUSDI>, manager_nonce: u8, amount: u64) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
@@ -65,10 +65,10 @@ pub fn execute(ctx: Context<MintUSDI>, manager_nonce: u8, amount: u64) -> Progra
         / Decimal::new(1, collateral_scale.try_into().unwrap());
 
     // check to see if the collateral used to mint usdi is stable
-    let is_stable: Result<bool, InceptError> = match collateral.stable {
+    let is_stable: Result<bool> = match collateral.stable {
         0 => Ok(false),
         1 => Ok(true),
-        _ => Err(InceptError::InvalidBool),
+        _ => Err(error!(InceptError::InvalidBool)),
     };
 
     // if collateral is not stable, we throw an error

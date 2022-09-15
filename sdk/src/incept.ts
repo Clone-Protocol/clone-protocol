@@ -87,7 +87,7 @@ export class Incept {
       toDevnetScale(ilLiquidationRewardPct),
       {
         accounts: {
-          admin: this.provider.wallet.publicKey,
+          admin: this.provider.publicKey!,
           manager: managerPubkeyAndBump[0],
           usdiMint: usdiMint.publicKey,
           usdiVault: usdiVault.publicKey,
@@ -140,7 +140,7 @@ export class Incept {
     const { userPubkey, bump } = await this.getUserAddress();
     await this.program.rpc.initializeUser(bump, {
       accounts: {
-        user: this.provider.wallet.publicKey,
+        user: this.provider.publicKey!,
         userAccount: userPubkey,
         rent: RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -302,7 +302,7 @@ export class Incept {
     let updatePricesIx = await this.updatePricesInstruction(poolIndices);
     txn.add(updatePricesIx);
 
-    await this.provider.send(txn, signers);
+    await this.provider.sendAndConfirm(txn, signers);
   }
 
   public async updatePricesInstruction(poolIndices?: number[]) {
@@ -425,7 +425,7 @@ export class Incept {
 
   public async getUserAddress(address?: PublicKey) {
     if (!address) {
-      address = this.provider.wallet.publicKey;
+      address = this.provider.publicKey!;
     }
 
     const [userPubkey, bump] = await PublicKey.findProgramAddress(
@@ -457,7 +457,10 @@ export class Incept {
       userCollateralTokenAccount,
       collateralIndex
     )) as TransactionInstruction;
-    await this.provider.send(new Transaction().add(mintUsdiIx), signers);
+    await this.provider.sendAndConfirm(
+      new Transaction().add(mintUsdiIx),
+      signers
+    );
   }
 
   public async mintUsdiInstruction(
@@ -472,7 +475,7 @@ export class Incept {
       new BN(amount),
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           vault: tokenData.collaterals[collateralIndex].vault,
@@ -504,7 +507,7 @@ export class Incept {
         poolIndex,
         collateralIndex
       );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(initializeMintPositionIx),
       signers
     );
@@ -527,7 +530,7 @@ export class Incept {
 
       await this.program.rpc.initializeMintPositions(bump, {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           userAccount: userPubkey,
           mintPositions: mintPositionsAccount.publicKey,
           rent: RENT_PUBKEY,
@@ -550,7 +553,7 @@ export class Incept {
       collateralAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           mintPositions: userAccount.mintPositions,
@@ -576,7 +579,7 @@ export class Incept {
       userCollateralTokenAccount,
       collateralAmount
     );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(addCollateralToMintIx),
       signers
     );
@@ -597,7 +600,7 @@ export class Incept {
       collateralAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           mintPositions: userAccount.mintPositions,
@@ -618,12 +621,12 @@ export class Incept {
     const updatePricesIx = await this.updatePricesInstruction();
     const withdrawCollateralFromMintIx =
       await this.withdrawCollateralFromMintInstruction(
-        this.provider.wallet.publicKey,
+        this.provider.publicKey!,
         mintIndex,
         userCollateralTokenAccount,
         collateralAmount
       );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(withdrawCollateralFromMintIx),
       signers
     );
@@ -668,7 +671,7 @@ export class Incept {
       iassetAmount,
       mintIndex
     );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(payBackiAssetToMintIx),
       signers
     );
@@ -688,7 +691,7 @@ export class Incept {
       iassetAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           mintPositions: userAccount.mintPositions,
@@ -712,7 +715,7 @@ export class Incept {
       iassetAmount,
       mintIndex
     );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(addiAssetToMintIx),
       signers
     );
@@ -732,7 +735,7 @@ export class Incept {
       iassetAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           mintPositions: userAccount.mintPositions,
@@ -760,7 +763,7 @@ export class Incept {
 
     const withdrawCollateralFromMintIx =
       await this.withdrawCollateralFromMintInstruction(
-        this.provider.wallet.publicKey,
+        this.provider.publicKey!,
         mintIndex,
         userCollateralTokenAccount,
         new BN(getMantissa(mintPosition.collateralAmount))
@@ -768,7 +771,7 @@ export class Incept {
 
     const updatePricesIx = await this.updatePricesInstruction();
 
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction()
         .add(payBackiAssetToMintIx)
         .add(updatePricesIx)
@@ -793,7 +796,7 @@ export class Incept {
         iassetAmount,
         poolIndex
       );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(initializeLiquidityPositionIx),
       signers
     );
@@ -816,7 +819,7 @@ export class Incept {
 
       await this.program.rpc.initializeLiquidityPositions(bump, {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           userAccount: userPubkey,
           liquidityPositions: liquidityPositionsAccount.publicKey,
           rent: RENT_PUBKEY,
@@ -839,7 +842,7 @@ export class Incept {
       iassetAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           liquidityPositions: userAccount.liquidityPositions,
@@ -870,7 +873,7 @@ export class Incept {
       iassetAmount,
       poolIndex
     );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(provideLiquidityIx),
       signers
     );
@@ -894,7 +897,7 @@ export class Incept {
       iassetAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           liquidityPositions: userAccount.liquidityPositions,
@@ -925,7 +928,7 @@ export class Incept {
       liquidityTokenAmount,
       poolIndex
     );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(withdrawLiquidityIx),
       signers
     );
@@ -948,7 +951,7 @@ export class Incept {
       liquidityTokenAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           liquidityPositions: userAccount.liquidityPositions,
@@ -977,7 +980,10 @@ export class Incept {
       iassetAmount,
       poolIndex
     );
-    await this.provider.send(new Transaction().add(buySynthIx), signers);
+    await this.provider.sendAndConfirm(
+      new Transaction().add(buySynthIx),
+      signers
+    );
   }
   public async buySynthInstruction(
     userUsdiTokenAccount: PublicKey,
@@ -993,7 +999,7 @@ export class Incept {
       iassetAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           userUsdiTokenAccount: userUsdiTokenAccount,
@@ -1019,7 +1025,10 @@ export class Incept {
       iassetAmount,
       poolIndex
     );
-    await this.provider.send(new Transaction().add(buySynthIx), signers);
+    await this.provider.sendAndConfirm(
+      new Transaction().add(buySynthIx),
+      signers
+    );
   }
   public async sellSynthInstruction(
     userUsdiTokenAccount: PublicKey,
@@ -1035,7 +1044,7 @@ export class Incept {
       iassetAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           userUsdiTokenAccount: userUsdiTokenAccount,
@@ -1071,7 +1080,7 @@ export class Incept {
         usdiAmount,
         Number(singlePoolComets.numComets) - 1
       );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction()
         .add(updatePricesIx)
         .add(addCollateralToSinglePoolCometIx)
@@ -1094,7 +1103,7 @@ export class Incept {
 
       await this.program.rpc.initializeSinglePoolComets(bump, {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           userAccount: userPubkey,
           singlePoolComets: singlePoolCometsAccount.publicKey,
           rent: RENT_PUBKEY,
@@ -1117,7 +1126,7 @@ export class Incept {
       poolIndex,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           singlePoolComets: userAccount.singlePoolComets,
@@ -1149,7 +1158,7 @@ export class Incept {
         collateralAmount,
         cometIndex
       );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(addCollateralToCometIx),
       signers
     );
@@ -1169,7 +1178,7 @@ export class Incept {
       collateralAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           comet: cometAddress,
@@ -1200,7 +1209,7 @@ export class Incept {
         collateralAmount,
         cometIndex
       );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(withdrawCollateralFromCometIx),
       signers
     );
@@ -1222,7 +1231,7 @@ export class Incept {
       collateralAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           userAccount: userPubkey,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
@@ -1249,7 +1258,7 @@ export class Incept {
         usdiAmount,
         cometIndex
       );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction()
         .add(updatePricesIx)
         .add(addLiquidityToSinglePoolCometIx),
@@ -1271,7 +1280,7 @@ export class Incept {
       usdiAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           usdiMint: this.manager!.usdiMint,
@@ -1301,7 +1310,7 @@ export class Incept {
         liquidityTokenAmount,
         cometIndex
       );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(withdrawLiquidityFromSinglePoolCometIx),
       signers
     );
@@ -1320,7 +1329,7 @@ export class Incept {
       liquidityTokenAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           usdiMint: this.manager!.usdiMint,
@@ -1351,7 +1360,7 @@ export class Incept {
     const recenterSingleCometIx = await this.recenterSingleCometInstruction(
       cometIndex
     );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(recenterSingleCometIx),
       signers
     );
@@ -1368,7 +1377,7 @@ export class Incept {
       0,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           usdiMint: this.manager!.usdiMint,
@@ -1397,7 +1406,7 @@ export class Incept {
       cometIndex,
       collateralAmount
     );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(paySinglePoolCometILDIx),
       signers
     );
@@ -1418,7 +1427,7 @@ export class Incept {
       new BN(collateralAmount),
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           usdiMint: this.manager!.usdiMint,
@@ -1455,7 +1464,7 @@ export class Incept {
           cometIndex,
           getMantissa(singlePoolComet.collaterals[0].collateralAmount)
         );
-      await this.provider.send(
+      await this.provider.sendAndConfirm(
         new Transaction()
           .add(withdrawLiquidityFromSinglePoolCometIx)
           .add(paySinglePoolCometILDIx),
@@ -1467,7 +1476,7 @@ export class Incept {
           cometIndex,
           getMantissa(singlePoolComet.collaterals[0].collateralAmount)
         );
-      await this.provider.send(
+      await this.provider.sendAndConfirm(
         new Transaction().add(paySinglePoolCometILDIx),
         signers
       );
@@ -1481,7 +1490,7 @@ export class Incept {
     const closeSinglePoolCometIx = await this.closeSinglePoolCometInstruction(
       cometIndex
     );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(closeSinglePoolCometIx),
       signers
     );
@@ -1496,7 +1505,7 @@ export class Incept {
       cometIndex,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           userAccount: userPubkey,
           singlePoolComets: userAccount.singlePoolComets,
           singlePoolComet: singlePoolComets.comets[cometIndex],
@@ -1525,7 +1534,7 @@ export class Incept {
       const closeSinglePoolCometIx = await this.closeSinglePoolCometInstruction(
         cometIndex
       );
-      await this.provider.send(
+      await this.provider.sendAndConfirm(
         new Transaction()
           .add(withdrawCollateralFromSinglePoolCometIx)
           .add(closeSinglePoolCometIx),
@@ -1535,7 +1544,7 @@ export class Incept {
       const closeSinglePoolCometIx = await this.closeSinglePoolCometInstruction(
         cometIndex
       );
-      await this.provider.send(
+      await this.provider.sendAndConfirm(
         new Transaction().add(closeSinglePoolCometIx),
         signers
       );
@@ -1553,8 +1562,8 @@ export class Incept {
       bump,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
-          admin: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
+          admin: this.provider.publicKey!,
           manager: this.managerAddress[0],
           userAccount: userPubkey,
           cometManager: cometManagerAccount.publicKey,
@@ -1586,20 +1595,20 @@ export class Incept {
       collateralIndex,
       forManager
     );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(addCollateralToCometIx),
       signers
     );
   }
 
-  public async initializeComet(user = this.provider.wallet.publicKey) {
+  public async initializeComet(user = this.provider.publicKey!) {
     let { userPubkey, bump } = await this.getUserAddress();
 
     const cometAccount = anchor.web3.Keypair.generate();
 
     await this.program.rpc.initializeComet(bump, {
       accounts: {
-        user: this.provider.wallet.publicKey,
+        user: this.provider.publicKey!,
         userAccount: userPubkey,
         comet: cometAccount.publicKey,
         rent: RENT_PUBKEY,
@@ -1631,7 +1640,7 @@ export class Incept {
       collateralAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           comet: cometAddress,
@@ -1658,7 +1667,7 @@ export class Incept {
         cometCollateralIndex,
         forManager
       );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(withdrawCollateralFromCometIx),
       signers
     );
@@ -1684,7 +1693,7 @@ export class Incept {
       collateralAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           userAccount: userPubkey,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
@@ -1712,7 +1721,7 @@ export class Incept {
       poolIndex,
       forManager
     );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(addLiquidityToCometIx),
       signers
     );
@@ -1734,7 +1743,7 @@ export class Incept {
       usdiAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           usdiMint: this.manager!.usdiMint,
@@ -1767,7 +1776,7 @@ export class Incept {
         cometPositionIndex,
         forManager
       );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(withdrawLiquidityFromCometIx),
       signers
     );
@@ -1793,7 +1802,7 @@ export class Incept {
       liquidityTokenAmount,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           usdiMint: this.manager!.usdiMint,
@@ -1825,7 +1834,10 @@ export class Incept {
       cometCollateralIndex,
       forManager
     );
-    await this.provider.send(new Transaction().add(recenterCometIx), signers);
+    await this.provider.sendAndConfirm(
+      new Transaction().add(recenterCometIx),
+      signers
+    );
   }
   public async recenterCometInstruction(
     cometPositionIndex: number,
@@ -1848,7 +1860,7 @@ export class Incept {
       cometCollateralIndex,
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: managerAddress,
           tokenData: this.manager!.tokenData,
           usdiMint: this.manager!.usdiMint,
@@ -1881,7 +1893,10 @@ export class Incept {
       collateralAmount,
       forManager
     );
-    await this.provider.send(new Transaction().add(payCometILDIx), signers);
+    await this.provider.sendAndConfirm(
+      new Transaction().add(payCometILDIx),
+      signers
+    );
   }
   public async payCometILDInstruction(
     cometPositionIndex: number,
@@ -1905,7 +1920,7 @@ export class Incept {
       new BN(collateralAmount),
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           usdiMint: this.manager!.usdiMint,
@@ -1933,7 +1948,7 @@ export class Incept {
       new BN(amount),
       {
         accounts: {
-          user: this.provider.wallet.publicKey,
+          user: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           usdiMint: this.manager!.usdiMint,
@@ -1951,7 +1966,7 @@ export class Incept {
   public async getOrCreateAssociatedTokenAccount(mint: PublicKey) {
     const associatedToken = await getAssociatedTokenAddress(
       mint,
-      this.provider.wallet.publicKey,
+      this.provider.publicKey!,
       false,
       TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
@@ -1969,16 +1984,16 @@ export class Incept {
       if (error instanceof TokenAccountNotFoundError) {
         const transaction = new Transaction().add(
           createAssociatedTokenAccountInstruction(
-            this.provider.wallet.publicKey,
+            this.provider.publicKey!,
             associatedToken,
-            this.provider.wallet.publicKey,
+            this.provider.publicKey!,
             mint,
             TOKEN_PROGRAM_ID,
             ASSOCIATED_TOKEN_PROGRAM_ID
           )
         );
 
-        await this.provider.send(transaction);
+        await this.provider.sendAndConfirm(transaction);
         await sleep(200);
         account = await getAccount(
           this.connection,
@@ -2005,7 +2020,7 @@ export class Incept {
       userUsdiTokenAccount,
       amount
     );
-    await this.provider.send(new Transaction().add(mintUsdiTx));
+    await this.provider.sendAndConfirm(new Transaction().add(mintUsdiTx));
   }
 
   public async liquidateMintPosition(
@@ -2019,7 +2034,7 @@ export class Incept {
       liquidateAccountBump,
       mintIndex
     );
-    await this.provider.send(
+    await this.provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(liquidateMintTx)
     );
   }
@@ -2047,7 +2062,7 @@ export class Incept {
       mintIndex,
       {
         accounts: {
-          liquidator: this.provider.wallet.publicKey,
+          liquidator: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           userAccount: liquidateAccount,
@@ -2120,7 +2135,7 @@ export class Incept {
       let associatedTokenAddress = (
         await PublicKey.findProgramAddress(
           [
-            this.provider.wallet.publicKey.toBuffer(),
+            this.provider.publicKey!.toBuffer(),
             TOKEN_PROGRAM_ID.toBuffer(),
             mint.toBuffer(),
           ],
@@ -2387,7 +2402,7 @@ export class Incept {
       toDevnetScale(coefficient),
       {
         accounts: {
-          admin: this.provider.wallet.publicKey,
+          admin: this.provider.publicKey!,
           manager: pubKey,
           tokenData: this.manager!.tokenData,
         },
@@ -2407,7 +2422,7 @@ export class Incept {
       toDevnetScale(coefficient),
       {
         accounts: {
-          admin: this.provider.wallet.publicKey,
+          admin: this.provider.publicKey!,
           manager: pubKey,
           tokenData: this.manager!.tokenData,
         },
@@ -2653,7 +2668,7 @@ export class Incept {
       toDevnetScale(reductionAmount),
       {
         accounts: {
-          liquidator: this.provider.wallet.publicKey,
+          liquidator: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           user: liquidateeAddress,
@@ -2685,7 +2700,7 @@ export class Incept {
       positionIndex,
       reductionAmount
     );
-    return await this.provider.send(
+    return await this.provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(ix)
     );
   }
@@ -2750,7 +2765,7 @@ export class Incept {
       toDevnetScale(reductionAmount),
       {
         accounts: {
-          liquidator: this.provider.wallet.publicKey,
+          liquidator: this.provider.publicKey!,
           manager: this.managerAddress[0],
           tokenData: this.manager!.tokenData,
           user: liquidateeAddress,
@@ -2795,7 +2810,7 @@ export class Incept {
       jupiterAddress,
       jupiterNonce
     );
-    return await this.provider.send(
+    return await this.provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(ix)
     );
   }

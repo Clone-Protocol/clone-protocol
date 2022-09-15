@@ -66,7 +66,7 @@ pub fn execute(
     manager_nonce: u8,
     pool_index: u8,
     usdi_amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;

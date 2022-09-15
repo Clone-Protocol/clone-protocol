@@ -6,6 +6,7 @@ use anchor_spl::token::*;
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, user_nonce: u8)]
 pub struct InitializeCometManager<'info> {
+    #[account(mut)]
     pub user: Signer<'info>,
     #[account(address = manager.admin)]
     pub admin: Signer<'info>,
@@ -39,7 +40,7 @@ pub fn execute(
     ctx: Context<InitializeCometManager>,
     _manager_nonce: u8,
     _user_nonce: u8,
-) -> ProgramResult {
+) -> Result<()> {
     let mut comet_manager = ctx.accounts.comet_manager.load_init()?;
 
     // set user data

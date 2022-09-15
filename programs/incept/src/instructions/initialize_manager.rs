@@ -10,11 +10,13 @@ use std::convert::TryInto;
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, il_health_score_coefficient: u64, il_health_score_cutoff: u64, il_liquidation_reward_pct: u64)]
 pub struct InitializeManager<'info> {
+    #[account(mut)]
     pub admin: Signer<'info>,
     #[account(
         init,
-        seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        space = 8 + 200,
+        seeds = [b"manager"],
+        bump,
         payer = admin
     )]
     pub manager: Account<'info, Manager>,
@@ -46,7 +48,7 @@ pub fn execute(
     _il_health_score_coefficient: u64,
     _il_health_score_cutoff: u64,
     _il_liquidation_reward_pct: u64,
-) -> ProgramResult {
+) -> Result<()> {
     require!(
         _il_health_score_coefficient > 0,
         InceptError::InvalidHealthScoreCoefficient
@@ -57,6 +59,7 @@ pub fn execute(
     ctx.accounts.manager.token_data = *ctx.accounts.token_data.to_account_info().key;
     ctx.accounts.manager.usdi_mint = *ctx.accounts.usdi_mint.to_account_info().key;
     ctx.accounts.manager.admin = *ctx.accounts.admin.to_account_info().key;
+    ctx.accounts.manager.bump = *ctx.bumps.get("manager").unwrap();
 
     // add usdi as first collateral type
     token_data.append_collateral(Collateral {

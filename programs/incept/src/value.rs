@@ -87,7 +87,7 @@ impl Mul<u128> for Value {
 }
 
 impl Add<Value> for Value {
-    fn add(self, value: Value) -> Result<Self, InceptError> {
+    fn add(self, value: Value) -> Result<Self> {
         require!(self.scale == value.scale, InceptError::DifferentScale);
 
         Ok(Self {
@@ -97,7 +97,7 @@ impl Add<Value> for Value {
     }
 }
 impl Sub<Value> for Value {
-    fn sub(self, value: Value) -> Result<Self, InceptError> {
+    fn sub(self, value: Value) -> Result<Self> {
         require!(self.scale == value.scale, InceptError::DifferentScale);
         Ok(Self {
             val: self.val.checked_sub(value.val).unwrap(),
@@ -185,32 +185,32 @@ impl Into<u128> for Value {
 }
 
 impl Compare<Value> for Value {
-    fn lte(self, other: Value) -> Result<bool, InceptError> {
+    fn lte(self, other: Value) -> Result<bool> {
         require!(self.scale == other.scale, InceptError::DifferentScale);
         Ok(self.val <= other.val)
     }
-    fn lt(self, other: Value) -> Result<bool, InceptError> {
+    fn lt(self, other: Value) -> Result<bool> {
         require!(self.scale == other.scale, InceptError::DifferentScale);
         Ok(self.val < other.val)
     }
-    fn gt(self, other: Value) -> Result<bool, InceptError> {
+    fn gt(self, other: Value) -> Result<bool> {
         require!(self.scale == other.scale, InceptError::DifferentScale);
         Ok(self.val > other.val)
     }
-    fn gte(self, other: Value) -> Result<bool, InceptError> {
+    fn gte(self, other: Value) -> Result<bool> {
         require!(self.scale == other.scale, InceptError::DifferentScale);
         Ok(self.val >= other.val)
     }
-    fn eq(self, other: Value) -> Result<bool, InceptError> {
+    fn eq(self, other: Value) -> Result<bool> {
         require!(self.scale == other.scale, InceptError::DifferentScale);
         Ok(self.val == other.val)
     }
 }
 pub trait Sub<T>: Sized {
-    fn sub(self, rhs: T) -> Result<Self, InceptError>;
+    fn sub(self, rhs: T) -> Result<Self>;
 }
 pub trait Add<T>: Sized {
-    fn add(self, rhs: T) -> Result<Self, InceptError>;
+    fn add(self, rhs: T) -> Result<Self>;
 }
 pub trait Div<T>: Sized {
     fn div(self, rhs: T) -> Self;
@@ -234,9 +234,9 @@ pub trait Sqrt<T>: Sized {
     fn sqrt(self) -> Self;
 }
 pub trait Compare<T>: Sized {
-    fn eq(self, rhs: T) -> Result<bool, InceptError>;
-    fn lt(self, rhs: T) -> Result<bool, InceptError>;
-    fn gt(self, rhs: T) -> Result<bool, InceptError>;
-    fn gte(self, rhs: T) -> Result<bool, InceptError>;
-    fn lte(self, rhs: T) -> Result<bool, InceptError>;
+    fn eq(self, rhs: T) -> Result<bool>;
+    fn lt(self, rhs: T) -> Result<bool>;
+    fn gt(self, rhs: T) -> Result<bool>;
+    fn gte(self, rhs: T) -> Result<bool>;
+    fn lte(self, rhs: T) -> Result<bool>;
 }

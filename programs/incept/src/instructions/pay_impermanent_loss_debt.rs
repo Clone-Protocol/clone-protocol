@@ -63,7 +63,7 @@ pub fn execute(
     comet_position_index: u8,
     comet_collateral_index: u8,
     collateral_amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
@@ -128,7 +128,7 @@ pub fn execute(
         token::mint_to(mint_usdi_context, collateral_amount)?;
         let cpi_accounts = Burn {
             mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-            to: ctx
+            from: ctx
                 .accounts
                 .amm_iasset_token_account
                 .to_account_info()
@@ -153,7 +153,7 @@ pub fn execute(
         // burn usdi from vault
         let cpi_accounts = Burn {
             mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-            to: ctx.accounts.vault.to_account_info().clone(),
+            from: ctx.accounts.vault.to_account_info().clone(),
             authority: ctx.accounts.manager.to_account_info().clone(),
         };
         let burn_usdi_context = CpiContext::new_with_signer(

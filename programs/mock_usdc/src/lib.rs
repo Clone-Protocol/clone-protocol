@@ -10,14 +10,14 @@ declare_id!("B5JYKUfHUwrcLjZqGSS5iksqDtGu6eRtGtZy8G1YghjX");
 #[program]
 pub mod mock_usdc {
     use super::*;
-    pub fn initialize(ctx: Context<Initialize>, _mock_usdc_nonce: u8) -> ProgramResult {
+    pub fn initialize(ctx: Context<Initialize>, _mock_usdc_nonce: u8) -> Result<()> {
         ctx.accounts.mock_usdc_account.mock_usdc_mint =
             *ctx.accounts.mock_usdc_mint.to_account_info().key;
 
         Ok(())
     }
 
-    pub fn mint_mock_usdc(ctx: Context<MintMockUSDC>, mock_usdc_nonce: u8) -> ProgramResult {
+    pub fn mint_mock_usdc(ctx: Context<MintMockUSDC>, mock_usdc_nonce: u8) -> Result<()> {
         let seeds = &[&[b"mock_usdc", bytemuck::bytes_of(&mock_usdc_nonce)][..]];
 
         let cpi_accounts = MintTo {

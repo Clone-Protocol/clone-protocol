@@ -8,7 +8,7 @@ use std::convert::TryInto;
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, scale: u8, stable: u8, collateralization_ratio: u64)]
 pub struct AddCollateral<'info> {
-    #[account(address = manager.admin)]
+    #[account(mut, address = manager.admin)]
     pub admin: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
@@ -41,7 +41,7 @@ pub fn execute(
     scale: u8,
     stable: u8,
     collateralization_ratio: u64,
-) -> ProgramResult {
+) -> Result<()> {
     require!(
         if stable == 0 {
             collateralization_ratio > 0
@@ -55,10 +55,10 @@ pub fn execute(
     let mut pool_index: u8 = u8::MAX;
 
     // check whether new collateral is stable (pegged to the US dollar)
-    let is_stable: Result<bool, InceptError> = match stable {
+    let is_stable: Result<bool> = match stable {
         0 => Ok(false),
         1 => Ok(true),
-        _ => Err(InceptError::InvalidBool),
+        _ => Err(error!(InceptError::InvalidBool)),
     };
 
     // if the collateral is not stable, store its pool index, which shall store its oracle data

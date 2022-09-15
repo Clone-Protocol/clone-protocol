@@ -1,5 +1,4 @@
 use crate::error::*;
-//use crate::instructions::LiquidateCometPositionReduction;
 use crate::math::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -86,7 +85,7 @@ pub fn execute(
     _user_nonce: u8,
     position_index: u8,
     lp_token_reduction: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
@@ -236,7 +235,7 @@ pub fn execute(
             ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                to: ctx
+                from: ctx
                     .accounts
                     .amm_usdi_token_account
                     .to_account_info()
@@ -254,7 +253,7 @@ pub fn execute(
             ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-                to: ctx
+                from: ctx
                     .accounts
                     .amm_iasset_token_account
                     .to_account_info()
@@ -272,7 +271,7 @@ pub fn execute(
             ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
-                to: ctx
+                from: ctx
                     .accounts
                     .comet_liquidity_token_account
                     .to_account_info()

@@ -68,7 +68,7 @@ pub fn execute(
     manager_nonce: u8,
     comet_position_index: u8,
     comet_collateral_index: u8,
-) -> ProgramResult {
+) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
@@ -77,10 +77,10 @@ pub fn execute(
     let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
 
     // check to see if the collateral used to mint usdi is stable
-    let is_stable: Result<bool, InceptError> = match collateral.stable {
+    let is_stable: Result<bool> = match collateral.stable {
         0 => Ok(false),
         1 => Ok(true),
-        _ => Err(InceptError::InvalidBool),
+        _ => Err(error!(InceptError::InvalidBool)),
     };
 
     // if collateral is not stable, we throw an error
@@ -175,7 +175,7 @@ pub fn execute(
             // burn usdi from vault
             let cpi_accounts = Burn {
                 mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                to: ctx.accounts.vault.to_account_info().clone(),
+                from: ctx.accounts.vault.to_account_info().clone(),
                 authority: ctx.accounts.manager.to_account_info().clone(),
             };
             let burn_usdi_context = CpiContext::new_with_signer(
@@ -228,7 +228,7 @@ pub fn execute(
         // burn iasset from amm
         let cpi_accounts = Burn {
             mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-            to: ctx
+            from: ctx
                 .accounts
                 .amm_iasset_token_account
                 .to_account_info()
@@ -284,7 +284,7 @@ pub fn execute(
             // burn usdi from vault
             let cpi_accounts = Burn {
                 mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                to: ctx.accounts.vault.to_account_info().clone(),
+                from: ctx.accounts.vault.to_account_info().clone(),
                 authority: ctx.accounts.manager.to_account_info().clone(),
             };
             let burn_usdi_context = CpiContext::new_with_signer(
@@ -340,7 +340,7 @@ pub fn execute(
         // burn usdi from amm
         let cpi_accounts = Burn {
             mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-            to: ctx
+            from: ctx
                 .accounts
                 .amm_usdi_token_account
                 .to_account_info()

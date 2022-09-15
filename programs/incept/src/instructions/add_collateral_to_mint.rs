@@ -47,7 +47,7 @@ pub fn execute(
     _manager_nonce: u8,
     mint_index: u8,
     amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mint_positions = &mut ctx.accounts.mint_positions.load_mut()?;
 

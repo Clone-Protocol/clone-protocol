@@ -15,14 +15,18 @@ const NUM_ASSETS: usize = 10;
 #[program]
 pub mod jupiter_agg_mock {
     use super::*;
-    pub fn initialize(ctx: Context<Initialize>, _nonce: u8) -> ProgramResult {
-        let jupiter_account = &mut ctx.accounts.jupiter_account;
+    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+        let jupiter_account = &mut ctx.accounts.jupiter_account.load_init()?;
         jupiter_account.usdc_mint = *ctx.accounts.usdc_mint.to_account_info().key;
+        if let Some(bump) = ctx.bumps.get("jupiter") {
+            jupiter_account.bump = *bump;
+        }
+        //jupiter_account.bump = *ctx.bumps.get("jupiter").expect("Couldn't find bump");
         Ok(())
     }
 
-    pub fn create_asset(ctx: Context<CreateAsset>, pyth_oracle: Pubkey) -> ProgramResult {
-        let jupiter_account = &mut ctx.accounts.jupiter_account;
+    pub fn create_asset(ctx: Context<CreateAsset>, pyth_oracle: Pubkey) -> Result<()> {
+        let jupiter_account = &mut ctx.accounts.jupiter_account.load_mut()?;
         jupiter_account.add_asset(*ctx.accounts.asset_mint.to_account_info().key, pyth_oracle);
         Ok(())
     }
@@ -32,7 +36,7 @@ pub mod jupiter_agg_mock {
         nonce: u8,
         _asset_index: u8,
         amount: u64,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         let seeds = &[&[b"jupiter", bytemuck::bytes_of(&nonce)][..]];
 
         let cpi_accounts = MintTo {
@@ -50,7 +54,7 @@ pub mod jupiter_agg_mock {
         Ok(())
     }
 
-    pub fn mint_usdc(ctx: Context<MintUsdc>, nonce: u8, amount: u64) -> ProgramResult {
+    pub fn mint_usdc(ctx: Context<MintUsdc>, nonce: u8, amount: u64) -> Result<()> {
         let seeds = &[&[b"jupiter", bytemuck::bytes_of(&nonce)][..]];
 
         let cpi_accounts = MintTo {
@@ -79,7 +83,7 @@ pub mod jupiter_agg_mock {
         is_amount_input: bool,
         is_amount_asset: bool,
         amount: u64,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         let seeds = &[&[b"jupiter", bytemuck::bytes_of(&nonce)][..]];
 
         // Get oracle price
@@ -103,7 +107,7 @@ pub mod jupiter_agg_mock {
                 // burn amount asset
                 let cpi_accounts = Burn {
                     mint: ctx.accounts.asset_mint.to_account_info().clone(),
-                    to: ctx
+                    from: ctx
                         .accounts
                         .user_asset_token_account
                         .to_account_info()
@@ -157,7 +161,7 @@ pub mod jupiter_agg_mock {
                 // burn usdc
                 let cpi_accounts = Burn {
                     mint: ctx.accounts.usdc_mint.to_account_info().clone(),
-                    to: ctx
+                    from: ctx
                         .accounts
                         .user_usdc_token_account
                         .to_account_info()
@@ -183,7 +187,7 @@ pub mod jupiter_agg_mock {
                 // burn amount usdc
                 let cpi_accounts = Burn {
                     mint: ctx.accounts.usdc_mint.to_account_info().clone(),
-                    to: ctx
+                    from: ctx
                         .accounts
                         .user_usdc_token_account
                         .to_account_info()
@@ -237,7 +241,7 @@ pub mod jupiter_agg_mock {
                 // burn asset
                 let cpi_accounts = Burn {
                     mint: ctx.accounts.asset_mint.to_account_info().clone(),
-                    to: ctx
+                    from: ctx
                         .accounts
                         .user_asset_token_account
                         .to_account_info()
@@ -258,42 +262,21 @@ pub mod jupiter_agg_mock {
 
         Ok(())
     }
-
-    pub fn stress_test(ctx: Context<StressTest>, nonce: u8, iterations: u8) -> ProgramResult {
-        //let mut val = 100u64;
-        //let additive = 10u64;
-        // let mut val = Value::new(10000000000, 8);
-        // let additive = Value::new(1000000000, 8);
-        let mut val = Decimal::new(100_0000_0000, 8);
-        // let mut raw: RawDecimal = RawDecimal::from(&val);
-        // // let additive = Decimal::new(10_0000_0000, 8);
-        // for _ in 0..iterations {
-        //     //val = val - additive;
-        //     raw = RawDecimal::from(&val);
-        //     val = raw.to_decimal();
-        // }
-        msg!("{:?}, {:?}", val.unpack(), val.mantissa());
-        let jupiter = &mut ctx.accounts.jupiter_account;
-        jupiter.answer = RawDecimal::from(&val);
-        //assert!(false);
-        //ans += rust_decimal::Decimal::new(10_0000_0000, 8);
-        Ok(())
-    }
 }
 
 /// Instructions
 #[derive(Accounts)]
-#[instruction(nonce: u8)]
 pub struct Initialize<'info> {
+    #[account(mut)]
     pub admin: Signer<'info>,
     #[account(
         init,
         payer = admin,
-        space = 8 + 689,
-        seeds = [b"jupiter".as_ref()],
-        bump = nonce,
+        space = 690 + 8,
+        seeds = [b"jupiter"],
+        bump,
     )]
-    pub jupiter_account: Account<'info, Jupiter>,
+    pub jupiter_account: AccountLoader<'info, Jupiter>,
     #[account(
         init,
         mint::decimals = USDC_TOKEN_SCALE,
@@ -309,17 +292,19 @@ pub struct Initialize<'info> {
 #[derive(Accounts)]
 #[instruction(pyth_oracle: Pubkey)]
 pub struct CreateAsset<'info> {
+    #[account(mut)]
     payer: Signer<'info>,
     #[account(
         init,
-        mint::decimals = DEVNET_TOKEN_SCALE.try_into().unwrap(),
+        mint::decimals = DEVNET_TOKEN_SCALE as u8,
         mint::authority = jupiter_account,
         payer = payer
     )]
     pub asset_mint: Account<'info, Mint>,
     #[account(mut)]
-    pub jupiter_account: Account<'info, Jupiter>,
+    pub jupiter_account: AccountLoader<'info, Jupiter>,
     pub rent: Sysvar<'info, Rent>,
+    /// CHECK: This is for mock program.
     pub token_program: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
@@ -329,7 +314,7 @@ pub struct CreateAsset<'info> {
 pub struct MintAsset<'info> {
     #[account(
         mut,
-        address = jupiter_account.asset_mints[asset_index as usize]
+        address = jupiter_account.load()?.asset_mints[asset_index as usize]
     )]
     pub asset_mint: Account<'info, Mint>,
     #[account(mut)]
@@ -338,7 +323,7 @@ pub struct MintAsset<'info> {
         seeds = [b"jupiter".as_ref()],
         bump = nonce,
     )]
-    pub jupiter_account: Account<'info, Jupiter>,
+    pub jupiter_account: AccountLoader<'info, Jupiter>,
     pub token_program: AccountInfo<'info>,
 }
 
@@ -353,7 +338,7 @@ pub struct MintUsdc<'info> {
         seeds = [b"jupiter".as_ref()],
         bump = nonce,
     )]
-    pub jupiter_account: Account<'info, Jupiter>,
+    pub jupiter_account: AccountLoader<'info, Jupiter>,
     pub token_program: AccountInfo<'info>,
 }
 
@@ -365,13 +350,13 @@ pub struct Swap<'info> {
         seeds = [b"jupiter".as_ref()],
         bump = nonce,
     )]
-    pub jupiter_account: Box<Account<'info, Jupiter>>,
+    pub jupiter_account: AccountLoader<'info, Jupiter>,
     #[account(mut,
-        address = jupiter_account.asset_mints[asset_index as usize]
+        address = jupiter_account.load()?.asset_mints[asset_index as usize]
     )]
     pub asset_mint: Box<Account<'info, Mint>>,
     #[account(mut,
-        address = jupiter_account.usdc_mint
+        address = jupiter_account.load()?.usdc_mint
     )]
     pub usdc_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -382,26 +367,15 @@ pub struct Swap<'info> {
     pub user_asset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = user_usdc_token_account.mint == jupiter_account.usdc_mint.key(),
+        constraint = user_usdc_token_account.mint == jupiter_account.load()?.usdc_mint.key(),
         constraint = user_asset_token_account.owner == user.key()
     )]
     pub user_usdc_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
-        address = jupiter_account.oracles[asset_index as usize]
+        address = jupiter_account.load()?.oracles[asset_index as usize]
     )]
     pub pyth_oracle: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
-#[instruction(nonce: u8, iterations: u8)]
-pub struct StressTest<'info> {
-    #[account(
-        mut,
-        seeds = [b"jupiter".as_ref()],
-        bump = nonce,
-    )]
-    pub jupiter_account: Account<'info, Jupiter>,
 }
 
 // TODO: Write a wrapper around this.
@@ -444,27 +418,17 @@ impl RawDecimal {
     }
 }
 
-#[account]
+#[account(zero_copy)]
 #[derive(Default)]
 pub struct Jupiter {
-    // 673, 689
+    // 690, 704
     pub usdc_mint: Pubkey,                 // 32
     pub asset_mints: [Pubkey; NUM_ASSETS], // 32 * 10 = 320
     pub oracles: [Pubkey; NUM_ASSETS],     // 32 * 10 = 320
-    pub n_assets: u8,                      // 1
     pub answer: RawDecimal,                // 16
+    pub n_assets: u8,                      // 1
+    pub bump: u8,                          // 1
 }
-
-// impl Default for Jupiter {
-//     fn default() -> Self {
-//         Jupiter { usdc_mint: Pubkey::default(),
-//              asset_mints: [Pubkey::default(); NUM_IASSETS],
-//              oracles: [Pubkey::default(); NUM_IASSETS],
-//              n_assets: 0,
-//              answer:
-//         }
-//     }
-// }
 
 impl Jupiter {
     pub fn add_asset(&mut self, mint_address: Pubkey, oracle: Pubkey) {

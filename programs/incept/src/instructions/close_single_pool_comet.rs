@@ -32,11 +32,7 @@ pub struct CloseSinglePoolComet<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(
-    ctx: Context<CloseSinglePoolComet>,
-    _user_nonce: u8,
-    comet_index: u8,
-) -> ProgramResult {
+pub fn execute(ctx: Context<CloseSinglePoolComet>, _user_nonce: u8, comet_index: u8) -> Result<()> {
     // remove single pool comet
     ctx.accounts
         .single_pool_comets

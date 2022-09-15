@@ -48,7 +48,7 @@ pub fn execute(
     manager_nonce: u8,
     mint_index: u8,
     amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 
     let token_data = ctx.accounts.token_data.load_mut()?;
