@@ -26,7 +26,7 @@ import {
   getFeedData,
   ChainLinkOracle,
 } from "../sdk/src/oracle";
-import { sleep, signAndSend, toScaledNumber } from "../sdk/src/utils";
+import { sleep } from "../sdk/src/utils";
 import { toNumber } from "../sdk/src/decimal";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;

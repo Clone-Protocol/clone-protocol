@@ -40,7 +40,7 @@ export class ChainLinkOracle {
         signers: [this.authority, this.priceFeed],
         instructions: [
           anchor.web3.SystemProgram.createAccount({
-            fromPubkey: this.program.provider.wallet.publicKey,
+            fromPubkey: this.program.provider.publicKey!,
             newAccountPubkey: this.priceFeed.publicKey,
             space: space,
             lamports:
@@ -89,7 +89,7 @@ export const createPriceFeed = async (
     signers: [priceFeed],
     instructions: [
       anchor.web3.SystemProgram.createAccount({
-        fromPubkey: pythProgram.provider.wallet.publicKey,
+        fromPubkey: pythProgram.provider.publicKey!,
         newAccountPubkey: priceFeed.publicKey,
         space: 3312,
         lamports:

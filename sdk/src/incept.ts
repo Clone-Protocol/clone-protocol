@@ -302,7 +302,7 @@ export class Incept {
     let updatePricesIx = await this.updatePricesInstruction(poolIndices);
     txn.add(updatePricesIx);
 
-    await this.provider.sendAndConfirm(txn, signers);
+    await this.provider.sendAndConfirm!(txn, signers);
   }
 
   public async updatePricesInstruction(poolIndices?: number[]) {
@@ -457,7 +457,7 @@ export class Incept {
       userCollateralTokenAccount,
       collateralIndex
     )) as TransactionInstruction;
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(mintUsdiIx),
       signers
     );
@@ -507,7 +507,7 @@ export class Incept {
         poolIndex,
         collateralIndex
       );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(updatePricesIx).add(initializeMintPositionIx),
       signers
     );
@@ -579,7 +579,7 @@ export class Incept {
       userCollateralTokenAccount,
       collateralAmount
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(addCollateralToMintIx),
       signers
     );
@@ -626,7 +626,7 @@ export class Incept {
         userCollateralTokenAccount,
         collateralAmount
       );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(updatePricesIx).add(withdrawCollateralFromMintIx),
       signers
     );
@@ -671,7 +671,7 @@ export class Incept {
       iassetAmount,
       mintIndex
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(payBackiAssetToMintIx),
       signers
     );
@@ -715,7 +715,7 @@ export class Incept {
       iassetAmount,
       mintIndex
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(updatePricesIx).add(addiAssetToMintIx),
       signers
     );
@@ -771,7 +771,7 @@ export class Incept {
 
     const updatePricesIx = await this.updatePricesInstruction();
 
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction()
         .add(payBackiAssetToMintIx)
         .add(updatePricesIx)
@@ -796,7 +796,7 @@ export class Incept {
         iassetAmount,
         poolIndex
       );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(initializeLiquidityPositionIx),
       signers
     );
@@ -873,7 +873,7 @@ export class Incept {
       iassetAmount,
       poolIndex
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(provideLiquidityIx),
       signers
     );
@@ -928,7 +928,7 @@ export class Incept {
       liquidityTokenAmount,
       poolIndex
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(withdrawLiquidityIx),
       signers
     );
@@ -980,7 +980,7 @@ export class Incept {
       iassetAmount,
       poolIndex
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(buySynthIx),
       signers
     );
@@ -1025,7 +1025,7 @@ export class Incept {
       iassetAmount,
       poolIndex
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(buySynthIx),
       signers
     );
@@ -1080,7 +1080,7 @@ export class Incept {
         usdiAmount,
         Number(singlePoolComets.numComets) - 1
       );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction()
         .add(updatePricesIx)
         .add(addCollateralToSinglePoolCometIx)
@@ -1158,7 +1158,7 @@ export class Incept {
         collateralAmount,
         cometIndex
       );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(addCollateralToCometIx),
       signers
     );
@@ -1209,7 +1209,7 @@ export class Incept {
         collateralAmount,
         cometIndex
       );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(updatePricesIx).add(withdrawCollateralFromCometIx),
       signers
     );
@@ -1258,7 +1258,7 @@ export class Incept {
         usdiAmount,
         cometIndex
       );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction()
         .add(updatePricesIx)
         .add(addLiquidityToSinglePoolCometIx),
@@ -1310,7 +1310,7 @@ export class Incept {
         liquidityTokenAmount,
         cometIndex
       );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(withdrawLiquidityFromSinglePoolCometIx),
       signers
     );
@@ -1360,7 +1360,7 @@ export class Incept {
     const recenterSingleCometIx = await this.recenterSingleCometInstruction(
       cometIndex
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(recenterSingleCometIx),
       signers
     );
@@ -1406,7 +1406,7 @@ export class Incept {
       cometIndex,
       collateralAmount
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(paySinglePoolCometILDIx),
       signers
     );
@@ -1464,7 +1464,7 @@ export class Incept {
           cometIndex,
           getMantissa(singlePoolComet.collaterals[0].collateralAmount)
         );
-      await this.provider.sendAndConfirm(
+      await this.provider.sendAndConfirm!(
         new Transaction()
           .add(withdrawLiquidityFromSinglePoolCometIx)
           .add(paySinglePoolCometILDIx),
@@ -1476,7 +1476,7 @@ export class Incept {
           cometIndex,
           getMantissa(singlePoolComet.collaterals[0].collateralAmount)
         );
-      await this.provider.sendAndConfirm(
+      await this.provider.sendAndConfirm!(
         new Transaction().add(paySinglePoolCometILDIx),
         signers
       );
@@ -1490,7 +1490,7 @@ export class Incept {
     const closeSinglePoolCometIx = await this.closeSinglePoolCometInstruction(
       cometIndex
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(closeSinglePoolCometIx),
       signers
     );
@@ -1534,7 +1534,7 @@ export class Incept {
       const closeSinglePoolCometIx = await this.closeSinglePoolCometInstruction(
         cometIndex
       );
-      await this.provider.sendAndConfirm(
+      await this.provider.sendAndConfirm!(
         new Transaction()
           .add(withdrawCollateralFromSinglePoolCometIx)
           .add(closeSinglePoolCometIx),
@@ -1544,7 +1544,7 @@ export class Incept {
       const closeSinglePoolCometIx = await this.closeSinglePoolCometInstruction(
         cometIndex
       );
-      await this.provider.sendAndConfirm(
+      await this.provider.sendAndConfirm!(
         new Transaction().add(closeSinglePoolCometIx),
         signers
       );
@@ -1595,7 +1595,7 @@ export class Incept {
       collateralIndex,
       forManager
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(addCollateralToCometIx),
       signers
     );
@@ -1667,7 +1667,7 @@ export class Incept {
         cometCollateralIndex,
         forManager
       );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(updatePricesIx).add(withdrawCollateralFromCometIx),
       signers
     );
@@ -1721,7 +1721,7 @@ export class Incept {
       poolIndex,
       forManager
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(updatePricesIx).add(addLiquidityToCometIx),
       signers
     );
@@ -1776,7 +1776,7 @@ export class Incept {
         cometPositionIndex,
         forManager
       );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(withdrawLiquidityFromCometIx),
       signers
     );
@@ -1834,7 +1834,7 @@ export class Incept {
       cometCollateralIndex,
       forManager
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(recenterCometIx),
       signers
     );
@@ -1893,7 +1893,7 @@ export class Incept {
       collateralAmount,
       forManager
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(payCometILDIx),
       signers
     );
@@ -1993,7 +1993,7 @@ export class Incept {
           )
         );
 
-        await this.provider.sendAndConfirm(transaction);
+        await this.provider.sendAndConfirm!(transaction);
         await sleep(200);
         account = await getAccount(
           this.connection,
@@ -2020,7 +2020,7 @@ export class Incept {
       userUsdiTokenAccount,
       amount
     );
-    await this.provider.sendAndConfirm(new Transaction().add(mintUsdiTx));
+    await this.provider.sendAndConfirm!(new Transaction().add(mintUsdiTx));
   }
 
   public async liquidateMintPosition(
@@ -2034,7 +2034,7 @@ export class Incept {
       liquidateAccountBump,
       mintIndex
     );
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(updatePricesIx).add(liquidateMintTx)
     );
   }
@@ -2700,7 +2700,7 @@ export class Incept {
       positionIndex,
       reductionAmount
     );
-    return await this.provider.sendAndConfirm(
+    return await this.provider.sendAndConfirm!(
       new Transaction().add(updatePricesIx).add(ix)
     );
   }
@@ -2810,7 +2810,7 @@ export class Incept {
       jupiterAddress,
       jupiterNonce
     );
-    return await this.provider.sendAndConfirm(
+    return await this.provider.sendAndConfirm!(
       new Transaction().add(updatePricesIx).add(ix)
     );
   }
