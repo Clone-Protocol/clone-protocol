@@ -101,7 +101,7 @@ pub fn execute(
         // update reduction values if they are too large
         if iasset_reduction_value > borrowed_iasset {
             let new_iasset_pool_amount = pool_iasset - borrowed_iasset;
-            collateral_reduction_value = pool_usdi - invariant / new_iasset_pool_amount;
+            collateral_reduction_value = invariant / new_iasset_pool_amount - pool_usdi;
             iasset_reduction_value = borrowed_iasset;
         }
 
@@ -125,7 +125,12 @@ pub fn execute(
             cpi_accounts,
             seeds,
         );
-        token::mint_to(mint_usdi_context, collateral_amount)?;
+        collateral_reduction_value.rescale(DEVNET_TOKEN_SCALE);
+        token::mint_to(
+            mint_usdi_context,
+            collateral_reduction_value.mantissa().try_into().unwrap(),
+        )?;
+
         let cpi_accounts = Burn {
             mint: ctx.accounts.iasset_mint.to_account_info().clone(),
             from: ctx
