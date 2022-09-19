@@ -80,7 +80,10 @@ pub fn execute(
         authority: ctx.accounts.user.to_account_info().clone(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
-    token::burn(CpiContext::new(cpi_program, cpi_accounts), amount_value.mantissa().try_into().unwrap())?;
+    token::burn(
+        CpiContext::new(cpi_program, cpi_accounts),
+        amount_value.mantissa().try_into().unwrap(),
+    )?;
 
     // update total amount of borrowed iasset
     let updated_borrowed_iasset = mint_position.borrowed_iasset.to_decimal() - amount_value;
