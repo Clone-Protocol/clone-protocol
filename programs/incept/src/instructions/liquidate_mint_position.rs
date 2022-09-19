@@ -73,6 +73,7 @@ pub struct LiquidateMintPosition<'info> {
 pub fn execute(
     ctx: Context<LiquidateMintPosition>,
     manager_nonce: u8,
+    _user_nonce: u8,
     mint_index: u8,
 ) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
