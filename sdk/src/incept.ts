@@ -1,5 +1,5 @@
 import * as anchor from "@project-serum/anchor";
-import { BN, Program, Provider, Wallet } from "@project-serum/anchor";
+import { BN, Program, Provider } from "@project-serum/anchor";
 import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -19,7 +19,7 @@ import {
   Keypair,
   ComputeBudgetProgram,
 } from "@solana/web3.js";
-import { sleep, toScaledNumber, toScaledPercent, div, mul } from "./utils";
+import { sleep } from "./utils";
 import {
   MintPositionsUninitialized,
   SinglePoolCometUninitialized,
@@ -27,7 +27,7 @@ import {
   LiquidityPositionsUninitialized,
 } from "./error";
 import { assert } from "chai";
-import { RawDecimal, toNumber, toDecimal, getMantissa } from "./decimal";
+import { RawDecimal, toNumber, getMantissa } from "./decimal";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -37,12 +37,6 @@ export const MAX_PRICE_SIZE = 128;
 export const toDevnetScale = (x: number) => {
   return new BN(x * 10 ** DEVNET_TOKEN_SCALE);
 };
-
-const TOKEN_DATA_SIZE = 151088 + 8;
-const SINGLE_POOL_COMET_SIZE = 8208;
-const MINT_POSITIONS_SIZE = 20440 + 8;
-const LIQUIDITY_POSITIONS_SIZE = 14320 + 8;
-const COMET_SIZE = 46992 + 8;
 
 const SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID: PublicKey = new PublicKey(
   "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
