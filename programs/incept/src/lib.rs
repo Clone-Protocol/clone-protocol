@@ -357,9 +357,10 @@ pub mod incept {
     pub fn liquidate_mint_position(
         ctx: Context<LiquidateMintPosition>,
         manager_nonce: u8,
+        user_nonce: u8,
         mint_index: u8,
     ) -> Result<()> {
-        instructions::liquidate_mint_position::execute(ctx, manager_nonce, mint_index)
+        instructions::liquidate_mint_position::execute(ctx, manager_nonce, user_nonce, mint_index)
     }
 
     pub fn liquidate_comet_position_reduction(

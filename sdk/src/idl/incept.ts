@@ -1905,6 +1905,10 @@ export type Incept = {
           "type": "u8"
         },
         {
+          "name": "userNonce",
+          "type": "u8"
+        },
+        {
           "name": "mintIndex",
           "type": "u8"
         }
@@ -5002,6 +5006,10 @@ export const IDL: Incept = {
       "args": [
         {
           "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "userNonce",
           "type": "u8"
         },
         {
