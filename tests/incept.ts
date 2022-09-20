@@ -1789,8 +1789,6 @@ describe("incept", async () => {
 
     await inceptClient.addLiquidityToComet(new BN(400000000), 0, false);
 
-    await sleep(200);
-
     const tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[0];
 
@@ -1895,6 +1893,63 @@ describe("incept", async () => {
     );
   });
 
+  it("multi pool comet extra tests!", async () => {
+    // Increase pool price
+    let tokenData = await inceptClient.getTokenData();
+    const poolIndex = 0;
+    const pool0 = tokenData.pools[poolIndex];
+
+    mockUSDCTokenAccountInfo =
+      await inceptClient.getOrCreateAssociatedTokenAccount(
+        mockUSDCMint.publicKey
+      );
+    usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
+      inceptClient.manager!.usdiMint
+    );
+    iassetTokenAccountInfo =
+      await inceptClient.getOrCreateAssociatedTokenAccount(
+        pool0.assetInfo.iassetMint
+      );
+    await inceptClient.addLiquidityToComet(new BN(50000000), 0, false);
+
+    tokenData = await inceptClient.getTokenData();
+    const pool1 = tokenData.pools[poolIndex];
+
+    await inceptClient.buySynth(
+      new BN(1000000000000),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      poolIndex
+    );
+    await inceptClient.withdrawLiquidityFromComet(new BN(50000000), 0, false);
+
+    // Decrease pool price
+    await inceptClient.sellSynth(
+      new BN(1500000000000),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      poolIndex
+    );
+
+    // Need to buy to get back to original price
+    tokenData = await inceptClient.getTokenData();
+    const pool2 = tokenData.pools[poolIndex];
+
+    const prevPrice = toNumber(pool1.usdiAmount) / toNumber(pool1.iassetAmount);
+    const iAssetToBuy =
+      toNumber(pool2.iassetAmount) -
+      Math.sqrt(
+        (toNumber(pool2.usdiAmount) * toNumber(pool2.iassetAmount)) / prevPrice
+      );
+
+    await inceptClient.buySynth(
+      toDevnetScale(iAssetToBuy),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      poolIndex
+    );
+  });
+
   it("hackathon USDI mint", async () => {
     usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
       inceptClient.manager!.usdiMint
@@ -1952,13 +2007,13 @@ describe("incept", async () => {
 
     assert.closeTo(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      5327251.60126519,
+      5327251.60216905,
       1e-6,
       "check user usdi balance."
     );
     assert.closeTo(
       Number(iassetTokenAccountInfo.amount) / 100000000,
-      129089.70909181,
+      129089.71019178,
       1e-6,
       "check user iAsset balance."
     );
@@ -1971,7 +2026,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      582759.97082502,
+      582760.40581892,
       1e-6,
       "check pool usdi"
     );
@@ -1984,7 +2039,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      70910.91569025,
+      70910.9860005,
       1e-6,
       "check pool iAsset"
     );
@@ -2021,13 +2076,13 @@ describe("incept", async () => {
 
     assert.closeTo(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      5327251.60126519,
+      5327251.60216905,
       1e-6,
       "check user usdi balance"
     );
     assert.closeTo(
       Number(iassetTokenAccountInfo.amount) / 100000000,
-      129089.70909181,
+      129089.71019178,
       1e-6,
       "check user iAsset balance"
     );
@@ -2040,7 +2095,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      582760.60542772,
+      582761.12087686,
       1e-6,
       "check pool usdi"
     );
@@ -2053,7 +2108,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      70910.83847113,
+      70910.8989915,
       1e-6,
       "check pool iAsset"
     );
