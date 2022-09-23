@@ -33,7 +33,6 @@ pub struct PayBackiAssetToMint<'info> {
         mut,
         constraint = &mint_positions.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
         constraint = (mint_index as u64) < mint_positions.load()?.num_positions @ InceptError::InvalidInputPositionIndex,
-        constraint = mint_positions.load()?.mint_positions[mint_index as usize].borrowed_iasset.to_u64() >= amount @ InceptError::InequalityComparisonViolated
     )]
     pub mint_positions: AccountLoader<'info, MintPositions>,
     #[account(
@@ -63,10 +62,12 @@ pub fn execute(
     mint_index: u8,
     amount: u64,
 ) -> ProgramResult {
-    let amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let mut amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
     let mint_positions = &mut ctx.accounts.mint_positions.load_mut()?;
     let mint_position = mint_positions.mint_positions[mint_index as usize];
+
+    amount_value = amount_value.min(mint_position.borrowed_iasset.to_decimal());
 
     // burn user iasset to pay back mint position
     let cpi_accounts = Burn {
@@ -79,7 +80,7 @@ pub fn execute(
         authority: ctx.accounts.user.to_account_info().clone(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
-    token::burn(CpiContext::new(cpi_program, cpi_accounts), amount)?;
+    token::burn(CpiContext::new(cpi_program, cpi_accounts), amount_value.mantissa().try_into().unwrap())?;
 
     // update total amount of borrowed iasset
     let updated_borrowed_iasset = mint_position.borrowed_iasset.to_decimal() - amount_value;
