@@ -144,6 +144,20 @@ export class Incept {
       .rpc();
   }
 
+  public async initializeUserInstruction() {
+    const { userPubkey, bump } = await this.getUserAddress();
+    return await this.program.methods
+      .initializeUser(bump)
+      .accounts({
+        user: this.provider.publicKey!,
+        userAccount: userPubkey,
+        rent: RENT_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SYSTEM_PROGRAM_ID,
+      })
+      .instruction();
+  }
+
   public async addCollateral(
     admin: PublicKey,
     scale: number,
