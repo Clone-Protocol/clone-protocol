@@ -8,7 +8,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, liquidity_token_amount: u64)]
+#[instruction(user_nonce: u8, manager_nonce: u8, liquidity_token_amount: u64)]
 pub struct WithdrawLiquidityFromSinglePoolComet<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -18,12 +18,18 @@ pub struct WithdrawLiquidityFromSinglePoolComet<'info> {
     )]
     pub manager: Account<'info, Manager>,
     #[account(
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_nonce,
+    )]
+    pub user_account: Account<'info, User>,
+    #[account(
         mut,
         has_one = manager
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
+        address = user_account.single_pool_comets,
         constraint = &single_pool_comet.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
         constraint = single_pool_comet.load()?.is_single_pool == 1 @ InceptError::NotSinglePoolComet
     )]
@@ -68,6 +74,7 @@ pub struct WithdrawLiquidityFromSinglePoolComet<'info> {
 
 pub fn execute(
     ctx: Context<WithdrawLiquidityFromSinglePoolComet>,
+    user_nonce: u8,
     manager_nonce: u8,
     liquidity_token_amount: u64,
 ) -> ProgramResult {

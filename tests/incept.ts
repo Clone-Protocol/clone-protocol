@@ -1088,7 +1088,7 @@ describe("incept", async () => {
     const singlePoolComets = await inceptClient.getSinglePoolComets();
 
     assert.equal(
-      Number(singlePoolComets.numComets),
+      Number(singlePoolComets.numPositions),
       1,
       "ensure comet position was initialized"
     );
@@ -1174,6 +1174,7 @@ describe("incept", async () => {
     assert.equal(vault.value!.uiAmount, 21000250, "check vault balance");
     const singlePoolComet = await inceptClient.getSinglePoolComet(0);
   });
+
 
   it("single pool comet liquidity added!", async () => {
     mockUSDCTokenAccountInfo =
@@ -1265,7 +1266,7 @@ describe("incept", async () => {
     //   "check upper range estimations"
     // );
 
-    await inceptClient.addLiquidityToSinglePoolComet(new BN(51000000000), 0);
+    await inceptClient.addLiquidityToSinglePoolComet(new BN(51000000000), 0, 0);
 
     await sleep(200);
 
@@ -1299,7 +1300,6 @@ describe("incept", async () => {
       91012.29090819,
       "check iasset pool balance"
     );
-    const singlePoolComet = await inceptClient.getSinglePoolComet(0);
   });
 
   it("single pool comet liquidity subtracted!", async () => {
@@ -1314,7 +1314,7 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         pool.assetInfo.iassetMint
       );
-    const comet = await inceptClient.getSinglePoolComet(0);
+    const comet = await inceptClient.getSinglePoolComets();
     const position = comet.positions[0];
 
     // // Estimate using edit.

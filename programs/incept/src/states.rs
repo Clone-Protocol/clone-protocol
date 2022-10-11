@@ -198,31 +198,31 @@ pub struct User {
     pub comet_manager: CometManager, // 40
 }
 
-#[account(zero_copy)]
-pub struct SinglePoolComets {
-    // 8200
-    pub owner: Pubkey,         // 32
-    pub num_comets: u64,       // 8
-    pub comets: [Pubkey; 255], // 255 * 32 = 8160
-}
+// #[account(zero_copy)]
+// pub struct SinglePoolComets {
+//     // 8200
+//     pub owner: Pubkey,         // 32
+//     pub num_comets: u64,       // 8
+//     pub comets: [Pubkey; 255], // 255 * 32 = 8160
+// }
 
-impl Default for SinglePoolComets {
-    fn default() -> Self {
-        return Self {
-            owner: Pubkey::default(),
-            num_comets: 0,
-            comets: [Pubkey::default(); 255],
-        };
-    }
-}
+// impl Default for SinglePoolComets {
+//     fn default() -> Self {
+//         return Self {
+//             owner: Pubkey::default(),
+//             num_comets: 0,
+//             comets: [Pubkey::default(); 255],
+//         };
+//     }
+// }
 
-impl SinglePoolComets {
-    pub fn remove(&mut self, index: usize) {
-        self.comets[index] = self.comets[(self.num_comets - 1) as usize];
-        self.comets[(self.num_comets - 1) as usize] = Pubkey::default();
-        self.num_comets -= 1;
-    }
-}
+// impl SinglePoolComets {
+//     pub fn remove(&mut self, index: usize) {
+//         self.comets[index] = self.comets[(self.num_comets - 1) as usize];
+//         self.comets[(self.num_comets - 1) as usize] = Pubkey::default();
+//         self.num_comets -= 1;
+//     }
+// }
 
 #[account(zero_copy)]
 pub struct Comet {
@@ -302,12 +302,22 @@ impl Comet {
         self.num_positions += 1;
     }
 
-    pub fn calculate_effective_collateral_value(&self, token_data: &TokenData) -> Decimal {
+    pub fn calculate_effective_collateral_value(
+        &self,
+        token_data: &TokenData,
+        single_index: Option<usize>,
+    ) -> Decimal {
         let mut total_value = Decimal::new(0, DEVNET_TOKEN_SCALE.into());
 
         self.collaterals[0..(self.num_collaterals as usize)]
             .iter()
-            .for_each(|comet_collateral| {
+            .enumerate()
+            .for_each(|(i, comet_collateral)| {
+                if let Some(index) = single_index {
+                    if index != i {
+                        return;
+                    }
+                }
                 let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
                 let collateral_value = if collateral.stable == 1 {
                     comet_collateral.collateral_amount.to_decimal()
@@ -350,6 +360,14 @@ impl Default for CometPosition {
             liquidity_token_value: RawDecimal::default(),
             comet_liquidation: CometLiquidation::default(),
         };
+    }
+}
+
+impl CometPosition {
+    pub fn is_empty(&self) -> bool {
+        self.borrowed_iasset.to_decimal().is_zero()
+            && self.borrowed_usdi.to_decimal().is_zero()
+            && self.liquidity_token_value.to_decimal().is_zero()
     }
 }
 

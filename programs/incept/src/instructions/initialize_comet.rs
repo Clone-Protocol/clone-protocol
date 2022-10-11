@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8)]
+#[instruction(user_nonce: u8, is_single_pool: bool)]
 pub struct InitializeComet<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -20,11 +20,20 @@ pub struct InitializeComet<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<InitializeComet>, _user_nonce: u8) -> ProgramResult {
+pub fn execute(
+    ctx: Context<InitializeComet>,
+    _user_nonce: u8,
+    is_single_pool: bool,
+) -> ProgramResult {
     let mut comet = ctx.accounts.comet.load_init()?;
 
     // set user data
-    ctx.accounts.user_account.comet = *ctx.accounts.comet.to_account_info().key;
+    if is_single_pool {
+        comet.is_single_pool = 1;
+        ctx.accounts.user_account.single_pool_comets = *ctx.accounts.comet.to_account_info().key;
+    } else {
+        ctx.accounts.user_account.comet = *ctx.accounts.comet.to_account_info().key;
+    }
 
     // set user as owner
     comet.owner = *ctx.accounts.user.to_account_info().key;
