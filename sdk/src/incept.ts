@@ -999,16 +999,17 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     userLiquidityTokenAccount: PublicKey,
     liquidityTokenAmount: BN,
-    poolIndex: number
+    liquidityPositionIndex: number,
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
+    let liquidityPosition = await this.getLiquidityPosition(liquidityPositionIndex);
 
-    let pool = tokenData.pools[poolIndex];
+    let pool = tokenData.pools[liquidityPosition.poolIndex];
 
     return (await this.program.instruction.withdrawLiquidity(
       this.managerAddress[1],
-      poolIndex,
+      liquidityPositionIndex,
       liquidityTokenAmount,
       {
         accounts: {
