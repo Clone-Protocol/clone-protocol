@@ -1531,13 +1531,13 @@ export class Incept {
     if (getMantissa(singlePoolComet.positions[0].liquidityTokenValue) !== 0) {
       const withdrawLiquidityFromSinglePoolCometIx =
         await this.withdrawLiquidityFromSinglePoolCometInstruction(
-          new BN(getMantissa(singlePoolComet.positions[0].liquidityTokenValue)),
+          new BN(getMantissa(singlePoolComet.positions[cometIndex].liquidityTokenValue)),
           cometIndex
         );
       const paySinglePoolCometILDIx =
         await this.paySinglePoolCometILDInstruction(
           cometIndex,
-          getMantissa(singlePoolComet.collaterals[0].collateralAmount)
+          getMantissa(singlePoolComet.collaterals[cometIndex].collateralAmount)
         );
       await this.provider.send(
         new Transaction()
@@ -1549,7 +1549,7 @@ export class Incept {
       const paySinglePoolCometILDIx =
         await this.paySinglePoolCometILDInstruction(
           cometIndex,
-          getMantissa(singlePoolComet.collaterals[0].collateralAmount)
+          getMantissa(singlePoolComet.collaterals[cometIndex].collateralAmount)
         );
       await this.provider.send(
         new Transaction().add(paySinglePoolCometILDIx),
@@ -1899,7 +1899,7 @@ export class Incept {
             tokenData.pools[position.poolIndex].liquidityTokenMint,
           cometLiquidityTokenAccount:
             tokenData.pools[position.poolIndex].cometLiquidityTokenAccount,
-          vault: tokenData.collaterals[0].vault,
+          vault: tokenData.collaterals[cometPositionIndex].vault,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
