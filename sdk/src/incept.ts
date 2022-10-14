@@ -2368,21 +2368,21 @@ export class Incept {
       }
       throw error;
     }
-    let singlePoolComet = await this.getSinglePoolComets();
 
     for (let i = 0; i < Number(singlePoolComets.numPositions); i++) {
       try {
-        let cometPosition = singlePoolComet.positions[i];
+        let cometPosition = singlePoolComets.positions[i];
+        let cometCollateral = singlePoolComets.collaterals[i];
         let poolIndex = cometPosition.poolIndex;
         if (Number(poolIndex) === 255) {
           cometInfos.push([
             poolIndex,
-            singlePoolComet.collaterals[i].collateralIndex,
+            cometCollateral.collateralIndex,
             null,
             null,
             null,
             null,
-            toNumber(singlePoolComet.collaterals[i].collateralAmount),
+            toNumber(cometCollateral.collateralAmount),
             null,
             null,
             0,
@@ -2393,7 +2393,7 @@ export class Incept {
           continue;
         }
         let pool = await this.getPool(poolIndex);
-        let collateralIndex = singlePoolComet.collaterals[i].collateralIndex;
+        let collateralIndex = cometCollateral.collateralIndex;
         let assetInfo = await this.getAssetInfo(poolIndex);
         let poolBalances = await this.getPoolBalances(poolIndex);
         let ammPrice = poolBalances[1] / poolBalances[0];
@@ -2401,7 +2401,7 @@ export class Incept {
         let borrowedIasset = toNumber(cometPosition.borrowedIasset);
         let borrowedUsdi = toNumber(cometPosition.borrowedIasset);
         let totalCollateralAmount = toNumber(
-          singlePoolComet.collaterals[i].collateralAmount
+          cometCollateral.collateralAmount
         );
         let data = await this.calculateEditCometSinglePoolWithUsdiBorrowed(
           i,
@@ -2411,30 +2411,21 @@ export class Incept {
         let range = [data.lowerPrice, data.upperPrice];
         let lowerPriceRange = range[0];
         let upperPriceRange = range[1];
-        let minGap = Math.min(
+
+        let gaps = [
           oraclePrice - lowerPriceRange,
           ammPrice - lowerPriceRange,
           upperPriceRange - oraclePrice,
           upperPriceRange - ammPrice
-        );
-        let indicatorPrice: number;
-        switch (minGap) {
-          case oraclePrice - lowerPriceRange:
-            indicatorPrice = oraclePrice;
-            break;
-          case ammPrice - lowerPriceRange:
-            indicatorPrice = ammPrice;
-            break;
-          case upperPriceRange - oraclePrice:
-            indicatorPrice = oraclePrice;
-            break;
-          case upperPriceRange - ammPrice:
-            indicatorPrice = ammPrice;
-            break;
-          default:
-            throw new Error("Couldn't get indicator price");
-            break;
+        ];
+        let minGapIndex = 0;
+        for (let i = 0; i < gaps.length; i++) {
+          if (gaps[minGapIndex] > gaps[i]) {
+            minGapIndex = i;
+          }
         }
+        let indicatorPrice = minGapIndex == 0 || minGapIndex == 2 ? oraclePrice : ammPrice;
+    
         let centerPrice =
           toNumber(cometPosition.borrowedUsdi) /
           toNumber(cometPosition.borrowedIasset);
