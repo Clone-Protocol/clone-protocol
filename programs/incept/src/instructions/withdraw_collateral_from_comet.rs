@@ -74,7 +74,8 @@ pub fn execute(
                 .scale()
                 .try_into()
                 .unwrap(),
-        );
+        )
+        .min(comet_collateral.collateral_amount.to_decimal());
 
         // subtract collateral amount from vault supply
         token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
@@ -83,9 +84,10 @@ pub fn execute(
             );
 
         // ensure the position holds sufficient collateral
-        if comet_collateral.collateral_amount.to_decimal() < subtracted_collateral_value {
-            return Err(InceptError::InsufficientCollateral.into());
-        }
+        require!(
+            subtracted_collateral_value <= comet_collateral.collateral_amount.to_decimal(),
+            InceptError::InsufficientCollateral
+        );
 
         // update the collateral amount
         comet.collaterals[comet_collateral_index as usize].collateral_amount = RawDecimal::from(

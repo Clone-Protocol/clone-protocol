@@ -311,12 +311,14 @@ pub mod incept {
         manager_nonce: u8,
         comet_position_index: u8,
         liquidity_token_amount: u64,
+        comet_collateral_index: u8,
     ) -> Result<()> {
         instructions::withdraw_liquidity_from_comet::execute(
             ctx,
             manager_nonce,
             comet_position_index,
             liquidity_token_amount,
+            comet_collateral_index,
         )
     }
 

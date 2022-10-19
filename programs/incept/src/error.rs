@@ -169,6 +169,14 @@ pub enum InceptError {
     /// 41. Incorrect Oracle Address
     #[msg("Incorrect oracle address provided")]
     IncorrectOracleAddress,
+
+    /// 42. Centered Comet Required
+    #[msg("Comet must be centered!")]
+    CenteredCometRequired,
+
+    /// 43. Invalid Resulting Comet
+    #[msg("Comet is in an invalid state after action")]
+    InvalidResultingComet,
 }
 
 impl From<InceptError> for ProgramError {

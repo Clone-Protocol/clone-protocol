@@ -1633,6 +1633,10 @@ export type Incept = {
         {
           "name": "liquidityTokenAmount",
           "type": "u64"
+        },
+        {
+          "name": "cometCollateralIndex",
+          "type": "u8"
         }
       ]
     },
@@ -3098,6 +3102,16 @@ export type Incept = {
       "code": 6041,
       "name": "IncorrectOracleAddress",
       "msg": "Incorrect oracle address provided"
+    },
+    {
+      "code": 6042,
+      "name": "CenteredCometRequired",
+      "msg": "Comet must be centered!"
+    },
+    {
+      "code": 6043,
+      "name": "InvalidResultingComet",
+      "msg": "Comet is in an invalid state after action"
     }
   ]
 };
@@ -4737,6 +4751,10 @@ export const IDL: Incept = {
         {
           "name": "liquidityTokenAmount",
           "type": "u64"
+        },
+        {
+          "name": "cometCollateralIndex",
+          "type": "u8"
         }
       ]
     },
@@ -6202,6 +6220,16 @@ export const IDL: Incept = {
       "code": 6041,
       "name": "IncorrectOracleAddress",
       "msg": "Incorrect oracle address provided"
+    },
+    {
+      "code": 6042,
+      "name": "CenteredCometRequired",
+      "msg": "Comet must be centered!"
+    },
+    {
+      "code": 6043,
+      "name": "InvalidResultingComet",
+      "msg": "Comet is in an invalid state after action"
     }
   ]
 };

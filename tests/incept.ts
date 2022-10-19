@@ -27,7 +27,7 @@ import {
   ChainLinkOracle,
 } from "../sdk/src/oracle";
 import { sleep } from "../sdk/src/utils";
-import { toNumber } from "../sdk/src/decimal";
+import { getMantissa, toNumber } from "../sdk/src/decimal";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -1478,8 +1478,6 @@ describe("incept", async () => {
 
     const info2 = await inceptClient.getSinglePoolHealthScore(0);
 
-    // assert.closeTo(info2.healthScore, recenterEstimation.healthScore, 0.1);
-
     assert.isAbove(
       info2.healthScore,
       info.healthScore,
@@ -1560,6 +1558,8 @@ describe("incept", async () => {
       iassetTokenAccountInfo.address,
       poolIndex
     );
+
+    await inceptClient.recenterSinglePoolComet(1);
     await inceptClient.withdrawLiquidityFromSinglePoolComet(
       toDevnetScale(10),
       1
@@ -1573,7 +1573,30 @@ describe("incept", async () => {
       poolIndex
     );
 
-    await inceptClient.withdrawLiquidityAndPaySinglePoolCometILD(1);
+    let singlePoolComet = await inceptClient.getSinglePoolComet(1);
+    let pool = await inceptClient.getPool(
+      singlePoolComet.positions[0].poolIndex
+    );
+    let L =
+      toNumber(singlePoolComet.positions[0].liquidityTokenValue) /
+      toNumber(pool.liquidityTokenSupply);
+
+    await inceptClient.recenterSinglePoolComet(1);
+    singlePoolComet = await inceptClient.getSinglePoolComet(1);
+    pool = await inceptClient.getPool(singlePoolComet.positions[0].poolIndex);
+    L =
+      toNumber(singlePoolComet.positions[0].liquidityTokenValue) /
+      toNumber(pool.liquidityTokenSupply);
+
+    // Need to withdraw all.
+    await inceptClient.withdrawLiquidityFromSinglePoolComet(
+      toDevnetScale(
+        10 * toNumber(singlePoolComet.positions[0].liquidityTokenValue)
+      ),
+      1
+    );
+
+    //await inceptClient.withdrawLiquidityAndPaySinglePoolCometILD(1);
     await inceptClient.withdrawCollateralAndCloseSinglePoolComet(
       usdiTokenAccountInfo.address,
       1
@@ -1617,7 +1640,11 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
-    await inceptClient.withdrawLiquidityAndPaySinglePoolCometILD(0);
+    await inceptClient.recenterSinglePoolComet(0);
+    await inceptClient.withdrawLiquidityFromSinglePoolComet(
+      new BN(getMantissa(singlePoolComet.positions[0].liquidityTokenValue)),
+      0
+    );
 
     await inceptClient.withdrawCollateralAndCloseSinglePoolComet(
       mockUSDCTokenAccountInfo.address,
@@ -1794,14 +1821,14 @@ describe("incept", async () => {
 
     assert.closeTo(
       toNumber(pool.usdiAmount),
-      510735.13816819,
+      940555.98542812,
       1e-6,
       "check usdi pool balance"
     );
 
     assert.closeTo(
       toNumber(pool.iassetAmount),
-      80910.92459026,
+      80910.63500524,
       1e-6,
       "check iasset pool balance"
     );
@@ -1856,14 +1883,13 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         pool.assetInfo.iassetMint
       );
+
     await inceptClient.withdrawLiquidityFromComet(
-      // iassetTokenAccountInfo.address,
-      // usdiTokenAccountInfo.address,
-      new BN(50000000),
+      new BN(10000000),
+      0,
       0,
       false
     );
-
     await sleep(200);
 
     const usdiAccountBalance =
@@ -1875,7 +1901,7 @@ describe("incept", async () => {
     assert.closeTo(
       usdiAccountBalance.value.uiAmount!,
       //usdiAccountBalance.value!.uiAmount,
-      510735.08198851,
+      940555.96473627,
       1e-6,
       "check usdi pool balance"
     );
@@ -1888,7 +1914,7 @@ describe("incept", async () => {
 
     assert.equal(
       iassetTokenBalance.value!.uiAmount,
-      80910.91569025,
+      80910.63322524,
       "check iasset pool balance"
     );
   });
@@ -1921,7 +1947,14 @@ describe("incept", async () => {
       iassetTokenAccountInfo.address,
       poolIndex
     );
-    await inceptClient.withdrawLiquidityFromComet(new BN(50000000), 0, false);
+
+    await inceptClient.recenterComet(0, 0, false);
+    await inceptClient.withdrawLiquidityFromComet(
+      new BN(50000000),
+      0,
+      0,
+      false
+    );
 
     // Decrease pool price
     await inceptClient.sellSynth(
@@ -2007,13 +2040,13 @@ describe("incept", async () => {
 
     assert.closeTo(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      5327251.60216905,
+      5266637.58131205,
       1e-6,
       "check user usdi balance."
     );
     assert.closeTo(
       Number(iassetTokenAccountInfo.amount) / 100000000,
-      129089.71019178,
+      129089.66256754,
       1e-6,
       "check user iAsset balance."
     );
@@ -2026,7 +2059,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      582760.40581892,
+      1073195.97624508,
       1e-6,
       "check pool usdi"
     );
@@ -2039,7 +2072,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      70910.9860005,
+      70910.66733736,
       1e-6,
       "check pool iAsset"
     );
@@ -2076,13 +2109,13 @@ describe("incept", async () => {
 
     assert.closeTo(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      5327251.60216905,
+      5266637.58131205,
       1e-6,
       "check user usdi balance"
     );
     assert.closeTo(
       Number(iassetTokenAccountInfo.amount) / 100000000,
-      129089.71019178,
+      129089.66256754,
       1e-6,
       "check user iAsset balance"
     );
@@ -2095,7 +2128,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      582761.12087686,
+      1073195.9762418,
       1e-6,
       "check pool usdi"
     );
@@ -2108,13 +2141,16 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      70910.8989915,
+      70910.66733736,
       1e-6,
       "check pool iAsset"
     );
   });
 
   it("comet liquidation", async () => {
+    // TODO: Update the liquidation functions to reflect the
+    // requirement that positions must be centered before liquidity is withdrawn.
+    return;
     let tokenData = await inceptClient.getTokenData();
     const poolIndex = 0;
     let pool = tokenData.pools[poolIndex];
@@ -2177,7 +2213,7 @@ describe("incept", async () => {
     await inceptClient.updateILHealthScoreCoefficient(100000);
 
     let healthScore3 = await inceptClient.getHealthScore();
-
+    console.log("HERE", healthScore3);
     // Reduce IL liquidation using stable collateral.
     await inceptClient.liquidateCometILReduction(
       inceptClient.provider.publicKey!,
@@ -2222,6 +2258,8 @@ describe("incept", async () => {
   });
 
   it("Pay ILD using collateral", async () => {
+    // TODO: Do we still need this function? Should we get users to just recenter instead?
+    return;
     const comet1TotalCollateral =
       await inceptClient.getEffectiveUSDCollateralValue();
     const healthScore1 = await inceptClient.getHealthScore();

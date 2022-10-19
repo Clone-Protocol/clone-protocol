@@ -1717,19 +1717,17 @@ export class Incept {
   }
 
   public async withdrawLiquidityFromComet(
-    // userIassetTokenAccount: PublicKey,
-    // userUsdiTokenAccount: PublicKey,
     liquidityTokenAmount: BN,
     cometPositionIndex: number,
+    collateralIndex: number,
     forManager: boolean,
     signers?: Array<Keypair>
   ) {
     const withdrawLiquidityFromCometIx =
       await this.withdrawLiquidityFromCometInstruction(
-        // userIassetTokenAccount,
-        // userUsdiTokenAccount,
         liquidityTokenAmount,
         cometPositionIndex,
+        collateralIndex,
         forManager
       );
     await this.provider.sendAndConfirm!(
@@ -1738,10 +1736,9 @@ export class Incept {
     );
   }
   public async withdrawLiquidityFromCometInstruction(
-    // userIassetTokenAccount: PublicKey,
-    // userUsdiTokenAccount: PublicKey,
     liquidityTokenAmount: BN,
     cometPositionIndex: number,
+    collateralIndex: number,
     forManager: boolean
   ) {
     let tokenData = await this.getTokenData();
@@ -1756,7 +1753,8 @@ export class Incept {
       .withdrawLiquidityFromComet(
         this.managerAddress[1],
         cometPositionIndex,
-        liquidityTokenAmount
+        liquidityTokenAmount,
+        collateralIndex
       )
       .accounts({
         user: this.provider.publicKey!,
@@ -1773,7 +1771,7 @@ export class Incept {
           tokenData.pools[position.poolIndex].liquidityTokenMint,
         cometLiquidityTokenAccount:
           tokenData.pools[position.poolIndex].cometLiquidityTokenAccount,
-        vault: tokenData.collaterals[0].vault,
+        vault: tokenData.collaterals[collateralIndex].vault,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
