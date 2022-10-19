@@ -2,6 +2,7 @@
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
+use rust_decimal::prelude::*;
 
 #[derive(Accounts)]
 #[instruction(user_nonce: u8)]
@@ -25,9 +26,15 @@ pub fn execute(ctx: Context<InitializeComet>, _user_nonce: u8) -> Result<()> {
 
     // set user data
     ctx.accounts.user_account.comet = *ctx.accounts.comet.to_account_info().key;
-
     // set user as owner
     comet.owner = *ctx.accounts.user.to_account_info().key;
+
+    // Initialize with USDi as collateral.
+    comet.add_collateral(CometCollateral {
+        authority: *ctx.accounts.user.to_account_info().key,
+        collateral_amount: RawDecimal::from(Decimal::new(0, DEVNET_TOKEN_SCALE)),
+        collateral_index: USDI_COLLATERAL_INDEX as u64,
+    });
 
     Ok(())
 }
