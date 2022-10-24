@@ -68,6 +68,14 @@ pub fn execute(
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
+
+    if comet.is_single_pool == 1 {
+        require!(
+            comet_position_index == comet_collateral_index,
+            InceptError::InvalidInputPositionIndex
+        );
+    }
+
     let comet_position = comet.positions[comet_position_index as usize];
     let comet_collateral = comet.collaterals[comet_collateral_index as usize];
     let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
@@ -85,7 +93,9 @@ pub fn execute(
     if borrowed_usdi.is_zero() && borrowed_iasset.is_zero() {
         // if there is no debt, close the position
         // TODO: Do we also need to close out the account for a single pool?
-        comet.remove_position(comet_position_index.into());
+        if comet.is_single_pool != 1 {
+            comet.remove_position(comet_position_index.into());
+        }
         return Ok(());
     } else if borrowed_iasset.is_zero() {
         // if usdi, update collateral and reduce borrowed amount

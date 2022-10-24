@@ -2,7 +2,6 @@
 use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
-use anchor_lang::AccountsClose;
 use anchor_spl::token::*;
 
 #[derive(Accounts)]
@@ -17,16 +16,9 @@ pub struct CloseSinglePoolComet<'info> {
     pub user_account: Account<'info, User>,
     #[account(
         mut,
-        constraint = &single_pool_comets.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
-        constraint = (comet_index as u64) < single_pool_comets.load()?.num_comets @ InceptError::InvalidInputPositionIndex,
-    )]
-    pub single_pool_comets: AccountLoader<'info, SinglePoolComets>,
-    #[account(
-        mut,
         constraint = single_pool_comet.load()?.owner == *user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
         constraint = single_pool_comet.load()?.is_single_pool == 1 @ InceptError::NotSinglePoolComet,
-        constraint = single_pool_comet.load()?.num_collaterals == 0 @ InceptError::SinglePoolCometNotEmpty,
-        address = single_pool_comets.load()?.comets[comet_index as usize],
+        address = user_account.single_pool_comets
     )]
     pub single_pool_comet: AccountLoader<'info, Comet>,
     pub token_program: Program<'info, Token>,
@@ -38,26 +30,21 @@ pub fn execute(
     comet_index: u8,
 ) -> ProgramResult {
     // remove single pool comet
-    ctx.accounts
-        .single_pool_comets
-        .load_mut()?
-        .remove(comet_index as usize);
+    let mut single_pool_comet = ctx.accounts.single_pool_comet.load_mut()?;
+    let position_index = comet_index as usize;
+    let comet_position = single_pool_comet.positions[position_index];
+    let collateral_position = single_pool_comet.collaterals[position_index];
 
-    let close = ctx.accounts.single_pool_comets.load_mut()?.num_comets == 0;
+    // TODO: Check liquidation status? move to a require statement w/ InceptError
+    assert!(
+        comet_position.liquidity_token_value.to_decimal().is_zero()
+            && comet_position.borrowed_usdi.to_decimal().is_zero()
+            && comet_position.borrowed_iasset.to_decimal().is_zero()
+            && collateral_position.collateral_amount.to_decimal().is_zero()
+    );
 
-    // close single pool comet account
-    ctx.accounts
-        .single_pool_comet
-        .close(ctx.accounts.user.to_account_info())?;
-
-    // check to see if single pool comets account should be closed
-    if close {
-        // close single pool comets account if no comets remain
-        ctx.accounts.user_account.single_pool_comets = Pubkey::default();
-        ctx.accounts
-            .single_pool_comets
-            .close(ctx.accounts.user.to_account_info())?;
-    }
+    single_pool_comet.remove_position(position_index);
+    single_pool_comet.remove_collateral(position_index);
 
     Ok(())
 }
