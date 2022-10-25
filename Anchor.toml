@@ -1,10 +1,10 @@
 [programs.localnet]
-incept = "BD4VhtXN4d9HJ7QgNcBx6qYX317L7hf3QCFemWfrKyMu"
-pyth = "8GJfjMsyoyD7L6Rrmhjqcp5XjgEv5Jznz9Qh2LY4Mivf"
-mock_usdc = "B5JYKUfHUwrcLjZqGSS5iksqDtGu6eRtGtZy8G1YghjX"
-store = "6bDJFLAQE2cbT1CjfZUPeiCQehQPgpU9oNiurdiL1Pb7"
-access_controller = "6QRzNywYqvdPcZdmpopsEqbJh7X9Bj61wHYYXmPXwJai"
-jupiter_agg_mock = "A2Ju5WPJfFPeVY8HhAe4VU9tJMTvAa5zMRFjU1UfZ8ek"
+incept = "FbFjJC5XVPszxumC5jGVkDkV19TgJP7LWmsX21cRSXKL"
+pyth = "7741WpkbdmZPGmqzPpsP3LdbzCwtMgxWH9tjdERnAzg8"
+mock_usdc = "ED1yj7uXEZRFXwFU8QMtD2CCnpkLiTq46W1cNKFqo9qV"
+store = "Haz47L8yvvthM99yy7hGi9jcPjVJSL1anMS238Ta6RFp"
+access_controller = "FvSzDSyxvu72HhTgAVnBkwVAwR9NvTqjR4tFBXia4bkv"
+jupiter_agg_mock = "CBM3RJyXMmu2cCSmBc1Vb5BB4Xy8hks3QQD4TcFYHoVg"
 
 [registry]
 url = "https://anchor.projectserum.com"

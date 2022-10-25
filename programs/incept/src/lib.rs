@@ -10,10 +10,11 @@ mod value;
 
 use instructions::*;
 
-declare_id!("BD4VhtXN4d9HJ7QgNcBx6qYX317L7hf3QCFemWfrKyMu");
+declare_id!("FbFjJC5XVPszxumC5jGVkDkV19TgJP7LWmsX21cRSXKL");
 
 #[program]
 pub mod incept {
+
     use super::*;
 
     pub fn initialize_manager(
@@ -48,12 +49,12 @@ pub mod incept {
         instructions::initialize_user::execute(ctx, user_nonce)
     }
 
-    pub fn initialize_single_pool_comets(
-        ctx: Context<InitializeSinglePoolComets>,
-        user_nonce: u8,
-    ) -> Result<()> {
-        instructions::initialize_single_pool_comets::execute(ctx, user_nonce)
-    }
+    // pub fn initialize_single_pool_comets(
+    //     ctx: Context<InitializeSinglePoolComets>,
+    //     user_nonce: u8,
+    // ) -> Result<()> {
+    //     instructions::initialize_single_pool_comets::execute(ctx, user_nonce)
+    // }
 
     pub fn initialize_mint_positions(
         ctx: Context<InitializeMintPositions>,
@@ -69,8 +70,12 @@ pub mod incept {
         instructions::initialize_liquidity_positions::execute(ctx, user_nonce)
     }
 
-    pub fn initialize_comet(ctx: Context<InitializeComet>, user_nonce: u8) -> Result<()> {
-        instructions::initialize_comet::execute(ctx, user_nonce)
+    pub fn initialize_comet(
+        ctx: Context<InitializeComet>,
+        user_nonce: u8,
+        is_single_pool: bool,
+    ) -> Result<()> {
+        instructions::initialize_comet::execute(ctx, user_nonce, is_single_pool)
     }
 
     pub fn add_collateral(
@@ -247,8 +252,14 @@ pub mod incept {
         ctx: Context<InitializeSinglePoolComet>,
         manager_nonce: u8,
         pool_index: u8,
+        collateral_index: u8,
     ) -> Result<()> {
-        instructions::initialize_single_pool_comet::execute(ctx, manager_nonce, pool_index)
+        instructions::initialize_single_pool_comet::execute(
+            ctx,
+            manager_nonce,
+            pool_index,
+            collateral_index,
+        )
     }
 
     pub fn close_single_pool_comet(
@@ -281,6 +292,36 @@ pub mod incept {
         )
     }
 
+    pub fn add_collateral_to_single_pool_comet(
+        ctx: Context<AddCollateralToSinglePoolComet>,
+        manager_nonce: u8,
+        position_index: u8,
+        collateral_amount: u64,
+    ) -> Result<()> {
+        instructions::add_collateral_to_single_pool_comet::execute(
+            ctx,
+            manager_nonce,
+            position_index,
+            collateral_amount,
+        )
+    }
+
+    pub fn withdraw_collateral_from_single_pool_comet(
+        ctx: Context<WithdrawCollateralFromSinglePoolComet>,
+        manager_nonce: u8,
+        user_nonce: u8,
+        position_index: u8,
+        collateral_amount: u64,
+    ) -> Result<()> {
+        instructions::withdraw_collateral_from_single_pool_comet::execute(
+            ctx,
+            manager_nonce,
+            user_nonce,
+            position_index,
+            collateral_amount,
+        )
+    }
+
     pub fn withdraw_collateral_from_comet(
         ctx: Context<WithdrawCollateralFromComet>,
         manager_nonce: u8,
@@ -306,6 +347,22 @@ pub mod incept {
         instructions::add_liquidity_to_comet::execute(ctx, manager_nonce, pool_index, usdi_amount)
     }
 
+    pub fn add_liquidity_to_single_pool_comet(
+        ctx: Context<AddLiquidityToSinglePoolComet>,
+        user_nonce: u8,
+        manager_nonce: u8,
+        position_index: u8,
+        usdi_amount: u64,
+    ) -> Result<()> {
+        instructions::add_liquidity_to_single_pool_comet::execute(
+            ctx,
+            user_nonce,
+            manager_nonce,
+            position_index,
+            usdi_amount,
+        )
+    }
+
     pub fn withdraw_liquidity_from_comet(
         ctx: Context<WithdrawLiquidityFromComet>,
         manager_nonce: u8,
@@ -324,13 +381,17 @@ pub mod incept {
 
     pub fn withdraw_liquidity_from_single_pool_comet(
         ctx: Context<WithdrawLiquidityFromSinglePoolComet>,
+        user_nonce: u8,
         manager_nonce: u8,
         liquidity_token_amount: u64,
+        position_index: u8,
     ) -> Result<()> {
         instructions::withdraw_liquidity_from_single_pool_comet::execute(
             ctx,
+            user_nonce,
             manager_nonce,
             liquidity_token_amount,
+            position_index,
         )
     }
 

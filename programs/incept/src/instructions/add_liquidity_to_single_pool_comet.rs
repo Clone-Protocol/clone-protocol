@@ -9,9 +9,14 @@ use std::convert::TryInto;
 //use crate::instructions::AddLiquidityToComet;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, pool_index: u8, usdi_amount: u64)]
-pub struct AddLiquidityToComet<'info> {
+#[instruction(user_nonce: u8, manager_nonce: u8, position_index: u8, usdi_amount: u64)]
+pub struct AddLiquidityToSinglePoolComet<'info> {
     pub user: Signer<'info>,
+    #[account(
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_nonce,
+    )]
+    pub user_account: Account<'info, User>,
     #[account(
         seeds = [b"manager".as_ref()],
         bump = manager_nonce,
@@ -25,9 +30,12 @@ pub struct AddLiquidityToComet<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        constraint = &comet.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
+        address = user_account.single_pool_comets,
+        constraint = single_pool_comet.load()?.is_single_pool == 1,
+        constraint = &single_pool_comet.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
+        constraint = (position_index as u64) < single_pool_comet.load()?.num_positions @ InceptError::InvalidInputPositionIndex
     )]
-    pub comet: AccountLoader<'info, Comet>,
+    pub single_pool_comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
         address = manager.usdi_mint
@@ -35,41 +43,44 @@ pub struct AddLiquidityToComet<'info> {
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[pool_index as usize].asset_info.iasset_mint,
+        address = token_data.load()?.pools[single_pool_comet.load()?.positions[position_index as usize].pool_index as usize].asset_info.iasset_mint,
     )]
     pub iasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[pool_index as usize].usdi_token_account,
+        address = token_data.load()?.pools[single_pool_comet.load()?.positions[position_index as usize].pool_index as usize].usdi_token_account,
     )]
     pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[pool_index as usize].iasset_token_account,
+        address = token_data.load()?.pools[single_pool_comet.load()?.positions[position_index as usize].pool_index as usize].iasset_token_account,
     )]
     pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[pool_index as usize].liquidity_token_mint,
+        address = token_data.load()?.pools[single_pool_comet.load()?.positions[position_index as usize].pool_index as usize].liquidity_token_mint,
     )]
     pub liquidity_token_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[pool_index as usize].comet_liquidity_token_account,
+        address = token_data.load()?.pools[single_pool_comet.load()?.positions[position_index as usize].pool_index as usize].comet_liquidity_token_account,
     )]
     pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 
 pub fn execute(
-    ctx: Context<AddLiquidityToComet>,
+    ctx: Context<AddLiquidityToSinglePoolComet>,
+    user_nonce: u8,
     manager_nonce: u8,
-    pool_index: u8,
+    position_index: u8,
     usdi_amount: u64,
 ) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let mut comet = ctx.accounts.comet.load_mut()?;
+    let mut comet = ctx.accounts.single_pool_comet.load_mut()?;
+
+    let pool_index = comet.positions[position_index as usize].pool_index as usize;
 
     let usdi_liquidity_value = Decimal::new(usdi_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
     let iasset_amm_value = Decimal::new(
@@ -104,52 +115,26 @@ pub fn execute(
             liquidity_token_supply,
         )?;
 
-    let mut lp_tokens_to_mint;
-    // find the index of the position within the comet position
-    let comet_position_index = comet.get_pool_index(pool_index);
+    let position = comet.positions[position_index as usize];
+    // update comet position data
+    let mut borrowed_usdi = position.borrowed_usdi.to_decimal() + usdi_liquidity_value;
+    borrowed_usdi.rescale(DEVNET_TOKEN_SCALE);
 
-    // check to see if a new position must be added to the position
-    if comet_position_index == usize::MAX {
-        if comet.is_single_pool == 1 {
-            return Err(InceptError::AttemptedToAddNewPoolToSingleComet.into());
-        }
+    let mut borrowed_iasset = position.borrowed_iasset.to_decimal() + iasset_liquidity_value;
+    borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
 
-        iasset_liquidity_value.rescale(DEVNET_TOKEN_SCALE);
-        liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
+    liquidity_token_value += position.liquidity_token_value.to_decimal();
+    liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
 
-        comet.add_position(CometPosition {
-            authority: *ctx.accounts.user.to_account_info().key,
-            pool_index: pool_index as u64,
-            borrowed_usdi: RawDecimal::from(usdi_liquidity_value),
-            borrowed_iasset: RawDecimal::from(iasset_liquidity_value),
-            liquidity_token_value: RawDecimal::from(liquidity_token_value),
-            comet_liquidation: CometLiquidation {
-                ..Default::default()
-            },
-        });
-        lp_tokens_to_mint = liquidity_token_value;
-    } else {
-        let position = comet.positions[comet_position_index];
-        // update comet position data
-        let mut borrowed_usdi = position.borrowed_usdi.to_decimal() + usdi_liquidity_value;
-        borrowed_usdi.rescale(DEVNET_TOKEN_SCALE);
+    let mut lp_tokens_to_mint = liquidity_token_value
+        - comet.positions[position_index as usize]
+            .liquidity_token_value
+            .to_decimal();
 
-        let mut borrowed_iasset = position.borrowed_iasset.to_decimal() + iasset_liquidity_value;
-        borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
-
-        liquidity_token_value += position.liquidity_token_value.to_decimal();
-        liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
-
-        lp_tokens_to_mint = liquidity_token_value
-            - comet.positions[comet_position_index]
-                .liquidity_token_value
-                .to_decimal();
-
-        comet.positions[comet_position_index].borrowed_usdi = RawDecimal::from(borrowed_usdi);
-        comet.positions[comet_position_index].borrowed_iasset = RawDecimal::from(borrowed_iasset);
-        comet.positions[comet_position_index].liquidity_token_value =
-            RawDecimal::from(liquidity_token_value);
-    }
+    comet.positions[position_index as usize].borrowed_usdi = RawDecimal::from(borrowed_usdi);
+    comet.positions[position_index as usize].borrowed_iasset = RawDecimal::from(borrowed_iasset);
+    comet.positions[position_index as usize].liquidity_token_value =
+        RawDecimal::from(liquidity_token_value);
 
     iasset_liquidity_value.rescale(DEVNET_TOKEN_SCALE);
     liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
@@ -238,7 +223,7 @@ pub fn execute(
     );
 
     // Require a healthy score after transactions
-    let health_score = calculate_health_score(&comet, token_data, None)?;
+    let health_score = calculate_health_score(&comet, token_data, Some(position_index as usize))?;
 
     require!(
         matches!(health_score, HealthScore::Healthy { .. }),

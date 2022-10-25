@@ -116,7 +116,7 @@ pub fn execute(
     let mut comet = ctx.accounts.comet.load_mut()?;
 
     // Require a healthy score after transactions
-    let health_score = calculate_health_score(&comet, &token_data)?;
+    let health_score = calculate_health_score(&comet, &token_data, None)?;
 
     require!(
         matches!(health_score, HealthScore::SubjectToLiquidation { .. }),
@@ -431,7 +431,7 @@ pub fn execute(
         )?;
     }
 
-    let resulting_score = match calculate_health_score(&comet, &token_data)? {
+    let resulting_score = match calculate_health_score(&comet, &token_data, None)? {
         HealthScore::Healthy { score } => score,
         HealthScore::SubjectToLiquidation { score } => score,
     };

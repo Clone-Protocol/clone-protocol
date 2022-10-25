@@ -38,7 +38,6 @@ pub struct WithdrawCollateralFromComet<'info> {
     #[account(
         mut,
         address = token_data.load()?.collaterals[comet.load()?.collaterals[comet_collateral_index as usize].collateral_index as usize].vault,
-        constraint = &vault.mint == &token_data.load()?.collaterals[comet.load()?.collaterals[comet_collateral_index as usize].collateral_index as usize].mint
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -124,7 +123,8 @@ pub fn execute(
             close = true;
         } else {
             // Require a healthy score after transactions
-            let health_score = calculate_health_score(&comet, token_data)?;
+
+            let health_score = calculate_health_score(&comet, token_data, None)?;
 
             require!(
                 matches!(health_score, HealthScore::Healthy { .. }),

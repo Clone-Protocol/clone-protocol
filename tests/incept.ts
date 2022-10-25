@@ -1083,7 +1083,7 @@ describe("incept", async () => {
     const singlePoolComets = await inceptClient.getSinglePoolComets();
 
     assert.equal(
-      Number(singlePoolComets.numComets),
+      Number(singlePoolComets.numPositions),
       1,
       "ensure comet position was initialized"
     );
@@ -1294,7 +1294,6 @@ describe("incept", async () => {
       91012.29090819,
       "check iasset pool balance"
     );
-    const singlePoolComet = await inceptClient.getSinglePoolComet(0);
   });
 
   it("single pool comet liquidity subtracted!", async () => {
@@ -1309,7 +1308,7 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         pool.assetInfo.iassetMint
       );
-    const comet = await inceptClient.getSinglePoolComet(0);
+    const comet = await inceptClient.getSinglePoolComets();
     const position = comet.positions[0];
 
     // // Estimate using edit.
@@ -1548,17 +1547,14 @@ describe("incept", async () => {
       1
     );
     await inceptClient.addLiquidityToSinglePoolComet(toDevnetScale(200), 1);
-
     tokenData = await inceptClient.getTokenData();
     const pool1 = tokenData.pools[poolIndex];
-
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       poolIndex
     );
-
     await inceptClient.recenterSinglePoolComet(1);
     await inceptClient.withdrawLiquidityFromSinglePoolComet(
       toDevnetScale(10),
@@ -1574,25 +1570,21 @@ describe("incept", async () => {
     );
 
     let singlePoolComet = await inceptClient.getSinglePoolComet(1);
-    let pool = await inceptClient.getPool(
-      singlePoolComet.positions[0].poolIndex
-    );
+    let pool = await inceptClient.getPool(singlePoolComet.poolIndex);
     let L =
-      toNumber(singlePoolComet.positions[0].liquidityTokenValue) /
+      toNumber(singlePoolComet.liquidityTokenValue) /
       toNumber(pool.liquidityTokenSupply);
 
     await inceptClient.recenterSinglePoolComet(1);
     singlePoolComet = await inceptClient.getSinglePoolComet(1);
-    pool = await inceptClient.getPool(singlePoolComet.positions[0].poolIndex);
+    pool = await inceptClient.getPool(singlePoolComet.poolIndex);
     L =
-      toNumber(singlePoolComet.positions[0].liquidityTokenValue) /
+      toNumber(singlePoolComet.liquidityTokenValue) /
       toNumber(pool.liquidityTokenSupply);
 
     // Need to withdraw all.
     await inceptClient.withdrawLiquidityFromSinglePoolComet(
-      toDevnetScale(
-        10 * toNumber(singlePoolComet.positions[0].liquidityTokenValue)
-      ),
+      toDevnetScale(10 * toNumber(singlePoolComet.liquidityTokenValue)),
       1
     );
 
@@ -1639,10 +1631,9 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         pool.assetInfo.iassetMint
       );
-
     await inceptClient.recenterSinglePoolComet(0);
     await inceptClient.withdrawLiquidityFromSinglePoolComet(
-      new BN(getMantissa(singlePoolComet.positions[0].liquidityTokenValue)),
+      new BN(getMantissa(singlePoolComet.liquidityTokenValue)),
       0
     );
 
