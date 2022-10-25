@@ -201,6 +201,15 @@ pub enum HealthScore {
     SubjectToLiquidation { score: f64 },
 }
 
+impl HealthScore {
+    pub fn score(&self) -> f64 {
+        match self {
+            HealthScore::Healthy { score } => *score,
+            HealthScore::SubjectToLiquidation { score } => *score,
+        }
+    }
+}
+
 pub fn calculate_health_score(
     comet: &Comet,
     token_data: &TokenData,

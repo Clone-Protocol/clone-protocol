@@ -1874,6 +1874,11 @@ export type Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -1925,6 +1930,10 @@ export type Incept = {
         }
       ],
       "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
         {
           "name": "managerNonce",
           "type": "u8"
@@ -2376,6 +2385,100 @@ export type Incept = {
         {
           "name": "collateralAmount",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "liquidateSinglePoolComet",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "cometLiquidityTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityTokenMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorCollateralTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
+        {
+          "name": "positionIndex",
+          "type": "u8"
         }
       ]
     }
@@ -5117,6 +5220,11 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -5168,6 +5276,10 @@ export const IDL: Incept = {
         }
       ],
       "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
         {
           "name": "managerNonce",
           "type": "u8"
@@ -5619,6 +5731,100 @@ export const IDL: Incept = {
         {
           "name": "collateralAmount",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "liquidateSinglePoolComet",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "cometLiquidityTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityTokenMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorCollateralTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
+        {
+          "name": "positionIndex",
+          "type": "u8"
         }
       ]
     }

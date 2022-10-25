@@ -2185,13 +2185,11 @@ describe("incept", async () => {
     // Check that the score is zero.
     let healthScore1 = await inceptClient.getHealthScore();
 
-    await inceptClient.liquidateCometPositionReduction(
-      inceptClient.provider.publicKey!,
-      0,
-      toNumber(comet.positions[0].liquidityTokenValue)
-    );
-
-    await sleep(200);
+    // await inceptClient.liquidateCometPositionReduction(
+    //   inceptClient.provider.publicKey!,
+    //   0,
+    //   toNumber(comet.positions[0].liquidityTokenValue)
+    // );
 
     let healthScore2 = await inceptClient.getHealthScore();
 
@@ -2200,6 +2198,7 @@ describe("incept", async () => {
       healthScore1.healthScore,
       "check liquidation for reducing position"
     );
+
     // Reduce IL.
     await inceptClient.updateILHealthScoreCoefficient(100000);
 

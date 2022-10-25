@@ -397,12 +397,14 @@ pub mod incept {
 
     pub fn recenter_comet(
         ctx: Context<RecenterComet>,
+        user_nonce: u8,
         manager_nonce: u8,
         comet_position_index: u8,
         comet_collateral_index: u8,
     ) -> Result<()> {
         instructions::recenter_comet::execute(
             ctx,
+            user_nonce,
             manager_nonce,
             comet_position_index,
             comet_collateral_index,
@@ -477,6 +479,20 @@ pub mod incept {
             comet_position_index,
             comet_collateral_index,
             collateral_amount,
+        )
+    }
+
+    pub fn liquidate_single_pool_comet(
+        ctx: Context<LiquidateSinglePoolComet>,
+        manager_nonce: u8,
+        user_nonce: u8,
+        position_index: u8,
+    ) -> Result<()> {
+        instructions::liquidate_single_pool_comet::execute(
+            ctx,
+            manager_nonce,
+            user_nonce,
+            position_index,
         )
     }
 }

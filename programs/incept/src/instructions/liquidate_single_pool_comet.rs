@@ -95,7 +95,8 @@ pub fn execute(
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
-    let pool = token_data.pools[comet.positions[position_index as usize].pool_index as usize];
+    let pool_index = comet.positions[position_index as usize].pool_index as usize;
+    let pool = token_data.pools[pool_index];
 
     let comet_collateral = comet.collaterals[position_index as usize];
     let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
@@ -103,7 +104,7 @@ pub fn execute(
     let comet_position = comet.positions[position_index as usize];
 
     // Require a healthy score after transactions
-    let health_score = calculate_health_score(&comet, &token_data)?;
+    let health_score = calculate_health_score(&comet, &token_data, Some(pool_index))?;
 
     require!(
         matches!(health_score, HealthScore::SubjectToLiquidation { .. }),
@@ -398,7 +399,7 @@ pub fn execute(
         lp_to_claim.mantissa().try_into().unwrap(),
     )?;
 
-    let resulting_score = calculate_health_score(&comet, &token_data)?;
+    let resulting_score = calculate_health_score(&comet, &token_data, Some(pool_index))?;
 
     require!(
         matches!(resulting_score, HealthScore::Healthy { .. }),

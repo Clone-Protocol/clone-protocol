@@ -370,6 +370,7 @@ pub fn execute(
     ctx.accounts.amm_iasset_token_account.reload()?;
     ctx.accounts.amm_usdi_token_account.reload()?;
     ctx.accounts.liquidity_token_mint.reload()?;
+    ctx.accounts.vault.reload()?;
 
     token_data.pools[comet_position.pool_index as usize].iasset_amount = RawDecimal::new(
         ctx.accounts
@@ -391,5 +392,11 @@ pub fn execute(
         ctx.accounts.liquidity_token_mint.supply.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,
     );
+    token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
+        RawDecimal::new(
+            ctx.accounts.vault.amount.try_into().unwrap(),
+            DEVNET_TOKEN_SCALE,
+        );
+
     Ok(())
 }
