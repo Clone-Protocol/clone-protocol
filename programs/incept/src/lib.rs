@@ -382,12 +382,14 @@ pub mod incept {
         user_nonce: u8,
         manager_nonce: u8,
         liquidity_token_amount: u64,
+        comet_position_index: u8,
     ) -> ProgramResult {
         instructions::withdraw_liquidity_from_single_pool_comet::execute(
             ctx,
             user_nonce,
             manager_nonce,
             liquidity_token_amount,
+            comet_position_index
         )
     }
 

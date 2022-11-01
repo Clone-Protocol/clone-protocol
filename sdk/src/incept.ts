@@ -1403,6 +1403,7 @@ export class Incept {
       bump,
       this.managerAddress[1],
       liquidityTokenAmount,
+      positionIndex,
       {
         accounts: {
           user: this.provider.wallet.publicKey,
@@ -1497,8 +1498,8 @@ export class Incept {
 
     return (await this.program.instruction.payImpermanentLossDebt(
       this.managerAddress[1],
-      0,
-      0,
+      cometIndex,
+      cometIndex,
       new BN(collateralAmount),
       {
         accounts: {

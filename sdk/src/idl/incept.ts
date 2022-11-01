@@ -1854,6 +1854,10 @@ export type Incept = {
         {
           "name": "liquidityTokenAmount",
           "type": "u64"
+        },
+        {
+          "name": "cometPositionIndex",
+          "type": "u8"
         }
       ]
     },
@@ -4997,6 +5001,10 @@ export const IDL: Incept = {
         {
           "name": "liquidityTokenAmount",
           "type": "u64"
+        },
+        {
+          "name": "cometPositionIndex",
+          "type": "u8"
         }
       ]
     },

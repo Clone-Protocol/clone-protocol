@@ -8,7 +8,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8, manager_nonce: u8, liquidity_token_amount: u64)]
+#[instruction(user_nonce: u8, manager_nonce: u8, liquidity_token_amount: u64, position_index: u8)]
 pub struct WithdrawLiquidityFromSinglePoolComet<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -30,6 +30,7 @@ pub struct WithdrawLiquidityFromSinglePoolComet<'info> {
     #[account(
         mut,
         address = user_account.single_pool_comets,
+        constraint = single_pool_comet.load()?.num_positions > position_index as u64,
         constraint = &single_pool_comet.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
         constraint = single_pool_comet.load()?.is_single_pool == 1 @ InceptError::NotSinglePoolComet
     )]
@@ -41,32 +42,32 @@ pub struct WithdrawLiquidityFromSinglePoolComet<'info> {
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[single_pool_comet.load()?.positions[0].pool_index as usize].asset_info.iasset_mint,
+        address = token_data.load()?.pools[single_pool_comet.load()?.positions[position_index as usize].pool_index as usize].asset_info.iasset_mint,
     )]
     pub iasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[single_pool_comet.load()?.positions[0].pool_index as usize].usdi_token_account,
+        address = token_data.load()?.pools[single_pool_comet.load()?.positions[position_index as usize].pool_index as usize].usdi_token_account,
     )]
     pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[single_pool_comet.load()?.positions[0].pool_index as usize].iasset_token_account,
+        address = token_data.load()?.pools[single_pool_comet.load()?.positions[position_index as usize].pool_index as usize].iasset_token_account,
     )]
     pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[single_pool_comet.load()?.positions[0].pool_index as usize].liquidity_token_mint,
+        address = token_data.load()?.pools[single_pool_comet.load()?.positions[position_index as usize].pool_index as usize].liquidity_token_mint,
     )]
     pub liquidity_token_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[single_pool_comet.load()?.positions[0].pool_index as usize].comet_liquidity_token_account,
+        address = token_data.load()?.pools[single_pool_comet.load()?.positions[position_index as usize].pool_index as usize].comet_liquidity_token_account,
     )]
     pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.collaterals[single_pool_comet.load()?.collaterals[0].collateral_index as usize].vault,
+        address = token_data.load()?.collaterals[single_pool_comet.load()?.collaterals[position_index as usize].collateral_index as usize].vault,
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
@@ -77,12 +78,13 @@ pub fn execute(
     user_nonce: u8,
     manager_nonce: u8,
     liquidity_token_amount: u64,
+    position_index: u8,
 ) -> ProgramResult {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut single_pool_comet = ctx.accounts.single_pool_comet.load_mut()?;
-    let comet_position = single_pool_comet.positions[0];
-    let comet_collateral = single_pool_comet.collaterals[0];
+    let comet_position = single_pool_comet.positions[position_index as usize];
+    let comet_collateral = single_pool_comet.collaterals[position_index as usize];
 
     let mut liquidity_token_value = Decimal::new(
         liquidity_token_amount.try_into().unwrap(),
@@ -263,8 +265,8 @@ pub fn execute(
         borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
 
         // update comet data
-        single_pool_comet.positions[0].borrowed_usdi = RawDecimal::from(borrowed_usdi);
-        single_pool_comet.positions[0].borrowed_iasset = RawDecimal::from(borrowed_iasset);
+        single_pool_comet.positions[position_index as usize].borrowed_usdi = RawDecimal::from(borrowed_usdi);
+        single_pool_comet.positions[position_index as usize].borrowed_iasset = RawDecimal::from(borrowed_iasset);
 
         let mut new_vault_comet_supply = token_data.collaterals
             [comet_collateral.collateral_index as usize]
@@ -279,7 +281,7 @@ pub fn execute(
         let mut new_collateral_amount =
             comet_collateral.collateral_amount.to_decimal() + usdi_collateral_amount;
         new_collateral_amount.rescale(collateral_scale);
-        single_pool_comet.collaterals[0].collateral_amount =
+        single_pool_comet.collaterals[position_index as usize].collateral_amount =
             RawDecimal::from(new_collateral_amount);
     } else if initial_comet_price < current_price {
         let mut usdi_burn_value =
@@ -386,8 +388,8 @@ pub fn execute(
             comet_position.borrowed_iasset.to_decimal() - iasset_liquidity_value;
         borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
 
-        single_pool_comet.positions[0].borrowed_usdi = RawDecimal::from(borrowed_usdi);
-        single_pool_comet.positions[0].borrowed_iasset = RawDecimal::from(borrowed_iasset);
+        single_pool_comet.positions[position_index as usize].borrowed_usdi = RawDecimal::from(borrowed_usdi);
+        single_pool_comet.positions[position_index as usize].borrowed_iasset = RawDecimal::from(borrowed_iasset);
 
         let mut new_vault_comet_supply = token_data.collaterals
             [comet_collateral.collateral_index as usize]
@@ -397,12 +399,12 @@ pub fn execute(
         new_vault_comet_supply.rescale(collateral_scale);
         token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
             RawDecimal::from(new_vault_comet_supply);
-        let mut new_collateral_amount = single_pool_comet.collaterals[0]
+        let mut new_collateral_amount = single_pool_comet.collaterals[position_index as usize]
             .collateral_amount
             .to_decimal()
             + usdi_surplus;
         new_collateral_amount.rescale(collateral_scale);
-        single_pool_comet.collaterals[0].collateral_amount =
+        single_pool_comet.collaterals[position_index as usize].collateral_amount =
             RawDecimal::from(new_collateral_amount);
     } else {
         // burn liquidity from amm
@@ -452,8 +454,8 @@ pub fn execute(
             comet_position.borrowed_iasset.to_decimal() - iasset_liquidity_value;
         borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
 
-        single_pool_comet.positions[0].borrowed_usdi = RawDecimal::from(borrowed_usdi);
-        single_pool_comet.positions[0].borrowed_iasset = RawDecimal::from(borrowed_iasset);
+        single_pool_comet.positions[position_index as usize].borrowed_usdi = RawDecimal::from(borrowed_usdi);
+        single_pool_comet.positions[position_index as usize].borrowed_iasset = RawDecimal::from(borrowed_iasset);
     }
     // burn liquidity tokens from comet
     let cpi_accounts = Burn {
@@ -480,7 +482,7 @@ pub fn execute(
     let mut updated_liquidity_token_value =
         comet_position.liquidity_token_value.to_decimal() - liquidity_token_value;
     updated_liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
-    single_pool_comet.positions[0].liquidity_token_value =
+    single_pool_comet.positions[position_index as usize].liquidity_token_value =
         RawDecimal::from(updated_liquidity_token_value);
 
     // update pool data
