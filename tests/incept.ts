@@ -1132,6 +1132,7 @@ describe("incept", async () => {
   });
 
   it("single pool comet collateral withdrawn!", async () => {
+    let comet = await inceptClient.getSinglePoolComets();
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
@@ -1139,7 +1140,13 @@ describe("incept", async () => {
 
     // Estimate using edit.
     const estimation =
-      await inceptClient.calculateEditCometSinglePoolWithUsdiBorrowed(0, -5, 0);
+      inceptClient.calculateEditCometSinglePoolWithUsdiBorrowed(
+        await inceptClient.getTokenData(),
+        comet,
+        0,
+        -5,
+        0
+      );
 
     await inceptClient.withdrawCollateralFromSinglePoolComet(
       mockUSDCTokenAccountInfo.address,
@@ -1174,7 +1181,6 @@ describe("incept", async () => {
     assert.equal(vault.value!.uiAmount, 21000250, "check vault balance");
     const singlePoolComet = await inceptClient.getSinglePoolComet(0);
   });
-
 
   it("single pool comet liquidity added!", async () => {
     mockUSDCTokenAccountInfo =
