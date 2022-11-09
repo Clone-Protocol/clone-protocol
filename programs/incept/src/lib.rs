@@ -389,7 +389,7 @@ pub mod incept {
             user_nonce,
             manager_nonce,
             liquidity_token_amount,
-            comet_position_index
+            comet_position_index,
         )
     }
 

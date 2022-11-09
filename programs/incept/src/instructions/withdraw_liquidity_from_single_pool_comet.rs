@@ -265,8 +265,10 @@ pub fn execute(
         borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
 
         // update comet data
-        single_pool_comet.positions[position_index as usize].borrowed_usdi = RawDecimal::from(borrowed_usdi);
-        single_pool_comet.positions[position_index as usize].borrowed_iasset = RawDecimal::from(borrowed_iasset);
+        single_pool_comet.positions[position_index as usize].borrowed_usdi =
+            RawDecimal::from(borrowed_usdi);
+        single_pool_comet.positions[position_index as usize].borrowed_iasset =
+            RawDecimal::from(borrowed_iasset);
 
         let mut new_vault_comet_supply = token_data.collaterals
             [comet_collateral.collateral_index as usize]
@@ -388,8 +390,10 @@ pub fn execute(
             comet_position.borrowed_iasset.to_decimal() - iasset_liquidity_value;
         borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
 
-        single_pool_comet.positions[position_index as usize].borrowed_usdi = RawDecimal::from(borrowed_usdi);
-        single_pool_comet.positions[position_index as usize].borrowed_iasset = RawDecimal::from(borrowed_iasset);
+        single_pool_comet.positions[position_index as usize].borrowed_usdi =
+            RawDecimal::from(borrowed_usdi);
+        single_pool_comet.positions[position_index as usize].borrowed_iasset =
+            RawDecimal::from(borrowed_iasset);
 
         let mut new_vault_comet_supply = token_data.collaterals
             [comet_collateral.collateral_index as usize]
@@ -454,8 +458,10 @@ pub fn execute(
             comet_position.borrowed_iasset.to_decimal() - iasset_liquidity_value;
         borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
 
-        single_pool_comet.positions[position_index as usize].borrowed_usdi = RawDecimal::from(borrowed_usdi);
-        single_pool_comet.positions[position_index as usize].borrowed_iasset = RawDecimal::from(borrowed_iasset);
+        single_pool_comet.positions[position_index as usize].borrowed_usdi =
+            RawDecimal::from(borrowed_usdi);
+        single_pool_comet.positions[position_index as usize].borrowed_iasset =
+            RawDecimal::from(borrowed_iasset);
     }
     // burn liquidity tokens from comet
     let cpi_accounts = Burn {
