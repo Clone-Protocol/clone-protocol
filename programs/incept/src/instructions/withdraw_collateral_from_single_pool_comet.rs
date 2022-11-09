@@ -92,7 +92,7 @@ pub fn execute(
 
     if !comet_position.is_empty() {
         let health_score =
-            calculate_health_score(&comet, token_data, Some(comet_position.pool_index as usize))?;
+            calculate_health_score(&comet, token_data, Some(position_index as usize))?;
 
         require!(
             matches!(health_score, HealthScore::Healthy { .. }),

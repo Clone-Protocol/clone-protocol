@@ -204,13 +204,13 @@ pub enum HealthScore {
 pub fn calculate_health_score(
     comet: &Comet,
     token_data: &TokenData,
-    single_pool_index: Option<usize>,
+    single_comet_index: Option<usize>,
 ) -> Result<HealthScore, InceptError> {
     let slot = Clock::get().expect("Failed to get slot.").slot;
 
     let single_index = if comet.is_single_pool == 1 {
-        assert!(single_pool_index.is_some());
-        let index = single_pool_index.unwrap();
+        assert!(single_comet_index.is_some());
+        let index = single_comet_index.unwrap();
         assert!(index < comet.num_positions as usize);
         Some(index)
     } else {
@@ -279,7 +279,7 @@ pub fn calculate_health_score(
     }
 
     let total_collateral_value =
-        comet.calculate_effective_collateral_value(token_data, single_pool_index);
+        comet.calculate_effective_collateral_value(token_data, single_index);
 
     let score = Decimal::new(100, 0) - loss / total_collateral_value;
 
