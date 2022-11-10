@@ -924,7 +924,7 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     userLiquidityTokenAccount: PublicKey,
-    poolIndex: number,
+    liquidityPosition: number,
     signers?: Array<Keypair>
   ) {
     const provideLiquidityIx = await this.provideLiquidityInstruction(
@@ -932,7 +932,7 @@ export class Incept {
       userIassetTokenAccount,
       userLiquidityTokenAccount,
       iassetAmount,
-      poolIndex
+      liquidityPosition
     );
     await this.provider.send(
       new Transaction().add(provideLiquidityIx),
@@ -944,17 +944,17 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     userLiquidityTokenAccount: PublicKey,
     iassetAmount: BN,
-    poolIndex: number
+    liquidityPosition: number
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
-    let pool = tokenData.pools[poolIndex];
 
-    //let userLiquidityPosition = await this.getLiquidityPosition(poolIndex);
+    let userLiquidityPosition = await this.getLiquidityPosition(liquidityPosition);
+    let pool = tokenData.pools[userLiquidityPosition.poolIndex];
 
     return (await this.program.instruction.provideLiquidity(
       this.managerAddress[1],
-      poolIndex,
+      liquidityPosition,
       iassetAmount,
       {
         accounts: {
