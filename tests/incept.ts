@@ -1138,10 +1138,12 @@ describe("incept", async () => {
         mockUSDCMint.publicKey
       );
 
+    let tokenData = await inceptClient.getTokenData();
+
     // Estimate using edit.
     const estimation =
       inceptClient.calculateEditCometSinglePoolWithUsdiBorrowed(
-        await inceptClient.getTokenData(),
+        tokenData,
         comet,
         0,
         -5,
@@ -1154,13 +1156,13 @@ describe("incept", async () => {
       0
     );
 
-    const health = await inceptClient.getSinglePoolHealthScore(0);
+    const health = await inceptClient.getSinglePoolHealthScore(0, tokenData, comet);
 
     assert.closeTo(estimation.healthScore, health.healthScore, 0.01);
 
     await sleep(200);
 
-    const tokenData = await inceptClient.getTokenData();
+    tokenData = await inceptClient.getTokenData();
     const collateral = tokenData.collaterals[1];
 
     mockUSDCTokenAccountInfo =
@@ -1463,9 +1465,10 @@ describe("incept", async () => {
 
   it("single pool comet recentered!", async () => {
     let poolIndex = 0;
-    const tokenData = await inceptClient.getTokenData();
+    let tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[poolIndex];
     const collateral = tokenData.collaterals[1];
+    let comet = await inceptClient.getSinglePoolComets();
 
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
@@ -1478,16 +1481,18 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         pool.assetInfo.iassetMint
       );
-    const info = await inceptClient.getSinglePoolHealthScore(0);
+
+    const info = inceptClient.getSinglePoolHealthScore(0, tokenData, comet);
 
     // const recenterEstimation =
     //   await inceptClient.calculateCometRecenterSinglePool(0);
 
     await inceptClient.recenterSinglePoolComet(0);
 
-    await sleep(200);
+    tokenData = await inceptClient.getTokenData();
+    comet = await inceptClient.getSinglePoolComets();
 
-    const info2 = await inceptClient.getSinglePoolHealthScore(0);
+    const info2 = await inceptClient.getSinglePoolHealthScore(0,  tokenData, comet);
 
     // assert.closeTo(info2.healthScore, recenterEstimation.healthScore, 0.1);
 
