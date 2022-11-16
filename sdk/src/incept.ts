@@ -3187,22 +3187,22 @@ export class Incept {
     };
   }
 
-  public async calculateEditCometSinglePoolWithRange(
+  public calculateEditCometSinglePoolWithRange(
     cometIndex: number,
     collateralChange: number,
     price: number,
-    isLowerPrice: boolean
-  ): Promise<{
+    isLowerPrice: boolean,
+    comet: Comet,
+    tokenData: TokenData
+  ): {
     maxCollateralWithdrawable: number;
     usdiPosition: number;
     healthScore: number;
     lowerPrice: number;
     upperPrice: number;
-  }> {
+  } {
     const tolerance = 1e-9;
     const maxIter = 100000;
-    const comet = await this.getSinglePoolComets();
-    const tokenData = await this.getTokenData();
     const position = comet.positions[cometIndex];
     const currentUsdiPosition = toNumber(position.borrowedUsdi);
     const currentIassetPosition = toNumber(position.borrowedIasset);
