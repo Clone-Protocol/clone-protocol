@@ -3111,15 +3111,11 @@ export class Incept {
     let markPrice = Math.max(toNumber(pool.assetInfo.price), poolPrice);
     let newClaimableRatio = claimableRatio;
     // Calculate total lp tokens
-    if (usdiBorrowedChange > 0) {
-      newClaimableRatio += usdiBorrowedChange / (usdiBorrowedChange + poolUsdi);
-    } else if (usdiBorrowedChange < 0) {
-      const claimableUsdi = claimableRatio * poolUsdi;
-      const newLpTokens =
-        (lpTokens * (positionBorrowedUsdi + usdiBorrowedChange)) /
-        claimableUsdi;
-      newClaimableRatio = newLpTokens / (poolLpTokens - lpTokens + newLpTokens);
-    }
+    const claimableUsdi = claimableRatio * poolUsdi;
+    const newLpTokens =
+      (lpTokens * (positionBorrowedUsdi + usdiBorrowedChange)) /
+      claimableUsdi;
+    newClaimableRatio = newLpTokens / (poolLpTokens - lpTokens + newLpTokens);
     positionBorrowedUsdi += usdiBorrowedChange;
     positionBorrowedIasset += iassetBorrowedChange;
 
