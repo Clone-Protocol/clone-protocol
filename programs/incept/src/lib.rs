@@ -19,17 +19,21 @@ pub mod incept {
 
     pub fn initialize_manager(
         ctx: Context<InitializeManager>,
-        manager_nonce: u8,
         il_health_score_coefficient: u64,
         il_health_score_cutoff: u64,
         il_liquidation_reward_pct: u64,
+        max_health_liquidation: u64,
+        liquidator_fee: u64,
+        collateral_full_liquidation_threshold: u64,
     ) -> Result<()> {
         instructions::initialize_manager::execute(
             ctx,
-            manager_nonce,
             il_health_score_coefficient,
             il_health_score_cutoff,
             il_liquidation_reward_pct,
+            max_health_liquidation,
+            liquidator_fee,
+            collateral_full_liquidation_threshold,
         )
     }
 
@@ -48,13 +52,6 @@ pub mod incept {
     pub fn initialize_user(ctx: Context<InitializeUser>, user_nonce: u8) -> Result<()> {
         instructions::initialize_user::execute(ctx, user_nonce)
     }
-
-    // pub fn initialize_single_pool_comets(
-    //     ctx: Context<InitializeSinglePoolComets>,
-    //     user_nonce: u8,
-    // ) -> Result<()> {
-    //     instructions::initialize_single_pool_comets::execute(ctx, user_nonce)
-    // }
 
     pub fn initialize_mint_positions(
         ctx: Context<InitializeMintPositions>,
@@ -96,19 +93,19 @@ pub mod incept {
 
     pub fn initialize_pool(
         ctx: Context<InitializePool>,
-        manager_nonce: u8,
         stable_collateral_ratio: u16,
         crypto_collateral_ratio: u16,
         liquidity_trading_fee: u16,
         health_score_coefficient: u64,
+        liquidation_discount_rate: u64,
     ) -> Result<()> {
         instructions::initialize_pool::execute(
             ctx,
-            manager_nonce,
             stable_collateral_ratio,
             crypto_collateral_ratio,
             liquidity_trading_fee,
             health_score_coefficient,
+            liquidation_discount_rate,
         )
     }
 
@@ -428,44 +425,6 @@ pub mod incept {
         instructions::liquidate_mint_position::execute(ctx, manager_nonce, user_nonce, mint_index)
     }
 
-    pub fn liquidate_comet_position_reduction(
-        ctx: Context<LiquidateCometPositionReduction>,
-        manager_nonce: u8,
-        user_nonce: u8,
-        position_index: u8,
-        lp_token_reduction: u64,
-    ) -> Result<()> {
-        instructions::liquidate_comet_position_reduction::execute(
-            ctx,
-            manager_nonce,
-            user_nonce,
-            position_index,
-            lp_token_reduction,
-        )
-    }
-
-    pub fn liquidate_comet_il_reduction(
-        ctx: Context<LiquidateCometILReduction>,
-        manager_nonce: u8,
-        user_nonce: u8,
-        jupiter_nonce: u8,
-        position_index: u8,
-        asset_index: u8,
-        comet_collateral_index: u8,
-        il_reduction_amount: u64,
-    ) -> Result<()> {
-        instructions::liquidate_comet_il_reduction::execute(
-            ctx,
-            manager_nonce,
-            user_nonce,
-            jupiter_nonce,
-            position_index,
-            asset_index,
-            comet_collateral_index,
-            il_reduction_amount,
-        )
-    }
-
     pub fn pay_impermanent_loss_debt(
         ctx: Context<PayImpermanentLossDebt>,
         manager_nonce: u8,
@@ -484,15 +443,45 @@ pub mod incept {
 
     pub fn liquidate_single_pool_comet(
         ctx: Context<LiquidateSinglePoolComet>,
-        manager_nonce: u8,
         user_nonce: u8,
         position_index: u8,
     ) -> Result<()> {
-        instructions::liquidate_single_pool_comet::execute(
+        instructions::liquidate_single_pool_comet::execute(ctx, user_nonce, position_index)
+    }
+
+    pub fn swap_nonstable_collateral(
+        ctx: Context<SwapCometNonStableCollateral>,
+        user_nonce: u8,
+        stable_swap_in_amount: u64,
+        comet_nonstable_collateral_index: u8,
+        comet_stable_collateral_index: u8,
+    ) -> Result<()> {
+        instructions::swap_comet_nonstable_collateral::execute(
             ctx,
-            manager_nonce,
             user_nonce,
-            position_index,
+            stable_swap_in_amount,
+            comet_nonstable_collateral_index,
+            comet_stable_collateral_index,
         )
+    }
+
+    pub fn swap_stable_collateral_into_usdi(
+        ctx: Context<SwapStableCollateralIntoUsdi>,
+        user_nonce: u8,
+        comet_collateral_index: u8,
+    ) -> Result<()> {
+        instructions::swap_stable_collateral_into_usdi::execute(
+            ctx,
+            user_nonce,
+            comet_collateral_index,
+        )
+    }
+
+    pub fn liquidate_comet(
+        ctx: Context<LiquidateComet>,
+        user_nonce: u8,
+        position_index: u8,
+    ) -> Result<()> {
+        instructions::liquidate_comet::execute(ctx, user_nonce, position_index)
     }
 }
