@@ -30,6 +30,7 @@ pub struct WithdrawLiquidityFromSinglePoolComet<'info> {
     #[account(
         mut,
         address = user_account.single_pool_comets,
+        constraint = single_pool_comet.load()?.num_positions > position_index as u64,
         constraint = &single_pool_comet.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
         constraint = single_pool_comet.load()?.is_single_pool == 1 @ InceptError::NotSinglePoolComet
     )]

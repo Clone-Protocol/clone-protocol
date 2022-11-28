@@ -264,13 +264,13 @@ pub fn calculate_comet_position_loss(
 pub fn calculate_health_score(
     comet: &Comet,
     token_data: &TokenData,
-    single_pool_index: Option<usize>,
+    single_pool_position_index: Option<usize>,
 ) -> Result<HealthScore> {
     let slot = Clock::get().expect("Failed to get slot.").slot;
 
     let single_index = if comet.is_single_pool == 1 {
-        assert!(single_pool_index.is_some());
-        let index = single_pool_index.unwrap();
+        assert!(single_pool_position_index.is_some());
+        let index = single_pool_position_index.unwrap();
         assert!(index < comet.num_positions as usize);
         Some(index)
     } else {
@@ -301,7 +301,7 @@ pub fn calculate_health_score(
     }
 
     let effective_collateral =
-        comet.calculate_effective_collateral_value(token_data, single_pool_index);
+        comet.calculate_effective_collateral_value(token_data, single_pool_position_index);
 
     let score = Decimal::new(100, 0) - (total_il_term + total_position_term) / effective_collateral;
 

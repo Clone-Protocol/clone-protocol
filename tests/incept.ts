@@ -1123,14 +1123,23 @@ describe("incept", async () => {
   });
 
   it("single pool comet collateral withdrawn!", async () => {
+    let comet = await inceptClient.getSinglePoolComets();
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
       );
 
+    let tokenData = await inceptClient.getTokenData();
+
     // Estimate using edit.
     const estimation =
-      await inceptClient.calculateEditCometSinglePoolWithUsdiBorrowed(0, -5, 0);
+      inceptClient.calculateEditCometSinglePoolWithUsdiBorrowed(
+        tokenData,
+        comet,
+        0,
+        -5,
+        0
+      );
 
     await inceptClient.withdrawCollateralFromSinglePoolComet(
       mockUSDCTokenAccountInfo.address,
@@ -1138,13 +1147,13 @@ describe("incept", async () => {
       0
     );
 
-    const health = await inceptClient.getSinglePoolHealthScore(0);
+    const health = await inceptClient.getSinglePoolHealthScore(0, tokenData, comet);
 
     assert.closeTo(estimation.healthScore, health.healthScore, 0.01);
 
     await sleep(200);
 
-    const tokenData = await inceptClient.getTokenData();
+    tokenData = await inceptClient.getTokenData();
     const collateral = tokenData.collaterals[1];
 
     mockUSDCTokenAccountInfo =
@@ -1447,9 +1456,10 @@ describe("incept", async () => {
 
   it("single pool comet recentered!", async () => {
     let poolIndex = 0;
-    const tokenData = await inceptClient.getTokenData();
+    let tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[poolIndex];
     const collateral = tokenData.collaterals[1];
+    let comet = await inceptClient.getSinglePoolComets();
 
     mockUSDCTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
@@ -1462,16 +1472,18 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         pool.assetInfo.iassetMint
       );
-    const info = await inceptClient.getSinglePoolHealthScore(0);
+
+    const info = inceptClient.getSinglePoolHealthScore(0, tokenData, comet);
 
     // const recenterEstimation =
     //   await inceptClient.calculateCometRecenterSinglePool(0);
 
     await inceptClient.recenterSinglePoolComet(0);
 
-    await sleep(200);
+    tokenData = await inceptClient.getTokenData();
+    comet = await inceptClient.getSinglePoolComets();
 
-    const info2 = await inceptClient.getSinglePoolHealthScore(0);
+    const info2 = await inceptClient.getSinglePoolHealthScore(0,  tokenData, comet);
 
     assert.isAbove(
       info2.healthScore,

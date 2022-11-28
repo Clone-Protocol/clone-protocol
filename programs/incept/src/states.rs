@@ -311,7 +311,7 @@ impl Comet {
     pub fn calculate_effective_collateral_value(
         &self,
         token_data: &TokenData,
-        single_index: Option<usize>,
+        single_collateral_position_index: Option<usize>,
     ) -> Decimal {
         let mut total_value = Decimal::new(0, DEVNET_TOKEN_SCALE.into());
 
@@ -319,7 +319,7 @@ impl Comet {
             .iter()
             .enumerate()
             .for_each(|(i, comet_collateral)| {
-                if let Some(index) = single_index {
+                if let Some(index) = single_collateral_position_index {
                     if index != i {
                         return;
                     }
