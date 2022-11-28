@@ -1,25 +1,19 @@
 use crate::error::*;
 use crate::math::*;
-use crate::recenter_comet::recenter_calculation;
+use crate::recenter_comet::{recenter_calculation, RecenterResult};
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-// use jupiter_agg_mock::cpi::accounts::Swap;
-// use jupiter_agg_mock::cpi::swap as CpiJupiterSwap;
-// use jupiter_agg_mock::program::JupiterAggMock;
-// use jupiter_agg_mock::Jupiter;
-// use rust_decimal::prelude::*;
-// use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, user_nonce: u8, position_index: u8)]
+#[instruction(user_nonce: u8, position_index: u8)]
 pub struct LiquidateSinglePoolComet<'info> {
     pub liquidator: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data
     )]
     pub manager: Box<Account<'info, Manager>>,
@@ -85,12 +79,59 @@ pub struct LiquidateSinglePoolComet<'info> {
     pub token_program: Program<'info, Token>,
 }
 
+pub fn calculate_claims(
+    comet_position: &CometPosition,
+    comet_collateral: &CometCollateral,
+    pool: &Pool,
+    recenter_result: &RecenterResult,
+    liquidation_config: &LiquidationConfig,
+) -> Result<(Decimal, Decimal)> {
+    let comet_lp_tokens = comet_position.liquidity_token_value.to_decimal();
+
+    // After recenter, ILD should be zero or very near zero.
+    // Assume we can ignore its impact on the health score.
+    let min_collateral_claim = liquidation_config
+        .collateral_full_liquidation_threshold
+        .to_decimal();
+    let claimable_fee = liquidation_config.liquidator_fee.to_decimal();
+    let collateral_after_recenter = comet_collateral.collateral_amount.to_decimal()
+        - recenter_result.user_usdi_collateral_deficit;
+    let health_after_recenter = Decimal::new(100, 0)
+        - pool.asset_info.health_score_coefficient.to_decimal()
+            * recenter_result.user_borrowed_usdi
+            / collateral_after_recenter;
+
+    let max_health_liquidation = liquidation_config.max_health_liquidation.to_decimal();
+    let health_score_delta = max_health_liquidation - health_after_recenter;
+
+    let full_liquidation = min_collateral_claim >= collateral_after_recenter;
+    let mut collateral_claim = min_collateral_claim.max(collateral_after_recenter * claimable_fee);
+
+    let mut lp_to_claim = if full_liquidation {
+        collateral_claim = collateral_after_recenter;
+        comet_lp_tokens
+    } else {
+        let new_collateral_amount = collateral_after_recenter - collateral_claim;
+        let new_usdi_position = new_collateral_amount
+            * (recenter_result.user_borrowed_usdi / collateral_after_recenter
+                - health_score_delta / pool.asset_info.health_score_coefficient.to_decimal());
+        let target_usdi_position_change = recenter_result.user_borrowed_usdi - new_usdi_position;
+
+        (comet_lp_tokens * target_usdi_position_change / recenter_result.user_borrowed_usdi)
+            .min(comet_lp_tokens)
+    };
+    lp_to_claim.rescale(DEVNET_TOKEN_SCALE);
+    collateral_claim.rescale(DEVNET_TOKEN_SCALE);
+
+    Ok((lp_to_claim, collateral_claim))
+}
+
 pub fn execute(
     ctx: Context<LiquidateSinglePoolComet>,
-    manager_nonce: u8,
     _user_nonce: u8,
     position_index: u8,
 ) -> Result<()> {
+    let manager_nonce = ctx.accounts.manager.bump;
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
@@ -107,7 +148,7 @@ pub fn execute(
     let health_score = calculate_health_score(&comet, &token_data, Some(pool_index))?;
 
     require!(
-        matches!(health_score, HealthScore::SubjectToLiquidation { .. }),
+        !health_score.is_healthy(),
         InceptError::NotSubjectToLiquidation
     );
 
@@ -120,32 +161,15 @@ pub fn execute(
         position_index as usize,
         position_index as usize,
     )?;
+
+    let (lp_to_claim, collateral_claim) = calculate_claims(
+        &comet_position,
+        &comet_collateral,
+        &pool,
+        &recenter_result,
+        &ctx.accounts.manager.liquidation_config,
+    )?;
     let comet_lp_tokens = comet_position.liquidity_token_value.to_decimal();
-
-    // After recenter, ILD should be zero or very near zero.
-    // Assume we can ignore its impact on the health score.
-    let min_collateral_claim =
-        Decimal::new(20 * i64::pow(10, DEVNET_TOKEN_SCALE), DEVNET_TOKEN_SCALE);
-    let claimable_fee = Decimal::new(5, 2);
-
-    let health_score_delta = Decimal::from_f64(20f64 - health_score.score()).unwrap();
-    let collateral_after_recenter = comet_collateral.collateral_amount.to_decimal()
-        - recenter_result.user_usdi_collateral_deficit;
-
-    let full_liquidation = min_collateral_claim >= collateral_after_recenter;
-    let mut collateral_claim = min_collateral_claim.max(collateral_after_recenter * claimable_fee);
-
-    let lp_to_claim = if full_liquidation {
-        collateral_claim = collateral_after_recenter;
-        comet_lp_tokens
-    } else {
-        let target_usdi_position_change = (recenter_result.user_borrowed_usdi * collateral_claim
-            - health_score_delta / pool.asset_info.health_score_coefficient.to_decimal())
-            / collateral_after_recenter;
-
-        (comet_lp_tokens * target_usdi_position_change / recenter_result.user_borrowed_usdi)
-            .min(comet_lp_tokens)
-    };
 
     let mut usdi_claimed = recenter_result.user_borrowed_usdi * lp_to_claim / comet_lp_tokens;
     usdi_claimed.rescale(DEVNET_TOKEN_SCALE);
@@ -398,13 +422,6 @@ pub fn execute(
         ),
         lp_to_claim.mantissa().try_into().unwrap(),
     )?;
-
-    let resulting_score = calculate_health_score(&comet, &token_data, Some(pool_index))?;
-
-    require!(
-        matches!(resulting_score, HealthScore::Healthy { .. }),
-        InceptError::InvalidHealthScoreCoefficient // TO DO change this.
-    );
 
     // Update token data
     // update pool data
