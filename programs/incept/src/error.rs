@@ -177,6 +177,14 @@ pub enum InceptError {
     /// 43. Invalid Resulting Comet
     #[msg("Comet is in an invalid state after action")]
     InvalidResultingComet,
+
+    /// 44. Invalid value range
+    #[msg("Value is in an incorrect range.")]
+    InvalidValueRange,
+
+    /// 45. Invalid value range
+    #[msg("Asset stable requirement violated!")]
+    InvalidAssetStability,
 }
 
 impl From<InceptError> for ProgramError {
