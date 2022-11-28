@@ -37,7 +37,6 @@ pub fn execute<'info>(
 ) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let n_accounts = ctx.remaining_accounts.iter().len();
-
     require!(n_accounts > 0, InceptError::NoRemainingAccountsSupplied);
 
     // generate data from  pyth oracle

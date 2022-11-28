@@ -74,7 +74,7 @@ pub struct WithdrawLiquidityFromSinglePoolComet<'info> {
 
 pub fn execute(
     ctx: Context<WithdrawLiquidityFromSinglePoolComet>,
-    user_nonce: u8,
+    _user_nonce: u8,
     manager_nonce: u8,
     liquidity_token_amount: u64,
     position_index: u8,
