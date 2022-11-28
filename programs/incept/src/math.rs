@@ -196,18 +196,69 @@ pub fn check_mint_collateral_sufficient(
 }
 
 #[derive(Clone, Debug)]
-pub enum HealthScore {
-    Healthy { score: f64 },
-    SubjectToLiquidation { score: f64 },
+pub struct HealthScore {
+    pub score: Decimal,
+    pub effective_collateral: Decimal,
+    pub total_il_term: Decimal,
+    pub total_position_term: Decimal,
 }
 
 impl HealthScore {
-    pub fn score(&self) -> f64 {
-        match self {
-            HealthScore::Healthy { score } => *score,
-            HealthScore::SubjectToLiquidation { score } => *score,
+    pub fn is_healthy(&self) -> bool {
+        self.score.is_sign_positive()
+    }
+}
+
+pub fn calculate_comet_position_loss(
+    token_data: &TokenData,
+    comet_position: &CometPosition,
+) -> Result<(Decimal, Decimal)> {
+    let pool = token_data.pools[comet_position.pool_index as usize];
+
+    let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
+        comet_position.liquidity_token_value.to_decimal(),
+        pool.liquidity_token_supply.to_decimal(),
+    );
+    let pool_usdi = pool.usdi_amount.to_decimal();
+    let pool_iasset = pool.iasset_amount.to_decimal();
+    let pool_price = pool_usdi / pool_iasset;
+    let effective_price = if pool_price > pool.asset_info.price.to_decimal() {
+        pool_price
+    } else {
+        pool.asset_info.price.to_decimal()
+    };
+
+    let borrowed_usdi = comet_position.borrowed_usdi.to_decimal();
+    let borrowed_iasset = comet_position.borrowed_iasset.to_decimal();
+
+    let impermanent_loss;
+
+    if liquidity_proportion.is_zero() {
+        if comet_position.borrowed_usdi.to_decimal() > comet_position.borrowed_iasset.to_decimal() {
+            impermanent_loss = borrowed_usdi;
+        } else {
+            impermanent_loss = borrowed_iasset * effective_price;
+        }
+    } else {
+        let claimable_usdi = liquidity_proportion * pool_usdi;
+        let claimable_iasset = liquidity_proportion * pool_iasset;
+        let init_price = borrowed_usdi / borrowed_iasset;
+
+        if pool_price < init_price {
+            impermanent_loss = borrowed_usdi - claimable_usdi;
+        } else if pool_price > init_price {
+            impermanent_loss = effective_price * (borrowed_iasset - claimable_iasset);
+        } else {
+            impermanent_loss = Decimal::zero();
         }
     }
+    // TODO: Do we need to ensure the impermanent loss is always non-negative?
+
+    let impermanent_loss_term =
+        impermanent_loss * token_data.il_health_score_coefficient.to_decimal();
+    let position_term = borrowed_usdi * pool.asset_info.health_score_coefficient.to_decimal();
+
+    Ok((impermanent_loss_term, position_term))
 }
 
 pub fn calculate_health_score(
@@ -226,7 +277,8 @@ pub fn calculate_health_score(
         None
     };
 
-    let mut loss = Decimal::zero();
+    let mut total_il_term = Decimal::zero();
+    let mut total_position_term = Decimal::zero();
 
     for index in 0..(comet.num_positions as usize) {
         if let Some(s_index) = single_index {
@@ -241,64 +293,22 @@ pub fn calculate_health_score(
             return Err(error!(InceptError::OutdatedOracle));
         }
 
-        let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
-            comet_position.liquidity_token_value.to_decimal(),
-            pool.liquidity_token_supply.to_decimal(),
-        );
-        let pool_usdi = pool.usdi_amount.to_decimal();
-        let pool_iasset = pool.iasset_amount.to_decimal();
-        let pool_price = pool_usdi / pool_iasset;
-        let effective_price = if pool_price > pool.asset_info.price.to_decimal() {
-            pool_price
-        } else {
-            pool.asset_info.price.to_decimal()
-        };
+        let (impermanent_loss_term, position_term) =
+            calculate_comet_position_loss(&token_data, &comet_position)?;
 
-        let borrowed_usdi = comet_position.borrowed_usdi.to_decimal();
-        let borrowed_iasset = comet_position.borrowed_iasset.to_decimal();
-
-        let impermanent_loss;
-
-        if liquidity_proportion.is_zero() {
-            if comet_position.borrowed_usdi.to_decimal()
-                > comet_position.borrowed_iasset.to_decimal()
-            {
-                impermanent_loss = borrowed_usdi;
-            } else {
-                impermanent_loss = borrowed_iasset * effective_price;
-            }
-        } else {
-            let claimable_usdi = liquidity_proportion * pool_usdi;
-            let claimable_iasset = liquidity_proportion * pool_iasset;
-            let init_price = borrowed_usdi / borrowed_iasset;
-
-            if pool_price < init_price {
-                impermanent_loss = borrowed_usdi - claimable_usdi;
-            } else if pool_price > init_price {
-                impermanent_loss = effective_price * (borrowed_iasset - claimable_iasset);
-            } else {
-                impermanent_loss = Decimal::zero();
-            }
-        }
-
-        let impermanent_loss_term =
-            impermanent_loss * token_data.il_health_score_coefficient.to_decimal();
-        let position_term = borrowed_usdi * pool.asset_info.health_score_coefficient.to_decimal();
-        loss += impermanent_loss_term + position_term;
+        total_il_term += impermanent_loss_term;
+        total_position_term += position_term;
     }
 
-    let total_collateral_value =
+    let effective_collateral =
         comet.calculate_effective_collateral_value(token_data, single_pool_index);
 
-    let score = Decimal::new(100, 0) - loss / total_collateral_value;
+    let score = Decimal::new(100, 0) - (total_il_term + total_position_term) / effective_collateral;
 
-    if score.is_sign_positive() {
-        Ok(HealthScore::Healthy {
-            score: score.to_f64().unwrap(),
-        })
-    } else {
-        Ok(HealthScore::SubjectToLiquidation {
-            score: score.to_f64().unwrap(),
-        })
-    }
+    Ok(HealthScore {
+        score,
+        effective_collateral,
+        total_il_term,
+        total_position_term,
+    })
 }

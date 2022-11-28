@@ -126,10 +126,7 @@ pub fn execute(
 
             let health_score = calculate_health_score(&comet, token_data, None)?;
 
-            require!(
-                matches!(health_score, HealthScore::Healthy { .. }),
-                InceptError::HealthScoreTooLow
-            );
+            require!(health_score.is_healthy(), InceptError::HealthScoreTooLow);
         }
     }
     if close {
