@@ -59,10 +59,12 @@ pub fn execute(
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
+    let comet_collateral_index = comet_collateral_index as usize;
+
     let mut close = false;
     {
         let mut comet = ctx.accounts.comet.load_mut()?;
-        let comet_collateral = comet.collaterals[comet_collateral_index as usize];
+        let comet_collateral = comet.collaterals[comet_collateral_index];
         let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
 
         let subtracted_collateral_value = Decimal::new(
@@ -89,17 +91,17 @@ pub fn execute(
         );
 
         // update the collateral amount
-        comet.collaterals[comet_collateral_index as usize].collateral_amount = RawDecimal::from(
+        comet.collaterals[comet_collateral_index].collateral_amount = RawDecimal::from(
             comet_collateral.collateral_amount.to_decimal() - subtracted_collateral_value,
         );
 
         // remove collateral if empty
-        if comet.collaterals[comet_collateral_index as usize]
+        if comet.collaterals[comet_collateral_index]
             .collateral_amount
             .to_decimal()
-            .is_zero()
+            .is_zero() && comet_collateral_index != USDI_COLLATERAL_INDEX
         {
-            comet.remove_collateral(comet_collateral_index as usize);
+            comet.remove_collateral(comet_collateral_index);
         }
 
         // send collateral from vault to user
