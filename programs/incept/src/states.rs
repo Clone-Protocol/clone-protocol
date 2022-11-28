@@ -53,11 +53,21 @@ impl Default for RawDecimal {
 #[account]
 #[derive(Default)]
 pub struct Manager {
-    // 97
-    pub usdi_mint: Pubkey,  // 32
-    pub token_data: Pubkey, // 32
-    pub admin: Pubkey,      // 32
-    pub bump: u8,           // 1
+    // 145
+    pub usdi_mint: Pubkey,                     // 32
+    pub token_data: Pubkey,                    // 32
+    pub admin: Pubkey,                         // 32
+    pub bump: u8,                              // 1
+    pub liquidation_config: LiquidationConfig, // 48
+}
+
+#[zero_copy]
+#[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
+pub struct LiquidationConfig {
+    // 48
+    pub liquidator_fee: RawDecimal,                        // 16,
+    pub collateral_full_liquidation_threshold: RawDecimal, // 16
+    pub max_health_liquidation: RawDecimal,                // 16
 }
 
 #[account(zero_copy)]
@@ -137,16 +147,17 @@ impl TokenData {
 #[derive(PartialEq, Default, Debug)]
 pub struct AssetInfo {
     // 208
-    pub iasset_mint: Pubkey,                  // 32
-    pub price_feed_addresses: [Pubkey; 2],    // 64
-    pub price: RawDecimal,                    // 16
-    pub twap: RawDecimal,                     // 16
-    pub confidence: RawDecimal,               // 16
-    pub status: u64,                          // 8
-    pub last_update: u64,                     // 8
-    pub stable_collateral_ratio: RawDecimal,  // 16
-    pub crypto_collateral_ratio: RawDecimal,  // 16
-    pub health_score_coefficient: RawDecimal, // 16
+    pub iasset_mint: Pubkey,                   // 32
+    pub price_feed_addresses: [Pubkey; 2],     // 64
+    pub price: RawDecimal,                     // 16
+    pub twap: RawDecimal,                      // 16
+    pub confidence: RawDecimal,                // 16
+    pub status: u64,                           // 8
+    pub last_update: u64,                      // 8
+    pub stable_collateral_ratio: RawDecimal,   // 16
+    pub crypto_collateral_ratio: RawDecimal,   // 16
+    pub health_score_coefficient: RawDecimal,  // 16
+    pub liquidation_discount_rate: RawDecimal, // 16
 }
 
 #[zero_copy]
