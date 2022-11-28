@@ -2,22 +2,14 @@ import * as anchor from "@project-serum/anchor";
 import { Program, BN } from "@project-serum/anchor";
 import { Incept } from "../sdk/src/idl/incept";
 import { Pyth } from "../sdk/src/idl/pyth";
-import { MockUsdc } from "../sdk/src/idl/mock_usdc";
 import { Store } from "../sdk/src/idl/store";
 import { JupiterAggMock } from "../sdk/src/idl/jupiter_agg_mock";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
 import { assert } from "chai";
 import {
   Incept as InceptConnection,
   TokenData,
-  User,
-  Comet,
-  MintPositions,
-  LiquidityPositions,
-  Manager,
-  Pool,
-  DEVNET_TOKEN_SCALE,
   toDevnetScale,
 } from "../sdk/src/incept";
 import {
@@ -29,32 +21,28 @@ import {
 import { sleep } from "../sdk/src/utils";
 import { getMantissa, toNumber } from "../sdk/src/decimal";
 
-const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
-const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 
 describe("incept", async () => {
   const provider = anchor.AnchorProvider.local();
   anchor.setProvider(provider);
+
   let inceptProgram = anchor.workspace.Incept as Program<Incept>;
   let pythProgram = anchor.workspace.Pyth as Program<Pyth>;
-  //let mockUSDCProgram = anchor.workspace.MockUsdc as Program<MockUsdc>;
-  //let walletPubkey = inceptProgram.provider.wallet.publicKey;
   let walletPubkey = inceptProgram.provider.publicKey!;
   let storeProgram = anchor.workspace.Store as Program<Store>;
   let jupiterProgram = anchor.workspace
     .JupiterAggMock as Program<JupiterAggMock>;
-  let chainlink; //= new ChainLinkOracle(storeProgram);
+  let chainlink;
 
   const mockUSDCMint = anchor.web3.Keypair.generate();
-  // const mockUSDCAccount = await anchor.web3.PublicKey.findProgramAddress(
-  //   [Buffer.from("mock_usdc")],
-  //   mockUSDCProgram.programId
-  // );
 
   const healthScoreCoefficient = 1.059;
   const ilHealthScoreCoefficient = 128.288;
   const ilHealthScoreCutoff = 100;
   const ilLiquidationRewardPct = 5;
+  const maxHealthLiquidation = 20;
+  const liquidatorFee = 500; // in bps
+  const collateralFullLiquidationThreshold = 25;
 
   let priceFeed;
   let mockUSDCTokenAccountInfo;
@@ -71,6 +59,7 @@ describe("incept", async () => {
     [anchor.utils.bytes.utf8.encode("jupiter")], //, jupiterProgram.provider.wallet.publicKey.toBuffer()],
     jupiterProgram.programId
   );
+
   it("mock jupiter agg initialized + mock usdc initialized + mock asset initialized!", async () => {
     await jupiterProgram.methods
       .initialize()
@@ -105,7 +94,10 @@ describe("incept", async () => {
       storeProgram.programId,
       ilHealthScoreCoefficient,
       ilHealthScoreCutoff,
-      ilLiquidationRewardPct
+      ilLiquidationRewardPct,
+      maxHealthLiquidation,
+      liquidatorFee,
+      collateralFullLiquidationThreshold
     );
   });
 
@@ -196,7 +188,8 @@ describe("incept", async () => {
       0,
       priceFeed,
       chainlink.priceFeedPubkey(),
-      healthScoreCoefficient
+      healthScoreCoefficient,
+      500
     );
   });
 
@@ -210,6 +203,9 @@ describe("incept", async () => {
       priceFeed,
       chainlink.priceFeedPubkey()
     );
+
+    let tokenData = await inceptClient.getTokenData();
+    assert.equal(tokenData.collaterals[2].stable, 0);
   });
 
   it("token data initialization check", async () => {
@@ -2138,14 +2134,80 @@ describe("incept", async () => {
     );
   });
 
+  let assetMint;
+  let jupiterAccount;
+  let assetAssociatedTokenAddress;
+  let usdcAssociatedTokenAddress;
+
+  it("mint USDC and swap for some mock asset", async () => {
+    jupiterAccount = await jupiterProgram.account.jupiter.fetch(
+      jupiterAddress
+    );
+    assetMint =  jupiterAccount.assetMints[0];
+    let usdcMint = jupiterAccount.usdcMint;
+    assetAssociatedTokenAddress = await getAssociatedTokenAddress(
+      assetMint,
+      inceptProgram.provider.publicKey!,
+      false,
+      TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    usdcAssociatedTokenAddress = await getAssociatedTokenAddress(
+      jupiterAccount.usdcMint,
+      inceptProgram.provider.publicKey!,
+      false,
+      TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    await jupiterProgram.methods.mintUsdc(
+      jupiterNonce,
+      new BN(10000 * 10000000)).accounts({
+          usdcMint: usdcMint,
+          usdcTokenAccount: usdcAssociatedTokenAddress,
+          jupiterAccount: jupiterAddress,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        }
+    ).rpc();
+
+    // Swap 10 asset out.
+    await jupiterProgram.methods.swap(
+      jupiterNonce,
+      0,
+      false,
+      true,
+      new BN(10 * 100000000)).accounts({
+          user: jupiterProgram.provider.publicKey!,
+          jupiterAccount: jupiterAddress,
+          assetMint: assetMint,
+          usdcMint: usdcMint,
+          userAssetTokenAccount: assetAssociatedTokenAddress,
+          userUsdcTokenAccount: usdcAssociatedTokenAddress,
+          pythOracle: jupiterAccount.oracles[0],
+          tokenProgram: TOKEN_PROGRAM_ID,
+        }).rpc();
+  })
+
   it("comet liquidation", async () => {
     // TODO: Update the liquidation functions to reflect the
     // requirement that positions must be centered before liquidity is withdrawn.
-    return;
     let tokenData = await inceptClient.getTokenData();
     const poolIndex = 0;
     let pool = tokenData.pools[poolIndex];
-    const comet = await inceptClient.getComet();
+    let comet = await inceptClient.getComet();
+
+    let mockAssetAssociatedTokenAddress =
+    await inceptClient.getOrCreateAssociatedTokenAccount(
+      mockAssetMint.publicKey
+    );
+    // add non-stable collateral to comet
+    await inceptClient.addCollateralToComet(mockAssetAssociatedTokenAddress.address, new BN(10 * 10000000), 2, false);
+    await inceptClient.addCollateralToComet(usdcAssociatedTokenAddress, new BN(100 * 10000000), 1, false);
+
+    comet = await inceptClient.getComet();
+
+    assert.equal(comet.numCollaterals.toNumber(), 3);
 
     usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
       inceptClient.manager!.usdiMint
@@ -2166,9 +2228,10 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         pool.assetInfo.iassetMint
       );
+    let buyAmount = new BN("2999800000000")//new BN("5999800000000");
 
-    await inceptClient.buySynth(
-      new BN("5999800000000"),
+    await inceptClient.buySynth(  
+      buyAmount,
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       poolIndex
@@ -2185,66 +2248,77 @@ describe("incept", async () => {
     // Check that the score is zero.
     let healthScore1 = await inceptClient.getHealthScore();
 
-    // await inceptClient.liquidateCometPositionReduction(
-    //   inceptClient.provider.publicKey!,
-    //   0,
-    //   toNumber(comet.positions[0].liquidityTokenValue)
-    // );
+    assert.isBelow(healthScore1.healthScore, 0, "require unhealthy comet.");
+
+    let userAddress = await inceptClient.getUserAddress();
+    assert.equal(comet.collaterals[1].collateralIndex, 2);
+
+    tokenData = await inceptClient.getTokenData();
+    
+    let user = await inceptClient.getUserAccount();
+    let swapNonstableIx = await inceptClient.swapCometNonstableCollateralInstruction(
+      inceptClient.provider.publicKey!,
+      {userPubKey: userAddress.userPubkey, bump: userAddress.bump},
+      user,
+      comet,
+      tokenData,
+      new BN(1000 * 100000000),
+      1,
+      0,
+      usdiTokenAccountInfo.address,
+      mockAssetAssociatedTokenAddress.address
+    );
+    let convertToStableIx = await inceptClient.swapStableCollateralIntoUsdiInstruction(
+      inceptClient.provider.publicKey!,
+      {userPubKey: userAddress.userPubkey, bump: userAddress.bump},
+      user,
+      comet,
+      tokenData,
+      2
+    );
+
+    let tx = new anchor.web3.Transaction().add(await inceptClient.updatePricesInstruction()).add(swapNonstableIx).add(convertToStableIx);
+    await inceptClient.provider.sendAndConfirm!(tx);
+
+    comet = await inceptClient.getComet();
+    assert.equal(toNumber(comet.collaterals[1].collateralAmount), 0);
+    assert.equal(toNumber(comet.collaterals[2].collateralAmount), 0);
 
     let healthScore2 = await inceptClient.getHealthScore();
 
     assert.isAbove(
       healthScore2.healthScore,
       healthScore1.healthScore,
-      "check liquidation for reducing position"
+      "check liquidation for swapping collateral!"
+    );
+    
+    let liquidationIx = await inceptClient.liquidateCometInstruction(
+      inceptClient.provider.publicKey!,
+      {userPubKey: userAddress.userPubkey, bump: userAddress.bump},
+      user,
+      comet,
+      tokenData,
+      0,
+      usdiTokenAccountInfo.address
     );
 
-    // Reduce IL.
-    await inceptClient.updateILHealthScoreCoefficient(100000);
+    await inceptClient.provider.sendAndConfirm!(
+      new anchor.web3.Transaction().add(
+        await inceptClient.updatePricesInstruction()
+        ).add(liquidationIx)
+    );
 
     let healthScore3 = await inceptClient.getHealthScore();
-    console.log("HERE", healthScore3);
-    // Reduce IL liquidation using stable collateral.
-    await inceptClient.liquidateCometILReduction(
-      inceptClient.provider.publicKey!,
-      0,
-      0,
-      0.2,
-      jupiterProgram.programId,
-      jupiterAddress,
-      jupiterNonce
-    );
-
-    let healthScore4 = await inceptClient.getHealthScore();
 
     assert.isAbove(
-      healthScore4.healthScore,
       healthScore3.healthScore,
-      "check liquidation for reducing IL"
+      healthScore2.healthScore,
+      "check liquidation for reducing position!"
     );
+  
+    assert.isBelow(healthScore3.healthScore, maxHealthLiquidation + 0.1, "health score above threshold.");
 
-    await inceptClient.updateILHealthScoreCoefficient(130000);
-
-    let healthScore5 = await inceptClient.getHealthScore();
-
-    // Reduce IL liquidation using non-stable collateral.
-    await inceptClient.liquidateCometILReduction(
-      inceptClient.provider.publicKey!,
-      0,
-      1,
-      0.02,
-      jupiterProgram.programId,
-      jupiterAddress,
-      jupiterNonce
-    );
-
-    let healthScore6 = await inceptClient.getHealthScore();
-
-    assert.isAbove(
-      healthScore6.healthScore,
-      healthScore5.healthScore,
-      "check liquidation for reducing IL"
-    );
+    // TODO: Add test with multiple comet positions.
   });
 
   it("Pay ILD using collateral", async () => {
