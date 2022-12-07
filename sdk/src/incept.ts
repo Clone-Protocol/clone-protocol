@@ -1909,7 +1909,7 @@ export class Incept {
             tokenData.pools[position.poolIndex].liquidityTokenMint,
           cometLiquidityTokenAccount:
             tokenData.pools[position.poolIndex].cometLiquidityTokenAccount,
-          vault: tokenData.collaterals[cometPositionIndex].vault,
+          vault: tokenData.collaterals[0].vault,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
@@ -2537,10 +2537,7 @@ export class Incept {
     );
   }
 
-  public async getEffectiveUSDCollateralValue() {
-    const tokenData = await this.getTokenData();
-    const comet = await this.getComet();
-
+  public getEffectiveUSDCollateralValue(tokenData: TokenData, comet: Comet) {
     // Iterate through collaterals.
     let effectiveUSDCollateral = 0;
 
@@ -2563,14 +2560,17 @@ export class Incept {
     return effectiveUSDCollateral;
   }
 
-  public async getHealthScore(): Promise<{
+  public getHealthScore(
+    tokenData: TokenData,
+    comet: Comet
+  ): {
     healthScore: number;
     ildHealthImpact: number;
-  }> {
-    const tokenData = await this.getTokenData();
-    const comet = await this.getComet();
-
-    const totalCollateralAmount = await this.getEffectiveUSDCollateralValue();
+  } {
+    const totalCollateralAmount = this.getEffectiveUSDCollateralValue(
+      tokenData,
+      comet
+    );
     let totalIldHealthImpact = 0;
 
     const loss =
@@ -3421,6 +3421,79 @@ export class Incept {
       healthScore: healthScore,
       lowerPrice: (y1 * y1) / invariant,
       upperPrice: (y2 * y2) / invariant,
+    };
+  }
+
+  public calculateCometRecenterMultiPool(
+    cometIndex: number,
+    tokenData: TokenData,
+    comet: Comet
+  ): {
+    healthScore: number;
+    usdiCost: number;
+  } {
+    const position = comet.positions[cometIndex];
+    const pool = tokenData.pools[position.poolIndex];
+
+    const ilCoefficient = toNumber(tokenData.ilHealthScoreCoefficient);
+    const assetCoefficient = toNumber(pool.assetInfo.healthScoreCoefficient);
+
+    const borrowedUsdi = toNumber(position.borrowedUsdi);
+    const borrowedIasset = toNumber(position.borrowedIasset);
+    const lpTokens = toNumber(position.liquidityTokenValue);
+
+    const initPrice = borrowedUsdi / borrowedIasset;
+    let poolUsdiAmount = toNumber(pool.usdiAmount);
+    let poolIassetAmount = toNumber(pool.iassetAmount);
+    let poolPrice = poolUsdiAmount / poolIassetAmount;
+    const invariant = poolUsdiAmount * poolIassetAmount;
+
+    const claimableRatio =
+      lpTokens / (lpTokens + toNumber(pool.liquidityTokenSupply));
+
+    assert.notEqual(
+      initPrice,
+      poolPrice,
+      "Cannot recenter with same initial and pool prices"
+    );
+    const iAssetDebt = Math.abs(
+      borrowedIasset - claimableRatio * poolIassetAmount
+    );
+    const usdiDebt = Math.abs(borrowedUsdi - claimableRatio * poolUsdiAmount);
+    let usdiCost;
+    let ildLoss;
+    if (initPrice < poolPrice) {
+      // calculate extra usdi comet can claim, iasset debt that comet cannot claim, and usdi amount needed to buy iasset and cover debt
+      const requiredUsdi =
+        invariant / (poolIassetAmount - iAssetDebt) - poolUsdiAmount;
+      usdiCost = requiredUsdi - usdiDebt;
+
+      poolIassetAmount -= iAssetDebt;
+      poolUsdiAmount += requiredUsdi;
+      ildLoss = usdiDebt * ilCoefficient;
+    } else {
+      // calculate extra iAsset comet can claim, usdi debt that comet cannot claim, and amount of usdi gained from trading iasset.
+      let extraUsdiFromIasset =
+        poolUsdiAmount - invariant / (poolIassetAmount + iAssetDebt);
+      usdiCost = usdiDebt - extraUsdiFromIasset;
+      ildLoss = iAssetDebt * poolPrice * ilCoefficient;
+    }
+
+    const newBorrowedUsdi = claimableRatio * poolUsdiAmount;
+    const prevCollateral = this.getEffectiveUSDCollateralValue(
+      tokenData,
+      comet
+    );
+    const newCollateral = prevCollateral - usdiCost;
+    const prevHealthScore = this.getHealthScore(tokenData, comet);
+    const prevLoss = (100 - prevHealthScore.healthScore) * prevCollateral;
+    const newLoss =
+      prevLoss - ildLoss - (borrowedUsdi - newBorrowedUsdi) * assetCoefficient;
+    const healthScore = 100 - newLoss / newCollateral;
+
+    return {
+      usdiCost: usdiCost,
+      healthScore: healthScore,
     };
   }
 
