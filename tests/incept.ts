@@ -1488,8 +1488,11 @@ describe("incept", async () => {
 
     const info = inceptClient.getSinglePoolHealthScore(0, tokenData, comet);
 
-    // const recenterEstimation =
-    //   await inceptClient.calculateCometRecenterSinglePool(0);
+    const recenterEstimation = inceptClient.calculateCometRecenterSinglePool(
+      0,
+      tokenData,
+      comet
+    );
 
     await inceptClient.recenterSinglePoolComet(0);
 
@@ -1502,7 +1505,7 @@ describe("incept", async () => {
       comet
     );
 
-    // assert.closeTo(info2.healthScore, recenterEstimation.healthScore, 0.1);
+    assert.closeTo(info2.healthScore, recenterEstimation.healthScore, 0.1);
 
     assert.isAbove(
       info2.healthScore,
@@ -1938,7 +1941,9 @@ describe("incept", async () => {
 
   it("comet recentered!", async () => {
     let poolIndex = 0;
-    const tokenData = await inceptClient.getTokenData();
+    let tokenData = await inceptClient.getTokenData();
+    let comet = await inceptClient.getComet();
+    let startingCollateral = toNumber(comet.collaterals[0].collateralAmount);
     const pool = tokenData.pools[poolIndex];
 
     mockUSDCTokenAccountInfo =
@@ -1952,10 +1957,17 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         pool.assetInfo.iassetMint
       );
+    let recenterCometEstimation = inceptClient.calculateCometRecenterMultiPool(
+      0,
+      tokenData,
+      comet
+    );
 
     await inceptClient.recenterComet(0, 0, false);
 
-    await sleep(200);
+    tokenData = await inceptClient.getTokenData();
+    comet = await inceptClient.getComet();
+    let healthScore = await inceptClient.getHealthScore(tokenData, comet);
 
     usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
       inceptClient.manager!.usdiMint
@@ -1964,6 +1976,19 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         pool.assetInfo.iassetMint
       );
+
+    let currentCollateral = toNumber(comet.collaterals[0].collateralAmount);
+
+    assert.closeTo(
+      healthScore.healthScore,
+      recenterCometEstimation.healthScore,
+      0.1
+    );
+    assert.closeTo(
+      startingCollateral - currentCollateral,
+      recenterCometEstimation.usdiCost,
+      0.01
+    );
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 100000000,
