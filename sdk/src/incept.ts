@@ -1909,7 +1909,7 @@ export class Incept {
             tokenData.pools[position.poolIndex].liquidityTokenMint,
           cometLiquidityTokenAccount:
             tokenData.pools[position.poolIndex].cometLiquidityTokenAccount,
-          vault: tokenData.collaterals[cometPositionIndex].vault,
+          vault: tokenData.collaterals[0].vault,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       }
