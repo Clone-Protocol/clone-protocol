@@ -3369,37 +3369,45 @@ export class Incept {
 
     const claimableRatio =
       lpTokens / (lpTokens + toNumber(pool.liquidityTokenSupply));
+    const invClaimableRatio = 1 - claimableRatio;
 
     assert.notEqual(
       initPrice,
       poolPrice,
       "Cannot recenter with same initial and pool prices"
     );
-    const iAssetDebt = Math.abs(
+    const iAssetDiff = Math.abs(
       borrowedIasset - claimableRatio * poolIassetAmount
     );
-    const usdiDebt = Math.abs(borrowedUsdi - claimableRatio * poolUsdiAmount);
     let usdiCost;
     if (initPrice < poolPrice) {
+      const iAssetDebt = iAssetDiff / invClaimableRatio;
       // calculate extra usdi comet can claim, iasset debt that comet cannot claim, and usdi amount needed to buy iasset and cover debt
-      const requiredUsdi =
-        invariant / (poolIassetAmount - iAssetDebt) - poolUsdiAmount;
-      usdiCost = requiredUsdi - usdiDebt;
-
-      poolIassetAmount -= iAssetDebt;
-      poolUsdiAmount += requiredUsdi;
+      const newPooliAssetAmount = poolIassetAmount - iAssetDebt;
+      const newPoolUsdiAmount = invariant / newPooliAssetAmount;
+      const requiredUsdi = invariant / newPooliAssetAmount - poolUsdiAmount;
+      const usdiSurplus = claimableRatio * newPoolUsdiAmount - borrowedUsdi;
+      usdiCost = requiredUsdi - usdiSurplus;
+      poolIassetAmount = newPooliAssetAmount;
+      poolUsdiAmount = newPoolUsdiAmount;
     } else {
+      const iassetSurplus = iAssetDiff / invClaimableRatio;
+      const newPooliAssetAmount = poolIassetAmount + iassetSurplus;
+      const newPoolUsdiAmount = invariant / newPooliAssetAmount;
       // calculate extra iAsset comet can claim, usdi debt that comet cannot claim, and amount of usdi gained from trading iasset.
-      let extraUsdiFromIasset =
-        poolUsdiAmount - invariant / (poolIassetAmount + iAssetDebt);
-      usdiCost = usdiDebt - extraUsdiFromIasset;
+      const usdiDebt = borrowedUsdi - claimableRatio * newPoolUsdiAmount;
+      const usdiBurned = poolUsdiAmount - newPoolUsdiAmount;
+      usdiCost = usdiDebt - usdiBurned;
+      poolIassetAmount = newPooliAssetAmount;
+      poolUsdiAmount = newPoolUsdiAmount;
     }
 
     const newBorrowedUsdi = claimableRatio * poolUsdiAmount;
     const newBorrowedIasset = claimableRatio * poolIassetAmount;
-    const newCollateral = toNumber(
+    const prevCollateral = toNumber(
       comet.collaterals[cometIndex].collateralAmount
     );
+    const newCollateral = prevCollateral - usdiCost;
 
     const positionLoss = assetCoefficient * newBorrowedUsdi;
 
@@ -3450,33 +3458,42 @@ export class Incept {
 
     const claimableRatio =
       lpTokens / (lpTokens + toNumber(pool.liquidityTokenSupply));
+    const invClaimableRatio = 1 - claimableRatio;
 
     assert.notEqual(
       initPrice,
       poolPrice,
       "Cannot recenter with same initial and pool prices"
     );
-    const iAssetDebt = Math.abs(
+    const iAssetDiff = Math.abs(
       borrowedIasset - claimableRatio * poolIassetAmount
     );
-    const usdiDebt = Math.abs(borrowedUsdi - claimableRatio * poolUsdiAmount);
+    const usdiDiff = Math.abs(borrowedUsdi - claimableRatio * poolUsdiAmount);
     let usdiCost;
     let ildLoss;
     if (initPrice < poolPrice) {
+      const iAssetDebt = iAssetDiff / invClaimableRatio;
       // calculate extra usdi comet can claim, iasset debt that comet cannot claim, and usdi amount needed to buy iasset and cover debt
-      const requiredUsdi =
-        invariant / (poolIassetAmount - iAssetDebt) - poolUsdiAmount;
-      usdiCost = requiredUsdi - usdiDebt;
-
-      poolIassetAmount -= iAssetDebt;
-      poolUsdiAmount += requiredUsdi;
-      ildLoss = usdiDebt * ilCoefficient;
+      const newPooliAssetAmount = poolIassetAmount - iAssetDebt;
+      const newPoolUsdiAmount = invariant / newPooliAssetAmount;
+      const requiredUsdi = invariant / newPooliAssetAmount - poolUsdiAmount;
+      const usdiSurplus = claimableRatio * newPoolUsdiAmount - borrowedUsdi;
+      usdiCost = requiredUsdi - usdiSurplus;
+      ildLoss = usdiDiff * ilCoefficient;
+      poolIassetAmount = newPooliAssetAmount;
+      poolUsdiAmount = newPoolUsdiAmount;
     } else {
+      const iassetSurplus = iAssetDiff / invClaimableRatio;
+      const newPooliAssetAmount = poolIassetAmount + iassetSurplus;
+      const newPoolUsdiAmount = invariant / newPooliAssetAmount;
       // calculate extra iAsset comet can claim, usdi debt that comet cannot claim, and amount of usdi gained from trading iasset.
-      let extraUsdiFromIasset =
-        poolUsdiAmount - invariant / (poolIassetAmount + iAssetDebt);
-      usdiCost = usdiDebt - extraUsdiFromIasset;
-      ildLoss = iAssetDebt * poolPrice * ilCoefficient;
+      const usdiDebt = borrowedUsdi - claimableRatio * newPoolUsdiAmount;
+      const usdiBurned = poolUsdiAmount - newPoolUsdiAmount;
+      usdiCost = usdiDebt - usdiBurned;
+      poolIassetAmount = newPooliAssetAmount;
+      poolUsdiAmount = newPoolUsdiAmount;
+      const markPrice = Math.max(toNumber(pool.assetInfo.price), poolPrice);
+      ildLoss = iAssetDiff * markPrice * ilCoefficient;
     }
 
     const newBorrowedUsdi = claimableRatio * poolUsdiAmount;
