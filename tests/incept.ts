@@ -1505,7 +1505,7 @@ describe("incept", async () => {
       comet
     );
 
-    assert.closeTo(info2.healthScore, recenterEstimation.healthScore, 0.1);
+    assert.closeTo(info2.healthScore, recenterEstimation.healthScore, 0.02);
 
     assert.isAbove(
       info2.healthScore,
@@ -1982,12 +1982,12 @@ describe("incept", async () => {
     assert.closeTo(
       healthScore.healthScore,
       recenterCometEstimation.healthScore,
-      0.1
+      0.02
     );
     assert.closeTo(
       startingCollateral - currentCollateral,
       recenterCometEstimation.usdiCost,
-      0.01
+      0.002
     );
 
     assert.equal(
