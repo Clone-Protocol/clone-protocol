@@ -3368,14 +3368,23 @@ export class Incept {
     const invariant = poolUsdiAmount * poolIassetAmount;
 
     const claimableRatio =
-      lpTokens / (lpTokens + toNumber(pool.liquidityTokenSupply));
+      lpTokens / toNumber(pool.liquidityTokenSupply);
     const invClaimableRatio = 1 - claimableRatio;
 
-    assert.notEqual(
-      initPrice,
-      poolPrice,
-      "Cannot recenter with same initial and pool prices"
-    );
+    if (Math.abs(initPrice - poolPrice) < 1e-8) {
+      const prevHealthScore = this.getSinglePoolHealthScore(cometIndex, tokenData, comet)
+      const estData = this.calculateEditCometSinglePoolWithUsdiBorrowed(
+        tokenData,
+        comet,
+        cometIndex,
+        0,
+        0
+      );
+      return {
+        usdiCost: 0, healthScore: prevHealthScore.healthScore,
+        lowerPrice: estData.lowerPrice, upperPrice: estData.upperPrice
+      }
+    }
     const iAssetDiff = Math.abs(
       borrowedIasset - claimableRatio * poolIassetAmount
     );
@@ -3449,6 +3458,10 @@ export class Incept {
     const borrowedUsdi = toNumber(position.borrowedUsdi);
     const borrowedIasset = toNumber(position.borrowedIasset);
     const lpTokens = toNumber(position.liquidityTokenValue);
+    const prevCollateral = this.getEffectiveUSDCollateralValue(
+      tokenData,
+      comet
+    );
 
     const initPrice = borrowedUsdi / borrowedIasset;
     let poolUsdiAmount = toNumber(pool.usdiAmount);
@@ -3457,14 +3470,17 @@ export class Incept {
     const invariant = poolUsdiAmount * poolIassetAmount;
 
     const claimableRatio =
-      lpTokens / (lpTokens + toNumber(pool.liquidityTokenSupply));
+      lpTokens / toNumber(pool.liquidityTokenSupply);
     const invClaimableRatio = 1 - claimableRatio;
 
-    assert.notEqual(
-      initPrice,
-      poolPrice,
-      "Cannot recenter with same initial and pool prices"
-    );
+    const prevHealthScore = this.getHealthScore(tokenData, comet);
+
+    if (Math.abs(initPrice - poolPrice) < 1e-8) {
+      return {
+        usdiCost: 0, healthScore: prevHealthScore.healthScore
+      }
+    }
+
     const iAssetDiff = Math.abs(
       borrowedIasset - claimableRatio * poolIassetAmount
     );
@@ -3472,7 +3488,7 @@ export class Incept {
     let usdiCost;
     let ildLoss;
     if (initPrice < poolPrice) {
-      const iAssetDebt = iAssetDiff / invClaimableRatio;
+      const iAssetDebt = (borrowedIasset - claimableRatio * poolIassetAmount) / invClaimableRatio;
       // calculate extra usdi comet can claim, iasset debt that comet cannot claim, and usdi amount needed to buy iasset and cover debt
       const newPooliAssetAmount = poolIassetAmount - iAssetDebt;
       const newPoolUsdiAmount = invariant / newPooliAssetAmount;
@@ -3482,8 +3498,9 @@ export class Incept {
       ildLoss = usdiDiff * ilCoefficient;
       poolIassetAmount = newPooliAssetAmount;
       poolUsdiAmount = newPoolUsdiAmount;
+
     } else {
-      const iassetSurplus = iAssetDiff / invClaimableRatio;
+      const iassetSurplus = (claimableRatio * poolIassetAmount - borrowedIasset) / invClaimableRatio;
       const newPooliAssetAmount = poolIassetAmount + iassetSurplus;
       const newPoolUsdiAmount = invariant / newPooliAssetAmount;
       // calculate extra iAsset comet can claim, usdi debt that comet cannot claim, and amount of usdi gained from trading iasset.
@@ -3497,12 +3514,8 @@ export class Incept {
     }
 
     const newBorrowedUsdi = claimableRatio * poolUsdiAmount;
-    const prevCollateral = this.getEffectiveUSDCollateralValue(
-      tokenData,
-      comet
-    );
+
     const newCollateral = prevCollateral - usdiCost;
-    const prevHealthScore = this.getHealthScore(tokenData, comet);
     const prevLoss = (100 - prevHealthScore.healthScore) * prevCollateral;
     const newLoss =
       prevLoss - ildLoss - (borrowedUsdi - newBorrowedUsdi) * assetCoefficient;
