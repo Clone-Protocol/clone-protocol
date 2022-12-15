@@ -1764,7 +1764,7 @@ describe("incept", async () => {
   it("comet health check", async () => {
     let comet = await inceptClient.getComet();
     let tokenData = await inceptClient.getTokenData();
-    let healthScore = await inceptClient.getHealthScore(tokenData, comet);
+    let healthScore = inceptClient.getHealthScore(tokenData, comet);
 
     assert.closeTo(
       healthScore.healthScore,
@@ -1782,7 +1782,7 @@ describe("incept", async () => {
     );
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
-    healthScore = await inceptClient.getHealthScore(tokenData, comet);
+    healthScore = inceptClient.getHealthScore(tokenData, comet);
     assert.closeTo(
       healthScore.healthScore,
       99.99990586662526,
@@ -1967,7 +1967,7 @@ describe("incept", async () => {
 
     tokenData = await inceptClient.getTokenData();
     comet = await inceptClient.getComet();
-    let healthScore = await inceptClient.getHealthScore(tokenData, comet);
+    let healthScore = inceptClient.getHealthScore(tokenData, comet);
 
     usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
       inceptClient.manager!.usdiMint
@@ -2070,7 +2070,7 @@ describe("incept", async () => {
     // Check that the score is zero.
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
-    let healthScore1 = await inceptClient.getHealthScore(tokenData, comet);
+    let healthScore1 = inceptClient.getHealthScore(tokenData, comet);
 
     await inceptClient.liquidateCometPositionReduction(
       inceptClient.provider.wallet.publicKey,
@@ -2081,7 +2081,7 @@ describe("incept", async () => {
     await sleep(200);
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
-    let healthScore2 = await inceptClient.getHealthScore(tokenData, comet);
+    let healthScore2 = inceptClient.getHealthScore(tokenData, comet);
 
     assert.isAbove(
       healthScore2.healthScore,
@@ -2092,7 +2092,7 @@ describe("incept", async () => {
     await inceptClient.updateILHealthScoreCoefficient(100000);
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
-    let healthScore3 = await inceptClient.getHealthScore(tokenData, comet);
+    let healthScore3 = inceptClient.getHealthScore(tokenData, comet);
 
     // Reduce IL liquidation using stable collateral.
     await inceptClient.liquidateCometILReduction(
@@ -2106,7 +2106,7 @@ describe("incept", async () => {
     );
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
-    let healthScore4 = await inceptClient.getHealthScore(tokenData, comet);
+    let healthScore4 = inceptClient.getHealthScore(tokenData, comet);
 
     assert.isAbove(
       healthScore4.healthScore,
@@ -2117,7 +2117,7 @@ describe("incept", async () => {
     await inceptClient.updateILHealthScoreCoefficient(130000);
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
-    let healthScore5 = await inceptClient.getHealthScore(tokenData, comet);
+    let healthScore5 = inceptClient.getHealthScore(tokenData, comet);
 
     // Reduce IL liquidation using non-stable collateral.
     await inceptClient.liquidateCometILReduction(
@@ -2131,7 +2131,7 @@ describe("incept", async () => {
     );
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
-    let healthScore6 = await inceptClient.getHealthScore(tokenData, comet);
+    let healthScore6 = inceptClient.getHealthScore(tokenData, comet);
 
     assert.isAbove(
       healthScore6.healthScore,
@@ -2143,15 +2143,19 @@ describe("incept", async () => {
   it("Pay ILD using collateral", async () => {
     let comet = await inceptClient.getComet();
     let tokenData = await inceptClient.getTokenData();
-    const comet1TotalCollateral =
-      await inceptClient.getEffectiveUSDCollateralValue(tokenData, comet);
-    const healthScore1 = await inceptClient.getHealthScore(tokenData, comet);
+    const comet1TotalCollateral = inceptClient.getEffectiveUSDCollateralValue(
+      tokenData,
+      comet
+    );
+    const healthScore1 = inceptClient.getHealthScore(tokenData, comet);
     await inceptClient.payCometILD(0, 0, toDevnetScale(1).toNumber(), false);
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
-    const comet2TotalCollateral =
-      await inceptClient.getEffectiveUSDCollateralValue(tokenData, comet);
-    const healthScore2 = await inceptClient.getHealthScore(tokenData, comet);
+    const comet2TotalCollateral = inceptClient.getEffectiveUSDCollateralValue(
+      tokenData,
+      comet
+    );
+    const healthScore2 = inceptClient.getHealthScore(tokenData, comet);
     assert.isAbove(
       healthScore2.healthScore,
       healthScore1.healthScore,
