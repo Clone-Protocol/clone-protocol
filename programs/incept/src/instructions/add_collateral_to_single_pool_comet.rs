@@ -74,27 +74,26 @@ pub fn execute(
     let collateral_index =
         single_pool_comets.collaterals[position_index as usize].collateral_index as usize;
 
-    let collateral = token_data.collaterals[collateral_index];
+    let collateral: Collateral = token_data.collaterals[collateral_index];
+    let current_vault_comet_supply = collateral.vault_comet_supply.to_decimal();
+    let collateral_scale: u32 = current_vault_comet_supply.scale().try_into().unwrap();
 
-    let added_collateral_value = Decimal::new(
-        collateral_amount.try_into().unwrap(),
-        collateral
-            .vault_comet_supply
-            .to_decimal()
-            .scale()
-            .try_into()
-            .unwrap(),
-    );
+    let added_collateral_value =
+        Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale);
 
     // add collateral amount to vault supply
+    let mut new_vault_comet_supply = current_vault_comet_supply + added_collateral_value;
+    new_vault_comet_supply.rescale(collateral_scale);
     token_data.collaterals[collateral_index].vault_comet_supply =
-        RawDecimal::from(collateral.vault_comet_supply.to_decimal() + added_collateral_value);
+        RawDecimal::from(new_vault_comet_supply);
 
+    let current_collateral_amount = single_pool_comets.collaterals[position_index as usize]
+        .collateral_amount
+        .to_decimal();
+    let mut new_collateral_amount = current_collateral_amount + added_collateral_value;
+    new_collateral_amount.rescale(current_collateral_amount.scale());
     single_pool_comets.collaterals[position_index as usize].collateral_amount = RawDecimal::from(
-        single_pool_comets.collaterals[position_index as usize]
-            .collateral_amount
-            .to_decimal()
-            + added_collateral_value,
+        new_collateral_amount
     );
 
     // send collateral from user to vault

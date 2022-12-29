@@ -64,22 +64,16 @@ pub fn execute(
         let mut comet = ctx.accounts.comet.load_mut()?;
         let comet_collateral = comet.collaterals[comet_collateral_index as usize];
         let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
-
-        let subtracted_collateral_value = Decimal::new(
-            collateral_amount.try_into().unwrap(),
-            collateral
-                .vault_comet_supply
-                .to_decimal()
-                .scale()
-                .try_into()
-                .unwrap(),
-        );
+        let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
+        let subtracted_collateral_value =
+            Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale);
 
         // subtract collateral amount from vault supply
+        let mut vault_comet_supply =
+            collateral.vault_comet_supply.to_decimal() - subtracted_collateral_value;
+        vault_comet_supply.rescale(collateral_scale);
         token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
-            RawDecimal::from(
-                collateral.vault_comet_supply.to_decimal() - subtracted_collateral_value,
-            );
+            RawDecimal::from(vault_comet_supply);
 
         // ensure the position holds sufficient collateral
         if comet_collateral.collateral_amount.to_decimal() < subtracted_collateral_value {
@@ -87,16 +81,14 @@ pub fn execute(
         }
 
         // update the collateral amount
-        comet.collaterals[comet_collateral_index as usize].collateral_amount = RawDecimal::from(
-            comet_collateral.collateral_amount.to_decimal() - subtracted_collateral_value,
-        );
+        let mut new_collateral_amount =
+            comet_collateral.collateral_amount.to_decimal() - subtracted_collateral_value;
+        new_collateral_amount.rescale(collateral_scale);
+        comet.collaterals[comet_collateral_index as usize].collateral_amount =
+            RawDecimal::from(new_collateral_amount);
 
         // remove collateral if empty
-        if comet.collaterals[comet_collateral_index as usize]
-            .collateral_amount
-            .to_decimal()
-            .is_zero()
-        {
+        if new_collateral_amount.is_zero() {
             comet.remove_collateral(comet_collateral_index as usize);
         }
 

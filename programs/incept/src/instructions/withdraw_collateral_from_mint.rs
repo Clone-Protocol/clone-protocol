@@ -72,10 +72,13 @@ pub fn execute(
     );
 
     // subtract collateral amount from vault supply
+    let current_vault_mint_supply = collateral.vault_mint_supply.to_decimal();
+    let mut new_vault_mint_supply = current_vault_mint_supply - amount_value;
+    new_vault_mint_supply.rescale(current_vault_mint_supply.scale());
     token_data.collaterals
         [mint_positions.mint_positions[mint_index as usize].collateral_index as usize]
         .vault_mint_supply =
-        RawDecimal::from(collateral.vault_mint_supply.to_decimal() - amount_value);
+        RawDecimal::from(new_vault_mint_supply);
 
     // subtract collateral amount from mint data
     mint_positions.mint_positions[mint_index as usize].collateral_amount =

@@ -232,12 +232,15 @@ pub fn execute(
             RawDecimal::from(borrowed_usdi);
         comet.positions[comet_position_index as usize].borrowed_iasset =
             RawDecimal::from(borrowed_iasset);
-        token_data.collaterals[0].vault_comet_supply = RawDecimal::from(
-            usdi_collateral.vault_comet_supply.to_decimal() + usdi_collateral_amount,
-        );
-        comet.collaterals[usdi_comet_collateral_index].collateral_amount = RawDecimal::from(
-            usdi_comet_collateral.collateral_amount.to_decimal() + usdi_collateral_amount,
-        );
+        let mut usdi_vault_comet_supply =
+            usdi_collateral.vault_comet_supply.to_decimal() + usdi_collateral_amount;
+        usdi_vault_comet_supply.rescale(DEVNET_TOKEN_SCALE);
+        token_data.collaterals[0].vault_comet_supply = RawDecimal::from(usdi_vault_comet_supply);
+        let mut new_usdi_collateral_amount =
+            usdi_comet_collateral.collateral_amount.to_decimal() + usdi_collateral_amount;
+        new_usdi_collateral_amount.rescale(DEVNET_TOKEN_SCALE);
+        comet.collaterals[usdi_comet_collateral_index].collateral_amount =
+            RawDecimal::from(new_usdi_collateral_amount);
     } else if initial_comet_price < current_price {
         let mut usdi_burn_value =
             lp_position_claimable_ratio * comet_position.borrowed_usdi.to_decimal();
@@ -318,10 +321,15 @@ pub fn execute(
             RawDecimal::from(borrowed_usdi);
         comet.positions[comet_position_index as usize].borrowed_iasset =
             RawDecimal::from(borrowed_iasset);
-        token_data.collaterals[0].vault_comet_supply =
-            RawDecimal::from(usdi_collateral.vault_comet_supply.to_decimal() + usdi_surplus);
+        let mut usdi_vault_comet_supply =
+            usdi_collateral.vault_comet_supply.to_decimal() + usdi_surplus;
+        usdi_vault_comet_supply.rescale(DEVNET_TOKEN_SCALE);
+        token_data.collaterals[0].vault_comet_supply = RawDecimal::from(usdi_vault_comet_supply);
+        let mut new_usdi_collateral_amount =
+            usdi_comet_collateral.collateral_amount.to_decimal() + usdi_surplus;
+        new_usdi_collateral_amount.rescale(DEVNET_TOKEN_SCALE);
         comet.collaterals[usdi_comet_collateral_index].collateral_amount =
-            RawDecimal::from(usdi_comet_collateral.collateral_amount.to_decimal() + usdi_surplus);
+            RawDecimal::from(new_usdi_collateral_amount);
     } else {
         // burn liquidity from amm
         let cpi_accounts = Burn {

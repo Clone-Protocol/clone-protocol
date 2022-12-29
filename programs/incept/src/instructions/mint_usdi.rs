@@ -82,11 +82,14 @@ pub fn execute(ctx: Context<MintUSDI>, manager_nonce: u8, amount: u64) -> Progra
     }
 
     // add collateral amount to vault supply
+    let current_vault_usdi_supply = collateral.vault_usdi_supply.to_decimal();
+    let mut new_vault_usdi_supply = current_vault_usdi_supply + collateral_value;
+    new_vault_usdi_supply.rescale(current_vault_usdi_supply.scale());
     token_data.collaterals[collateral_index].vault_usdi_supply =
-        RawDecimal::from(collateral.vault_usdi_supply.to_decimal() + collateral_value);
+        RawDecimal::from(new_vault_usdi_supply);
 
     // transfer user collateral to vault
-    usdi_value.rescale(collateral_scale.try_into().unwrap());
+    usdi_value.rescale(current_vault_usdi_supply.scale());
     let cpi_accounts = Transfer {
         from: ctx
             .accounts

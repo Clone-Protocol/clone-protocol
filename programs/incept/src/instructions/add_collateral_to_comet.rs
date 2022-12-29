@@ -82,9 +82,12 @@ pub fn execute(
             .unwrap(),
     );
 
+    let current_vault_comet_supply = collateral.vault_comet_supply.to_decimal();
+    let mut new_vault_comet_supply = current_vault_comet_supply + added_collateral_value;
+    new_vault_comet_supply.rescale(current_vault_comet_supply.scale());
     // add collateral amount to vault supply
     token_data.collaterals[collateral_index as usize].vault_comet_supply =
-        RawDecimal::from(collateral.vault_comet_supply.to_decimal() + added_collateral_value);
+        RawDecimal::from(new_vault_comet_supply);
 
     // find the comet collateral index
     let comet_collateral_index = comet.get_collateral_index(collateral_index);
