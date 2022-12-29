@@ -81,26 +81,19 @@ pub fn execute(
     let added_collateral_value =
         Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale);
 
-    msg!(
-        "Collateral: {:?}, {:?}, {:?}",
-        added_collateral_value,
-        collateral_amount,
-        collateral_scale
-    );
-
-    require!(false, InceptError::FailedImpermanentLossCalculation);
-
     // add collateral amount to vault supply
     let mut new_vault_comet_supply = current_vault_comet_supply + added_collateral_value;
     new_vault_comet_supply.rescale(collateral_scale);
     token_data.collaterals[collateral_index].vault_comet_supply =
         RawDecimal::from(new_vault_comet_supply);
 
+    let current_collateral_amount = single_pool_comets.collaterals[position_index as usize]
+        .collateral_amount
+        .to_decimal();
+    let mut new_collateral_amount = current_collateral_amount + added_collateral_value;
+    new_collateral_amount.rescale(current_collateral_amount.scale());
     single_pool_comets.collaterals[position_index as usize].collateral_amount = RawDecimal::from(
-        single_pool_comets.collaterals[position_index as usize]
-            .collateral_amount
-            .to_decimal()
-            + added_collateral_value,
+        new_collateral_amount
     );
 
     // send collateral from user to vault
