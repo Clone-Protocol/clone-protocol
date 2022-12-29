@@ -153,6 +153,7 @@ pub fn execute(
 
     let comet_collateral = comet.collaterals[comet_collateral_index as usize];
     let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
+    let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
 
     let is_stable_collateral = collateral.stable == 1;
 
@@ -177,6 +178,10 @@ pub fn execute(
             comet.collaterals[comet_collateral_index as usize].collateral_amount = RawDecimal::from(
                 comet_collateral.collateral_amount.to_decimal() - total_usdi_required,
             );
+
+            let mut new_vault_comet_supply =
+                collateral.vault_comet_supply.to_decimal() - total_usdi_required;
+            new_vault_comet_supply.rescale(collateral_scale);
             token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
                 RawDecimal::from(collateral.vault_comet_supply.to_decimal() - total_usdi_required);
 
@@ -320,7 +325,6 @@ pub fn execute(
                 total_usdi_required.mantissa().try_into().unwrap(),
             )?;
         } else {
-            let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
             let starting_vault_collateral = Decimal::new(
                 ctx.accounts.vault.amount.try_into().unwrap(),
                 collateral_scale,
@@ -363,8 +367,12 @@ pub fn execute(
                 comet_collateral.collateral_amount.to_decimal() - collateral_reduction,
             );
 
+            let mut new_vault_comet_supply =
+                collateral.vault_comet_supply.to_decimal() - collateral_reduction;
+            new_vault_comet_supply.rescale(collateral_scale);
+
             token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
-                RawDecimal::from(collateral.vault_comet_supply.to_decimal() - collateral_reduction);
+                RawDecimal::from(new_vault_comet_supply);
         }
 
         // Mint USDi into AMM

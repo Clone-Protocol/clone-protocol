@@ -83,7 +83,7 @@ pub fn execute(
     let comet_position = comet.positions[comet_position_index as usize];
     let comet_collateral = comet.collaterals[comet_collateral_index as usize];
     let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
-
+    let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
     // check to see if the collateral used to mint usdi is stable
     let is_stable: Result<bool, InceptError> = match collateral.stable {
         0 => Ok(false),
@@ -202,15 +202,17 @@ pub fn execute(
             token_data.collaterals[comet_collateral.collateral_index as usize].vault_usdi_supply =
                 RawDecimal::from(vault_usdi_supply);
         }
-
+        let mut vault_comet_supply =
+            collateral.vault_comet_supply.to_decimal() - recentering_fee_collateral_scale;
+        vault_comet_supply.rescale(collateral_scale);
         // subtract the collateral the user paid from the position
         token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
-            RawDecimal::from(
-                collateral.vault_comet_supply.to_decimal() - recentering_fee_collateral_scale,
-            );
-        comet.collaterals[comet_collateral_index as usize].collateral_amount = RawDecimal::from(
-            comet_collateral.collateral_amount.to_decimal() - recentering_fee_collateral_scale,
-        );
+            RawDecimal::from(vault_comet_supply);
+        let mut new_collateral_amount =
+            comet_collateral.collateral_amount.to_decimal() - recentering_fee_collateral_scale;
+        new_collateral_amount.rescale(collateral_scale);
+        comet.collaterals[comet_collateral_index as usize].collateral_amount =
+            RawDecimal::from(new_collateral_amount);
 
         // mint usdi into amm
         let cpi_accounts = MintTo {
@@ -314,13 +316,14 @@ pub fn execute(
         }
 
         let mut vault_comet_supply = collateral.vault_comet_supply.to_decimal() - recentering_fee;
-        vault_comet_supply.rescale(DEVNET_TOKEN_SCALE);
+        vault_comet_supply.rescale(collateral_scale);
         // subtract the collateral the user paid from the position
         token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
             RawDecimal::from(vault_comet_supply);
 
-        let collateral_amount =
+        let mut collateral_amount =
             comet_collateral.collateral_amount.to_decimal() - recentering_fee_collateral_scale;
+        collateral_amount.rescale(collateral_scale);
         comet.collaterals[comet_collateral_index as usize].collateral_amount =
             RawDecimal::from(collateral_amount);
 

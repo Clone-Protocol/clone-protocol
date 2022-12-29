@@ -98,7 +98,7 @@ pub fn execute(
             comet.remove_position(comet_position_index.into());
         }
         return Ok(());
-    }  else if borrowed_iasset.is_sign_positive() {
+    } else if borrowed_iasset.is_sign_positive() {
         // if iAsset, calculate iAsset from usdi amount, mint usdi to amm, burn iAsset amount from pool.
         let invariant = calculate_invariant(pool_iasset, pool_usdi);
         let new_usdi_pool_amount = pool_usdi + collateral_reduction_value;
