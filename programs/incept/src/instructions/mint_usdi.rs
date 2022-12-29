@@ -89,7 +89,7 @@ pub fn execute(ctx: Context<MintUSDI>, manager_nonce: u8, amount: u64) -> Progra
         RawDecimal::from(new_vault_usdi_supply);
 
     // transfer user collateral to vault
-    usdi_value.rescale(collateral_scale.try_into().unwrap());
+    usdi_value.rescale(current_vault_usdi_supply.scale());
     let cpi_accounts = Transfer {
         from: ctx
             .accounts

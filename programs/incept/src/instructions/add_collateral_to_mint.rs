@@ -66,14 +66,20 @@ pub fn execute(
     );
 
     // add collateral amount to vault supply
+    let current_vault_mint_supply = collateral.vault_mint_supply.to_decimal();
+    let mut new_vault_mint_supply = current_vault_mint_supply + amount_value;
+    new_vault_mint_supply.rescale(current_vault_mint_supply.scale());
     token_data.collaterals
         [mint_positions.mint_positions[mint_index as usize].collateral_index as usize]
         .vault_mint_supply =
-        RawDecimal::from(collateral.vault_mint_supply.to_decimal() + amount_value);
+        RawDecimal::from(new_vault_mint_supply);
 
     // add collateral amount to mint data
+    let current_collateral_amount = mint_position.collateral_amount.to_decimal();
+    let mut new_collateral_amount = current_collateral_amount + amount_value;
+    new_collateral_amount.rescale(current_collateral_amount.scale());
     mint_positions.mint_positions[mint_index as usize].collateral_amount =
-        RawDecimal::from(mint_position.collateral_amount.to_decimal() + amount_value);
+        RawDecimal::from(new_collateral_amount);
 
     // send collateral to vault
     let cpi_accounts = Transfer {

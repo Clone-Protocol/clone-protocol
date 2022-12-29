@@ -146,9 +146,12 @@ pub fn execute(
         borrowed_iasset: RawDecimal::from(iasset_amount_value),
     };
 
+    let current_vault_mint_supply = collateral.vault_mint_supply.to_decimal();
+    let mut new_vault_mint_supply = current_vault_mint_supply + collateral_amount_value;
+    new_vault_mint_supply.rescale(current_vault_mint_supply.scale());
     // add collateral amount to vault supply
     token_data.collaterals[collateral_index].vault_mint_supply =
-        RawDecimal::from(collateral.vault_mint_supply.to_decimal() + collateral_amount_value);
+        RawDecimal::from(new_vault_mint_supply);
 
     // increment number of mint positions
     mint_positions.num_positions += 1;
