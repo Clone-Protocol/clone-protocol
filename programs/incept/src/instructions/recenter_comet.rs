@@ -308,8 +308,10 @@ pub fn execute(
                 recentering_fee.mantissa().try_into().unwrap(),
             )?;
         } else {
-            let vault_usdi_supply =
-                collateral.vault_usdi_supply.to_decimal() - recentering_fee_collateral_scale;
+            let current_vault_usdi_supply = collateral.vault_usdi_supply.to_decimal();
+            let mut vault_usdi_supply =
+                current_vault_usdi_supply - recentering_fee_collateral_scale;
+            vault_usdi_supply.rescale(current_vault_usdi_supply.scale());
             // add to the amount of collateral backing usdi
             token_data.collaterals[comet_collateral.collateral_index as usize].vault_usdi_supply =
                 RawDecimal::from(vault_usdi_supply);

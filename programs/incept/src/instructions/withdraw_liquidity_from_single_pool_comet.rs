@@ -250,13 +250,14 @@ pub fn execute(
                     .try_into()
                     .unwrap(),
             )?;
+            let current_vault_usdi_supply = token_data.collaterals
+                [comet_collateral.collateral_index as usize]
+                .vault_usdi_supply
+                .to_decimal();
+            let mut new_vault_usdi_supply = current_vault_usdi_supply - usdi_collateral_amount;
+            new_vault_usdi_supply.rescale(current_vault_usdi_supply.scale());
             token_data.collaterals[comet_collateral.collateral_index as usize].vault_usdi_supply =
-                RawDecimal::from(
-                    token_data.collaterals[comet_collateral.collateral_index as usize]
-                        .vault_usdi_supply
-                        .to_decimal()
-                        - usdi_collateral_amount,
-                );
+                RawDecimal::from(new_vault_usdi_supply);
         }
 
         let mut borrowed_usdi = comet_position.borrowed_usdi.to_decimal() - usdi_liquidity_value;
@@ -374,13 +375,15 @@ pub fn execute(
             burn_value.rescale(DEVNET_TOKEN_SCALE);
             token::burn(burn_usdi_context, burn_value.mantissa().try_into().unwrap())?;
 
+            let current_vault_usdi_supply = token_data.collaterals
+                [comet_collateral.collateral_index as usize]
+                .vault_usdi_supply
+                .to_decimal();
+            let mut new_vault_usdi_supply = current_vault_usdi_supply - usdi_surplus;
+            new_vault_usdi_supply.rescale(current_vault_usdi_supply.scale());
+
             token_data.collaterals[comet_collateral.collateral_index as usize].vault_usdi_supply =
-                RawDecimal::from(
-                    token_data.collaterals[comet_collateral.collateral_index as usize]
-                        .vault_usdi_supply
-                        .to_decimal()
-                        - usdi_surplus,
-                );
+                RawDecimal::from(new_vault_usdi_supply);
         }
 
         // update comet data
