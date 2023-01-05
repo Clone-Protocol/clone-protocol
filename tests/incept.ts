@@ -28,6 +28,7 @@ import {
 } from "../sdk/src/oracle";
 import { sleep, signAndSend, toScaledNumber } from "../sdk/src/utils";
 import { toNumber } from "../sdk/src/decimal";
+import { getUSDiAccount } from "../scripts/run_action";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -1081,7 +1082,7 @@ describe("incept", async () => {
   });
 
   it("single pool comet initialized!", async () => {
-    await inceptClient.initializeSinglePoolComet(0, 1);
+    await inceptClient.initializeSinglePoolComet(0, 0);
 
     await sleep(200);
 
@@ -1099,13 +1100,18 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
       );
-
-    await inceptClient.addCollateralToSinglePoolComet(
+    await inceptClient.mintUsdi(
+      25,
+      usdiTokenAccountInfo.address,
       mockUSDCTokenAccountInfo.address,
-      new BN(2550000000),
+      1,
+      []
+    );
+    await inceptClient.addCollateralToSinglePoolComet(
+      usdiTokenAccountInfo.address,
+      new BN(2500000000),
       0
     );
-
     await sleep(200);
 
     const tokenData = await inceptClient.getTokenData();
@@ -1115,9 +1121,10 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
       );
-    assert.equal(
+    assert.closeTo(
       Number(mockUSDCTokenAccountInfo.amount) / 10000000,
-      999978999745,
+      999979000000,
+      1,
       "check user USDC"
     );
 
@@ -1126,7 +1133,7 @@ describe("incept", async () => {
       "recent"
     );
 
-    assert.equal(vault.value!.uiAmount, 21000255, "check vault balance");
+    assert.equal(vault.value!.uiAmount, 21000000.00025, "check vault balance");
 
     const singlePoolComet = await inceptClient.getSinglePoolComet(0);
   });
@@ -1151,7 +1158,7 @@ describe("incept", async () => {
       );
 
     await inceptClient.withdrawCollateralFromSinglePoolComet(
-      mockUSDCTokenAccountInfo.address,
+      usdiTokenAccountInfo.address,
       new BN(50000000),
       0
     );
@@ -1169,13 +1176,12 @@ describe("incept", async () => {
     tokenData = await inceptClient.getTokenData();
     const collateral = tokenData.collaterals[1];
 
-    mockUSDCTokenAccountInfo =
-      await inceptClient.getOrCreateAssociatedTokenAccount(
-        mockUSDCMint.publicKey
-      );
+    usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
+      inceptClient.manager!.usdiMint
+    );
     assert.equal(
-      Number(mockUSDCTokenAccountInfo.amount) / 10000000,
-      999978999750,
+      Number(usdiTokenAccountInfo.amount),
+      54544904545905,
       "check user USDI"
     );
 
@@ -1184,7 +1190,7 @@ describe("incept", async () => {
       "recent"
     );
 
-    assert.equal(vault.value!.uiAmount, 21000250, "check vault balance");
+    assert.equal(vault.value!.uiAmount, 21000000.00025, "check vault balance");
     const singlePoolComet = await inceptClient.getSinglePoolComet(0);
   });
 
@@ -1433,7 +1439,7 @@ describe("incept", async () => {
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      489276.4901017,
+      489276.9901017,
       "check user usdi balance."
     );
     assert.equal(
@@ -1522,7 +1528,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      21000250,
+      21000000.00025,
       "check usdc collateral vault"
     );
     assert.equal(
@@ -1574,7 +1580,7 @@ describe("incept", async () => {
     await inceptClient.withdrawLiquidityAndPaySinglePoolCometILD(0);
 
     await inceptClient.withdrawCollateralAndCloseSinglePoolComet(
-      mockUSDCTokenAccountInfo.address,
+      usdiTokenAccountInfo.address,
       0
     );
 
@@ -1650,8 +1656,8 @@ describe("incept", async () => {
       inceptClient.manager!.usdiMint
     );
     assert.equal(
-      Number(usdiTokenAccountInfo.amount) / 100000000,
-      389276.4901017,
+      Number(usdiTokenAccountInfo.amount),
+      38929386183181,
       "check user USDi"
     );
 
@@ -1719,7 +1725,7 @@ describe("incept", async () => {
     );
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      399276.4901017,
+      399293.86183181,
       "check user USDi"
     );
 
@@ -1905,7 +1911,7 @@ describe("incept", async () => {
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      5327251.60126519,
+      5327268.9729953,
       "check user usdi balance."
     );
     assert.equal(
@@ -1992,7 +1998,7 @@ describe("incept", async () => {
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      5327251.60126519,
+      5327268.9729953,
       "check user usdi balance"
     );
     assert.equal(

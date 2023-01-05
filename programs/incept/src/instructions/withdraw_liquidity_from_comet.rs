@@ -77,19 +77,14 @@ pub fn execute(
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
     let comet_position = comet.positions[comet_position_index as usize];
-    let usdi_collateral = token_data.collaterals[0];
-    let mut usdi_comet_collateral_index = comet.get_collateral_index(0);
-    if usdi_comet_collateral_index == usize::MAX {
-        usdi_comet_collateral_index = comet.num_collaterals as usize;
-        comet.add_collateral(CometCollateral {
-            authority: *ctx.accounts.user.to_account_info().key,
-            collateral_amount: RawDecimal::default(),
-            collateral_index: 0,
-        })
-    }
-    let usdi_comet_collateral = comet.collaterals[usdi_comet_collateral_index];
+    let comet_collateral = comet.collaterals[0];
 
-    let mut liquidity_token_value = Decimal::new(
+    require!(
+        comet_collateral.collateral_index as usize == USDI_COLLATERAL_INDEX,
+        InceptError::InvalidCollateralType
+    );
+
+    let liquidity_token_value = Decimal::new(
         liquidity_token_amount.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,
     );
@@ -122,216 +117,86 @@ pub fn execute(
         DEVNET_TOKEN_SCALE,
     );
 
-    // calculate iasset liquidity value as well as liquidity token value for comet
-    let (mut iasset_liquidity_value, mut usdi_liquidity_value) =
-        calculate_liquidity_provider_values_from_liquidity_tokens(
-            liquidity_token_value,
-            iasset_amm_value,
-            usdi_amm_value,
-            liquidity_token_supply,
-        )?;
+    let lp_position_claimable_ratio = liquidity_token_value / liquidity_token_supply;
 
-    let lp_position_claimable_ratio =
-        liquidity_token_value / comet_position.liquidity_token_value.to_decimal();
+    let borrowed_usdi = comet_position.borrowed_usdi.to_decimal();
+    let borrowed_iasset = comet_position.borrowed_iasset.to_decimal();
 
-    // calculate initial comet pool price
-    let initial_comet_price = calculate_amm_price(
-        comet_position.borrowed_iasset.to_decimal(),
-        comet_position.borrowed_usdi.to_decimal(),
-    );
-    // calculate current pool price
-    let current_price = calculate_amm_price(iasset_amm_value, usdi_amm_value);
-    // check if price has decreased since comet was initialized
-    if initial_comet_price > current_price {
-        // IL is in USDi, reward in iasset
-        let mut iasset_burn_value =
-            lp_position_claimable_ratio * comet_position.borrowed_iasset.to_decimal();
-        iasset_burn_value = if iasset_burn_value > iasset_liquidity_value {
-            iasset_liquidity_value
-        } else {
-            iasset_burn_value
-        };
+    let claimable_usdi = lp_position_claimable_ratio * usdi_amm_value;
+    let claimable_iasset = lp_position_claimable_ratio * iasset_amm_value;
 
-        let mut iasset_surplus = iasset_liquidity_value - iasset_burn_value;
+    let mut usdi_reward = Decimal::zero();
+    let mut usdi_to_burn = Decimal::zero();
+    let mut iasset_to_burn = Decimal::zero();
 
-        // burn liquidity from amm
-        let cpi_accounts = Burn {
-            mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-            to: ctx
-                .accounts
-                .amm_usdi_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.manager.to_account_info().clone(),
-        };
-        let burn_usdi_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            cpi_accounts,
-            seeds,
-        );
-
-        usdi_liquidity_value.rescale(DEVNET_TOKEN_SCALE);
-        token::burn(
-            burn_usdi_context,
-            usdi_liquidity_value.mantissa().try_into().unwrap(),
-        )?;
-        let cpi_accounts = Burn {
-            mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-            to: ctx
-                .accounts
-                .amm_iasset_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.manager.to_account_info().clone(),
-        };
-        let burn_iasset_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            cpi_accounts,
-            seeds,
-        );
-        iasset_burn_value.rescale(DEVNET_TOKEN_SCALE);
-        token::burn(
-            burn_iasset_context,
-            iasset_burn_value.mantissa().try_into().unwrap(),
-        )?;
-
-        // calculate usdi collateral amount to add
-        let invariant_after_withdrawl =
-            (iasset_amm_value - iasset_liquidity_value) * (usdi_amm_value - usdi_liquidity_value);
-        let usdi_collateral_amount = (usdi_amm_value - usdi_liquidity_value)
-            - (invariant_after_withdrawl / (iasset_amm_value - iasset_burn_value));
-
-        // transfer usdi to vault
-        let cpi_accounts = Transfer {
-            from: ctx
-                .accounts
-                .amm_usdi_token_account
-                .to_account_info()
-                .clone(),
-            to: ctx.accounts.vault.to_account_info().clone(),
-            authority: ctx.accounts.manager.to_account_info().clone(),
-        };
-        let transfer_iasset_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            cpi_accounts,
-            seeds,
-        );
-        iasset_surplus.rescale(DEVNET_TOKEN_SCALE);
-        token::transfer(
-            transfer_iasset_context,
-            usdi_collateral_amount.mantissa().try_into().unwrap(),
-        )?;
-
-        let mut borrowed_usdi = comet_position.borrowed_usdi.to_decimal() - usdi_liquidity_value;
-        borrowed_usdi.rescale(DEVNET_TOKEN_SCALE);
-        let mut borrowed_iasset = comet_position.borrowed_iasset.to_decimal() - iasset_burn_value;
-        borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
-
-        // update comet data
+    if claimable_usdi > borrowed_usdi {
+        usdi_to_burn += borrowed_usdi;
+        // Claim USDi reward
+        usdi_reward += claimable_usdi - borrowed_usdi;
+        // Set borrowed USDi to zero.
         comet.positions[comet_position_index as usize].borrowed_usdi =
-            RawDecimal::from(borrowed_usdi);
-        comet.positions[comet_position_index as usize].borrowed_iasset =
-            RawDecimal::from(borrowed_iasset);
-        let mut usdi_vault_comet_supply =
-            usdi_collateral.vault_comet_supply.to_decimal() + usdi_collateral_amount;
-        usdi_vault_comet_supply.rescale(DEVNET_TOKEN_SCALE);
-        token_data.collaterals[0].vault_comet_supply = RawDecimal::from(usdi_vault_comet_supply);
-        let mut new_usdi_collateral_amount =
-            usdi_comet_collateral.collateral_amount.to_decimal() + usdi_collateral_amount;
-        new_usdi_collateral_amount.rescale(DEVNET_TOKEN_SCALE);
-        comet.collaterals[usdi_comet_collateral_index].collateral_amount =
-            RawDecimal::from(new_usdi_collateral_amount);
-    } else if initial_comet_price < current_price {
-        let mut usdi_burn_value =
-            lp_position_claimable_ratio * comet_position.borrowed_usdi.to_decimal();
-        usdi_burn_value = if usdi_burn_value > usdi_liquidity_value {
-            usdi_liquidity_value
-        } else {
-            usdi_burn_value
-        };
-        let mut usdi_surplus = usdi_liquidity_value - usdi_burn_value;
-        // burn liquidity from amm
-        let cpi_accounts = Burn {
-            mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-            to: ctx
-                .accounts
-                .amm_usdi_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.manager.to_account_info().clone(),
-        };
-        let burn_usdi_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            cpi_accounts,
-            seeds,
-        );
-        usdi_burn_value.rescale(DEVNET_TOKEN_SCALE);
-        token::burn(
-            burn_usdi_context,
-            usdi_burn_value.mantissa().try_into().unwrap(),
-        )?;
-        let cpi_accounts = Burn {
-            mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-            to: ctx
-                .accounts
-                .amm_iasset_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.manager.to_account_info().clone(),
-        };
-        let burn_iasset_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            cpi_accounts,
-            seeds,
-        );
-        iasset_liquidity_value.rescale(DEVNET_TOKEN_SCALE);
-        token::burn(
-            burn_iasset_context,
-            iasset_liquidity_value.mantissa().try_into().unwrap(),
-        )?;
-
-        // transfer usdi to vault
-        let cpi_accounts = Transfer {
-            from: ctx
-                .accounts
-                .amm_usdi_token_account
-                .to_account_info()
-                .clone(),
-            to: ctx.accounts.vault.to_account_info().clone(),
-            authority: ctx.accounts.manager.to_account_info().clone(),
-        };
-        let transfer_iasset_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            cpi_accounts,
-            seeds,
-        );
-        usdi_surplus.rescale(DEVNET_TOKEN_SCALE);
-        token::transfer(
-            transfer_iasset_context,
-            usdi_surplus.mantissa().try_into().unwrap(),
-        )?;
-        // update comet data
-        let mut borrowed_usdi = comet_position.borrowed_usdi.to_decimal() - usdi_burn_value;
-        borrowed_usdi.rescale(DEVNET_TOKEN_SCALE);
-        let mut borrowed_iasset =
-            comet_position.borrowed_iasset.to_decimal() - iasset_liquidity_value;
-        borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
-
-        comet.positions[comet_position_index as usize].borrowed_usdi =
-            RawDecimal::from(borrowed_usdi);
-        comet.positions[comet_position_index as usize].borrowed_iasset =
-            RawDecimal::from(borrowed_iasset);
-        let mut usdi_vault_comet_supply =
-            usdi_collateral.vault_comet_supply.to_decimal() + usdi_surplus;
-        usdi_vault_comet_supply.rescale(DEVNET_TOKEN_SCALE);
-        token_data.collaterals[0].vault_comet_supply = RawDecimal::from(usdi_vault_comet_supply);
-        let mut new_usdi_collateral_amount =
-            usdi_comet_collateral.collateral_amount.to_decimal() + usdi_surplus;
-        new_usdi_collateral_amount.rescale(DEVNET_TOKEN_SCALE);
-        comet.collaterals[usdi_comet_collateral_index].collateral_amount =
-            RawDecimal::from(new_usdi_collateral_amount);
+            RawDecimal::new(0, DEVNET_TOKEN_SCALE);
     } else {
-        // burn liquidity from amm
+        usdi_to_burn += claimable_usdi;
+        let mut new_borrowed_usdi = borrowed_usdi - claimable_usdi;
+        new_borrowed_usdi.rescale(DEVNET_TOKEN_SCALE);
+        comet.positions[comet_position_index as usize].borrowed_usdi =
+            RawDecimal::from(new_borrowed_usdi);
+    }
+
+    if claimable_iasset > borrowed_iasset {
+        iasset_to_burn += borrowed_iasset;
+        // Calculate iasset reward and its conversion to usdi.
+        let iasset_reward = claimable_iasset - borrowed_iasset;
+
+        let post_claim_usdi_amm = usdi_amm_value - claimable_usdi;
+        let post_claim_iasset_amm = iasset_amm_value - claimable_iasset;
+        let invariant = post_claim_usdi_amm * post_claim_iasset_amm;
+
+        let usdi_traded_for =
+            post_claim_usdi_amm - invariant / (post_claim_iasset_amm + iasset_reward);
+        usdi_reward += usdi_traded_for;
+
+        comet.positions[comet_position_index as usize].borrowed_iasset =
+            RawDecimal::new(0, DEVNET_TOKEN_SCALE);
+    } else {
+        iasset_to_burn += claimable_iasset;
+        let mut new_borrowed_iasset = borrowed_iasset - claimable_iasset;
+        new_borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
+        comet.positions[comet_position_index as usize].borrowed_iasset =
+            RawDecimal::from(new_borrowed_iasset);
+    }
+
+    // Send usdi reward from amm to collateral vault
+    if usdi_reward.is_sign_positive() {
+        let cpi_accounts = Transfer {
+            from: ctx
+                .accounts
+                .amm_usdi_token_account
+                .to_account_info()
+                .clone(),
+            to: ctx.accounts.vault.to_account_info().clone(),
+            authority: ctx.accounts.manager.to_account_info().clone(),
+        };
+        let transfer_usdi_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            cpi_accounts,
+            seeds,
+        );
+        usdi_reward.rescale(DEVNET_TOKEN_SCALE);
+        token::transfer(
+            transfer_usdi_context,
+            usdi_reward.mantissa().try_into().unwrap(),
+        )?;
+
+        let mut new_usdi_collateral = comet_collateral.collateral_amount.to_decimal() + usdi_reward;
+        new_usdi_collateral.rescale(DEVNET_TOKEN_SCALE);
+        comet.collaterals[comet_position_index as usize].collateral_amount =
+            RawDecimal::from(new_usdi_collateral);
+    }
+
+    // Burn Usdi from amm
+    if usdi_to_burn.is_sign_positive() {
         let cpi_accounts = Burn {
             mint: ctx.accounts.usdi_mint.to_account_info().clone(),
             to: ctx
@@ -341,16 +206,21 @@ pub fn execute(
                 .clone(),
             authority: ctx.accounts.manager.to_account_info().clone(),
         };
-        let burn_usdi_context = CpiContext::new_with_signer(
+        let burn_iasset_context = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info().clone(),
             cpi_accounts,
             seeds,
         );
-        usdi_liquidity_value.rescale(DEVNET_TOKEN_SCALE);
+
+        usdi_to_burn.rescale(DEVNET_TOKEN_SCALE);
         token::burn(
-            burn_usdi_context,
-            usdi_liquidity_value.mantissa().try_into().unwrap(),
+            burn_iasset_context,
+            usdi_to_burn.mantissa().try_into().unwrap(),
         )?;
+    }
+
+    // Burn iasset from amm
+    if iasset_to_burn.is_sign_positive() {
         let cpi_accounts = Burn {
             mint: ctx.accounts.iasset_mint.to_account_info().clone(),
             to: ctx
@@ -365,23 +235,12 @@ pub fn execute(
             cpi_accounts,
             seeds,
         );
-        iasset_liquidity_value.rescale(DEVNET_TOKEN_SCALE);
+
+        iasset_to_burn.rescale(DEVNET_TOKEN_SCALE);
         token::burn(
             burn_iasset_context,
-            iasset_liquidity_value.mantissa().try_into().unwrap(),
+            iasset_to_burn.mantissa().try_into().unwrap(),
         )?;
-
-        let mut borrowed_usdi = comet_position.borrowed_usdi.to_decimal() - usdi_liquidity_value;
-        borrowed_usdi.rescale(DEVNET_TOKEN_SCALE);
-
-        let mut borrowed_iasset =
-            comet_position.borrowed_iasset.to_decimal() - iasset_liquidity_value;
-        borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
-
-        comet.positions[comet_position_index as usize].borrowed_usdi =
-            RawDecimal::from(borrowed_usdi);
-        comet.positions[comet_position_index as usize].borrowed_iasset =
-            RawDecimal::from(borrowed_iasset);
     }
     // burn liquidity tokens from comet
     let cpi_accounts = Burn {
@@ -398,7 +257,6 @@ pub fn execute(
         cpi_accounts,
         seeds,
     );
-    liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
     token::burn(
         burn_liquidity_tokens_to_comet_context,
         liquidity_token_value.mantissa().try_into().unwrap(),
