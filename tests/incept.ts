@@ -1123,7 +1123,7 @@ describe("incept", async () => {
       );
     assert.closeTo(
       Number(mockUSDCTokenAccountInfo.amount) / 10000000,
-      999978999975,
+      999979000000,
       1,
       "check user USDC"
     );
@@ -1133,7 +1133,7 @@ describe("incept", async () => {
       "recent"
     );
 
-    assert.equal(vault.value!.uiAmount, 21000025, "check vault balance");
+    assert.equal(vault.value!.uiAmount, 21000000.00025, "check vault balance");
 
     const singlePoolComet = await inceptClient.getSinglePoolComet(0);
   });
@@ -1190,7 +1190,7 @@ describe("incept", async () => {
       "recent"
     );
 
-    assert.equal(vault.value!.uiAmount, 21000025, "check vault balance");
+    assert.equal(vault.value!.uiAmount, 21000000.00025, "check vault balance");
     const singlePoolComet = await inceptClient.getSinglePoolComet(0);
   });
 
@@ -1528,7 +1528,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      21000025,
+      21000000.00025,
       "check usdc collateral vault"
     );
     assert.equal(
