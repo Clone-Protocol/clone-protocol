@@ -461,6 +461,7 @@ export class Incept {
     collateralIndex: number,
     signers?: Array<Keypair>
   ) {
+  
     const mintUsdiIx = (await this.mintUsdiInstruction(
       toDevnetScale(amount),
       userUsdiTokenAccount,
