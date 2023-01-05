@@ -184,9 +184,9 @@ pub fn execute(
         )?;
     } else {
         // add to the amount of collateral backing usdi
-        let mut vault_usdi_supply =
-            collateral.vault_usdi_supply.to_decimal() + collateral_reduction_value;
-        vault_usdi_supply.rescale(DEVNET_TOKEN_SCALE);
+        let current_vault_usdi_supply = collateral.vault_usdi_supply.to_decimal();
+        let mut vault_usdi_supply = current_vault_usdi_supply + collateral_reduction_value;
+        vault_usdi_supply.rescale(current_vault_usdi_supply.scale());
         token_data.collaterals[comet_collateral.collateral_index as usize].vault_usdi_supply =
             RawDecimal::from(vault_usdi_supply);
     }
