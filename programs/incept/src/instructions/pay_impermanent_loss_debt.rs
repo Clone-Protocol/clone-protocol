@@ -79,6 +79,9 @@ pub fn execute(
     let comet_position = comet.positions[comet_position_index as usize];
     let comet_collateral = comet.collaterals[comet_collateral_index as usize];
     let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
+
+    require!(collateral.stable == 1, InceptError::NonStablesNotSupported);
+
     let pool = token_data.pools[comet_position.pool_index as usize];
 
     let mut collateral_reduction_value =
@@ -98,7 +101,7 @@ pub fn execute(
             comet.remove_position(comet_position_index.into());
         }
         return Ok(());
-    } else if borrowed_iasset.is_sign_positive() {
+    } else if borrowed_iasset > Decimal::ZERO {
         // if iAsset, calculate iAsset from usdi amount, mint usdi to amm, burn iAsset amount from pool.
         let invariant = calculate_invariant(pool_iasset, pool_usdi);
         let new_usdi_pool_amount = pool_usdi + collateral_reduction_value;
@@ -110,7 +113,7 @@ pub fn execute(
             collateral_reduction_value = invariant / new_iasset_pool_amount - pool_usdi;
             iasset_reduction_value = borrowed_iasset;
         }
-        assert!(collateral_reduction_value.is_sign_positive());
+        assert!(collateral_reduction_value > Decimal::ZERO);
         let mut new_borrowed_iasset = borrowed_iasset - iasset_reduction_value;
         new_borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
         comet.positions[comet_position_index as usize].borrowed_iasset =
@@ -156,11 +159,13 @@ pub fn execute(
             burn_iasset_context,
             iasset_reduction_value.mantissa().try_into().unwrap(),
         )?;
-    } else if borrowed_usdi.is_sign_positive() {
+    } else if borrowed_usdi > Decimal::ZERO {
         // if usdi, update collateral and reduce borrowed amount
         collateral_reduction_value = collateral_reduction_value.min(borrowed_usdi);
+        let mut new_borrowed_usdi = borrowed_usdi - collateral_reduction_value;
+        new_borrowed_usdi.rescale(DEVNET_TOKEN_SCALE);
         comet.positions[comet_position_index as usize].borrowed_usdi =
-            RawDecimal::from(borrowed_usdi - collateral_reduction_value);
+            RawDecimal::from(new_borrowed_usdi);
     } else {
         return Err(InceptError::LiquidityNotWithdrawn.into());
     }
