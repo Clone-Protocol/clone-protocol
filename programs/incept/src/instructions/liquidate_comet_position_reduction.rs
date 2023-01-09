@@ -103,7 +103,7 @@ pub fn execute(
     let comet_position = comet.positions[position_index as usize];
 
     require!(
-        comet_position.borrowed_usdi.to_decimal().is_sign_positive(),
+        comet_position.borrowed_usdi.to_decimal() > Decimal::ZERO,
         InceptError::NotSubjectToLiquidation
     );
 

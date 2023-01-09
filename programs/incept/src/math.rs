@@ -283,7 +283,7 @@ pub fn calculate_health_score(
 
     let score = Decimal::new(100, 0) - loss / total_collateral_value;
 
-    if score.is_sign_positive() {
+    if score > Decimal::ZERO {
         Ok(HealthScore::Healthy {
             score: score.to_f64().unwrap(),
         })
