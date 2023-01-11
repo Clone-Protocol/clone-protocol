@@ -7,13 +7,13 @@ export type MockUsdc = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
           "name": "mockUsdcAccount",
           "isMut": true,
-          "isSigner": false
+          "isSigner": true
         },
         {
           "name": "mockUsdcMint",
@@ -100,13 +100,13 @@ export const IDL: MockUsdc = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
           "name": "mockUsdcAccount",
           "isMut": true,
-          "isSigner": false
+          "isSigner": true
         },
         {
           "name": "mockUsdcMint",

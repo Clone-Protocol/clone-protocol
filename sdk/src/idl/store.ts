@@ -201,7 +201,10 @@ export type Store = {
         {
           "name": "feed",
           "isMut": true,
-          "isSigner": false
+          "isSigner": false,
+          "docs": [
+            "The OCR2 feed"
+          ]
         },
         {
           "name": "authority",
@@ -299,6 +302,10 @@ export type Store = {
     },
     {
       "name": "query",
+      "docs": [
+        "The query instruction takes a `Query` and serializes the response in a fixed format. That way queries",
+        "are not bound to the underlying layout."
+      ],
       "accounts": [
         {
           "name": "feed",
@@ -364,6 +371,9 @@ export type Store = {
           },
           {
             "name": "description",
+            "docs": [
+              "Raw UTF-8 byte string"
+            ],
             "type": {
               "array": [
                 "u8",
@@ -405,6 +415,22 @@ export type Store = {
   ],
   "types": [
     {
+      "name": "NewTransmission",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "timestamp",
+            "type": "u64"
+          },
+          {
+            "name": "answer",
+            "type": "i128"
+          }
+        ]
+      }
+    },
+    {
       "name": "Round",
       "type": {
         "kind": "struct",
@@ -420,22 +446,6 @@ export type Store = {
           {
             "name": "timestamp",
             "type": "u32"
-          },
-          {
-            "name": "answer",
-            "type": "i128"
-          }
-        ]
-      }
-    },
-    {
-      "name": "NewTransmission",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "timestamp",
-            "type": "u64"
           },
           {
             "name": "answer",
@@ -708,7 +718,10 @@ export const IDL: Store = {
         {
           "name": "feed",
           "isMut": true,
-          "isSigner": false
+          "isSigner": false,
+          "docs": [
+            "The OCR2 feed"
+          ]
         },
         {
           "name": "authority",
@@ -806,6 +819,10 @@ export const IDL: Store = {
     },
     {
       "name": "query",
+      "docs": [
+        "The query instruction takes a `Query` and serializes the response in a fixed format. That way queries",
+        "are not bound to the underlying layout."
+      ],
       "accounts": [
         {
           "name": "feed",
@@ -871,6 +888,9 @@ export const IDL: Store = {
           },
           {
             "name": "description",
+            "docs": [
+              "Raw UTF-8 byte string"
+            ],
             "type": {
               "array": [
                 "u8",
@@ -912,6 +932,22 @@ export const IDL: Store = {
   ],
   "types": [
     {
+      "name": "NewTransmission",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "timestamp",
+            "type": "u64"
+          },
+          {
+            "name": "answer",
+            "type": "i128"
+          }
+        ]
+      }
+    },
+    {
       "name": "Round",
       "type": {
         "kind": "struct",
@@ -927,22 +963,6 @@ export const IDL: Store = {
           {
             "name": "timestamp",
             "type": "u32"
-          },
-          {
-            "name": "answer",
-            "type": "i128"
-          }
-        ]
-      }
-    },
-    {
-      "name": "NewTransmission",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "timestamp",
-            "type": "u64"
           },
           {
             "name": "answer",
