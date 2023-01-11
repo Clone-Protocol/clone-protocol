@@ -72,7 +72,7 @@ pub fn execute(
 
     // ensure the position holds sufficient collateral
     require!(
-        subtracted_collateral_value <= comet_collateral.collateral_amount.to_decimal()
+        subtracted_collateral_value <= comet_collateral.collateral_amount.to_decimal(),
         InceptError::InsufficientCollateral
     );
 
