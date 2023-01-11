@@ -214,45 +214,34 @@ pub fn calculate_comet_position_loss(
     comet_position: &CometPosition,
 ) -> Result<(Decimal, Decimal)> {
     let pool = token_data.pools[comet_position.pool_index as usize];
+    let pool_usdi = pool.usdi_amount.to_decimal();
+    let pool_iasset = pool.iasset_amount.to_decimal();
 
     let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
         comet_position.liquidity_token_value.to_decimal(),
         pool.liquidity_token_supply.to_decimal(),
     );
-    let pool_usdi = pool.usdi_amount.to_decimal();
-    let pool_iasset = pool.iasset_amount.to_decimal();
-    let pool_price = pool_usdi / pool_iasset;
-    let effective_price = if pool_price > pool.asset_info.price.to_decimal() {
-        pool_price
-    } else {
-        pool.asset_info.price.to_decimal()
-    };
+    let claimable_usdi = liquidity_proportion * pool_usdi;
+    let claimable_iasset = liquidity_proportion * pool_iasset;
 
     let borrowed_usdi = comet_position.borrowed_usdi.to_decimal();
     let borrowed_iasset = comet_position.borrowed_iasset.to_decimal();
 
-    let impermanent_loss;
+    let mut impermanent_loss = Decimal::zero();
 
-    if liquidity_proportion.is_zero() {
-        if comet_position.borrowed_usdi.to_decimal() > comet_position.borrowed_iasset.to_decimal() {
-            impermanent_loss = borrowed_usdi;
-        } else {
-            impermanent_loss = borrowed_iasset * effective_price;
-        }
-    } else {
-        let claimable_usdi = liquidity_proportion * pool_usdi;
-        let claimable_iasset = liquidity_proportion * pool_iasset;
-        let init_price = borrowed_usdi / borrowed_iasset;
-
-        if pool_price < init_price {
-            impermanent_loss = borrowed_usdi - claimable_usdi;
-        } else if pool_price > init_price {
-            impermanent_loss = effective_price * (borrowed_iasset - claimable_iasset);
-        } else {
-            impermanent_loss = Decimal::zero();
-        }
+    if borrowed_usdi > claimable_usdi {
+        impermanent_loss += borrowed_usdi - claimable_usdi;
     }
-    // TODO: Do we need to ensure the impermanent loss is always non-negative?
+
+    if borrowed_iasset > claimable_iasset {
+        let iasset_debt = borrowed_iasset - claimable_iasset;
+
+        let oracle_marked_debt = pool.asset_info.price.to_decimal() * iasset_debt;
+        // Marked as the required USDi to buy back the iasset debt
+        let pool_marked_debt = pool.calculate_input_from_output(iasset_debt, false);
+
+        impermanent_loss += oracle_marked_debt.max(pool_marked_debt);
+    }
 
     let impermanent_loss_term =
         impermanent_loss * token_data.il_health_score_coefficient.to_decimal();
