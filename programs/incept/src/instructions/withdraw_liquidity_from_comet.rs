@@ -80,6 +80,8 @@ pub fn execute(
     let comet_position = comet.positions[comet_position_index as usize];
     let comet_collateral = comet.collaterals[0];
 
+    let comet_liquidity_tokens = comet_position.liquidity_token_value.to_decimal();
+
     require!(
         comet_collateral.collateral_index as usize == USDI_COLLATERAL_INDEX,
         InceptError::InvalidCollateralType
@@ -92,15 +94,6 @@ pub fn execute(
     .min(comet_liquidity_tokens);
 
     let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
-
-    // check to see if the collateral used to mint usdi is stable
-    let is_stable: Result<bool> = match collateral.stable {
-        0 => Ok(false),
-        1 => Ok(true),
-        _ => Err(error!(InceptError::InvalidBool)),
-    };
-    // if collateral is not stable, we throw an error
-    require!(is_stable?, InceptError::InvalidCollateralType);
 
     let iasset_amm_value = Decimal::new(
         ctx.accounts
@@ -229,15 +222,6 @@ pub fn execute(
 
     // Burn iasset from amm
     if iasset_to_burn.is_sign_positive() {
-        let cpi_accounts = Burn {
-            mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-            from: ctx
-                .accounts
-                .amm_iasset_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.manager.to_account_info().clone(),
-        };
         let burn_iasset_context = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info().clone(),
             Burn {
@@ -251,28 +235,13 @@ pub fn execute(
             },
             seeds,
         );
-
         iasset_to_burn.rescale(DEVNET_TOKEN_SCALE);
         token::burn(
             burn_iasset_context,
             iasset_to_burn.mantissa().try_into().unwrap(),
         )?;
     }
-    // burn liquidity tokens from comet
-    let cpi_accounts = Burn {
-        mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
-        from: ctx
-            .accounts
-            .comet_liquidity_token_account
-            .to_account_info()
-            .clone(),
-        authority: ctx.accounts.manager.to_account_info().clone(),
-    };
-    let burn_liquidity_tokens_to_comet_context = CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info().clone(),
-        cpi_accounts,
-        seeds,
-    );
+
     token::burn(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info().clone(),
@@ -289,6 +258,12 @@ pub fn execute(
         ),
         liquidity_token_value.mantissa().try_into().unwrap(),
     )?;
+
+    // Remove lp tokens from user
+    let mut new_comet_liquidity_tokens = comet_liquidity_tokens - liquidity_token_value;
+    new_comet_liquidity_tokens.rescale(DEVNET_TOKEN_SCALE);
+    comet.positions[comet_position_index as usize].liquidity_token_value =
+        RawDecimal::from(new_comet_liquidity_tokens);
 
     // update pool data
     ctx.accounts.amm_iasset_token_account.reload()?;

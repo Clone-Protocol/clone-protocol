@@ -97,18 +97,6 @@ pub fn execute(
     )
     .min(comet_liquidity_tokens);
 
-    let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
-
-    // check to see if the collateral used to mint usdi is stable
-    let is_stable: Result<bool> = match collateral.stable {
-        0 => Ok(false),
-        1 => Ok(true),
-        _ => Err(error!(InceptError::InvalidBool)),
-    };
-
-    // if collateral is not stable, we throw an error
-    require!(is_stable?, InceptError::InvalidCollateralType);
-
     let iasset_amm_value = Decimal::new(
         ctx.accounts
             .amm_iasset_token_account
@@ -182,8 +170,16 @@ pub fn execute(
             RawDecimal::from(new_borrowed_iasset);
     }
 
+    msg!("usdi reward: {:?}", usdi_reward);
+    msg!("usdi_to_burn: {:?}", usdi_to_burn);
+    msg!("iasset_to_burn: {:?}", iasset_to_burn);
+    msg!("liquidity_token_value: {:?}", liquidity_token_value);
+    msg!("borrowed_usdi: {:?}", borrowed_usdi);
+    msg!("borrowed_iasset: {:?}", borrowed_iasset);
+    msg!("liquidity_token_supply: {:?}", liquidity_token_supply);
+
     // Send usdi reward from amm to collateral vault
-    if usdi_reward.is_sign_positive() {
+    if usdi_reward > Decimal::ZERO {
         let cpi_accounts = Transfer {
             from: ctx
                 .accounts
@@ -211,7 +207,7 @@ pub fn execute(
     }
 
     // Burn Usdi from amm
-    if usdi_to_burn.is_sign_positive() {
+    if usdi_to_burn > Decimal::ZERO {
         let cpi_accounts = Burn {
             mint: ctx.accounts.usdi_mint.to_account_info().clone(),
             from: ctx
@@ -221,7 +217,7 @@ pub fn execute(
                 .clone(),
             authority: ctx.accounts.manager.to_account_info().clone(),
         };
-        let burn_iasset_context = CpiContext::new_with_signer(
+        let burn_usdi_context = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info().clone(),
             cpi_accounts,
             seeds,
@@ -229,13 +225,13 @@ pub fn execute(
 
         usdi_to_burn.rescale(DEVNET_TOKEN_SCALE);
         token::burn(
-            burn_iasset_context,
+            burn_usdi_context,
             usdi_to_burn.mantissa().try_into().unwrap(),
         )?;
     }
 
     // Burn iasset from amm
-    if iasset_to_burn.is_sign_positive() {
+    if iasset_to_burn > Decimal::ZERO {
         let cpi_accounts = Burn {
             mint: ctx.accounts.iasset_mint.to_account_info().clone(),
             from: ctx
@@ -258,24 +254,28 @@ pub fn execute(
         )?;
     }
     // burn liquidity tokens from comet
-    let cpi_accounts = Burn {
-        mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
-        from: ctx
-            .accounts
-            .comet_liquidity_token_account
-            .to_account_info()
-            .clone(),
-        authority: ctx.accounts.manager.to_account_info().clone(),
-    };
-    let burn_liquidity_tokens_to_comet_context = CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info().clone(),
-        cpi_accounts,
-        seeds,
-    );
     token::burn(
-        burn_liquidity_tokens_to_comet_context,
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info().clone(),
+            Burn {
+                mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
+                from: ctx
+                    .accounts
+                    .comet_liquidity_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.manager.to_account_info().clone(),
+            },
+            seeds,
+        ),
         liquidity_token_value.mantissa().try_into().unwrap(),
     )?;
+
+    // Remove lp tokens from user
+    let mut new_comet_liquidity_tokens = comet_liquidity_tokens - liquidity_token_value;
+    new_comet_liquidity_tokens.rescale(DEVNET_TOKEN_SCALE);
+    single_pool_comet.positions[position_index as usize].liquidity_token_value =
+        RawDecimal::from(new_comet_liquidity_tokens);
 
     // update pool data
     ctx.accounts.amm_iasset_token_account.reload()?;
