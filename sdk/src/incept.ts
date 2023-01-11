@@ -985,13 +985,17 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     poolIndex: number,
+    expectedUsdiAmount: BN,
+    slippageTolerance: BN,
     signers?: Array<Keypair>
   ) {
     const buySynthIx = await this.buySynthInstruction(
       userUsdiTokenAccount,
       userIassetTokenAccount,
       iassetAmount,
-      poolIndex
+      poolIndex,
+      expectedUsdiAmount,
+      slippageTolerance
     );
     await this.provider.sendAndConfirm!(
       new Transaction().add(buySynthIx),
@@ -1002,12 +1006,14 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     iassetAmount: BN,
-    poolIndex: number
+    poolIndex: number,
+    expectedUsdiAmount: BN,
+    slippageTolerance: BN
   ) {
     let tokenData = await this.getTokenData();
 
     return await this.program.methods
-      .buySynth(this.managerAddress[1], poolIndex, iassetAmount)
+      .buySynth(this.managerAddress[1], poolIndex, iassetAmount, expectedUsdiAmount, slippageTolerance)
       .accounts({
         user: this.provider.publicKey!,
         manager: this.managerAddress[0],
@@ -1026,13 +1032,17 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     poolIndex: number,
+    expectedUsdiAmount: BN,
+    slippageTolerance: BN,
     signers?: Array<Keypair>
   ) {
     const buySynthIx = await this.sellSynthInstruction(
       userUsdiTokenAccount,
       userIassetTokenAccount,
       iassetAmount,
-      poolIndex
+      poolIndex,
+      expectedUsdiAmount,
+      slippageTolerance
     );
     await this.provider.sendAndConfirm!(
       new Transaction().add(buySynthIx),
@@ -1043,12 +1053,14 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     iassetAmount: BN,
-    poolIndex: number
+    poolIndex: number,
+    expectedUsdiAmount: BN,
+    slippageTolerance: BN
   ) {
     let tokenData = await this.getTokenData();
 
     return await this.program.methods
-      .sellSynth(this.managerAddress[1], poolIndex, iassetAmount)
+      .sellSynth(this.managerAddress[1], poolIndex, iassetAmount, expectedUsdiAmount, slippageTolerance)
       .accounts({
         user: this.provider.publicKey!,
         manager: this.managerAddress[0],
