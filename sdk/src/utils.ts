@@ -6,7 +6,8 @@ import {
   ConfirmOptions,
   sendAndConfirmRawTransaction,
 } from "@solana/web3.js";
-import { Value } from "./incept";
+import { toNumber } from "./decimal";
+import { Value, Pool } from "./incept";
 
 // export const signAndSend = async (
 //   tx: Transaction,
@@ -66,3 +67,31 @@ export const toScaledPercent = (value: Value) => {
     ? 0
     : Number(value.val.div(new BN(Math.pow(10, Number(value.scale) - 2))));
 };
+
+export const calculateOutputFromInput = (pool: Pool, input: number, isInputUsdi: boolean) => {
+  const feeAdjustment = 1 - toNumber(pool.liquidityTradingFee) - toNumber(pool.treasuryTradingFee)
+
+  const poolUsdi = toNumber(pool.usdiAmount)
+  const poolIasset = toNumber(pool.iassetAmount)
+  const invariant = poolIasset * poolUsdi
+
+  if (isInputUsdi) {
+    return feeAdjustment * (poolIasset - invariant / (poolUsdi + input));
+  } else {
+    return feeAdjustment * (poolUsdi - invariant / (poolIasset + input));
+  }
+}
+
+export const calculateInputFromOutput = (pool: Pool, output: number, isOutputUsdi: boolean) => {
+  const feeAdjustment = 1 - toNumber(pool.liquidityTradingFee) - toNumber(pool.treasuryTradingFee)
+
+  const poolUsdi = toNumber(pool.usdiAmount)
+  const poolIasset = toNumber(pool.iassetAmount)
+  const invariant = poolIasset * poolUsdi
+
+  if (isOutputUsdi) {
+    return invariant / (poolUsdi - output / feeAdjustment) - poolIasset
+  } else {
+    return invariant / (poolIasset - output / feeAdjustment) - poolUsdi
+  }
+}
