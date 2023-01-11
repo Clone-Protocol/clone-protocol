@@ -72,7 +72,7 @@ impl<'a, 'b, 'c, 'info> From<&WithdrawLiquidity<'info>>
     fn from(accounts: &WithdrawLiquidity<'info>) -> CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
         let cpi_accounts = Burn {
             mint: accounts.liquidity_token_mint.to_account_info().clone(),
-            to: accounts
+            from: accounts
                 .user_liquidity_token_account
                 .to_account_info()
                 .clone(),
@@ -88,7 +88,7 @@ pub fn execute(
     manager_nonce: u8,
     liquidity_position_index: u8,
     liquidity_token_amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
@@ -133,7 +133,7 @@ pub fn execute(
     // burn user liquidity tokens
     let cpi_accounts = Burn {
         mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
-        to: ctx
+        from: ctx
             .accounts
             .user_liquidity_token_account
             .to_account_info()

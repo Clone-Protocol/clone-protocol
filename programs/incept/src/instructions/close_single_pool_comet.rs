@@ -24,11 +24,7 @@ pub struct CloseSinglePoolComet<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(
-    ctx: Context<CloseSinglePoolComet>,
-    _user_nonce: u8,
-    comet_index: u8,
-) -> ProgramResult {
+pub fn execute(ctx: Context<CloseSinglePoolComet>, _user_nonce: u8, comet_index: u8) -> Result<()> {
     // remove single pool comet
     let mut single_pool_comet = ctx.accounts.single_pool_comet.load_mut()?;
     let position_index = comet_index as usize;

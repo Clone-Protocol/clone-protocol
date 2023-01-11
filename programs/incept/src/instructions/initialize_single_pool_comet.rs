@@ -33,7 +33,7 @@ pub fn execute(
     _manager_nonce: u8,
     pool_index: u8,
     collateral_index: u8,
-) -> ProgramResult {
+) -> Result<()> {
     let single_pool_comets = &mut ctx.accounts.single_pool_comets.load_mut()?;
 
     single_pool_comets.add_collateral(CometCollateral {

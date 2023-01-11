@@ -1,13 +1,16 @@
 export type JupiterAggMock = {
   "version": "0.1.0",
   "name": "jupiter_agg_mock",
+  "docs": [
+    "Lib"
+  ],
   "instructions": [
     {
       "name": "initialize",
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -36,19 +39,14 @@ export type JupiterAggMock = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "nonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "createAsset",
       "accounts": [
         {
           "name": "payer",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -224,26 +222,6 @@ export type JupiterAggMock = {
           "type": "u64"
         }
       ]
-    },
-    {
-      "name": "stressTest",
-      "accounts": [
-        {
-          "name": "jupiterAccount",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "nonce",
-          "type": "u8"
-        },
-        {
-          "name": "iterations",
-          "type": "u8"
-        }
-      ]
     }
   ],
   "accounts": [
@@ -275,14 +253,18 @@ export type JupiterAggMock = {
             }
           },
           {
-            "name": "nAssets",
-            "type": "u8"
-          },
-          {
             "name": "answer",
             "type": {
               "defined": "RawDecimal"
             }
+          },
+          {
+            "name": "nAssets",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
@@ -291,6 +273,9 @@ export type JupiterAggMock = {
   "types": [
     {
       "name": "RawDecimal",
+      "docs": [
+        "States"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -312,13 +297,16 @@ export type JupiterAggMock = {
 export const IDL: JupiterAggMock = {
   "version": "0.1.0",
   "name": "jupiter_agg_mock",
+  "docs": [
+    "Lib"
+  ],
   "instructions": [
     {
       "name": "initialize",
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -347,19 +335,14 @@ export const IDL: JupiterAggMock = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "nonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "createAsset",
       "accounts": [
         {
           "name": "payer",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -535,26 +518,6 @@ export const IDL: JupiterAggMock = {
           "type": "u64"
         }
       ]
-    },
-    {
-      "name": "stressTest",
-      "accounts": [
-        {
-          "name": "jupiterAccount",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "nonce",
-          "type": "u8"
-        },
-        {
-          "name": "iterations",
-          "type": "u8"
-        }
-      ]
     }
   ],
   "accounts": [
@@ -586,14 +549,18 @@ export const IDL: JupiterAggMock = {
             }
           },
           {
-            "name": "nAssets",
-            "type": "u8"
-          },
-          {
             "name": "answer",
             "type": {
               "defined": "RawDecimal"
             }
+          },
+          {
+            "name": "nAssets",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
@@ -602,6 +569,9 @@ export const IDL: JupiterAggMock = {
   "types": [
     {
       "name": "RawDecimal",
+      "docs": [
+        "States"
+      ],
       "type": {
         "kind": "struct",
         "fields": [

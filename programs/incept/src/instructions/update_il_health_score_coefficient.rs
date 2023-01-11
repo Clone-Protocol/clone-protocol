@@ -26,7 +26,7 @@ pub fn execute(
     ctx: Context<UpdateILHealthScoreCoefficient>,
     _manager_nonce: u8,
     _il_health_score_coefficient: u64,
-) -> ProgramResult {
+) -> Result<()> {
     // ensure that a valid coefficient was entered
     require!(
         _il_health_score_coefficient > 0,

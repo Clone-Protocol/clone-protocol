@@ -56,7 +56,7 @@ pub fn execute(
     _user_nonce: u8,
     position_index: u8,
     collateral_amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
@@ -71,9 +71,10 @@ pub fn execute(
         Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale);
 
     // ensure the position holds sufficient collateral
-    if comet_collateral.collateral_amount.to_decimal() < subtracted_collateral_value {
-        return Err(InceptError::InsufficientCollateral.into());
-    }
+    require!(
+        subtracted_collateral_value <= comet_collateral.collateral_amount.to_decimal()
+        InceptError::InsufficientCollateral
+    );
 
     // subtract collateral amount from vault supply
     let mut new_vault_comet_supply =
@@ -92,10 +93,7 @@ pub fn execute(
         let health_score =
             calculate_health_score(&comet, token_data, Some(position_index as usize))?;
 
-        require!(
-            matches!(health_score, HealthScore::Healthy { .. }),
-            InceptError::HealthScoreTooLow
-        );
+        require!(health_score.is_healthy(), InceptError::HealthScoreTooLow);
     }
 
     // send collateral from vault to user

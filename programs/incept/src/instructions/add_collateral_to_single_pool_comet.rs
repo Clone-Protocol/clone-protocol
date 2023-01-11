@@ -67,7 +67,7 @@ pub fn execute(
     _manager_nonce: u8,
     position_index: u8,
     collateral_amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut single_pool_comets = ctx.accounts.single_pool_comet.load_mut()?;
 

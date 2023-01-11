@@ -20,7 +20,7 @@ pub struct InitializeMintPositions<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<InitializeMintPositions>, _user_nonce: u8) -> ProgramResult {
+pub fn execute(ctx: Context<InitializeMintPositions>, _user_nonce: u8) -> Result<()> {
     let mut mint_positions = ctx.accounts.mint_positions.load_init()?;
 
     // set user data

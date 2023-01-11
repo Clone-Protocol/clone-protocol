@@ -5,11 +5,13 @@ use anchor_spl::token::*;
 #[derive(Accounts)]
 #[instruction(mock_usdc_nonce: u8)]
 pub struct Initialize<'info> {
+    #[account(mut)]
     pub admin: Signer<'info>,
     #[account(
         init,
-        seeds = [b"mock_usdc".as_ref()],
-        bump = mock_usdc_nonce,
+        //seeds = [b"mock_usdc".as_ref()],
+        //bump = mock_usdc_nonce,
+        space = 8 + 32,
         payer = admin
     )]
     pub mock_usdc_account: Account<'info, MockUsdc>,

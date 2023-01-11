@@ -7,7 +7,7 @@ export type Incept = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -53,10 +53,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "ilHealthScoreCoefficient",
           "type": "u64"
         },
@@ -66,6 +62,18 @@ export type Incept = {
         },
         {
           "name": "ilLiquidationRewardPct",
+          "type": "u64"
+        },
+        {
+          "name": "maxHealthLiquidation",
+          "type": "u64"
+        },
+        {
+          "name": "liquidatorFee",
+          "type": "u64"
+        },
+        {
+          "name": "collateralFullLiquidationThreshold",
           "type": "u64"
         }
       ]
@@ -105,7 +113,7 @@ export type Incept = {
       "accounts": [
         {
           "name": "user",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -268,7 +276,7 @@ export type Incept = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -331,7 +339,7 @@ export type Incept = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -407,10 +415,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "stableCollateralRatio",
           "type": "u16"
         },
@@ -424,6 +428,10 @@ export type Incept = {
         },
         {
           "name": "healthScoreCoefficient",
+          "type": "u64"
+        },
+        {
+          "name": "liquidationDiscountRate",
           "type": "u64"
         }
       ]
@@ -1248,7 +1256,7 @@ export type Incept = {
       "accounts": [
         {
           "name": "user",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -1258,12 +1266,12 @@ export type Incept = {
         },
         {
           "name": "manager",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1770,6 +1778,10 @@ export type Incept = {
         {
           "name": "liquidityTokenAmount",
           "type": "u64"
+        },
+        {
+          "name": "cometCollateralIndex",
+          "type": "u8"
         }
       ]
     },
@@ -1856,7 +1868,7 @@ export type Incept = {
           "type": "u64"
         },
         {
-          "name": "cometPositionIndex",
+          "name": "positionIndex",
           "type": "u8"
         }
       ]
@@ -1868,6 +1880,11 @@ export type Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -1921,6 +1938,10 @@ export type Incept = {
         }
       ],
       "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
         {
           "name": "managerNonce",
           "type": "u8"
@@ -2055,246 +2076,12 @@ export type Incept = {
           "type": "u8"
         },
         {
+          "name": "userNonce",
+          "type": "u8"
+        },
+        {
           "name": "mintIndex",
           "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "liquidateCometPositionReduction",
-      "accounts": [
-        {
-          "name": "liquidator",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "manager",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdiMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "iassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidatorIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidatorUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
-          "name": "positionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "lpTokenReduction",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "liquidateCometIlReduction",
-      "accounts": [
-        {
-          "name": "liquidator",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "manager",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdiMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "iassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidatorUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "jupiterProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "jupiterAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "usdcVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "assetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdcMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "pythOracle",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
-          "name": "jupiterNonce",
-          "type": "u8"
-        },
-        {
-          "name": "positionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "assetIndex",
-          "type": "u8"
-        },
-        {
-          "name": "cometCollateralIndex",
-          "type": "u8"
-        },
-        {
-          "name": "ilReductionAmount",
-          "type": "u64"
         }
       ]
     },
@@ -2370,6 +2157,339 @@ export type Incept = {
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "liquidateSinglePoolComet",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "cometLiquidityTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityTokenMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorCollateralTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
+        {
+          "name": "positionIndex",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "swapNonstableCollateral",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stableCollateralMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stableCollateralVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorStableCollateralTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nonstableCollateralMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nonstableCollateralVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorNonstableCollateralTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
+        {
+          "name": "stableSwapInAmount",
+          "type": "u64"
+        },
+        {
+          "name": "cometNonstableCollateralIndex",
+          "type": "u8"
+        },
+        {
+          "name": "cometStableCollateralIndex",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "swapStableCollateralIntoUsdi",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
+        {
+          "name": "cometCollateralIndex",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "liquidateComet",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "cometLiquidityTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityTokenMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
+        {
+          "name": "positionIndex",
+          "type": "u8"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -2389,6 +2509,16 @@ export type Incept = {
           {
             "name": "admin",
             "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "liquidationConfig",
+            "type": {
+              "defined": "LiquidationConfig"
+            }
           }
         ]
       }
@@ -2598,6 +2728,23 @@ export type Incept = {
   ],
   "types": [
     {
+      "name": "PoolIndices",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "indices",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "Value",
       "type": {
         "kind": "struct",
@@ -2625,6 +2772,32 @@ export type Incept = {
                 "u8",
                 16
               ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "LiquidationConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "liquidatorFee",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "collateralFullLiquidationThreshold",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "maxHealthLiquidation",
+            "type": {
+              "defined": "RawDecimal"
             }
           }
         ]
@@ -2688,6 +2861,12 @@ export type Incept = {
           },
           {
             "name": "healthScoreCoefficient",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "liquidationDiscountRate",
             "type": {
               "defined": "RawDecimal"
             }
@@ -2960,187 +3139,238 @@ export type Incept = {
           }
         ]
       }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidMintCollateralRatio",
+      "msg": "Invalid Mint Collateral Ratio"
     },
     {
-      "name": "PoolIndices",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "indices",
-            "type": {
-              "array": [
-                "u8",
-                128
-              ]
-            }
-          }
-        ]
-      }
+      "code": 6001,
+      "name": "InvalidCometCollateralRatio",
+      "msg": "Invalid Comet Collateral Ratio"
     },
     {
-      "name": "InceptError",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "InvalidMintCollateralRatio"
-          },
-          {
-            "name": "InvalidCometCollateralRatio"
-          },
-          {
-            "name": "DifferentScale"
-          },
-          {
-            "name": "MathError"
-          },
-          {
-            "name": "OracleConfidenceOutOfRange"
-          },
-          {
-            "name": "AssetInfoNotFound"
-          },
-          {
-            "name": "CollateralNotFound"
-          },
-          {
-            "name": "PoolNotFound"
-          },
-          {
-            "name": "InvalidCollateralType"
-          },
-          {
-            "name": "InvalidTokenAmount"
-          },
-          {
-            "name": "InvalidBool"
-          },
-          {
-            "name": "InsufficientCollateral"
-          },
-          {
-            "name": "NoPriceDeviationDetected"
-          },
-          {
-            "name": "OutdatedOracle"
-          },
-          {
-            "name": "CometAlreadyLiquidated"
-          },
-          {
-            "name": "CometNotYetLiquidated"
-          },
-          {
-            "name": "CometUnableToLiquidate"
-          },
-          {
-            "name": "NonStablesNotSupported"
-          },
-          {
-            "name": "MintPositionUnableToLiquidate"
-          },
-          {
-            "name": "NoSuchCollateralPosition"
-          },
-          {
-            "name": "InvalidHealthScoreCoefficient"
-          },
-          {
-            "name": "FailedImpermanentLossCalculation"
-          },
-          {
-            "name": "HealthScoreTooLow"
-          },
-          {
-            "name": "InsufficientUSDiCollateral"
-          },
-          {
-            "name": "AttemptedToAddNewPoolToSingleComet"
-          },
-          {
-            "name": "AttemptedToAddNewCollateralToSingleComet"
-          },
-          {
-            "name": "InvalidInputMintAccount"
-          },
-          {
-            "name": "InvalidInputCollateralAccount"
-          },
-          {
-            "name": "InvalidAccountLoaderOwner"
-          },
-          {
-            "name": "InvalidInputPositionIndex"
-          },
-          {
-            "name": "InvalidTokenAccountBalance"
-          },
-          {
-            "name": "InequalityComparisonViolated"
-          },
-          {
-            "name": "NotSinglePoolComet"
-          },
-          {
-            "name": "SinglePoolCometNotEmpty"
-          },
-          {
-            "name": "LiquidityNotWithdrawn"
-          },
-          {
-            "name": "NotSubjectToLiquidation"
-          },
-          {
-            "name": "NotSubjectToILLiquidation"
-          },
-          {
-            "name": "LiquidationAmountTooLarge"
-          },
-          {
-            "name": "NoRemainingAccountsSupplied"
-          },
-          {
-            "name": "InvalidRecenter"
-          },
-          {
-            "name": "NonZeroCollateralizationRatioRequired"
-          },
-          {
-            "name": "IncorrectOracleAddress"
-          }
-        ]
-      }
+      "code": 6002,
+      "name": "DifferentScale",
+      "msg": "Different Scale"
     },
     {
-      "name": "HealthScore",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Healthy",
-            "fields": [
-              {
-                "name": "score",
-                "type": {
-                  "defined": "f64"
-                }
-              }
-            ]
-          },
-          {
-            "name": "SubjectToLiquidation",
-            "fields": [
-              {
-                "name": "score",
-                "type": {
-                  "defined": "f64"
-                }
-              }
-            ]
-          }
-        ]
-      }
+      "code": 6003,
+      "name": "MathError",
+      "msg": "Math Error"
+    },
+    {
+      "code": 6004,
+      "name": "OracleConfidenceOutOfRange",
+      "msg": "Oracle Confidence Out Of Range"
+    },
+    {
+      "code": 6005,
+      "name": "AssetInfoNotFound",
+      "msg": "Asset Info Not Found"
+    },
+    {
+      "code": 6006,
+      "name": "CollateralNotFound",
+      "msg": "Collateral Not Found"
+    },
+    {
+      "code": 6007,
+      "name": "PoolNotFound",
+      "msg": "Pool Not Found"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidCollateralType",
+      "msg": "Invalid Collateral Type"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidTokenAmount",
+      "msg": "Invalid Token Amount"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidBool",
+      "msg": "Invalid Bool"
+    },
+    {
+      "code": 6011,
+      "name": "InsufficientCollateral",
+      "msg": "Insufficient Collateral"
+    },
+    {
+      "code": 6012,
+      "name": "NoPriceDeviationDetected",
+      "msg": "No Price Deviation Detected"
+    },
+    {
+      "code": 6013,
+      "name": "OutdatedOracle",
+      "msg": "Outdated Oracle"
+    },
+    {
+      "code": 6014,
+      "name": "CometAlreadyLiquidated",
+      "msg": "Comet Already Liquidated"
+    },
+    {
+      "code": 6015,
+      "name": "CometNotYetLiquidated",
+      "msg": "Comet Not Yet Liquidated"
+    },
+    {
+      "code": 6016,
+      "name": "CometUnableToLiquidate",
+      "msg": "Comet Unable to Liquidate"
+    },
+    {
+      "code": 6017,
+      "name": "NonStablesNotSupported",
+      "msg": "Non-stables Not Supported"
+    },
+    {
+      "code": 6018,
+      "name": "MintPositionUnableToLiquidate",
+      "msg": "Mint Position Unable to Liquidate"
+    },
+    {
+      "code": 6019,
+      "name": "NoSuchCollateralPosition",
+      "msg": "No Such Collateral Position"
+    },
+    {
+      "code": 6020,
+      "name": "InvalidHealthScoreCoefficient",
+      "msg": "Invalid Health Score Coefficient"
+    },
+    {
+      "code": 6021,
+      "name": "FailedImpermanentLossCalculation",
+      "msg": "Failed Impermanent Loss Calculation"
+    },
+    {
+      "code": 6022,
+      "name": "HealthScoreTooLow",
+      "msg": "Health Score Too Low"
+    },
+    {
+      "code": 6023,
+      "name": "InsufficientUSDiCollateral",
+      "msg": "Insufficient USDi Collateral"
+    },
+    {
+      "code": 6024,
+      "name": "AttemptedToAddNewPoolToSingleComet",
+      "msg": "Attempted To Add New Pool To Single Comet"
+    },
+    {
+      "code": 6025,
+      "name": "AttemptedToAddNewCollateralToSingleComet",
+      "msg": "Attempted To Add New Collateral To Single Comet"
+    },
+    {
+      "code": 6026,
+      "name": "InvalidInputMintAccount",
+      "msg": "Invalid input mint account"
+    },
+    {
+      "code": 6027,
+      "name": "InvalidInputCollateralAccount",
+      "msg": "Invalid input collateral account"
+    },
+    {
+      "code": 6028,
+      "name": "InvalidAccountLoaderOwner",
+      "msg": "Invalid Account loader owner"
+    },
+    {
+      "code": 6029,
+      "name": "InvalidInputPositionIndex",
+      "msg": "Invalid input position index"
+    },
+    {
+      "code": 6030,
+      "name": "InvalidTokenAccountBalance",
+      "msg": "Invalid token account balance"
+    },
+    {
+      "code": 6031,
+      "name": "InequalityComparisonViolated",
+      "msg": "Inequality comparison violated"
+    },
+    {
+      "code": 6032,
+      "name": "NotSinglePoolComet",
+      "msg": "Not Single Pool Comet"
+    },
+    {
+      "code": 6033,
+      "name": "SinglePoolCometNotEmpty",
+      "msg": "Single Pool Comet Not Empty"
+    },
+    {
+      "code": 6034,
+      "name": "LiquidityNotWithdrawn",
+      "msg": "Liquidity Not Withdrawn"
+    },
+    {
+      "code": 6035,
+      "name": "NotSubjectToLiquidation",
+      "msg": "Not Subject to Liquidation"
+    },
+    {
+      "code": 6036,
+      "name": "NotSubjectToILLiquidation",
+      "msg": "Not Subject to IL liquidation"
+    },
+    {
+      "code": 6037,
+      "name": "LiquidationAmountTooLarge",
+      "msg": "Liquidation amount too large"
+    },
+    {
+      "code": 6038,
+      "name": "NoRemainingAccountsSupplied",
+      "msg": "No remaining accounts supplied"
+    },
+    {
+      "code": 6039,
+      "name": "InvalidRecenter",
+      "msg": "Invalid Recenter"
+    },
+    {
+      "code": 6040,
+      "name": "NonZeroCollateralizationRatioRequired",
+      "msg": "Non-zero collateralization ratio required"
+    },
+    {
+      "code": 6041,
+      "name": "IncorrectOracleAddress",
+      "msg": "Incorrect oracle address provided"
+    },
+    {
+      "code": 6042,
+      "name": "CenteredCometRequired",
+      "msg": "Comet must be centered!"
+    },
+    {
+      "code": 6043,
+      "name": "InvalidResultingComet",
+      "msg": "Comet is in an invalid state after action"
+    },
+    {
+      "code": 6044,
+      "name": "InvalidValueRange",
+      "msg": "Value is in an incorrect range."
+    },
+    {
+      "code": 6045,
+      "name": "InvalidAssetStability",
+      "msg": "Asset stable requirement violated!"
     }
   ]
 };
@@ -3154,7 +3384,7 @@ export const IDL: Incept = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -3200,10 +3430,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "ilHealthScoreCoefficient",
           "type": "u64"
         },
@@ -3213,6 +3439,18 @@ export const IDL: Incept = {
         },
         {
           "name": "ilLiquidationRewardPct",
+          "type": "u64"
+        },
+        {
+          "name": "maxHealthLiquidation",
+          "type": "u64"
+        },
+        {
+          "name": "liquidatorFee",
+          "type": "u64"
+        },
+        {
+          "name": "collateralFullLiquidationThreshold",
           "type": "u64"
         }
       ]
@@ -3252,7 +3490,7 @@ export const IDL: Incept = {
       "accounts": [
         {
           "name": "user",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -3415,7 +3653,7 @@ export const IDL: Incept = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -3478,7 +3716,7 @@ export const IDL: Incept = {
       "accounts": [
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -3554,10 +3792,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "stableCollateralRatio",
           "type": "u16"
         },
@@ -3571,6 +3805,10 @@ export const IDL: Incept = {
         },
         {
           "name": "healthScoreCoefficient",
+          "type": "u64"
+        },
+        {
+          "name": "liquidationDiscountRate",
           "type": "u64"
         }
       ]
@@ -4395,7 +4633,7 @@ export const IDL: Incept = {
       "accounts": [
         {
           "name": "user",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -4405,12 +4643,12 @@ export const IDL: Incept = {
         },
         {
           "name": "manager",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -4917,6 +5155,10 @@ export const IDL: Incept = {
         {
           "name": "liquidityTokenAmount",
           "type": "u64"
+        },
+        {
+          "name": "cometCollateralIndex",
+          "type": "u8"
         }
       ]
     },
@@ -5003,7 +5245,7 @@ export const IDL: Incept = {
           "type": "u64"
         },
         {
-          "name": "cometPositionIndex",
+          "name": "positionIndex",
           "type": "u8"
         }
       ]
@@ -5015,6 +5257,11 @@ export const IDL: Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -5068,6 +5315,10 @@ export const IDL: Incept = {
         }
       ],
       "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
         {
           "name": "managerNonce",
           "type": "u8"
@@ -5202,246 +5453,12 @@ export const IDL: Incept = {
           "type": "u8"
         },
         {
+          "name": "userNonce",
+          "type": "u8"
+        },
+        {
           "name": "mintIndex",
           "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "liquidateCometPositionReduction",
-      "accounts": [
-        {
-          "name": "liquidator",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "manager",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdiMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "iassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidatorIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidatorUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
-          "name": "positionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "lpTokenReduction",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "liquidateCometIlReduction",
-      "accounts": [
-        {
-          "name": "liquidator",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "manager",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdiMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "iassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidatorUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "jupiterProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "jupiterAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "usdcVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "assetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdcMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "pythOracle",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
-          "name": "jupiterNonce",
-          "type": "u8"
-        },
-        {
-          "name": "positionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "assetIndex",
-          "type": "u8"
-        },
-        {
-          "name": "cometCollateralIndex",
-          "type": "u8"
-        },
-        {
-          "name": "ilReductionAmount",
-          "type": "u64"
         }
       ]
     },
@@ -5517,6 +5534,339 @@ export const IDL: Incept = {
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "liquidateSinglePoolComet",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "cometLiquidityTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityTokenMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorCollateralTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
+        {
+          "name": "positionIndex",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "swapNonstableCollateral",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stableCollateralMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stableCollateralVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorStableCollateralTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nonstableCollateralMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nonstableCollateralVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorNonstableCollateralTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
+        {
+          "name": "stableSwapInAmount",
+          "type": "u64"
+        },
+        {
+          "name": "cometNonstableCollateralIndex",
+          "type": "u8"
+        },
+        {
+          "name": "cometStableCollateralIndex",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "swapStableCollateralIntoUsdi",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
+        {
+          "name": "cometCollateralIndex",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "liquidateComet",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ammIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "cometLiquidityTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityTokenMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        },
+        {
+          "name": "positionIndex",
+          "type": "u8"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -5536,6 +5886,16 @@ export const IDL: Incept = {
           {
             "name": "admin",
             "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "liquidationConfig",
+            "type": {
+              "defined": "LiquidationConfig"
+            }
           }
         ]
       }
@@ -5745,6 +6105,23 @@ export const IDL: Incept = {
   ],
   "types": [
     {
+      "name": "PoolIndices",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "indices",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "Value",
       "type": {
         "kind": "struct",
@@ -5772,6 +6149,32 @@ export const IDL: Incept = {
                 "u8",
                 16
               ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "LiquidationConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "liquidatorFee",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "collateralFullLiquidationThreshold",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "maxHealthLiquidation",
+            "type": {
+              "defined": "RawDecimal"
             }
           }
         ]
@@ -5835,6 +6238,12 @@ export const IDL: Incept = {
           },
           {
             "name": "healthScoreCoefficient",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "liquidationDiscountRate",
             "type": {
               "defined": "RawDecimal"
             }
@@ -6107,187 +6516,238 @@ export const IDL: Incept = {
           }
         ]
       }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidMintCollateralRatio",
+      "msg": "Invalid Mint Collateral Ratio"
     },
     {
-      "name": "PoolIndices",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "indices",
-            "type": {
-              "array": [
-                "u8",
-                128
-              ]
-            }
-          }
-        ]
-      }
+      "code": 6001,
+      "name": "InvalidCometCollateralRatio",
+      "msg": "Invalid Comet Collateral Ratio"
     },
     {
-      "name": "InceptError",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "InvalidMintCollateralRatio"
-          },
-          {
-            "name": "InvalidCometCollateralRatio"
-          },
-          {
-            "name": "DifferentScale"
-          },
-          {
-            "name": "MathError"
-          },
-          {
-            "name": "OracleConfidenceOutOfRange"
-          },
-          {
-            "name": "AssetInfoNotFound"
-          },
-          {
-            "name": "CollateralNotFound"
-          },
-          {
-            "name": "PoolNotFound"
-          },
-          {
-            "name": "InvalidCollateralType"
-          },
-          {
-            "name": "InvalidTokenAmount"
-          },
-          {
-            "name": "InvalidBool"
-          },
-          {
-            "name": "InsufficientCollateral"
-          },
-          {
-            "name": "NoPriceDeviationDetected"
-          },
-          {
-            "name": "OutdatedOracle"
-          },
-          {
-            "name": "CometAlreadyLiquidated"
-          },
-          {
-            "name": "CometNotYetLiquidated"
-          },
-          {
-            "name": "CometUnableToLiquidate"
-          },
-          {
-            "name": "NonStablesNotSupported"
-          },
-          {
-            "name": "MintPositionUnableToLiquidate"
-          },
-          {
-            "name": "NoSuchCollateralPosition"
-          },
-          {
-            "name": "InvalidHealthScoreCoefficient"
-          },
-          {
-            "name": "FailedImpermanentLossCalculation"
-          },
-          {
-            "name": "HealthScoreTooLow"
-          },
-          {
-            "name": "InsufficientUSDiCollateral"
-          },
-          {
-            "name": "AttemptedToAddNewPoolToSingleComet"
-          },
-          {
-            "name": "AttemptedToAddNewCollateralToSingleComet"
-          },
-          {
-            "name": "InvalidInputMintAccount"
-          },
-          {
-            "name": "InvalidInputCollateralAccount"
-          },
-          {
-            "name": "InvalidAccountLoaderOwner"
-          },
-          {
-            "name": "InvalidInputPositionIndex"
-          },
-          {
-            "name": "InvalidTokenAccountBalance"
-          },
-          {
-            "name": "InequalityComparisonViolated"
-          },
-          {
-            "name": "NotSinglePoolComet"
-          },
-          {
-            "name": "SinglePoolCometNotEmpty"
-          },
-          {
-            "name": "LiquidityNotWithdrawn"
-          },
-          {
-            "name": "NotSubjectToLiquidation"
-          },
-          {
-            "name": "NotSubjectToILLiquidation"
-          },
-          {
-            "name": "LiquidationAmountTooLarge"
-          },
-          {
-            "name": "NoRemainingAccountsSupplied"
-          },
-          {
-            "name": "InvalidRecenter"
-          },
-          {
-            "name": "NonZeroCollateralizationRatioRequired"
-          },
-          {
-            "name": "IncorrectOracleAddress"
-          }
-        ]
-      }
+      "code": 6002,
+      "name": "DifferentScale",
+      "msg": "Different Scale"
     },
     {
-      "name": "HealthScore",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Healthy",
-            "fields": [
-              {
-                "name": "score",
-                "type": {
-                  "defined": "f64"
-                }
-              }
-            ]
-          },
-          {
-            "name": "SubjectToLiquidation",
-            "fields": [
-              {
-                "name": "score",
-                "type": {
-                  "defined": "f64"
-                }
-              }
-            ]
-          }
-        ]
-      }
+      "code": 6003,
+      "name": "MathError",
+      "msg": "Math Error"
+    },
+    {
+      "code": 6004,
+      "name": "OracleConfidenceOutOfRange",
+      "msg": "Oracle Confidence Out Of Range"
+    },
+    {
+      "code": 6005,
+      "name": "AssetInfoNotFound",
+      "msg": "Asset Info Not Found"
+    },
+    {
+      "code": 6006,
+      "name": "CollateralNotFound",
+      "msg": "Collateral Not Found"
+    },
+    {
+      "code": 6007,
+      "name": "PoolNotFound",
+      "msg": "Pool Not Found"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidCollateralType",
+      "msg": "Invalid Collateral Type"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidTokenAmount",
+      "msg": "Invalid Token Amount"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidBool",
+      "msg": "Invalid Bool"
+    },
+    {
+      "code": 6011,
+      "name": "InsufficientCollateral",
+      "msg": "Insufficient Collateral"
+    },
+    {
+      "code": 6012,
+      "name": "NoPriceDeviationDetected",
+      "msg": "No Price Deviation Detected"
+    },
+    {
+      "code": 6013,
+      "name": "OutdatedOracle",
+      "msg": "Outdated Oracle"
+    },
+    {
+      "code": 6014,
+      "name": "CometAlreadyLiquidated",
+      "msg": "Comet Already Liquidated"
+    },
+    {
+      "code": 6015,
+      "name": "CometNotYetLiquidated",
+      "msg": "Comet Not Yet Liquidated"
+    },
+    {
+      "code": 6016,
+      "name": "CometUnableToLiquidate",
+      "msg": "Comet Unable to Liquidate"
+    },
+    {
+      "code": 6017,
+      "name": "NonStablesNotSupported",
+      "msg": "Non-stables Not Supported"
+    },
+    {
+      "code": 6018,
+      "name": "MintPositionUnableToLiquidate",
+      "msg": "Mint Position Unable to Liquidate"
+    },
+    {
+      "code": 6019,
+      "name": "NoSuchCollateralPosition",
+      "msg": "No Such Collateral Position"
+    },
+    {
+      "code": 6020,
+      "name": "InvalidHealthScoreCoefficient",
+      "msg": "Invalid Health Score Coefficient"
+    },
+    {
+      "code": 6021,
+      "name": "FailedImpermanentLossCalculation",
+      "msg": "Failed Impermanent Loss Calculation"
+    },
+    {
+      "code": 6022,
+      "name": "HealthScoreTooLow",
+      "msg": "Health Score Too Low"
+    },
+    {
+      "code": 6023,
+      "name": "InsufficientUSDiCollateral",
+      "msg": "Insufficient USDi Collateral"
+    },
+    {
+      "code": 6024,
+      "name": "AttemptedToAddNewPoolToSingleComet",
+      "msg": "Attempted To Add New Pool To Single Comet"
+    },
+    {
+      "code": 6025,
+      "name": "AttemptedToAddNewCollateralToSingleComet",
+      "msg": "Attempted To Add New Collateral To Single Comet"
+    },
+    {
+      "code": 6026,
+      "name": "InvalidInputMintAccount",
+      "msg": "Invalid input mint account"
+    },
+    {
+      "code": 6027,
+      "name": "InvalidInputCollateralAccount",
+      "msg": "Invalid input collateral account"
+    },
+    {
+      "code": 6028,
+      "name": "InvalidAccountLoaderOwner",
+      "msg": "Invalid Account loader owner"
+    },
+    {
+      "code": 6029,
+      "name": "InvalidInputPositionIndex",
+      "msg": "Invalid input position index"
+    },
+    {
+      "code": 6030,
+      "name": "InvalidTokenAccountBalance",
+      "msg": "Invalid token account balance"
+    },
+    {
+      "code": 6031,
+      "name": "InequalityComparisonViolated",
+      "msg": "Inequality comparison violated"
+    },
+    {
+      "code": 6032,
+      "name": "NotSinglePoolComet",
+      "msg": "Not Single Pool Comet"
+    },
+    {
+      "code": 6033,
+      "name": "SinglePoolCometNotEmpty",
+      "msg": "Single Pool Comet Not Empty"
+    },
+    {
+      "code": 6034,
+      "name": "LiquidityNotWithdrawn",
+      "msg": "Liquidity Not Withdrawn"
+    },
+    {
+      "code": 6035,
+      "name": "NotSubjectToLiquidation",
+      "msg": "Not Subject to Liquidation"
+    },
+    {
+      "code": 6036,
+      "name": "NotSubjectToILLiquidation",
+      "msg": "Not Subject to IL liquidation"
+    },
+    {
+      "code": 6037,
+      "name": "LiquidationAmountTooLarge",
+      "msg": "Liquidation amount too large"
+    },
+    {
+      "code": 6038,
+      "name": "NoRemainingAccountsSupplied",
+      "msg": "No remaining accounts supplied"
+    },
+    {
+      "code": 6039,
+      "name": "InvalidRecenter",
+      "msg": "Invalid Recenter"
+    },
+    {
+      "code": 6040,
+      "name": "NonZeroCollateralizationRatioRequired",
+      "msg": "Non-zero collateralization ratio required"
+    },
+    {
+      "code": 6041,
+      "name": "IncorrectOracleAddress",
+      "msg": "Incorrect oracle address provided"
+    },
+    {
+      "code": 6042,
+      "name": "CenteredCometRequired",
+      "msg": "Comet must be centered!"
+    },
+    {
+      "code": 6043,
+      "name": "InvalidResultingComet",
+      "msg": "Comet is in an invalid state after action"
+    },
+    {
+      "code": 6044,
+      "name": "InvalidValueRange",
+      "msg": "Value is in an incorrect range."
+    },
+    {
+      "code": 6045,
+      "name": "InvalidAssetStability",
+      "msg": "Asset stable requirement violated!"
     }
   ]
 };

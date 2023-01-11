@@ -8,12 +8,7 @@ declare_id!("7741WpkbdmZPGmqzPpsP3LdbzCwtMgxWH9tjdERnAzg8");
 pub mod pyth {
     use super::*;
 
-    pub fn initialize(
-        ctx: Context<Initialize>,
-        price: i64,
-        expo: i32,
-        _conf: u64,
-    ) -> ProgramResult {
+    pub fn initialize(ctx: Context<Initialize>, price: i64, expo: i32, _conf: u64) -> Result<()> {
         let oracle = &ctx.accounts.price;
 
         let mut price_oracle = Price::load(&oracle).unwrap();
@@ -28,7 +23,7 @@ pub mod pyth {
         Ok(())
     }
 
-    pub fn set_price(ctx: Context<SetPrice>, price: i64) -> ProgramResult {
+    pub fn set_price(ctx: Context<SetPrice>, price: i64) -> Result<()> {
         let oracle = &ctx.accounts.price;
         let mut price_oracle = Price::load(&oracle).unwrap();
 

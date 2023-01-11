@@ -2,6 +2,7 @@
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
+use rust_decimal::prelude::*;
 
 #[derive(Accounts)]
 #[instruction(user_nonce: u8, is_single_pool: bool)]
@@ -20,11 +21,7 @@ pub struct InitializeComet<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(
-    ctx: Context<InitializeComet>,
-    _user_nonce: u8,
-    is_single_pool: bool,
-) -> ProgramResult {
+pub fn execute(ctx: Context<InitializeComet>, _user_nonce: u8, is_single_pool: bool) -> Result<()> {
     let mut comet = ctx.accounts.comet.load_init()?;
 
     // set user data
@@ -33,10 +30,14 @@ pub fn execute(
         ctx.accounts.user_account.single_pool_comets = *ctx.accounts.comet.to_account_info().key;
     } else {
         ctx.accounts.user_account.comet = *ctx.accounts.comet.to_account_info().key;
+        // Initialize with USDi as collateral for multipool.
+        comet.add_collateral(CometCollateral {
+            authority: *ctx.accounts.user.to_account_info().key,
+            collateral_amount: RawDecimal::from(Decimal::new(0, DEVNET_TOKEN_SCALE)),
+            collateral_index: USDI_COLLATERAL_INDEX as u64,
+        });
     }
-
     // set user as owner
     comet.owner = *ctx.accounts.user.to_account_info().key;
-
     Ok(())
 }

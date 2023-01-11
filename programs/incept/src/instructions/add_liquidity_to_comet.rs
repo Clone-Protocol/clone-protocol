@@ -66,7 +66,7 @@ pub fn execute(
     manager_nonce: u8,
     pool_index: u8,
     usdi_amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
@@ -240,10 +240,7 @@ pub fn execute(
     // Require a healthy score after transactions
     let health_score = calculate_health_score(&comet, token_data, None)?;
 
-    require!(
-        matches!(health_score, HealthScore::Healthy { .. }),
-        InceptError::HealthScoreTooLow
-    );
+    require!(health_score.is_healthy(), InceptError::HealthScoreTooLow);
 
     Ok(())
 }

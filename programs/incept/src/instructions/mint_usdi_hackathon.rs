@@ -32,7 +32,7 @@ pub struct MintUSDIHackathon<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(ctx: Context<MintUSDIHackathon>, manager_nonce: u8, amount: u64) -> ProgramResult {
+pub fn execute(ctx: Context<MintUSDIHackathon>, manager_nonce: u8, amount: u64) -> Result<()> {
     //This instruction is for hackathon use ONLY!!!!
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 

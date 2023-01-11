@@ -54,7 +54,7 @@ pub fn execute(
     manager_nonce: u8,
     iasset_amount: u64,
     collateral_amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
@@ -80,10 +80,10 @@ pub fn execute(
     let iasset_amount_value = Decimal::new(iasset_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
     // check to see if collateral is stable
-    let is_stable: Result<bool, InceptError> = match collateral.stable {
+    let is_stable: Result<bool> = match collateral.stable {
         0 => Ok(false),
         1 => Ok(true),
-        _ => Err(InceptError::InvalidBool),
+        _ => Err(error!(InceptError::InvalidBool)),
     };
 
     // if collateral is not stable, throw an error

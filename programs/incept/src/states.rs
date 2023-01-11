@@ -53,10 +53,21 @@ impl Default for RawDecimal {
 #[account]
 #[derive(Default)]
 pub struct Manager {
-    // 96
-    pub usdi_mint: Pubkey,  // 32
-    pub token_data: Pubkey, // 32
-    pub admin: Pubkey,      // 32
+    // 145
+    pub usdi_mint: Pubkey,                     // 32
+    pub token_data: Pubkey,                    // 32
+    pub admin: Pubkey,                         // 32
+    pub bump: u8,                              // 1
+    pub liquidation_config: LiquidationConfig, // 48
+}
+
+#[zero_copy]
+#[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
+pub struct LiquidationConfig {
+    // 48
+    pub liquidator_fee: RawDecimal,                        // 16,
+    pub collateral_full_liquidation_threshold: RawDecimal, // 16
+    pub max_health_liquidation: RawDecimal,                // 16
 }
 
 #[account(zero_copy)]
@@ -98,10 +109,7 @@ impl TokenData {
         self.collaterals[(self.num_collaterals) as usize] = new_collateral;
         self.num_collaterals += 1;
     }
-    pub fn get_collateral_tuple(
-        &self,
-        collateral_vault: Pubkey,
-    ) -> Result<(Collateral, usize), InceptError> {
+    pub fn get_collateral_tuple(&self, collateral_vault: Pubkey) -> Result<(Collateral, usize)> {
         for i in 0..self.num_collaterals {
             let temp_collateral = self.collaterals[i as usize];
             if temp_collateral.vault == collateral_vault {
@@ -110,10 +118,7 @@ impl TokenData {
         }
         Err(InceptError::CollateralNotFound.into())
     }
-    pub fn get_pool_tuple_from_iasset_mint(
-        &self,
-        iasset_mint: Pubkey,
-    ) -> Result<(Pool, usize), InceptError> {
+    pub fn get_pool_tuple_from_iasset_mint(&self, iasset_mint: Pubkey) -> Result<(Pool, usize)> {
         for i in 0..self.num_pools {
             let temp_pool = self.pools[i as usize];
             if temp_pool.asset_info.iasset_mint == iasset_mint {
@@ -125,7 +130,7 @@ impl TokenData {
     pub fn get_pool_tuple_from_oracle(
         &self,
         price_feed_addresses: [&Pubkey; 2],
-    ) -> Result<(Pool, usize), InceptError> {
+    ) -> Result<(Pool, usize)> {
         for i in 0..self.num_pools {
             let temp_pool = self.pools[i as usize];
             if temp_pool.asset_info.price_feed_addresses[0] == *price_feed_addresses[0]
@@ -142,16 +147,17 @@ impl TokenData {
 #[derive(PartialEq, Default, Debug)]
 pub struct AssetInfo {
     // 208
-    pub iasset_mint: Pubkey,                  // 32
-    pub price_feed_addresses: [Pubkey; 2],    // 64
-    pub price: RawDecimal,                    // 16
-    pub twap: RawDecimal,                     // 16
-    pub confidence: RawDecimal,               // 16
-    pub status: u64,                          // 8
-    pub last_update: u64,                     // 8
-    pub stable_collateral_ratio: RawDecimal,  // 16
-    pub crypto_collateral_ratio: RawDecimal,  // 16
-    pub health_score_coefficient: RawDecimal, // 16
+    pub iasset_mint: Pubkey,                   // 32
+    pub price_feed_addresses: [Pubkey; 2],     // 64
+    pub price: RawDecimal,                     // 16
+    pub twap: RawDecimal,                      // 16
+    pub confidence: RawDecimal,                // 16
+    pub status: u64,                           // 8
+    pub last_update: u64,                      // 8
+    pub stable_collateral_ratio: RawDecimal,   // 16
+    pub crypto_collateral_ratio: RawDecimal,   // 16
+    pub health_score_coefficient: RawDecimal,  // 16
+    pub liquidation_discount_rate: RawDecimal, // 16
 }
 
 #[zero_copy]
@@ -305,7 +311,7 @@ impl Comet {
     pub fn calculate_effective_collateral_value(
         &self,
         token_data: &TokenData,
-        single_index: Option<usize>,
+        single_collateral_position_index: Option<usize>,
     ) -> Decimal {
         let mut total_value = Decimal::new(0, DEVNET_TOKEN_SCALE.into());
 
@@ -313,7 +319,7 @@ impl Comet {
             .iter()
             .enumerate()
             .for_each(|(i, comet_collateral)| {
-                if let Some(index) = single_index {
+                if let Some(index) = single_collateral_position_index {
                     if index != i {
                         return;
                     }

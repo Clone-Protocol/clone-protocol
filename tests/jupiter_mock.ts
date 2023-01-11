@@ -38,9 +38,9 @@ describe("jupiter mock aggregator", async () => {
   let assetMint = anchor.web3.Keypair.generate();
 
   it("initialize", async () => {
-    await jupiterProgram.rpc.initialize(nonce, {
+    await jupiterProgram.rpc.initialize({
       accounts: {
-        admin: jupiterProgram.provider.wallet.publicKey,
+        admin: jupiterProgram.provider.publicKey!,
         jupiterAccount: jupiterAddress,
         usdcMint: usdcMint.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -51,17 +51,9 @@ describe("jupiter mock aggregator", async () => {
       signers: [usdcMint],
     });
 
-    await jupiterProgram.rpc.stressTest(nonce, 10, {
-      accounts: {
-        jupiterAccount: jupiterAddress,
-      },
-    });
-
     let jupiterAccount = await jupiterProgram.account.jupiter.fetch(
       jupiterAddress
     );
-
-    let answer = new Decimal(jupiterAccount.answer.data);
   });
 
   it("create mock asset", async () => {
@@ -72,7 +64,7 @@ describe("jupiter mock aggregator", async () => {
 
     await jupiterProgram.rpc.createAsset(priceFeedKey, {
       accounts: {
-        payer: jupiterProgram.provider.wallet.publicKey,
+        payer: jupiterProgram.provider.publicKey!,
         assetMint: assetMint.publicKey,
         jupiterAccount: jupiterAddress,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -88,7 +80,7 @@ describe("jupiter mock aggregator", async () => {
 
     let usdcAssociatedTokenAddress = await getAssociatedTokenAddress(
       usdcMint.publicKey,
-      jupiterProgram.provider.wallet.publicKey,
+      jupiterProgram.provider.publicKey!,
       false,
       TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
@@ -96,14 +88,14 @@ describe("jupiter mock aggregator", async () => {
 
     let tx = new Transaction().add(
       createAssociatedTokenAccountInstruction(
-        jupiterProgram.provider.wallet.publicKey, // payer
+        jupiterProgram.provider.publicKey!, // payer
         usdcAssociatedTokenAddress, // ata
-        jupiterProgram.provider.wallet.publicKey, // owner
+        jupiterProgram.provider.publicKey!, // owner
         usdcMint.publicKey // mint
       )
     );
 
-    await jupiterProgram.provider.send(tx);
+    await jupiterProgram.provider.sendAndConfirm!(tx);
 
     await jupiterProgram.rpc.mintUsdc(
       nonce,
@@ -130,7 +122,7 @@ describe("jupiter mock aggregator", async () => {
 
     let assetAssociatedTokenAddress = await getAssociatedTokenAddress(
       assetMint.publicKey,
-      jupiterProgram.provider.wallet.publicKey,
+      jupiterProgram.provider.publicKey!,
       false,
       TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
@@ -138,14 +130,14 @@ describe("jupiter mock aggregator", async () => {
 
     let tx = new Transaction().add(
       createAssociatedTokenAccountInstruction(
-        jupiterProgram.provider.wallet.publicKey, // payer
+        jupiterProgram.provider.publicKey!, // payer
         assetAssociatedTokenAddress, // ata
-        jupiterProgram.provider.wallet.publicKey, // owner
+        jupiterProgram.provider.publicKey!, // owner
         assetMint.publicKey // mint
       )
     );
 
-    await jupiterProgram.provider.send(tx);
+    await jupiterProgram.provider.sendAndConfirm!(tx);
 
     await jupiterProgram.rpc.mintAsset(
       nonce,
@@ -173,7 +165,7 @@ describe("jupiter mock aggregator", async () => {
 
     let assetAssociatedTokenAddress = await getAssociatedTokenAddress(
       assetMint.publicKey,
-      jupiterProgram.provider.wallet.publicKey,
+      jupiterProgram.provider.publicKey!,
       false,
       TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
@@ -181,7 +173,7 @@ describe("jupiter mock aggregator", async () => {
 
     let usdcAssociatedTokenAddress = await getAssociatedTokenAddress(
       usdcMint.publicKey,
-      jupiterProgram.provider.wallet.publicKey,
+      jupiterProgram.provider.publicKey!,
       false,
       TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
@@ -199,7 +191,7 @@ describe("jupiter mock aggregator", async () => {
       new BN(amount * 100000000),
       {
         accounts: {
-          user: jupiterProgram.provider.wallet.publicKey,
+          user: jupiterProgram.provider.publicKey!,
           jupiterAccount: jupiterAddress,
           assetMint: assetMint.publicKey,
           usdcMint: usdcMint.publicKey,
@@ -232,7 +224,7 @@ describe("jupiter mock aggregator", async () => {
       new BN(amount * 100000000),
       {
         accounts: {
-          user: jupiterProgram.provider.wallet.publicKey,
+          user: jupiterProgram.provider.publicKey!,
           jupiterAccount: jupiterAddress,
           assetMint: assetMint.publicKey,
           usdcMint: usdcMint.publicKey,
@@ -262,7 +254,7 @@ describe("jupiter mock aggregator", async () => {
 
     let assetAssociatedTokenAddress = await getAssociatedTokenAddress(
       assetMint.publicKey,
-      jupiterProgram.provider.wallet.publicKey,
+      jupiterProgram.provider.publicKey!,
       false,
       TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
@@ -270,7 +262,7 @@ describe("jupiter mock aggregator", async () => {
 
     let usdcAssociatedTokenAddress = await getAssociatedTokenAddress(
       usdcMint.publicKey,
-      jupiterProgram.provider.wallet.publicKey,
+      jupiterProgram.provider.publicKey!,
       false,
       TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
@@ -289,7 +281,7 @@ describe("jupiter mock aggregator", async () => {
       new BN(amount * 10000000),
       {
         accounts: {
-          user: jupiterProgram.provider.wallet.publicKey,
+          user: jupiterProgram.provider.publicKey!,
           jupiterAccount: jupiterAddress,
           assetMint: assetMint.publicKey,
           usdcMint: usdcMint.publicKey,
@@ -322,7 +314,7 @@ describe("jupiter mock aggregator", async () => {
       new BN(amount * 10000000),
       {
         accounts: {
-          user: jupiterProgram.provider.wallet.publicKey,
+          user: jupiterProgram.provider.publicKey!,
           jupiterAccount: jupiterAddress,
           assetMint: assetMint.publicKey,
           usdcMint: usdcMint.publicKey,

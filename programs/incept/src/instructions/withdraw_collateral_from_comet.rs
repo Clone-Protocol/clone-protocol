@@ -55,18 +55,28 @@ pub fn execute(
     _user_nonce: u8,
     comet_collateral_index: u8,
     collateral_amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
+
+    let comet_collateral_index = comet_collateral_index as usize;
 
     let mut close = false;
     {
         let mut comet = ctx.accounts.comet.load_mut()?;
-        let comet_collateral = comet.collaterals[comet_collateral_index as usize];
+        let comet_collateral = comet.collaterals[comet_collateral_index];
         let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
-        let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
-        let subtracted_collateral_value =
-            Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale);
+
+        let collateral_scale = collateral
+            .vault_comet_supply
+            .to_decimal()
+            .scale();
+
+        let subtracted_collateral_value = Decimal::new(
+            collateral_amount.try_into().unwrap(),
+            collateral_scale     
+        )
+        .min(comet_collateral.collateral_amount.to_decimal());
 
         // subtract collateral amount from vault supply
         let mut vault_comet_supply =
@@ -76,9 +86,10 @@ pub fn execute(
             RawDecimal::from(vault_comet_supply);
 
         // ensure the position holds sufficient collateral
-        if comet_collateral.collateral_amount.to_decimal() < subtracted_collateral_value {
-            return Err(InceptError::InsufficientCollateral.into());
-        }
+        require!(
+            subtracted_collateral_value <= comet_collateral.collateral_amount.to_decimal(),
+            InceptError::InsufficientCollateral
+        );
 
         // update the collateral amount
         let mut new_collateral_amount =
@@ -88,8 +99,9 @@ pub fn execute(
             RawDecimal::from(new_collateral_amount);
 
         // remove collateral if empty
-        if new_collateral_amount.is_zero() {
-            comet.remove_collateral(comet_collateral_index as usize);
+        if new_collateral_amount.is_zero() && comet_collateral_index != USDI_COLLATERAL_INDEX
+        {
+            comet.remove_collateral(comet_collateral_index);
         }
 
         // send collateral from vault to user
@@ -116,10 +128,7 @@ pub fn execute(
 
             let health_score = calculate_health_score(&comet, token_data, None)?;
 
-            require!(
-                matches!(health_score, HealthScore::Healthy { .. }),
-                InceptError::HealthScoreTooLow
-            );
+            require!(health_score.is_healthy(), InceptError::HealthScoreTooLow);
         }
     }
     if close {

@@ -80,22 +80,22 @@ pub struct LiquidateCometILReduction<'info> {
     pub vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
     pub jupiter_program: Program<'info, JupiterAggMock>,
-    pub jupiter_account: Box<Account<'info, Jupiter>>,
+    pub jupiter_account: AccountLoader<'info, Jupiter>,
     #[account(
         mut,
         address = token_data.load()?.collaterals[USDC_COLLATERAL_INDEX].vault,
    )]
     pub usdc_vault: Box<Account<'info, TokenAccount>>,
     #[account(mut,
-        address = jupiter_account.asset_mints[asset_index as usize],
+        address = jupiter_account.load()?.asset_mints[asset_index as usize],
     )]
     pub asset_mint: Account<'info, Mint>,
     #[account(mut,
-        address = jupiter_account.usdc_mint
+        address = jupiter_account.load()?.usdc_mint
     )]
     pub usdc_mint: Account<'info, Mint>,
     #[account(
-        address = jupiter_account.oracles[asset_index as usize]
+        address = jupiter_account.load()?.oracles[asset_index as usize]
     )]
     pub pyth_oracle: AccountInfo<'info>,
 }
@@ -109,7 +109,7 @@ pub fn execute(
     asset_index: u8,
     comet_collateral_index: u8,
     il_reduction_amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
@@ -192,7 +192,7 @@ pub fn execute(
                     ctx.accounts.token_program.to_account_info().clone(),
                     Burn {
                         mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                        to: ctx.accounts.vault.to_account_info().clone(),
+                        from: ctx.accounts.vault.to_account_info().clone(),
                         authority: ctx.accounts.manager.to_account_info().clone(),
                     },
                     seeds,
@@ -317,7 +317,7 @@ pub fn execute(
                     ctx.accounts.token_program.to_account_info().clone(),
                     Burn {
                         mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                        to: ctx.accounts.vault.to_account_info().clone(),
+                        from: ctx.accounts.vault.to_account_info().clone(),
                         authority: ctx.accounts.manager.to_account_info().clone(),
                     },
                     seeds,
@@ -401,7 +401,7 @@ pub fn execute(
                 ctx.accounts.token_program.to_account_info().clone(),
                 Burn {
                     mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-                    to: ctx
+                    from: ctx
                         .accounts
                         .amm_iasset_token_account
                         .to_account_info()

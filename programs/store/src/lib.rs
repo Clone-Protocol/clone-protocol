@@ -220,7 +220,7 @@ pub mod store {
 
     /// The query instruction takes a `Query` and serializes the response in a fixed format. That way queries
     /// are not bound to the underlying layout.
-    pub fn query(ctx: Context<Query>, scope: Scope) -> ProgramResult {
+    pub fn query(ctx: Context<Query>, scope: Scope) -> Result<()> {
         use std::io::Cursor;
 
         let mut buf = Cursor::new(Vec::with_capacity(128)); // TODO: calculate max size
@@ -431,7 +431,7 @@ pub mod accessors {
     }
 }
 
-#[error]
+#[error_code]
 pub enum ErrorCode {
     #[msg("Unauthorized")]
     Unauthorized = 0,

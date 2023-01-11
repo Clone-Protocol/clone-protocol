@@ -6,13 +6,13 @@ use anchor_spl::token::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, stable_collateral_ratio: u16, crypto_collateral_ratio: u16, health_score_coefficient: u64)]
+#[instruction(stable_collateral_ratio: u16, crypto_collateral_ratio: u16, health_score_coefficient: u64)]
 pub struct InitializePool<'info> {
-    #[account(address = manager.admin)]
+    #[account(mut, address = manager.admin)]
     pub admin: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data,
         has_one = admin
     )]
@@ -77,16 +77,16 @@ pub struct InitializePool<'info> {
 
 pub fn execute(
     ctx: Context<InitializePool>,
-    _manager_nonce: u8,
     stable_collateral_ratio: u16,
     crypto_collateral_ratio: u16,
     liquidity_trading_fee: u16,
     health_score_coefficient: u64,
-) -> ProgramResult {
+    liquidation_discount_rate: u64,
+) -> Result<()> {
     // ensure valid health score coefficient
     require!(
-        health_score_coefficient > 0,
-        InceptError::InvalidHealthScoreCoefficient
+        liquidation_discount_rate < 10000,
+        InceptError::InvalidValueRange
     );
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
@@ -135,6 +135,10 @@ pub fn execute(
         health_score_coefficient.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,
     );
+    token_data.pools[index as usize]
+        .asset_info
+        .liquidation_discount_rate =
+        RawDecimal::new(liquidation_discount_rate.try_into().unwrap(), 4);
 
     Ok(())
 }

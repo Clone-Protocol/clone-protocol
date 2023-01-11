@@ -28,7 +28,7 @@ pub fn execute(
     _manager_nonce: u8,
     pool_index: u8,
     health_score_coefficient: u64,
-) -> ProgramResult {
+) -> Result<()> {
     // ensure that a valid coefficient was entered
     require!(
         health_score_coefficient > 0,
