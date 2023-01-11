@@ -232,8 +232,10 @@ pub mod incept {
         manager_nonce: u8,
         pool_index: u8,
         amount: u64,
+        expected_usdi_amount: u64,
+        slippage_tolerance: u64
     ) -> Result<()> {
-        instructions::buy_synth::execute(ctx, manager_nonce, pool_index, amount)
+        instructions::buy_synth::execute(ctx, manager_nonce, pool_index, amount, expected_usdi_amount, slippage_tolerance)
     }
 
     pub fn sell_synth(
@@ -241,8 +243,10 @@ pub mod incept {
         manager_nonce: u8,
         pool_index: u8,
         amount: u64,
+        expected_usdi_amount: u64,
+        slippage_tolerance: u64
     ) -> Result<()> {
-        instructions::sell_synth::execute(ctx, manager_nonce, pool_index, amount)
+        instructions::sell_synth::execute(ctx, manager_nonce, pool_index, amount, expected_usdi_amount, slippage_tolerance)
     }
 
     pub fn initialize_single_pool_comet(
