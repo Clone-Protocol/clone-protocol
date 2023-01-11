@@ -67,16 +67,11 @@ pub fn execute(
         let comet_collateral = comet.collaterals[comet_collateral_index];
         let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
 
-        let collateral_scale = collateral
-            .vault_comet_supply
-            .to_decimal()
-            .scale();
+        let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
 
-        let subtracted_collateral_value = Decimal::new(
-            collateral_amount.try_into().unwrap(),
-            collateral_scale     
-        )
-        .min(comet_collateral.collateral_amount.to_decimal());
+        let subtracted_collateral_value =
+            Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale)
+                .min(comet_collateral.collateral_amount.to_decimal());
 
         // subtract collateral amount from vault supply
         let mut vault_comet_supply =
@@ -99,8 +94,7 @@ pub fn execute(
             RawDecimal::from(new_collateral_amount);
 
         // remove collateral if empty
-        if new_collateral_amount.is_zero() && comet_collateral_index != USDI_COLLATERAL_INDEX
-        {
+        if new_collateral_amount.is_zero() && comet_collateral_index != USDI_COLLATERAL_INDEX {
             comet.remove_collateral(comet_collateral_index);
         }
 

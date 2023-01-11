@@ -92,9 +92,8 @@ pub fn execute(
         .to_decimal();
     let mut new_collateral_amount = current_collateral_amount + added_collateral_value;
     new_collateral_amount.rescale(current_collateral_amount.scale());
-    single_pool_comets.collaterals[position_index as usize].collateral_amount = RawDecimal::from(
-        new_collateral_amount
-    );
+    single_pool_comets.collaterals[position_index as usize].collateral_amount =
+        RawDecimal::from(new_collateral_amount);
 
     // send collateral from user to vault
     let cpi_ctx = CpiContext::from(&*ctx.accounts);
