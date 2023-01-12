@@ -17,7 +17,7 @@ import {
   Transaction,
   Keypair,
 } from "@solana/web3.js";
-import { sleep } from "./utils";
+import { calculateInputFromOutput, sleep } from "./utils";
 import {
   MintPositionsUninitialized,
   SinglePoolCometUninitialized,
@@ -2543,11 +2543,8 @@ export class Incept {
           let pool = tokenData.pools[position.poolIndex];
           let poolUsdiAmount = toNumber(pool.usdiAmount);
           let poolIassetAmount = toNumber(pool.iassetAmount);
-          let poolPrice = poolUsdiAmount / poolIassetAmount;
           let borrowedUsdi = toNumber(position.borrowedUsdi);
           let borrowedIasset = toNumber(position.borrowedIasset);
-
-          let initPrice = borrowedUsdi / borrowedIasset;
 
           let claimableRatio =
             toNumber(position.liquidityTokenValue) /
@@ -2562,24 +2559,23 @@ export class Incept {
           let poolHealthScoreCoefficient = toNumber(
             pool.assetInfo.healthScoreCoefficient
           );
-          let markPrice = Math.max(toNumber(pool.assetInfo.price), poolPrice);
 
-          let ilHealthImpact = 0;
-
-          if (borrowedUsdi === 0 || borrowedIasset === 0) {
-            ilHealthImpact = borrowedUsdi
-              ? borrowedUsdi
-              : borrowedIasset * markPrice * ilHealthScoreCoefficient;
-          } else if (poolPrice < initPrice) {
-            ilHealthImpact =
-              (borrowedUsdi - claimableUsdi) * ilHealthScoreCoefficient;
-          } else if (initPrice < poolPrice) {
-            ilHealthImpact =
-              markPrice *
-              (borrowedIasset - claimableIasset) *
-              ilHealthScoreCoefficient;
+          let ild = 0;
+          if (borrowedUsdi > claimableUsdi) {
+            ild += borrowedUsdi - claimableUsdi
           }
+          if (borrowedIasset > claimableIasset) {
+            const iassetDebt = borrowedIasset - claimableIasset
+
+            const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt
+            const poolMarked = calculateInputFromOutput(pool, iassetDebt, false)
+
+            ild += Math.max(oracleMarked, poolMarked)
+          }
+
+          let ilHealthImpact = ild * ilHealthScoreCoefficient;
           let positionHealthImpact = poolHealthScoreCoefficient * borrowedUsdi;
+
           totalIldHealthImpact += ilHealthImpact;
 
           return positionHealthImpact + ilHealthImpact;
@@ -2601,26 +2597,30 @@ export class Incept {
     let pool = tokenData.pools[position.poolIndex];
     let poolUsdiAmount = toNumber(pool.usdiAmount);
     let poolIassetAmount = toNumber(pool.iassetAmount);
-    let poolPrice = poolUsdiAmount / poolIassetAmount;
     let borrowedUsdi = toNumber(position.borrowedUsdi);
     let borrowedIasset = toNumber(position.borrowedIasset);
-    let initPrice = borrowedUsdi / borrowedIasset;
 
     let claimableRatio =
       toNumber(position.liquidityTokenValue) /
       toNumber(pool.liquidityTokenSupply);
 
-    let markPrice = Math.max(toNumber(pool.assetInfo.price), poolPrice);
-
     let claimableUsdi = poolUsdiAmount * claimableRatio;
     let claimableIasset = poolIassetAmount * claimableRatio;
+
     let ILD = 0;
-    let isUsdi = false;
-    if (initPrice < poolPrice) {
-      ILD += (borrowedIasset - claimableIasset) * markPrice;
-    } else if (poolPrice < initPrice) {
-      ILD += borrowedUsdi - claimableUsdi;
-      isUsdi = true;
+    let isUsdi = true;
+
+    if (borrowedUsdi > claimableUsdi) {
+      ILD += borrowedUsdi - claimableUsdi
+    }
+    if (borrowedIasset > claimableIasset) {
+      const iassetDebt = borrowedIasset - claimableIasset
+
+      const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt
+      const poolMarked = calculateInputFromOutput(pool, iassetDebt, false)
+
+      ILD += Math.max(oracleMarked, poolMarked)
+      isUsdi = false
     }
 
     const ilCoefficient = toNumber(tokenData.ilHealthScoreCoefficient);
@@ -2632,7 +2632,7 @@ export class Incept {
       100 -
       totalLoss / toNumber(comet.collaterals[cometIndex].collateralAmount);
 
-    return { healthScore: healthScore, ILD: ILD, ildInUsdi: isUsdi };
+    return { healthScore: healthScore, ILD: ILD, ildInUsdi: isUsdi};
   }
 
   public async getSinglePoolILD(
@@ -2659,12 +2659,18 @@ export class Incept {
     let claimableUsdi = poolUsdiAmount * claimableRatio;
     let claimableIasset = poolIassetAmount * claimableRatio;
     let ILD = 0;
-    let isUsdi = false;
-    if (initPrice < poolPrice) {
-      ILD += (borrowedIasset - claimableIasset) * markPrice;
-    } else if (poolPrice < initPrice) {
-      ILD += borrowedUsdi - claimableUsdi;
-      isUsdi = true;
+    let isUsdi = true;
+    if (borrowedUsdi > claimableUsdi) {
+      ILD += borrowedUsdi - claimableUsdi
+    }
+    if (borrowedIasset > claimableIasset) {
+      const iassetDebt = borrowedIasset - claimableIasset
+
+      const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt
+      const poolMarked = calculateInputFromOutput(pool, iassetDebt, false)
+
+      ILD += Math.max(oracleMarked, poolMarked)
+      isUsdi = false;
     }
 
     return { ILD: ILD, ildInUsdi: isUsdi };
@@ -2686,11 +2692,9 @@ export class Incept {
       let pool = tokenData.pools[position.poolIndex];
       let poolUsdiAmount = toNumber(pool.usdiAmount);
       let poolIassetAmount = toNumber(pool.iassetAmount);
-      let poolPrice = poolUsdiAmount / poolIassetAmount;
 
       let borrowedUsdi = toNumber(position.borrowedUsdi);
       let borrowedIasset = toNumber(position.borrowedIasset);
-      let initPrice = borrowedUsdi / borrowedIasset;
 
       let claimableRatio =
         toNumber(position.liquidityTokenValue) /
@@ -2699,12 +2703,18 @@ export class Incept {
       let claimableUsdi = poolUsdiAmount * claimableRatio;
       let claimableIasset = poolIassetAmount * claimableRatio;
       let ILD = 0;
-      let isUsdi = false;
-      if (poolPrice < initPrice) {
-        ILD += borrowedUsdi - claimableUsdi;
-        isUsdi = true;
-      } else if (initPrice < poolPrice) {
-        ILD += borrowedIasset - claimableIasset;
+      let isUsdi = true;
+      if (borrowedUsdi > claimableUsdi) {
+        ILD += borrowedUsdi - claimableUsdi
+      }
+      if (borrowedIasset > claimableIasset) {
+        const iassetDebt = borrowedIasset - claimableIasset
+  
+        const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt
+        const poolMarked = calculateInputFromOutput(pool, iassetDebt, false)
+  
+        ILD += Math.max(oracleMarked, poolMarked)
+        isUsdi = false;
       }
 
       results.push({ isUsdi: isUsdi, ILD: ILD, poolIndex: position.poolIndex });

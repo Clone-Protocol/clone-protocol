@@ -2397,10 +2397,11 @@ describe("incept", async () => {
       comet
     );
     const healthScore2 = inceptClient.getHealthScore(tokenData, comet);
-    assert.isAbove(
-      healthScore2.healthScore,
-      healthScore1.healthScore,
-      "health score should increase"
+    assert.closeTo(
+      healthScore2.ildHealthImpact,
+      0,
+      1e-6,
+      "ILD should be near zero."
     );
     assert.equal(
       comet1TotalCollateral - 1,

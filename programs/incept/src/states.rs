@@ -177,6 +177,41 @@ pub struct Pool {
     pub asset_info: AssetInfo,                    // 208
 }
 
+impl Pool {
+    pub fn total_trading_fee(&self) -> Decimal {
+        self.liquidity_trading_fee.to_decimal() + self.treasury_trading_fee.to_decimal()
+    }
+
+    // Calculate how much you would get from inputting that amount into the pool.
+    pub fn calculate_output_from_input(&self, input: Decimal, input_is_usdi: bool) -> Decimal {
+        let pool_usdi = self.usdi_amount.to_decimal();
+        let pool_iasset = self.iasset_amount.to_decimal();
+        let invariant = pool_iasset * pool_usdi;
+        let fee_adjustment = Decimal::ONE - self.total_trading_fee();
+
+        let unadjusted_output = if input_is_usdi {
+            pool_iasset - invariant / (pool_usdi + input)
+        } else {
+            pool_usdi - invariant / (pool_iasset + input)
+        };
+        unadjusted_output * fee_adjustment
+    }
+
+    // Calculate how much you would require to input into the pool given a desired output.
+    pub fn calculate_input_from_output(&self, output: Decimal, output_is_usdi: bool) -> Decimal {
+        let pool_usdi = self.usdi_amount.to_decimal();
+        let pool_iasset = self.iasset_amount.to_decimal();
+        let invariant = pool_iasset * pool_usdi;
+        let fee_adjustment = Decimal::ONE - self.total_trading_fee();
+
+        if output_is_usdi {
+            invariant / (pool_usdi - output / fee_adjustment) - pool_iasset
+        } else {
+            invariant / (pool_iasset - output / fee_adjustment) - pool_usdi
+        }
+    }
+}
+
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct Collateral {
