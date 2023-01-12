@@ -57,7 +57,7 @@ pub fn execute(
     pool_index: u8,
     amount: u64,
     expected_usdi_amount: u64,
-    slippage_tolerance: u64
+    slippage_tolerance: u64,
 ) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
@@ -87,9 +87,11 @@ pub fn execute(
 
     // ensure it's within slippage tolerance
     let execution_slippage_tolerance = Decimal::new(slippage_tolerance.try_into().unwrap(), 4);
-    let expected_usdi_output = Decimal::new(expected_usdi_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let expected_usdi_output =
+        Decimal::new(expected_usdi_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
     require!(
-        (expected_usdi_output - usdi_amount_value) / expected_usdi_output <= execution_slippage_tolerance,
+        (expected_usdi_output - usdi_amount_value) / expected_usdi_output
+            <= execution_slippage_tolerance,
         InceptError::SlippageToleranceExceeded
     );
 

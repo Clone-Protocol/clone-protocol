@@ -54,7 +54,7 @@ pub fn execute(
     pool_index: u8,
     amount: u64,
     expected_usdi_amount: u64,
-    slippage_tolerance: u64
+    slippage_tolerance: u64,
 ) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
@@ -78,22 +78,24 @@ pub fn execute(
         DEVNET_TOKEN_SCALE,
     );
 
-
     // calculate how much usdi must be spent
     let mut usdi_amount_value = pool.calculate_input_from_output(iasset_amount_value, false);
     usdi_amount_value.rescale(DEVNET_TOKEN_SCALE);
 
     // ensure that the user has sufficient usdi
     require!(
-        ctx.accounts.user_usdi_token_account.amount >= usdi_amount_value.mantissa().try_into().unwrap(),
+        ctx.accounts.user_usdi_token_account.amount
+            >= usdi_amount_value.mantissa().try_into().unwrap(),
         InceptError::InvalidTokenAmount
     );
 
     // ensure it's within slippage tolerance
     let execution_slippage_tolerance = Decimal::new(slippage_tolerance.try_into().unwrap(), 4);
-    let expected_usdi_output = Decimal::new(expected_usdi_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let expected_usdi_output =
+        Decimal::new(expected_usdi_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
     require!(
-        (usdi_amount_value - expected_usdi_output) / expected_usdi_output <= execution_slippage_tolerance,
+        (usdi_amount_value - expected_usdi_output) / expected_usdi_output
+            <= execution_slippage_tolerance,
         InceptError::SlippageToleranceExceeded
     );
 
