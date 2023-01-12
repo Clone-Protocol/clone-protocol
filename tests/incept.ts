@@ -22,7 +22,11 @@ import {
   getFeedData,
   ChainLinkOracle,
 } from "../sdk/src/oracle";
-import { sleep } from "../sdk/src/utils";
+import {
+  calculateInputFromOutput,
+  calculateOutputFromInput,
+  sleep,
+} from "../sdk/src/utils";
 import { getMantissa, toNumber } from "../sdk/src/decimal";
 
 describe("incept", async () => {
@@ -959,7 +963,9 @@ describe("incept", async () => {
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      new BN(5617968362723),
+      new BN(1000)
     );
 
     await sleep(200);
@@ -1025,7 +1031,9 @@ describe("incept", async () => {
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      new BN(5617968362723),
+      new BN(1000)
     );
 
     await sleep(200);
@@ -1410,11 +1418,15 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
+    const expectedUsdiRequired = calculateInputFromOutput(pool, 10000, false);
+
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(expectedUsdiRequired),
+      new BN(1000)
     );
 
     await sleep(200);
@@ -1574,24 +1586,34 @@ describe("incept", async () => {
     await inceptClient.addLiquidityToSinglePoolComet(toDevnetScale(200), 1);
     tokenData = await inceptClient.getTokenData();
     const pool1 = tokenData.pools[poolIndex];
+    const expectedUsdiRequired = calculateInputFromOutput(pool1, 10000, false);
+
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(expectedUsdiRequired),
+      new BN(20)
     );
     await inceptClient.recenterSinglePoolComet(1);
     await inceptClient.withdrawLiquidityFromSinglePoolComet(
       toDevnetScale(10),
       1
     );
+    tokenData = await inceptClient.getTokenData();
+    const pool2 = tokenData.pools[poolIndex];
+
+    const expectedUsdiOutput = calculateOutputFromInput(pool2, 15000, false);
 
     // Decrease pool price
     await inceptClient.sellSynth(
       new BN(1500000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(expectedUsdiOutput),
+      new BN(20)
     );
 
     let singlePoolComet = await inceptClient.getSinglePoolComet(1);
@@ -1621,20 +1643,22 @@ describe("incept", async () => {
 
     // Need to buy to get back to original price
     tokenData = await inceptClient.getTokenData();
-    const pool2 = tokenData.pools[poolIndex];
+    const pool3 = tokenData.pools[poolIndex];
 
     const prevPrice = toNumber(pool1.usdiAmount) / toNumber(pool1.iassetAmount);
     const iAssetToBuy =
-      toNumber(pool2.iassetAmount) -
+      toNumber(pool3.iassetAmount) -
       Math.sqrt(
-        (toNumber(pool2.usdiAmount) * toNumber(pool2.iassetAmount)) / prevPrice
+        (toNumber(pool3.usdiAmount) * toNumber(pool3.iassetAmount)) / prevPrice
       );
 
     await inceptClient.buySynth(
       toDevnetScale(iAssetToBuy),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(calculateInputFromOutput(pool3, iAssetToBuy, false)),
+      new BN(1000)
     );
   });
 
@@ -1958,13 +1982,19 @@ describe("incept", async () => {
     tokenData = await inceptClient.getTokenData();
     const pool1 = tokenData.pools[poolIndex];
 
+    const estimatedUsdiRequired1 = calculateInputFromOutput(
+      pool1,
+      10000,
+      false
+    );
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(estimatedUsdiRequired1),
+      new BN(20)
     );
-
     await inceptClient.recenterComet(0, 0, false);
     await inceptClient.withdrawLiquidityFromComet(
       new BN(50000000),
@@ -1973,30 +2003,48 @@ describe("incept", async () => {
       false
     );
 
+    tokenData = await inceptClient.getTokenData();
+    const pool2 = tokenData.pools[poolIndex];
+
+    const estimatedUsdiRequired2 = calculateOutputFromInput(
+      pool2,
+      15000,
+      false
+    );
+
     // Decrease pool price
     await inceptClient.sellSynth(
       new BN(1500000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(estimatedUsdiRequired2),
+      new BN(20)
     );
-
     // Need to buy to get back to original price
     tokenData = await inceptClient.getTokenData();
-    const pool2 = tokenData.pools[poolIndex];
+    const pool3 = tokenData.pools[poolIndex];
 
     const prevPrice = toNumber(pool1.usdiAmount) / toNumber(pool1.iassetAmount);
     const iAssetToBuy =
-      toNumber(pool2.iassetAmount) -
+      toNumber(pool3.iassetAmount) -
       Math.sqrt(
-        (toNumber(pool2.usdiAmount) * toNumber(pool2.iassetAmount)) / prevPrice
+        (toNumber(pool3.usdiAmount) * toNumber(pool3.iassetAmount)) / prevPrice
       );
+
+    const estimatedUsdiRequired3 = calculateInputFromOutput(
+      pool3,
+      iAssetToBuy,
+      false
+    );
 
     await inceptClient.buySynth(
       toDevnetScale(iAssetToBuy),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(estimatedUsdiRequired3),
+      new BN(20)
     );
   });
 
@@ -2038,11 +2086,15 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
+    const estimatedUsdiRequired = calculateInputFromOutput(pool, 10000, false);
+
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(estimatedUsdiRequired),
+      new BN(20)
     );
 
     await sleep(200);
