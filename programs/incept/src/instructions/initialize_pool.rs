@@ -110,6 +110,8 @@ pub fn execute(
         liquidity_token_supply: RawDecimal::default(),
         treasury_trading_fee: RawDecimal::from_percent(0),
         liquidity_trading_fee: RawDecimal::from_percent(liquidity_trading_fee),
+        total_minted_amount: RawDecimal::default(),
+        supplied_mint_collateral_amount: RawDecimal::default(),
         asset_info: AssetInfo {
             ..Default::default()
         },
