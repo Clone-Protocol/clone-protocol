@@ -9,7 +9,7 @@ use std::convert::TryInto;
 //use crate::instructions::InitializeMintPosition;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, iasset_amount: u64, collateral_amount: u64)]
+#[instruction(manager_nonce: u8, pool_index: u8, collateral_index: u8, iasset_amount: u64, collateral_amount: u64)]
 pub struct InitializeMintPosition<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -28,7 +28,10 @@ pub struct InitializeMintPosition<'info> {
         constraint = &mint_positions.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner
     )]
     pub mint_positions: AccountLoader<'info, MintPositions>,
-    #[account(mut)]
+    #[account(
+        mut,
+        address = token_data.load()?.collaterals[collateral_index as usize].vault
+    )]
     pub vault: Account<'info, TokenAccount>,
     #[account(
         mut,
@@ -37,7 +40,10 @@ pub struct InitializeMintPosition<'info> {
         associated_token::authority = user
     )]
     pub user_collateral_token_account: Account<'info, TokenAccount>,
-    #[account(mut)]
+    #[account(
+        mut,
+        address = token_data.load()?.pools[pool_index as usize].asset_info.iasset_mint,
+    )]
     pub iasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
@@ -52,44 +58,29 @@ pub struct InitializeMintPosition<'info> {
 pub fn execute(
     ctx: Context<InitializeMintPosition>,
     manager_nonce: u8,
+    pool_index: u8,
+    collateral_index: u8,
     iasset_amount: u64,
     collateral_amount: u64,
 ) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
+    let pool = token_data.pools[pool_index as usize];
+
     let (collateral, collateral_index) =
         TokenData::get_collateral_tuple(&*token_data, *ctx.accounts.vault.to_account_info().key)
             .unwrap();
 
-    let (pool, pool_index) = TokenData::get_pool_tuple_from_iasset_mint(
-        &*token_data,
-        *ctx.accounts.iasset_mint.to_account_info().key,
-    )
-    .unwrap();
+    let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
 
-    let collateral_amount_value = Decimal::new(
-        collateral_amount.try_into().unwrap(),
-        collateral
-            .vault_mint_supply
-            .to_decimal()
-            .scale()
-            .try_into()
-            .unwrap(),
-    );
+    let collateral_amount_value =
+        Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale);
     let iasset_amount_value = Decimal::new(iasset_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
     // check to see if collateral is stable
-    let is_stable: Result<bool> = match collateral.stable {
-        0 => Ok(false),
-        1 => Ok(true),
-        _ => Err(error!(InceptError::InvalidBool)),
-    };
+    require!(collateral.stable == 1, InceptError::InvalidCollateralType);
 
-    // if collateral is not stable, throw an error
-    if !(is_stable.unwrap()) {
-        return Err(InceptError::InvalidCollateralType.into());
-    }
     let collateral_ratio = pool.asset_info.stable_collateral_ratio.to_decimal();
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
@@ -148,10 +139,27 @@ pub fn execute(
 
     let current_vault_mint_supply = collateral.vault_mint_supply.to_decimal();
     let mut new_vault_mint_supply = current_vault_mint_supply + collateral_amount_value;
-    new_vault_mint_supply.rescale(current_vault_mint_supply.scale());
+    new_vault_mint_supply.rescale(collateral_scale);
     // add collateral amount to vault supply
     token_data.collaterals[collateral_index].vault_mint_supply =
         RawDecimal::from(new_vault_mint_supply);
+
+    // Update token data
+    let mut total_minted_amount = token_data.pools[pool_index as usize]
+        .total_minted_amount
+        .to_decimal()
+        + iasset_amount_value;
+    total_minted_amount.rescale(DEVNET_TOKEN_SCALE);
+    token_data.pools[pool_index as usize].total_minted_amount =
+        RawDecimal::from(total_minted_amount);
+
+    let mut supplied_collateral = token_data.pools[pool_index as usize]
+        .supplied_mint_collateral_amount
+        .to_decimal()
+        + collateral_amount_value;
+    supplied_collateral.rescale(DEVNET_TOKEN_SCALE);
+    token_data.pools[pool_index as usize].supplied_mint_collateral_amount =
+        RawDecimal::from(supplied_collateral);
 
     // increment number of mint positions
     mint_positions.num_positions += 1;

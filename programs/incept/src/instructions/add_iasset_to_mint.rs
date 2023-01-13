@@ -51,7 +51,7 @@ pub fn execute(
 ) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 
-    let token_data = ctx.accounts.token_data.load_mut()?;
+    let mut token_data = ctx.accounts.token_data.load_mut()?;
     let mint_positions = &mut ctx.accounts.mint_positions.load_mut()?;
 
     let amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
@@ -62,10 +62,17 @@ pub fn execute(
     let collateral_ratio = pool.asset_info.stable_collateral_ratio.to_decimal();
 
     // update total amount of borrowed iasset
+    let mut new_minted_amount = mint_position.borrowed_iasset.to_decimal() + amount_value;
+    new_minted_amount.rescale(DEVNET_TOKEN_SCALE);
     mint_positions.mint_positions[mint_index as usize].borrowed_iasset =
-        RawDecimal::from(mint_position.borrowed_iasset.to_decimal() + amount_value);
+        RawDecimal::from(new_minted_amount);
 
     let slot = Clock::get()?.slot;
+
+    // Update protocol-wide total
+    let mut total_minted = pool.total_minted_amount.to_decimal() + amount_value;
+    total_minted.rescale(DEVNET_TOKEN_SCALE);
+    token_data.pools[pool_index as usize].total_minted_amount = RawDecimal::from(total_minted);
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
