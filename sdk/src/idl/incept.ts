@@ -612,6 +612,14 @@ export type Incept = {
           "type": "u8"
         },
         {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "collateralIndex",
+          "type": "u8"
+        },
+        {
           "name": "iassetAmount",
           "type": "u64"
         },
@@ -2941,6 +2949,18 @@ export type Incept = {
           },
           {
             "name": "liquidityTradingFee",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "totalMintedAmount",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "suppliedMintCollateralAmount",
             "type": {
               "defined": "RawDecimal"
             }
@@ -4010,6 +4030,14 @@ export const IDL: Incept = {
           "type": "u8"
         },
         {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "collateralIndex",
+          "type": "u8"
+        },
+        {
           "name": "iassetAmount",
           "type": "u64"
         },
@@ -6339,6 +6367,18 @@ export const IDL: Incept = {
           },
           {
             "name": "liquidityTradingFee",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "totalMintedAmount",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "suppliedMintCollateralAmount",
             "type": {
               "defined": "RawDecimal"
             }
