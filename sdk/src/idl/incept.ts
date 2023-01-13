@@ -1115,6 +1115,14 @@ export type Incept = {
         {
           "name": "amount",
           "type": "u64"
+        },
+        {
+          "name": "expectedUsdiAmount",
+          "type": "u64"
+        },
+        {
+          "name": "slippageTolerance",
+          "type": "u64"
         }
       ]
     },
@@ -1173,6 +1181,14 @@ export type Incept = {
         },
         {
           "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "expectedUsdiAmount",
+          "type": "u64"
+        },
+        {
+          "name": "slippageTolerance",
           "type": "u64"
         }
       ]
@@ -3371,6 +3387,11 @@ export type Incept = {
       "code": 6045,
       "name": "InvalidAssetStability",
       "msg": "Asset stable requirement violated!"
+    },
+    {
+      "code": 6046,
+      "name": "SlippageToleranceExceeded",
+      "msg": "Slippage tolerance exceeded!"
     }
   ]
 };
@@ -4492,6 +4513,14 @@ export const IDL: Incept = {
         {
           "name": "amount",
           "type": "u64"
+        },
+        {
+          "name": "expectedUsdiAmount",
+          "type": "u64"
+        },
+        {
+          "name": "slippageTolerance",
+          "type": "u64"
         }
       ]
     },
@@ -4550,6 +4579,14 @@ export const IDL: Incept = {
         },
         {
           "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "expectedUsdiAmount",
+          "type": "u64"
+        },
+        {
+          "name": "slippageTolerance",
           "type": "u64"
         }
       ]
@@ -6748,6 +6785,11 @@ export const IDL: Incept = {
       "code": 6045,
       "name": "InvalidAssetStability",
       "msg": "Asset stable requirement violated!"
+    },
+    {
+      "code": 6046,
+      "name": "SlippageToleranceExceeded",
+      "msg": "Slippage tolerance exceeded!"
     }
   ]
 };
