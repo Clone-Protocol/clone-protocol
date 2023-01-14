@@ -22,11 +22,7 @@ import {
   getFeedData,
   ChainLinkOracle,
 } from "../sdk/src/oracle";
-import {
-  calculateInputFromOutput,
-  calculateOutputFromInput,
-  sleep,
-} from "../sdk/src/utils";
+import { calculateExecutionThreshold, sleep } from "../sdk/src/utils";
 import { getMantissa, toNumber } from "../sdk/src/decimal";
 
 describe("incept", async () => {
@@ -959,13 +955,14 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
+    const executionEst = calculateExecutionThreshold(10000, true, pool, 0.0);
+
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       poolIndex,
-      new BN(5617968362723),
-      new BN(1000)
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
 
     await sleep(200);
@@ -1027,13 +1024,14 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
+    let executionEst = calculateExecutionThreshold(10000, false, pool, 0.0);
+
     await inceptClient.sellSynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       poolIndex,
-      new BN(5617968362723),
-      new BN(1000)
+      new BN(executionEst.expectedUsdiAmount)
     );
 
     await sleep(200);
@@ -1417,16 +1415,14 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         pool.assetInfo.iassetMint
       );
-
-    const expectedUsdiRequired = calculateInputFromOutput(pool, 10000, false);
+    const executionEst = calculateExecutionThreshold(10000, true, pool, 0.0001);
 
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       poolIndex,
-      toDevnetScale(expectedUsdiRequired),
-      new BN(1000)
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
 
     await sleep(200);
@@ -1586,15 +1582,13 @@ describe("incept", async () => {
     await inceptClient.addLiquidityToSinglePoolComet(toDevnetScale(200), 1);
     tokenData = await inceptClient.getTokenData();
     const pool1 = tokenData.pools[poolIndex];
-    const expectedUsdiRequired = calculateInputFromOutput(pool1, 10000, false);
-
+    let executionEst = calculateExecutionThreshold(10000, true, pool1, 0.0001);
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       poolIndex,
-      toDevnetScale(expectedUsdiRequired),
-      new BN(20)
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
     await inceptClient.recenterSinglePoolComet(1);
     await inceptClient.withdrawLiquidityFromSinglePoolComet(
@@ -1604,7 +1598,7 @@ describe("incept", async () => {
     tokenData = await inceptClient.getTokenData();
     const pool2 = tokenData.pools[poolIndex];
 
-    const expectedUsdiOutput = calculateOutputFromInput(pool2, 15000, false);
+    executionEst = calculateExecutionThreshold(15000, false, pool2, 0.0001);
 
     // Decrease pool price
     await inceptClient.sellSynth(
@@ -1612,8 +1606,7 @@ describe("incept", async () => {
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       poolIndex,
-      toDevnetScale(expectedUsdiOutput),
-      new BN(20)
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
 
     let singlePoolComet = await inceptClient.getSinglePoolComet(1);
@@ -1651,14 +1644,14 @@ describe("incept", async () => {
       Math.sqrt(
         (toNumber(pool3.usdiAmount) * toNumber(pool3.iassetAmount)) / prevPrice
       );
+    executionEst = calculateExecutionThreshold(iAssetToBuy, true, pool3, 0.002);
 
     await inceptClient.buySynth(
       toDevnetScale(iAssetToBuy),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       poolIndex,
-      toDevnetScale(calculateInputFromOutput(pool3, iAssetToBuy, false)),
-      new BN(1000)
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
   });
 
@@ -1982,18 +1975,14 @@ describe("incept", async () => {
     tokenData = await inceptClient.getTokenData();
     const pool1 = tokenData.pools[poolIndex];
 
-    const estimatedUsdiRequired1 = calculateInputFromOutput(
-      pool1,
-      10000,
-      false
-    );
+    let executionEst = calculateExecutionThreshold(10000, true, pool1, 0.0001);
+
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       poolIndex,
-      toDevnetScale(estimatedUsdiRequired1),
-      new BN(20)
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
     await inceptClient.recenterComet(0, 0, false);
     await inceptClient.withdrawLiquidityFromComet(
@@ -2006,11 +1995,7 @@ describe("incept", async () => {
     tokenData = await inceptClient.getTokenData();
     const pool2 = tokenData.pools[poolIndex];
 
-    const estimatedUsdiRequired2 = calculateOutputFromInput(
-      pool2,
-      15000,
-      false
-    );
+    executionEst = calculateExecutionThreshold(15000, false, pool2, 0.0001);
 
     // Decrease pool price
     await inceptClient.sellSynth(
@@ -2018,8 +2003,7 @@ describe("incept", async () => {
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       poolIndex,
-      toDevnetScale(estimatedUsdiRequired2),
-      new BN(20)
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
     // Need to buy to get back to original price
     tokenData = await inceptClient.getTokenData();
@@ -2032,10 +2016,11 @@ describe("incept", async () => {
         (toNumber(pool3.usdiAmount) * toNumber(pool3.iassetAmount)) / prevPrice
       );
 
-    const estimatedUsdiRequired3 = calculateInputFromOutput(
-      pool3,
+    executionEst = calculateExecutionThreshold(
       iAssetToBuy,
-      false
+      true,
+      pool3,
+      0.0001
     );
 
     await inceptClient.buySynth(
@@ -2043,8 +2028,7 @@ describe("incept", async () => {
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       poolIndex,
-      toDevnetScale(estimatedUsdiRequired3),
-      new BN(20)
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
   });
 
@@ -2086,15 +2070,14 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
-    const estimatedUsdiRequired = calculateInputFromOutput(pool, 10000, false);
+    let executionEst = calculateExecutionThreshold(10000, true, pool, 0.0001);
 
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       poolIndex,
-      toDevnetScale(estimatedUsdiRequired),
-      new BN(20)
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
 
     await sleep(200);
