@@ -9,7 +9,7 @@ use std::convert::TryInto;
 //use crate::instructions::SellSynth;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, pool_index: u8, iasset_amount: u64, expected_usdi_amount: u64, slippage_tolerance: u64)]
+#[instruction(manager_nonce: u8, pool_index: u8, iasset_amount: u64, usdi_amount_threshold: u64)]
 pub struct SellSynth<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -56,42 +56,25 @@ pub fn execute(
     manager_nonce: u8,
     pool_index: u8,
     amount: u64,
-    expected_usdi_amount: u64,
-    slippage_tolerance: u64,
+    usdi_received_threshold: u64,
 ) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let pool = token_data.pools[pool_index as usize];
 
     let iasset_amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
-    let iasset_amm_value = Decimal::new(
-        ctx.accounts
-            .amm_iasset_token_account
-            .amount
-            .try_into()
-            .unwrap(),
-        DEVNET_TOKEN_SCALE,
-    );
-    let usdi_amm_value = Decimal::new(
-        ctx.accounts
-            .amm_usdi_token_account
-            .amount
-            .try_into()
-            .unwrap(),
-        DEVNET_TOKEN_SCALE,
-    );
 
     // calculate how much usdi will be recieved
     let mut usdi_amount_value = pool.calculate_output_from_input(iasset_amount_value, false);
     usdi_amount_value.rescale(DEVNET_TOKEN_SCALE);
 
     // ensure it's within slippage tolerance
-    let execution_slippage_tolerance = Decimal::new(slippage_tolerance.try_into().unwrap(), 4);
-    let expected_usdi_output =
-        Decimal::new(expected_usdi_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let min_usdi_to_receive = Decimal::new(
+        usdi_received_threshold.try_into().unwrap(),
+        DEVNET_TOKEN_SCALE,
+    );
     require!(
-        (expected_usdi_output - usdi_amount_value) / expected_usdi_output
-            <= execution_slippage_tolerance,
+        usdi_amount_value >= min_usdi_to_receive,
         InceptError::SlippageToleranceExceeded
     );
 

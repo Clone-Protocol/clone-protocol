@@ -985,8 +985,7 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     poolIndex: number,
-    expectedUsdiAmount: BN,
-    slippageTolerance: BN,
+    usdiSpendThreshold: BN,
     signers?: Array<Keypair>
   ) {
     const buySynthIx = await this.buySynthInstruction(
@@ -994,8 +993,7 @@ export class Incept {
       userIassetTokenAccount,
       iassetAmount,
       poolIndex,
-      expectedUsdiAmount,
-      slippageTolerance
+      usdiSpendThreshold
     );
     await this.provider.sendAndConfirm!(
       new Transaction().add(buySynthIx),
@@ -1007,8 +1005,7 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     iassetAmount: BN,
     poolIndex: number,
-    expectedUsdiAmount: BN,
-    slippageTolerance: BN
+    usdiSpendThreshold: BN
   ) {
     let tokenData = await this.getTokenData();
 
@@ -1017,8 +1014,7 @@ export class Incept {
         this.managerAddress[1],
         poolIndex,
         iassetAmount,
-        expectedUsdiAmount,
-        slippageTolerance
+        usdiSpendThreshold
       )
       .accounts({
         user: this.provider.publicKey!,
@@ -1038,20 +1034,18 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     poolIndex: number,
-    expectedUsdiAmount: BN,
-    slippageTolerance: BN,
+    usdiReceivedThreshold: BN,
     signers?: Array<Keypair>
   ) {
-    const buySynthIx = await this.sellSynthInstruction(
+    const sellSynthIx = await this.sellSynthInstruction(
       userUsdiTokenAccount,
       userIassetTokenAccount,
       iassetAmount,
       poolIndex,
-      expectedUsdiAmount,
-      slippageTolerance
+      usdiReceivedThreshold
     );
     await this.provider.sendAndConfirm!(
-      new Transaction().add(buySynthIx),
+      new Transaction().add(sellSynthIx),
       signers
     );
   }
@@ -1060,8 +1054,7 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     iassetAmount: BN,
     poolIndex: number,
-    expectedUsdiAmount: BN,
-    slippageTolerance: BN
+    usdiReceivedThreshold: BN
   ) {
     let tokenData = await this.getTokenData();
 
@@ -1070,8 +1063,7 @@ export class Incept {
         this.managerAddress[1],
         poolIndex,
         iassetAmount,
-        expectedUsdiAmount,
-        slippageTolerance
+        usdiReceivedThreshold
       )
       .accounts({
         user: this.provider.publicKey!,
