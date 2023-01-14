@@ -545,6 +545,8 @@ export class Incept {
     return await this.program.methods
       .initializeMintPosition(
         this.managerAddress[1],
+        poolIndex,
+        collateralIndex,
         iassetAmount,
         collateralAmount
       )
@@ -985,13 +987,15 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     poolIndex: number,
+    usdiSpendThreshold: BN,
     signers?: Array<Keypair>
   ) {
     const buySynthIx = await this.buySynthInstruction(
       userUsdiTokenAccount,
       userIassetTokenAccount,
       iassetAmount,
-      poolIndex
+      poolIndex,
+      usdiSpendThreshold
     );
     await this.provider.sendAndConfirm!(
       new Transaction().add(buySynthIx),
@@ -1002,12 +1006,18 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     iassetAmount: BN,
-    poolIndex: number
+    poolIndex: number,
+    usdiSpendThreshold: BN
   ) {
     let tokenData = await this.getTokenData();
 
     return await this.program.methods
-      .buySynth(this.managerAddress[1], poolIndex, iassetAmount)
+      .buySynth(
+        this.managerAddress[1],
+        poolIndex,
+        iassetAmount,
+        usdiSpendThreshold
+      )
       .accounts({
         user: this.provider.publicKey!,
         manager: this.managerAddress[0],
@@ -1026,16 +1036,18 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     poolIndex: number,
+    usdiReceivedThreshold: BN,
     signers?: Array<Keypair>
   ) {
-    const buySynthIx = await this.sellSynthInstruction(
+    const sellSynthIx = await this.sellSynthInstruction(
       userUsdiTokenAccount,
       userIassetTokenAccount,
       iassetAmount,
-      poolIndex
+      poolIndex,
+      usdiReceivedThreshold
     );
     await this.provider.sendAndConfirm!(
-      new Transaction().add(buySynthIx),
+      new Transaction().add(sellSynthIx),
       signers
     );
   }
@@ -1043,12 +1055,18 @@ export class Incept {
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     iassetAmount: BN,
-    poolIndex: number
+    poolIndex: number,
+    usdiReceivedThreshold: BN
   ) {
     let tokenData = await this.getTokenData();
 
     return await this.program.methods
-      .sellSynth(this.managerAddress[1], poolIndex, iassetAmount)
+      .sellSynth(
+        this.managerAddress[1],
+        poolIndex,
+        iassetAmount,
+        usdiReceivedThreshold
+      )
       .accounts({
         user: this.provider.publicKey!,
         manager: this.managerAddress[0],
@@ -3678,6 +3696,8 @@ export interface Pool {
   liquidityTokenSupply: RawDecimal;
   treasuryTradingFee: RawDecimal;
   liquidityTradingFee: RawDecimal;
+  totalMintedAmount: RawDecimal;
+  suppliedMintCollateralAmount: RawDecimal;
   assetInfo: AssetInfo;
 }
 

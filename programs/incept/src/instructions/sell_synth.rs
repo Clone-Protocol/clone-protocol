@@ -9,7 +9,7 @@ use std::convert::TryInto;
 //use crate::instructions::SellSynth;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, pool_index: u8, iasset_amount: u64)]
+#[instruction(manager_nonce: u8, pool_index: u8, iasset_amount: u64, usdi_amount_threshold: u64)]
 pub struct SellSynth<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -56,35 +56,27 @@ pub fn execute(
     manager_nonce: u8,
     pool_index: u8,
     amount: u64,
+    usdi_received_threshold: u64,
 ) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let pool = token_data.pools[pool_index as usize];
 
     let iasset_amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
-    let iasset_amm_value = Decimal::new(
-        ctx.accounts
-            .amm_iasset_token_account
-            .amount
-            .try_into()
-            .unwrap(),
-        DEVNET_TOKEN_SCALE,
-    );
-    let usdi_amm_value = Decimal::new(
-        ctx.accounts
-            .amm_usdi_token_account
-            .amount
-            .try_into()
-            .unwrap(),
-        DEVNET_TOKEN_SCALE,
-    );
 
     // calculate how much usdi will be recieved
-    let mut usdi_amount_value =
-        calculate_price_from_iasset(iasset_amount_value, iasset_amm_value, usdi_amm_value, false)?
-            * (Decimal::ONE - pool.liquidity_trading_fee.to_decimal());
-
+    let mut usdi_amount_value = pool.calculate_output_from_input(iasset_amount_value, false);
     usdi_amount_value.rescale(DEVNET_TOKEN_SCALE);
+
+    // ensure it's within slippage tolerance
+    let min_usdi_to_receive = Decimal::new(
+        usdi_received_threshold.try_into().unwrap(),
+        DEVNET_TOKEN_SCALE,
+    );
+    require!(
+        usdi_amount_value >= min_usdi_to_receive,
+        InceptError::SlippageToleranceExceeded
+    );
 
     // transfer iasset from user to amm
     let cpi_accounts = Transfer {

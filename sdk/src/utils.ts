@@ -68,30 +68,73 @@ export const toScaledPercent = (value: Value) => {
     : Number(value.val.div(new BN(Math.pow(10, Number(value.scale) - 2))));
 };
 
-export const calculateOutputFromInput = (pool: Pool, input: number, isInputUsdi: boolean) => {
-  const feeAdjustment = 1 - toNumber(pool.liquidityTradingFee) - toNumber(pool.treasuryTradingFee)
+export const calculateOutputFromInput = (
+  pool: Pool,
+  input: number,
+  isInputUsdi: boolean
+) => {
+  const feeAdjustment =
+    1 - toNumber(pool.liquidityTradingFee) - toNumber(pool.treasuryTradingFee);
 
-  const poolUsdi = toNumber(pool.usdiAmount)
-  const poolIasset = toNumber(pool.iassetAmount)
-  const invariant = poolIasset * poolUsdi
+  const poolUsdi = toNumber(pool.usdiAmount);
+  const poolIasset = toNumber(pool.iassetAmount);
+  const invariant = poolIasset * poolUsdi;
 
   if (isInputUsdi) {
     return feeAdjustment * (poolIasset - invariant / (poolUsdi + input));
   } else {
     return feeAdjustment * (poolUsdi - invariant / (poolIasset + input));
   }
-}
+};
 
-export const calculateInputFromOutput = (pool: Pool, output: number, isOutputUsdi: boolean) => {
-  const feeAdjustment = 1 - toNumber(pool.liquidityTradingFee) - toNumber(pool.treasuryTradingFee)
+export const calculateInputFromOutput = (
+  pool: Pool,
+  output: number,
+  isOutputUsdi: boolean
+) => {
+  const feeAdjustment =
+    1 - toNumber(pool.liquidityTradingFee) - toNumber(pool.treasuryTradingFee);
 
-  const poolUsdi = toNumber(pool.usdiAmount)
-  const poolIasset = toNumber(pool.iassetAmount)
-  const invariant = poolIasset * poolUsdi
+  const poolUsdi = toNumber(pool.usdiAmount);
+  const poolIasset = toNumber(pool.iassetAmount);
+  const invariant = poolIasset * poolUsdi;
 
   if (isOutputUsdi) {
-    return invariant / (poolUsdi - output / feeAdjustment) - poolIasset
+    return invariant / (poolUsdi - output / feeAdjustment) - poolIasset;
   } else {
-    return invariant / (poolIasset - output / feeAdjustment) - poolUsdi
+    return invariant / (poolIasset - output / feeAdjustment) - poolUsdi;
   }
-}
+};
+
+export const calculateExecutionThreshold = (
+  iassetAmount: number,
+  isBuy: boolean,
+  pool: Pool,
+  slippage: number
+): {
+  expectedUsdiAmount: number;
+  usdiThresholdAmount: number;
+  expectedPrice: number;
+  thresholdPrice: number;
+} => {
+  let expectedUsdiAmount;
+  let usdiThresholdAmount;
+  if (isBuy) {
+    expectedUsdiAmount = calculateInputFromOutput(pool, iassetAmount, false);
+    usdiThresholdAmount = expectedUsdiAmount / (1 - slippage);
+  } else {
+    const expectedUsdiAmount = calculateOutputFromInput(
+      pool,
+      iassetAmount,
+      false
+    );
+    usdiThresholdAmount = expectedUsdiAmount * (1 - slippage);
+  }
+
+  return {
+    expectedUsdiAmount,
+    usdiThresholdAmount,
+    expectedPrice: expectedUsdiAmount / iassetAmount,
+    thresholdPrice: usdiThresholdAmount / iassetAmount,
+  };
+};

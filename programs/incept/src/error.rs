@@ -185,6 +185,10 @@ pub enum InceptError {
     /// 45. Invalid value range
     #[msg("Asset stable requirement violated!")]
     InvalidAssetStability,
+
+    /// 45. Trade exceeds desired slippage
+    #[msg("Slippage tolerance exceeded!")]
+    SlippageToleranceExceeded,
 }
 
 impl From<InceptError> for ProgramError {

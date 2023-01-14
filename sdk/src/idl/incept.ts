@@ -612,6 +612,14 @@ export type Incept = {
           "type": "u8"
         },
         {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "collateralIndex",
+          "type": "u8"
+        },
+        {
           "name": "iassetAmount",
           "type": "u64"
         },
@@ -1115,6 +1123,10 @@ export type Incept = {
         {
           "name": "amount",
           "type": "u64"
+        },
+        {
+          "name": "usdiSpendThreshold",
+          "type": "u64"
         }
       ]
     },
@@ -1173,6 +1185,10 @@ export type Incept = {
         },
         {
           "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "usdiReceivedThreshold",
           "type": "u64"
         }
       ]
@@ -2930,6 +2946,18 @@ export type Incept = {
             }
           },
           {
+            "name": "totalMintedAmount",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "suppliedMintCollateralAmount",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
             "name": "assetInfo",
             "type": {
               "defined": "AssetInfo"
@@ -3371,6 +3399,11 @@ export type Incept = {
       "code": 6045,
       "name": "InvalidAssetStability",
       "msg": "Asset stable requirement violated!"
+    },
+    {
+      "code": 6046,
+      "name": "SlippageToleranceExceeded",
+      "msg": "Slippage tolerance exceeded!"
     }
   ]
 };
@@ -3989,6 +4022,14 @@ export const IDL: Incept = {
           "type": "u8"
         },
         {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "collateralIndex",
+          "type": "u8"
+        },
+        {
           "name": "iassetAmount",
           "type": "u64"
         },
@@ -4492,6 +4533,10 @@ export const IDL: Incept = {
         {
           "name": "amount",
           "type": "u64"
+        },
+        {
+          "name": "usdiSpendThreshold",
+          "type": "u64"
         }
       ]
     },
@@ -4550,6 +4595,10 @@ export const IDL: Incept = {
         },
         {
           "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "usdiReceivedThreshold",
           "type": "u64"
         }
       ]
@@ -6307,6 +6356,18 @@ export const IDL: Incept = {
             }
           },
           {
+            "name": "totalMintedAmount",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "suppliedMintCollateralAmount",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
             "name": "assetInfo",
             "type": {
               "defined": "AssetInfo"
@@ -6748,6 +6809,11 @@ export const IDL: Incept = {
       "code": 6045,
       "name": "InvalidAssetStability",
       "msg": "Asset stable requirement violated!"
+    },
+    {
+      "code": 6046,
+      "name": "SlippageToleranceExceeded",
+      "msg": "Slippage tolerance exceeded!"
     }
   ]
 };

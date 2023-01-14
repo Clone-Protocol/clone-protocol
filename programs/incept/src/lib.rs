@@ -138,12 +138,16 @@ pub mod incept {
     pub fn initialize_mint_position(
         ctx: Context<InitializeMintPosition>,
         manager_nonce: u8,
+        pool_index: u8,
+        collateral_index: u8,
         iasset_amount: u64,
         collateral_amount: u64,
     ) -> Result<()> {
         instructions::initialize_mint_position::execute(
             ctx,
             manager_nonce,
+            pool_index,
+            collateral_index,
             iasset_amount,
             collateral_amount,
         )
@@ -232,8 +236,15 @@ pub mod incept {
         manager_nonce: u8,
         pool_index: u8,
         amount: u64,
+        usdi_spend_threshold: u64,
     ) -> Result<()> {
-        instructions::buy_synth::execute(ctx, manager_nonce, pool_index, amount)
+        instructions::buy_synth::execute(
+            ctx,
+            manager_nonce,
+            pool_index,
+            amount,
+            usdi_spend_threshold,
+        )
     }
 
     pub fn sell_synth(
@@ -241,8 +252,15 @@ pub mod incept {
         manager_nonce: u8,
         pool_index: u8,
         amount: u64,
+        usdi_received_threshold: u64,
     ) -> Result<()> {
-        instructions::sell_synth::execute(ctx, manager_nonce, pool_index, amount)
+        instructions::sell_synth::execute(
+            ctx,
+            manager_nonce,
+            pool_index,
+            amount,
+            usdi_received_threshold,
+        )
     }
 
     pub fn initialize_single_pool_comet(

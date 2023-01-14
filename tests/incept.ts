@@ -22,7 +22,7 @@ import {
   getFeedData,
   ChainLinkOracle,
 } from "../sdk/src/oracle";
-import { sleep } from "../sdk/src/utils";
+import { calculateExecutionThreshold, sleep } from "../sdk/src/utils";
 import { getMantissa, toNumber } from "../sdk/src/decimal";
 
 describe("incept", async () => {
@@ -370,7 +370,7 @@ describe("incept", async () => {
 
     const vault = await inceptClient.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
-      "confirmed"
+      "recent"
     );
     assert.equal(vault.value!.uiAmount, 1000000, "check usdc vault amount");
   });
@@ -405,10 +405,8 @@ describe("incept", async () => {
   });
 
   it("iasset minted!", async () => {
-    const tokenData = (await inceptProgram.account.tokenData.fetch(
-      inceptClient.manager!.tokenData
-    )) as TokenData;
-    const pool = tokenData.pools[0];
+    let tokenData = await inceptClient.getTokenData();
+    let pool = tokenData.pools[0];
 
     iassetTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
@@ -432,7 +430,8 @@ describe("incept", async () => {
       signers
     );
 
-    await sleep(200);
+    tokenData = await inceptClient.getTokenData();
+    pool = tokenData.pools[0];
 
     iassetTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
@@ -456,7 +455,7 @@ describe("incept", async () => {
 
     let vault = await inceptClient.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
-      "confirmed"
+      "recent"
     );
     assert.equal(vault.value!.uiAmount, 21000000, "check usdc vault amount");
 
@@ -472,15 +471,25 @@ describe("incept", async () => {
       20000000,
       "stored minted amount"
     );
+    assert.equal(
+      toNumber(pool.suppliedMintCollateralAmount),
+      20000000,
+      "check supplied collateral amount!"
+    );
+    assert.equal(
+      toNumber(pool.totalMintedAmount),
+      200000,
+      "check supplied collateral amount!"
+    );
   });
 
   it("full withdraw and close mint position!", async () => {
     // @ts-ignore
     let signers: Array<Signer> = [provider.wallet.payer];
-    const tokenData = (await inceptProgram.account.tokenData.fetch(
+    let tokenData = (await inceptProgram.account.tokenData.fetch(
       inceptClient.manager!.tokenData
     )) as TokenData;
-    const pool = tokenData.pools[0];
+    let pool = tokenData.pools[0];
 
     await inceptClient.closeMintPosition(
       iassetTokenAccountInfo.address,
@@ -489,7 +498,8 @@ describe("incept", async () => {
       signers
     );
 
-    await sleep(200);
+    tokenData = await inceptClient.getTokenData();
+    pool = tokenData.pools[0];
 
     iassetTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
@@ -513,10 +523,21 @@ describe("incept", async () => {
 
     const vault = await inceptClient.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
-      "confirmed"
+      "recent"
     );
 
     assert.equal(vault.value!.uiAmount, 1000000, "check usdc vault amount");
+
+    assert.equal(
+      toNumber(pool.suppliedMintCollateralAmount),
+      0,
+      "check supplied collateral amount!"
+    );
+    assert.equal(
+      toNumber(pool.totalMintedAmount),
+      0,
+      "check supplied collateral amount!"
+    );
 
     // Recreate original position.
     await inceptClient.initializeMintPosition(
@@ -546,9 +567,7 @@ describe("incept", async () => {
       signers
     );
 
-    const tokenData = (await inceptProgram.account.tokenData.fetch(
-      inceptClient.manager!.tokenData
-    )) as TokenData;
+    const tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[0];
 
     await sleep(200);
@@ -575,9 +594,15 @@ describe("incept", async () => {
 
     const vault = await inceptClient.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
-      "confirmed"
+      "recent"
     );
     assert.equal(vault.value!.uiAmount, 21000100, "check usdc vault amount");
+
+    assert.equal(
+      toNumber(pool.suppliedMintCollateralAmount),
+      20000100,
+      "check supplied collateral amount!"
+    );
   });
 
   it("mint collateral removed!", async () => {
@@ -625,9 +650,14 @@ describe("incept", async () => {
 
     const vault = await inceptClient.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
-      "confirmed"
+      "recent"
     );
     assert.equal(vault.value!.uiAmount, 21000000, "check usdc vault amount");
+    assert.equal(
+      toNumber(pool.suppliedMintCollateralAmount),
+      20000000,
+      "check supplied collateral amount!"
+    );
   });
 
   it("iasset burned!", async () => {
@@ -761,7 +791,7 @@ describe("incept", async () => {
     const usdiAccountBalance =
       await inceptClient.connection.getTokenAccountBalance(
         pool.usdiTokenAccount,
-        "confirmed"
+        "recent"
       );
     assert.equal(
       usdiAccountBalance.value!.uiAmount,
@@ -772,7 +802,7 @@ describe("incept", async () => {
     const iassetAccountBalance =
       await inceptClient.connection.getTokenAccountBalance(
         pool.iassetTokenAccount,
-        "confirmed"
+        "recent"
       );
     assert.equal(
       iassetAccountBalance.value!.uiAmount,
@@ -955,11 +985,14 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
+    const executionEst = calculateExecutionThreshold(10000, true, pool, 0.0);
+
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
 
     await sleep(200);
@@ -987,7 +1020,7 @@ describe("incept", async () => {
         (
           await inceptClient.connection.getTokenAccountBalance(
             pool.usdiTokenAccount,
-            "confirmed"
+            "recent"
           )
         ).value!.uiAmount
       ),
@@ -999,7 +1032,7 @@ describe("incept", async () => {
         (
           await inceptClient.connection.getTokenAccountBalance(
             pool.iassetTokenAccount,
-            "confirmed"
+            "recent"
           )
         ).value!.uiAmount
       ),
@@ -1021,11 +1054,14 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
+    let executionEst = calculateExecutionThreshold(10000, false, pool, 0.0);
+
     await inceptClient.sellSynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      new BN(executionEst.expectedUsdiAmount)
     );
 
     await sleep(200);
@@ -1053,7 +1089,7 @@ describe("incept", async () => {
         (
           await inceptClient.connection.getTokenAccountBalance(
             pool.usdiTokenAccount,
-            "confirmed"
+            "recent"
           )
         ).value!.uiAmount
       ),
@@ -1065,7 +1101,7 @@ describe("incept", async () => {
         (
           await inceptClient.connection.getTokenAccountBalance(
             pool.iassetTokenAccount,
-            "confirmed"
+            "recent"
           )
         ).value!.uiAmount
       ),
@@ -1409,12 +1445,14 @@ describe("incept", async () => {
       await inceptClient.getOrCreateAssociatedTokenAccount(
         pool.assetInfo.iassetMint
       );
+    const executionEst = calculateExecutionThreshold(10000, true, pool, 0.0001);
 
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
 
     await sleep(200);
@@ -1514,7 +1552,7 @@ describe("incept", async () => {
         (
           await inceptClient.connection.getTokenAccountBalance(
             collateral.vault,
-            "confirmed"
+            "recent"
           )
         ).value!.uiAmount
       ),
@@ -1574,24 +1612,31 @@ describe("incept", async () => {
     await inceptClient.addLiquidityToSinglePoolComet(toDevnetScale(200), 1);
     tokenData = await inceptClient.getTokenData();
     const pool1 = tokenData.pools[poolIndex];
+    let executionEst = calculateExecutionThreshold(10000, true, pool1, 0.0001);
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
     await inceptClient.recenterSinglePoolComet(1);
     await inceptClient.withdrawLiquidityFromSinglePoolComet(
       toDevnetScale(10),
       1
     );
+    tokenData = await inceptClient.getTokenData();
+    const pool2 = tokenData.pools[poolIndex];
+
+    executionEst = calculateExecutionThreshold(15000, false, pool2, 0.0001);
 
     // Decrease pool price
     await inceptClient.sellSynth(
       new BN(1500000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
 
     let singlePoolComet = await inceptClient.getSinglePoolComet(1);
@@ -1621,20 +1666,22 @@ describe("incept", async () => {
 
     // Need to buy to get back to original price
     tokenData = await inceptClient.getTokenData();
-    const pool2 = tokenData.pools[poolIndex];
+    const pool3 = tokenData.pools[poolIndex];
 
     const prevPrice = toNumber(pool1.usdiAmount) / toNumber(pool1.iassetAmount);
     const iAssetToBuy =
-      toNumber(pool2.iassetAmount) -
+      toNumber(pool3.iassetAmount) -
       Math.sqrt(
-        (toNumber(pool2.usdiAmount) * toNumber(pool2.iassetAmount)) / prevPrice
+        (toNumber(pool3.usdiAmount) * toNumber(pool3.iassetAmount)) / prevPrice
       );
+    executionEst = calculateExecutionThreshold(iAssetToBuy, true, pool3, 0.002);
 
     await inceptClient.buySynth(
       toDevnetScale(iAssetToBuy),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
   });
 
@@ -1958,13 +2005,15 @@ describe("incept", async () => {
     tokenData = await inceptClient.getTokenData();
     const pool1 = tokenData.pools[poolIndex];
 
+    let executionEst = calculateExecutionThreshold(10000, true, pool1, 0.0001);
+
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
-
     await inceptClient.recenterComet(0, 0, false);
     await inceptClient.withdrawLiquidityFromComet(
       new BN(50000000),
@@ -1973,30 +2022,43 @@ describe("incept", async () => {
       false
     );
 
+    tokenData = await inceptClient.getTokenData();
+    const pool2 = tokenData.pools[poolIndex];
+
+    executionEst = calculateExecutionThreshold(15000, false, pool2, 0.0001);
+
     // Decrease pool price
     await inceptClient.sellSynth(
       new BN(1500000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
-
     // Need to buy to get back to original price
     tokenData = await inceptClient.getTokenData();
-    const pool2 = tokenData.pools[poolIndex];
+    const pool3 = tokenData.pools[poolIndex];
 
     const prevPrice = toNumber(pool1.usdiAmount) / toNumber(pool1.iassetAmount);
     const iAssetToBuy =
-      toNumber(pool2.iassetAmount) -
+      toNumber(pool3.iassetAmount) -
       Math.sqrt(
-        (toNumber(pool2.usdiAmount) * toNumber(pool2.iassetAmount)) / prevPrice
+        (toNumber(pool3.usdiAmount) * toNumber(pool3.iassetAmount)) / prevPrice
       );
+
+    executionEst = calculateExecutionThreshold(
+      iAssetToBuy,
+      true,
+      pool3,
+      0.0001
+    );
 
     await inceptClient.buySynth(
       toDevnetScale(iAssetToBuy),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
   });
 
@@ -2038,11 +2100,14 @@ describe("incept", async () => {
         pool.assetInfo.iassetMint
       );
 
+    let executionEst = calculateExecutionThreshold(10000, true, pool, 0.0001);
+
     await inceptClient.buySynth(
       new BN(1000000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
-      poolIndex
+      poolIndex,
+      toDevnetScale(executionEst.usdiThresholdAmount)
     );
 
     await sleep(200);

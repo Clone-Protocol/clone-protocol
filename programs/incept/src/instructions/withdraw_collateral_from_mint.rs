@@ -80,9 +80,17 @@ pub fn execute(
         .vault_mint_supply = RawDecimal::from(new_vault_mint_supply);
 
     // subtract collateral amount from mint data
+    let mut new_collateral_amount = mint_position.collateral_amount.to_decimal() - amount_value;
+    new_collateral_amount.rescale(DEVNET_TOKEN_SCALE);
     mint_positions.mint_positions[mint_index as usize].collateral_amount =
-        RawDecimal::from(mint_position.collateral_amount.to_decimal() - amount_value);
+        RawDecimal::from(new_collateral_amount);
     let slot = Clock::get()?.slot;
+
+    let mut new_supplied_collateral =
+        pool.supplied_mint_collateral_amount.to_decimal() - amount_value;
+    new_supplied_collateral.rescale(DEVNET_TOKEN_SCALE);
+    token_data.pools[mint_position.pool_index as usize].supplied_mint_collateral_amount =
+        RawDecimal::from(new_supplied_collateral);
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(

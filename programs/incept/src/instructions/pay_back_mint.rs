@@ -64,6 +64,8 @@ pub fn execute(
 ) -> Result<()> {
     let mut amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
+    let mut token_data = ctx.accounts.token_data.load_mut()?;
+
     let mint_positions = &mut ctx.accounts.mint_positions.load_mut()?;
     let mint_position = mint_positions.mint_positions[mint_index as usize];
 
@@ -89,6 +91,14 @@ pub fn execute(
     let updated_borrowed_iasset = mint_position.borrowed_iasset.to_decimal() - amount_value;
     mint_positions.mint_positions[mint_index as usize].borrowed_iasset =
         RawDecimal::from(updated_borrowed_iasset);
+
+    let mut new_minted_amount = token_data.pools[mint_position.pool_index as usize]
+        .total_minted_amount
+        .to_decimal()
+        - amount_value;
+    new_minted_amount.rescale(DEVNET_TOKEN_SCALE);
+    token_data.pools[mint_position.pool_index as usize].total_minted_amount =
+        RawDecimal::from(new_minted_amount);
 
     Ok(())
 }
