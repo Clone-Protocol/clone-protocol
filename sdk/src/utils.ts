@@ -105,3 +105,36 @@ export const calculateInputFromOutput = (
     return invariant / (poolIasset - output / feeAdjustment) - poolUsdi;
   }
 };
+
+export const calculateExecutionThreshold = (
+  iassetAmount: number,
+  isBuy: boolean,
+  pool: Pool,
+  slippage: number
+): {
+  expectedUsdiAmount: number;
+  usdiThresholdAmount: number;
+  expectedPrice: number;
+  thresholdPrice: number;
+} => {
+  let expectedUsdiAmount;
+  let usdiThresholdAmount;
+  if (isBuy) {
+    expectedUsdiAmount = calculateInputFromOutput(pool, iassetAmount, false);
+    usdiThresholdAmount = expectedUsdiAmount / (1 - slippage);
+  } else {
+    const expectedUsdiAmount = calculateOutputFromInput(
+      pool,
+      iassetAmount,
+      false
+    );
+    usdiThresholdAmount = expectedUsdiAmount * (1 - slippage);
+  }
+
+  return {
+    expectedUsdiAmount,
+    usdiThresholdAmount,
+    expectedPrice: expectedUsdiAmount / iassetAmount,
+    thresholdPrice: usdiThresholdAmount / iassetAmount,
+  };
+};

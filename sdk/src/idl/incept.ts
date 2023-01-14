@@ -1125,11 +1125,7 @@ export type Incept = {
           "type": "u64"
         },
         {
-          "name": "expectedUsdiAmount",
-          "type": "u64"
-        },
-        {
-          "name": "slippageTolerance",
+          "name": "usdiSpendThreshold",
           "type": "u64"
         }
       ]
@@ -1192,11 +1188,7 @@ export type Incept = {
           "type": "u64"
         },
         {
-          "name": "expectedUsdiAmount",
-          "type": "u64"
-        },
-        {
-          "name": "slippageTolerance",
+          "name": "usdiReceivedThreshold",
           "type": "u64"
         }
       ]
@@ -4543,11 +4535,7 @@ export const IDL: Incept = {
           "type": "u64"
         },
         {
-          "name": "expectedUsdiAmount",
-          "type": "u64"
-        },
-        {
-          "name": "slippageTolerance",
+          "name": "usdiSpendThreshold",
           "type": "u64"
         }
       ]
@@ -4610,11 +4598,7 @@ export const IDL: Incept = {
           "type": "u64"
         },
         {
-          "name": "expectedUsdiAmount",
-          "type": "u64"
-        },
-        {
-          "name": "slippageTolerance",
+          "name": "usdiReceivedThreshold",
           "type": "u64"
         }
       ]
