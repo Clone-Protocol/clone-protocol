@@ -138,12 +138,16 @@ pub mod incept {
     pub fn initialize_mint_position(
         ctx: Context<InitializeMintPosition>,
         manager_nonce: u8,
+        pool_index: u8,
+        collateral_index: u8,
         iasset_amount: u64,
         collateral_amount: u64,
     ) -> Result<()> {
         instructions::initialize_mint_position::execute(
             ctx,
             manager_nonce,
+            pool_index,
+            collateral_index,
             iasset_amount,
             collateral_amount,
         )

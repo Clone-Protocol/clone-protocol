@@ -72,11 +72,11 @@ pub struct LiquidationConfig {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 151,088
+    // 159,248
     pub manager: Pubkey,                         // 32
     pub num_pools: u64,                          // 8
     pub num_collaterals: u64,                    // 8
-    pub pools: [Pool; 255],                      // 255 * 448 = 114,240
+    pub pools: [Pool; 255],                      // 255 * 480 = 122,400
     pub collaterals: [Collateral; 255],          // 255 * 144 = 36,720
     pub chainlink_program: Pubkey,               // 32
     pub il_health_score_coefficient: RawDecimal, // 16
@@ -163,18 +163,20 @@ pub struct AssetInfo {
 #[zero_copy]
 #[derive(PartialEq, Default, Debug)]
 pub struct Pool {
-    // 448
-    pub iasset_token_account: Pubkey,             // 32
-    pub usdi_token_account: Pubkey,               // 32
-    pub liquidity_token_mint: Pubkey,             // 32
-    pub liquidation_iasset_token_account: Pubkey, // 32
-    pub comet_liquidity_token_account: Pubkey,    // 32
-    pub iasset_amount: RawDecimal,                // 16
-    pub usdi_amount: RawDecimal,                  // 16
-    pub liquidity_token_supply: RawDecimal,       // 16
-    pub treasury_trading_fee: RawDecimal,         // 16
-    pub liquidity_trading_fee: RawDecimal,        // 16
-    pub asset_info: AssetInfo,                    // 208
+    // 480
+    pub iasset_token_account: Pubkey,                // 32
+    pub usdi_token_account: Pubkey,                  // 32
+    pub liquidity_token_mint: Pubkey,                // 32
+    pub liquidation_iasset_token_account: Pubkey,    // 32
+    pub comet_liquidity_token_account: Pubkey,       // 32
+    pub iasset_amount: RawDecimal,                   // 16
+    pub usdi_amount: RawDecimal,                     // 16
+    pub liquidity_token_supply: RawDecimal,          // 16
+    pub treasury_trading_fee: RawDecimal,            // 16
+    pub liquidity_trading_fee: RawDecimal,           // 16
+    pub total_minted_amount: RawDecimal,             // 16
+    pub supplied_mint_collateral_amount: RawDecimal, // 16
+    pub asset_info: AssetInfo,                       // 208
 }
 
 impl Pool {
@@ -238,32 +240,6 @@ pub struct User {
     pub comet: Pubkey,               // 32
     pub comet_manager: CometManager, // 40
 }
-
-// #[account(zero_copy)]
-// pub struct SinglePoolComets {
-//     // 8200
-//     pub owner: Pubkey,         // 32
-//     pub num_comets: u64,       // 8
-//     pub comets: [Pubkey; 255], // 255 * 32 = 8160
-// }
-
-// impl Default for SinglePoolComets {
-//     fn default() -> Self {
-//         return Self {
-//             owner: Pubkey::default(),
-//             num_comets: 0,
-//             comets: [Pubkey::default(); 255],
-//         };
-//     }
-// }
-
-// impl SinglePoolComets {
-//     pub fn remove(&mut self, index: usize) {
-//         self.comets[index] = self.comets[(self.num_comets - 1) as usize];
-//         self.comets[(self.num_comets - 1) as usize] = Pubkey::default();
-//         self.num_comets -= 1;
-//     }
-// }
 
 #[account(zero_copy)]
 pub struct Comet {

@@ -374,7 +374,7 @@ describe("incept", async () => {
 
     const vault = await inceptClient.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
-      "confirmed"
+      "recent"
     );
     assert.equal(vault.value!.uiAmount, 1000000, "check usdc vault amount");
   });
@@ -409,10 +409,8 @@ describe("incept", async () => {
   });
 
   it("iasset minted!", async () => {
-    const tokenData = (await inceptProgram.account.tokenData.fetch(
-      inceptClient.manager!.tokenData
-    )) as TokenData;
-    const pool = tokenData.pools[0];
+    let tokenData = await inceptClient.getTokenData();
+    let pool = tokenData.pools[0];
 
     iassetTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
@@ -436,7 +434,8 @@ describe("incept", async () => {
       signers
     );
 
-    await sleep(200);
+    tokenData = await inceptClient.getTokenData();
+    pool = tokenData.pools[0];
 
     iassetTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
@@ -460,7 +459,7 @@ describe("incept", async () => {
 
     let vault = await inceptClient.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
-      "confirmed"
+      "recent"
     );
     assert.equal(vault.value!.uiAmount, 21000000, "check usdc vault amount");
 
@@ -476,15 +475,25 @@ describe("incept", async () => {
       20000000,
       "stored minted amount"
     );
+    assert.equal(
+      toNumber(pool.suppliedMintCollateralAmount),
+      20000000,
+      "check supplied collateral amount!"
+    );
+    assert.equal(
+      toNumber(pool.totalMintedAmount),
+      200000,
+      "check supplied collateral amount!"
+    );
   });
 
   it("full withdraw and close mint position!", async () => {
     // @ts-ignore
     let signers: Array<Signer> = [provider.wallet.payer];
-    const tokenData = (await inceptProgram.account.tokenData.fetch(
+    let tokenData = (await inceptProgram.account.tokenData.fetch(
       inceptClient.manager!.tokenData
     )) as TokenData;
-    const pool = tokenData.pools[0];
+    let pool = tokenData.pools[0];
 
     await inceptClient.closeMintPosition(
       iassetTokenAccountInfo.address,
@@ -493,7 +502,8 @@ describe("incept", async () => {
       signers
     );
 
-    await sleep(200);
+    tokenData = await inceptClient.getTokenData();
+    pool = tokenData.pools[0];
 
     iassetTokenAccountInfo =
       await inceptClient.getOrCreateAssociatedTokenAccount(
@@ -517,10 +527,21 @@ describe("incept", async () => {
 
     const vault = await inceptClient.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
-      "confirmed"
+      "recent"
     );
 
     assert.equal(vault.value!.uiAmount, 1000000, "check usdc vault amount");
+
+    assert.equal(
+      toNumber(pool.suppliedMintCollateralAmount),
+      0,
+      "check supplied collateral amount!"
+    );
+    assert.equal(
+      toNumber(pool.totalMintedAmount),
+      0,
+      "check supplied collateral amount!"
+    );
 
     // Recreate original position.
     await inceptClient.initializeMintPosition(
@@ -550,9 +571,7 @@ describe("incept", async () => {
       signers
     );
 
-    const tokenData = (await inceptProgram.account.tokenData.fetch(
-      inceptClient.manager!.tokenData
-    )) as TokenData;
+    const tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[0];
 
     await sleep(200);
@@ -579,9 +598,15 @@ describe("incept", async () => {
 
     const vault = await inceptClient.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
-      "confirmed"
+      "recent"
     );
     assert.equal(vault.value!.uiAmount, 21000100, "check usdc vault amount");
+
+    assert.equal(
+      toNumber(pool.suppliedMintCollateralAmount),
+      20000100,
+      "check supplied collateral amount!"
+    );
   });
 
   it("mint collateral removed!", async () => {
@@ -629,9 +654,14 @@ describe("incept", async () => {
 
     const vault = await inceptClient.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
-      "confirmed"
+      "recent"
     );
     assert.equal(vault.value!.uiAmount, 21000000, "check usdc vault amount");
+    assert.equal(
+      toNumber(pool.suppliedMintCollateralAmount),
+      20000000,
+      "check supplied collateral amount!"
+    );
   });
 
   it("iasset burned!", async () => {
@@ -765,7 +795,7 @@ describe("incept", async () => {
     const usdiAccountBalance =
       await inceptClient.connection.getTokenAccountBalance(
         pool.usdiTokenAccount,
-        "confirmed"
+        "recent"
       );
     assert.equal(
       usdiAccountBalance.value!.uiAmount,
@@ -776,7 +806,7 @@ describe("incept", async () => {
     const iassetAccountBalance =
       await inceptClient.connection.getTokenAccountBalance(
         pool.iassetTokenAccount,
-        "confirmed"
+        "recent"
       );
     assert.equal(
       iassetAccountBalance.value!.uiAmount,
@@ -993,7 +1023,7 @@ describe("incept", async () => {
         (
           await inceptClient.connection.getTokenAccountBalance(
             pool.usdiTokenAccount,
-            "confirmed"
+            "recent"
           )
         ).value!.uiAmount
       ),
@@ -1005,7 +1035,7 @@ describe("incept", async () => {
         (
           await inceptClient.connection.getTokenAccountBalance(
             pool.iassetTokenAccount,
-            "confirmed"
+            "recent"
           )
         ).value!.uiAmount
       ),
@@ -1061,7 +1091,7 @@ describe("incept", async () => {
         (
           await inceptClient.connection.getTokenAccountBalance(
             pool.usdiTokenAccount,
-            "confirmed"
+            "recent"
           )
         ).value!.uiAmount
       ),
@@ -1073,7 +1103,7 @@ describe("incept", async () => {
         (
           await inceptClient.connection.getTokenAccountBalance(
             pool.iassetTokenAccount,
-            "confirmed"
+            "recent"
           )
         ).value!.uiAmount
       ),
@@ -1526,7 +1556,7 @@ describe("incept", async () => {
         (
           await inceptClient.connection.getTokenAccountBalance(
             collateral.vault,
-            "confirmed"
+            "recent"
           )
         ).value!.uiAmount
       ),

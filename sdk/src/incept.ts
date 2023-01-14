@@ -545,6 +545,8 @@ export class Incept {
     return await this.program.methods
       .initializeMintPosition(
         this.managerAddress[1],
+        poolIndex,
+        collateralIndex,
         iassetAmount,
         collateralAmount
       )
@@ -3698,6 +3700,8 @@ export interface Pool {
   liquidityTokenSupply: RawDecimal;
   treasuryTradingFee: RawDecimal;
   liquidityTradingFee: RawDecimal;
+  totalMintedAmount: RawDecimal;
+  suppliedMintCollateralAmount: RawDecimal;
   assetInfo: AssetInfo;
 }
 

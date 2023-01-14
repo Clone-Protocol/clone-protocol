@@ -78,8 +78,8 @@ pub fn execute(
 ) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 
-    let token_data = &mut ctx.accounts.token_data.load()?;
-    let mint_positions = ctx.accounts.mint_positions.load_mut()?;
+    let token_data = &mut ctx.accounts.token_data.load_mut()?;
+    let mut mint_positions = ctx.accounts.mint_positions.load_mut()?;
     let mint_position = mint_positions.mint_positions[mint_index as usize];
 
     let collateral = token_data.collaterals[mint_position.collateral_index as usize];
@@ -159,6 +159,21 @@ pub fn execute(
             .try_into()
             .unwrap(),
     )?;
+
+    // Update data
+    let mut new_minted_amount = pool.total_minted_amount.to_decimal() - borrowed_iasset;
+    new_minted_amount.rescale(DEVNET_TOKEN_SCALE);
+    token_data.pools[mint_position.pool_index as usize].total_minted_amount =
+        RawDecimal::from(new_minted_amount);
+
+    let mut new_supplied_collateral = pool.supplied_mint_collateral_amount.to_decimal()
+        - mint_position.collateral_amount.to_decimal();
+    new_supplied_collateral.rescale(DEVNET_TOKEN_SCALE);
+    token_data.pools[mint_position.pool_index as usize].supplied_mint_collateral_amount =
+        RawDecimal::from(new_supplied_collateral);
+
+    // Remove position
+    mint_positions.remove(mint_index as usize);
 
     Ok(())
 }
