@@ -2586,9 +2586,10 @@ export class Incept {
             const iassetDebt = borrowedIasset - claimableIasset;
 
             const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt;
+            const effectiveDebt = iassetDebt / (1 - claimableRatio);
             const poolMarked = calculateInputFromOutput(
               pool,
-              iassetDebt,
+              effectiveDebt,
               false
             );
 
@@ -2639,7 +2640,8 @@ export class Incept {
       const iassetDebt = borrowedIasset - claimableIasset;
 
       const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt;
-      const poolMarked = calculateInputFromOutput(pool, iassetDebt, false);
+      const effectiveDebt = iassetDebt / (1 - claimableRatio);
+      const poolMarked = calculateInputFromOutput(pool, effectiveDebt, false);
 
       ILD += Math.max(oracleMarked, poolMarked);
       isUsdi = false;
@@ -2689,7 +2691,8 @@ export class Incept {
       const iassetDebt = borrowedIasset - claimableIasset;
 
       const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt;
-      const poolMarked = calculateInputFromOutput(pool, iassetDebt, false);
+      const effectiveDebt = iassetDebt / (1 - claimableRatio);
+      const poolMarked = calculateInputFromOutput(pool, effectiveDebt, false);
 
       ILD += Math.max(oracleMarked, poolMarked);
       isUsdi = false;
@@ -2733,7 +2736,8 @@ export class Incept {
         const iassetDebt = borrowedIasset - claimableIasset;
 
         const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt;
-        const poolMarked = calculateInputFromOutput(pool, iassetDebt, false);
+        const effectiveDebt = iassetDebt / (1 - claimableRatio);
+        const poolMarked = calculateInputFromOutput(pool, effectiveDebt, false);
 
         ILD += Math.max(oracleMarked, poolMarked);
         isUsdi = false;
