@@ -16,7 +16,7 @@ pub struct BuySynth<'info> {
         bump = manager_nonce,
         has_one = token_data
     )]
-    pub manager: Account<'info, Manager>,
+    pub manager: Box<Account<'info, Manager>>,
     #[account(
         mut,
         has_one = manager,
@@ -28,23 +28,29 @@ pub struct BuySynth<'info> {
         associated_token::mint = manager.usdi_mint,
         associated_token::authority = user
     )]
-    pub user_usdi_token_account: Account<'info, TokenAccount>,
+    pub user_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::mint = token_data.load()?.pools[pool_index as usize].asset_info.iasset_mint,
         associated_token::authority = user
     )]
-    pub user_iasset_token_account: Account<'info, TokenAccount>,
+    pub user_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         address = token_data.load()?.pools[pool_index as usize].usdi_token_account,
     )]
-    pub amm_usdi_token_account: Account<'info, TokenAccount>,
+    pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         address = token_data.load()?.pools[pool_index as usize].iasset_token_account,
     )]
-    pub amm_iasset_token_account: Account<'info, TokenAccount>,
+    pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        associated_token::mint = token_data.load()?.pools[pool_index as usize].asset_info.iasset_mint,
+        associated_token::authority = manager.treasury_address
+    )]
+    pub treasury_iasset_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 
@@ -62,9 +68,9 @@ pub fn execute(
     let iasset_amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
     // calculate how much usdi must be spent
-    let mut usdi_amount_value = pool.calculate_input_from_output(iasset_amount_value, false);
+    let swap_summary = pool.calculate_input_from_output(iasset_amount_value, false);
+    let mut usdi_amount_value = swap_summary.result;
     usdi_amount_value.rescale(DEVNET_TOKEN_SCALE);
-
     // ensure that the user has sufficient usdi
     require!(
         ctx.accounts.user_usdi_token_account.amount
@@ -74,6 +80,7 @@ pub fn execute(
     // ensure it's within slippage tolerance
     let max_usdi_to_spend =
         Decimal::new(usdi_spend_threshold.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    msg!("{:?}, {:?}", max_usdi_to_spend, swap_summary);
 
     require!(
         max_usdi_to_spend >= usdi_amount_value,
@@ -132,6 +139,33 @@ pub fn execute(
     token::transfer(
         send_iasset_to_user_context,
         iasset_amount_value.mantissa().try_into().unwrap(),
+    )?;
+
+    // Transfer treasury fee from pool to treasury token account
+    let mut treasury_fee_to_pay = swap_summary.treasury_fees_paid;
+    treasury_fee_to_pay.rescale(DEVNET_TOKEN_SCALE);
+    let cpi_accounts = Transfer {
+        from: ctx
+            .accounts
+            .amm_iasset_token_account
+            .to_account_info()
+            .clone(),
+        to: ctx
+            .accounts
+            .treasury_iasset_token_account
+            .to_account_info()
+            .clone(),
+        authority: ctx.accounts.manager.to_account_info().clone(),
+    };
+    let send_iasset_to_treasury_context = CpiContext::new_with_signer(
+        ctx.accounts.token_program.to_account_info().clone(),
+        cpi_accounts,
+        seeds,
+    );
+
+    token::transfer(
+        send_iasset_to_treasury_context,
+        treasury_fee_to_pay.mantissa().try_into().unwrap(),
     )?;
 
     // update pool data
