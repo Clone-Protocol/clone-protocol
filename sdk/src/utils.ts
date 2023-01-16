@@ -1,13 +1,15 @@
 import { BN, Provider } from "@project-serum/anchor";
-import {
-  Connection,
-  Keypair,
-  Transaction,
-  ConfirmOptions,
-  sendAndConfirmRawTransaction,
-} from "@solana/web3.js";
+import { Connection, PublicKey, Transaction } from "@solana/web3.js";
 import { toNumber } from "./decimal";
-import { Value, Pool } from "./incept";
+import { Value, Pool, DEVNET_TOKEN_SCALE } from "./incept";
+import {
+  getAccount,
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddress,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TokenAccountNotFoundError,
+} from "@solana/spl-token";
 
 // export const signAndSend = async (
 //   tx: Transaction,
@@ -68,6 +70,11 @@ export const toScaledPercent = (value: Value) => {
     : Number(value.val.div(new BN(Math.pow(10, Number(value.scale) - 2))));
 };
 
+export const floorToScale = (x: number, scale: number) => {
+  const f = Math.pow(10, scale);
+  return Math.floor(x * f) / f;
+};
+
 export const calculateOutputFromInput = (
   pool: Pool,
   input: number,
@@ -81,9 +88,15 @@ export const calculateOutputFromInput = (
   const invariant = poolIasset * poolUsdi;
 
   if (isInputUsdi) {
-    return feeAdjustment * (poolIasset - invariant / (poolUsdi + input));
+    return floorToScale(
+      feeAdjustment * (poolIasset - invariant / (poolUsdi + input)),
+      DEVNET_TOKEN_SCALE
+    );
   } else {
-    return feeAdjustment * (poolUsdi - invariant / (poolIasset + input));
+    return floorToScale(
+      feeAdjustment * (poolUsdi - invariant / (poolIasset + input)),
+      DEVNET_TOKEN_SCALE
+    );
   }
 };
 
@@ -100,9 +113,15 @@ export const calculateInputFromOutput = (
   const invariant = poolIasset * poolUsdi;
 
   if (isOutputUsdi) {
-    return invariant / (poolUsdi - output / feeAdjustment) - poolIasset;
+    return floorToScale(
+      invariant / (poolUsdi - output / feeAdjustment) - poolIasset,
+      DEVNET_TOKEN_SCALE
+    );
   } else {
-    return invariant / (poolIasset - output / feeAdjustment) - poolUsdi;
+    return floorToScale(
+      invariant / (poolIasset - output / feeAdjustment) - poolUsdi,
+      DEVNET_TOKEN_SCALE
+    );
   }
 };
 
@@ -132,9 +151,15 @@ export const calculateExecutionThreshold = (
   }
 
   return {
-    expectedUsdiAmount,
-    usdiThresholdAmount,
-    expectedPrice: expectedUsdiAmount / iassetAmount,
-    thresholdPrice: usdiThresholdAmount / iassetAmount,
+    expectedUsdiAmount: floorToScale(expectedUsdiAmount, DEVNET_TOKEN_SCALE),
+    usdiThresholdAmount: floorToScale(usdiThresholdAmount, DEVNET_TOKEN_SCALE),
+    expectedPrice: floorToScale(
+      expectedUsdiAmount / iassetAmount,
+      DEVNET_TOKEN_SCALE
+    ),
+    thresholdPrice: floorToScale(
+      usdiThresholdAmount / iassetAmount,
+      DEVNET_TOKEN_SCALE
+    ),
   };
 };

@@ -17,7 +17,7 @@ pub struct SellSynth<'info> {
         bump = manager_nonce,
         has_one = token_data
     )]
-    pub manager: Account<'info, Manager>,
+    pub manager: Box<Account<'info, Manager>>,
     #[account(
         mut,
         has_one = manager,
@@ -29,25 +29,31 @@ pub struct SellSynth<'info> {
         associated_token::mint = manager.usdi_mint,
         associated_token::authority = user
     )]
-    pub user_usdi_token_account: Account<'info, TokenAccount>,
+    pub user_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         constraint = user_iasset_token_account.amount >= iasset_amount @ InceptError::InvalidTokenAccountBalance,
         associated_token::mint = token_data.load()?.pools[pool_index as usize].asset_info.iasset_mint,
         associated_token::authority = user
     )]
-    pub user_iasset_token_account: Account<'info, TokenAccount>,
+    pub user_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         address = token_data.load()?.pools[pool_index as usize].usdi_token_account,
     )]
-    pub amm_usdi_token_account: Account<'info, TokenAccount>,
+    pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         address = token_data.load()?.pools[pool_index as usize].iasset_token_account,
         constraint = amm_iasset_token_account.amount >= iasset_amount @ InceptError::InvalidTokenAccountBalance,
     )]
-    pub amm_iasset_token_account: Account<'info, TokenAccount>,
+    pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        associated_token::mint = manager.usdi_mint,
+        associated_token::authority = manager.treasury_address
+    )]
+    pub treasury_usdi_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 
@@ -65,7 +71,8 @@ pub fn execute(
     let iasset_amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
     // calculate how much usdi will be recieved
-    let mut usdi_amount_value = pool.calculate_output_from_input(iasset_amount_value, false);
+    let swap_summary = pool.calculate_output_from_input(iasset_amount_value, false);
+    let mut usdi_amount_value = swap_summary.result;
     usdi_amount_value.rescale(DEVNET_TOKEN_SCALE);
 
     // ensure it's within slippage tolerance
@@ -73,6 +80,10 @@ pub fn execute(
         usdi_received_threshold.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,
     );
+    if usdi_amount_value < min_usdi_to_receive {
+        msg!("{:?} {:?}", swap_summary, min_usdi_to_receive);
+        return Ok(());
+    }
     require!(
         usdi_amount_value >= min_usdi_to_receive,
         InceptError::SlippageToleranceExceeded
@@ -122,6 +133,33 @@ pub fn execute(
     token::transfer(
         send_usdi_to_user_context,
         usdi_amount_value.mantissa().try_into().unwrap(),
+    )?;
+
+    // Transfer treasury fee to treasury token account
+    let mut treasury_fee_to_pay = swap_summary.treasury_fees_paid;
+    treasury_fee_to_pay.rescale(DEVNET_TOKEN_SCALE);
+    let cpi_accounts = Transfer {
+        from: ctx
+            .accounts
+            .amm_usdi_token_account
+            .to_account_info()
+            .clone(),
+        to: ctx
+            .accounts
+            .treasury_usdi_token_account
+            .to_account_info()
+            .clone(),
+        authority: ctx.accounts.manager.to_account_info().clone(),
+    };
+    let send_usdi_to_treasury_context = CpiContext::new_with_signer(
+        ctx.accounts.token_program.to_account_info().clone(),
+        cpi_accounts,
+        seeds,
+    );
+
+    token::transfer(
+        send_usdi_to_treasury_context,
+        treasury_fee_to_pay.mantissa().try_into().unwrap(),
     )?;
 
     // update pool data

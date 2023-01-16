@@ -67,7 +67,8 @@ export class Incept {
     ilLiquidationRewardPct: number,
     maxHealthLiquidation: number,
     liquidatorFee: number,
-    collateralFullLiquidationThreshold: number
+    collateralFullLiquidationThreshold: number,
+    treasuryAddress: PublicKey
   ) {
     const managerPubkeyAndBump = await this.getManagerAddress();
     const usdiMint = anchor.web3.Keypair.generate();
@@ -81,7 +82,8 @@ export class Incept {
         toDevnetScale(ilLiquidationRewardPct),
         new BN(maxHealthLiquidation),
         new BN(liquidatorFee),
-        new BN(collateralFullLiquidationThreshold)
+        new BN(collateralFullLiquidationThreshold),
+        treasuryAddress
       )
       .accounts({
         admin: this.provider.publicKey!,
@@ -205,6 +207,7 @@ export class Incept {
     stableCollateralRatio: number,
     cryptoCollateralRatio: number,
     liquidityTradingFee: number,
+    treasuryTradingFee: number,
     pythOracle: PublicKey,
     chainlinkOracle: PublicKey,
     healthScoreCoefficient: number,
@@ -222,6 +225,7 @@ export class Incept {
         stableCollateralRatio,
         cryptoCollateralRatio,
         liquidityTradingFee,
+        treasuryTradingFee,
         toDevnetScale(healthScoreCoefficient),
         new BN(liquidationDiscountRate)
       )
@@ -988,6 +992,7 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     poolIndex: number,
     usdiSpendThreshold: BN,
+    treasuryIassetTokenAccount: PublicKey,
     signers?: Array<Keypair>
   ) {
     const buySynthIx = await this.buySynthInstruction(
@@ -995,7 +1000,8 @@ export class Incept {
       userIassetTokenAccount,
       iassetAmount,
       poolIndex,
-      usdiSpendThreshold
+      usdiSpendThreshold,
+      treasuryIassetTokenAccount
     );
     await this.provider.sendAndConfirm!(
       new Transaction().add(buySynthIx),
@@ -1007,10 +1013,10 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     iassetAmount: BN,
     poolIndex: number,
-    usdiSpendThreshold: BN
+    usdiSpendThreshold: BN,
+    treasuryIassetTokenAccount: PublicKey
   ) {
     let tokenData = await this.getTokenData();
-
     return await this.program.methods
       .buySynth(
         this.managerAddress[1],
@@ -1026,6 +1032,7 @@ export class Incept {
         userIassetTokenAccount: userIassetTokenAccount,
         ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
         ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
+        treasuryIassetTokenAccount: treasuryIassetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
@@ -1037,6 +1044,7 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     poolIndex: number,
     usdiReceivedThreshold: BN,
+    treasuryUsdiTokenAccount: PublicKey,
     signers?: Array<Keypair>
   ) {
     const sellSynthIx = await this.sellSynthInstruction(
@@ -1044,7 +1052,8 @@ export class Incept {
       userIassetTokenAccount,
       iassetAmount,
       poolIndex,
-      usdiReceivedThreshold
+      usdiReceivedThreshold,
+      treasuryUsdiTokenAccount
     );
     await this.provider.sendAndConfirm!(
       new Transaction().add(sellSynthIx),
@@ -1056,7 +1065,8 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     iassetAmount: BN,
     poolIndex: number,
-    usdiReceivedThreshold: BN
+    usdiReceivedThreshold: BN,
+    treasuryUsdiTokenAccount: PublicKey
   ) {
     let tokenData = await this.getTokenData();
 
@@ -1076,6 +1086,7 @@ export class Incept {
         ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
         ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
+        treasuryUsdiTokenAccount: treasuryUsdiTokenAccount,
       })
       .instruction();
   }

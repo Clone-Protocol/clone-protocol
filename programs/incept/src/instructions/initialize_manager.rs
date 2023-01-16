@@ -50,6 +50,7 @@ pub fn execute(
     max_health_liquidation: u64,
     liquidator_fee: u64,
     collateral_full_liquidation_threshold: u64,
+    treasury_address: Pubkey,
 ) -> Result<()> {
     require!(max_health_liquidation < 100, InceptError::InvalidValueRange);
     require!(liquidator_fee < 10000, InceptError::InvalidValueRange);
@@ -60,6 +61,7 @@ pub fn execute(
     ctx.accounts.manager.usdi_mint = *ctx.accounts.usdi_mint.to_account_info().key;
     ctx.accounts.manager.admin = *ctx.accounts.admin.to_account_info().key;
     ctx.accounts.manager.bump = *ctx.bumps.get("manager").unwrap();
+    ctx.accounts.manager.treasury_address = treasury_address;
 
     ctx.accounts.manager.liquidation_config = LiquidationConfig {
         max_health_liquidation: RawDecimal::new(max_health_liquidation.try_into().unwrap(), 0),

@@ -80,6 +80,7 @@ pub fn execute(
     stable_collateral_ratio: u16,
     crypto_collateral_ratio: u16,
     liquidity_trading_fee: u16,
+    treasury_trading_fee: u16,
     health_score_coefficient: u64,
     liquidation_discount_rate: u64,
 ) -> Result<()> {
@@ -108,7 +109,7 @@ pub fn execute(
         iasset_amount: RawDecimal::default(),
         usdi_amount: RawDecimal::default(),
         liquidity_token_supply: RawDecimal::default(),
-        treasury_trading_fee: RawDecimal::from_percent(0),
+        treasury_trading_fee: RawDecimal::from_percent(treasury_trading_fee),
         liquidity_trading_fee: RawDecimal::from_percent(liquidity_trading_fee),
         total_minted_amount: RawDecimal::default(),
         supplied_mint_collateral_amount: RawDecimal::default(),
