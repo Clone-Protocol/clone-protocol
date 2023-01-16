@@ -6,7 +6,6 @@ mod error;
 mod instructions;
 mod math;
 mod states;
-mod value;
 
 use instructions::*;
 

@@ -1,5 +1,4 @@
 use crate::error::*;
-use crate::value::*;
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
@@ -7,6 +6,7 @@ use std::convert::TryInto;
 pub const DEVNET_TOKEN_SCALE: u32 = 8;
 pub const USDI_COLLATERAL_INDEX: usize = 0;
 pub const USDC_COLLATERAL_INDEX: usize = 1;
+pub const PERCENT_SCALE: u8 = 2;
 
 #[zero_copy]
 #[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
