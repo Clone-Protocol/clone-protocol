@@ -75,6 +75,10 @@ export type Incept = {
         {
           "name": "collateralFullLiquidationThreshold",
           "type": "u64"
+        },
+        {
+          "name": "treasuryAddress",
+          "type": "publicKey"
         }
       ]
     },
@@ -424,6 +428,10 @@ export type Incept = {
         },
         {
           "name": "liquidityTradingFee",
+          "type": "u16"
+        },
+        {
+          "name": "treasuryTradingFee",
           "type": "u16"
         },
         {
@@ -1106,6 +1114,11 @@ export type Incept = {
           "isSigner": false
         },
         {
+          "name": "treasuryIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -1165,6 +1178,11 @@ export type Incept = {
         },
         {
           "name": "ammIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "treasuryUsdiTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -2535,6 +2553,10 @@ export type Incept = {
             "type": {
               "defined": "LiquidationConfig"
             }
+          },
+          {
+            "name": "treasuryAddress",
+            "type": "publicKey"
           }
         ]
       }
@@ -3485,6 +3507,10 @@ export const IDL: Incept = {
         {
           "name": "collateralFullLiquidationThreshold",
           "type": "u64"
+        },
+        {
+          "name": "treasuryAddress",
+          "type": "publicKey"
         }
       ]
     },
@@ -3834,6 +3860,10 @@ export const IDL: Incept = {
         },
         {
           "name": "liquidityTradingFee",
+          "type": "u16"
+        },
+        {
+          "name": "treasuryTradingFee",
           "type": "u16"
         },
         {
@@ -4516,6 +4546,11 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
+          "name": "treasuryIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -4575,6 +4610,11 @@ export const IDL: Incept = {
         },
         {
           "name": "ammIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "treasuryUsdiTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -5945,6 +5985,10 @@ export const IDL: Incept = {
             "type": {
               "defined": "LiquidationConfig"
             }
+          },
+          {
+            "name": "treasuryAddress",
+            "type": "publicKey"
           }
         ]
       }
