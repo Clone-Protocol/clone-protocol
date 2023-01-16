@@ -25,6 +25,7 @@ pub mod incept {
         max_health_liquidation: u64,
         liquidator_fee: u64,
         collateral_full_liquidation_threshold: u64,
+        treasury_address: Pubkey,
     ) -> Result<()> {
         instructions::initialize_manager::execute(
             ctx,
@@ -34,6 +35,7 @@ pub mod incept {
             max_health_liquidation,
             liquidator_fee,
             collateral_full_liquidation_threshold,
+            treasury_address,
         )
     }
 
@@ -96,6 +98,7 @@ pub mod incept {
         stable_collateral_ratio: u16,
         crypto_collateral_ratio: u16,
         liquidity_trading_fee: u16,
+        treasury_trading_fee: u16,
         health_score_coefficient: u64,
         liquidation_discount_rate: u64,
     ) -> Result<()> {
@@ -104,6 +107,7 @@ pub mod incept {
             stable_collateral_ratio,
             crypto_collateral_ratio,
             liquidity_trading_fee,
+            treasury_trading_fee,
             health_score_coefficient,
             liquidation_discount_rate,
         )
