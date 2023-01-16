@@ -241,7 +241,9 @@ pub fn calculate_comet_position_loss(
         // Adjust the debt since as we buywe increase the effective debt.
         let effective_iasset_debt = iasset_debt / (Decimal::ONE - liquidity_proportion);
         // Marked as the required USDi to buy back the iasset debt,
-        let pool_marked_debt = pool.calculate_input_from_output(effective_iasset_debt, false);
+        let pool_marked_debt = pool
+            .calculate_input_from_output(effective_iasset_debt, false)
+            .result;
 
         impermanent_loss += oracle_marked_debt.max(pool_marked_debt);
     }

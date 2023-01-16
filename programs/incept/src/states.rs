@@ -53,12 +53,13 @@ impl Default for RawDecimal {
 #[account]
 #[derive(Default)]
 pub struct Manager {
-    // 145
+    // 177
     pub usdi_mint: Pubkey,                     // 32
     pub token_data: Pubkey,                    // 32
     pub admin: Pubkey,                         // 32
     pub bump: u8,                              // 1
     pub liquidation_config: LiquidationConfig, // 48
+    pub treasury_address: Pubkey,              // 32
 }
 
 #[zero_copy]
@@ -179,37 +180,73 @@ pub struct Pool {
     pub asset_info: AssetInfo,                       // 208
 }
 
+#[derive(Default, Debug)]
+pub struct SwapSummary {
+    pub result: Decimal,
+    pub liquidity_fees_paid: Decimal,
+    pub treasury_fees_paid: Decimal,
+}
+
 impl Pool {
     pub fn total_trading_fee(&self) -> Decimal {
         self.liquidity_trading_fee.to_decimal() + self.treasury_trading_fee.to_decimal()
     }
 
     // Calculate how much you would get from inputting that amount into the pool.
-    pub fn calculate_output_from_input(&self, input: Decimal, input_is_usdi: bool) -> Decimal {
+    pub fn calculate_output_from_input(&self, input: Decimal, input_is_usdi: bool) -> SwapSummary {
         let pool_usdi = self.usdi_amount.to_decimal();
         let pool_iasset = self.iasset_amount.to_decimal();
         let invariant = pool_iasset * pool_usdi;
-        let fee_adjustment = Decimal::ONE - self.total_trading_fee();
+        let liquidity_trading_fee = self.liquidity_trading_fee.to_decimal();
+        let treasury_trading_fee = self.treasury_trading_fee.to_decimal();
+        let total_trading_fee = liquidity_trading_fee + treasury_trading_fee;
+        let fee_adjustment = Decimal::ONE - total_trading_fee;
 
-        let unadjusted_output = if input_is_usdi {
+        let output_before_fees = if input_is_usdi {
             pool_iasset - invariant / (pool_usdi + input)
         } else {
             pool_usdi - invariant / (pool_iasset + input)
         };
-        unadjusted_output * fee_adjustment
+        let result = output_before_fees * fee_adjustment;
+        let total_fees_paid = output_before_fees - result;
+        let liquidity_fees_paid = total_fees_paid * liquidity_trading_fee / total_trading_fee;
+        let treasury_fees_paid = total_fees_paid - liquidity_fees_paid;
+
+        SwapSummary {
+            result,
+            liquidity_fees_paid,
+            treasury_fees_paid,
+        }
     }
 
     // Calculate how much you would require to input into the pool given a desired output.
-    pub fn calculate_input_from_output(&self, output: Decimal, output_is_usdi: bool) -> Decimal {
+    pub fn calculate_input_from_output(
+        &self,
+        output: Decimal,
+        output_is_usdi: bool,
+    ) -> SwapSummary {
         let pool_usdi = self.usdi_amount.to_decimal();
         let pool_iasset = self.iasset_amount.to_decimal();
         let invariant = pool_iasset * pool_usdi;
-        let fee_adjustment = Decimal::ONE - self.total_trading_fee();
+        let liquidity_trading_fee = self.liquidity_trading_fee.to_decimal();
+        let treasury_trading_fee = self.treasury_trading_fee.to_decimal();
+        let total_trading_fee = liquidity_trading_fee + treasury_trading_fee;
+        let fee_adjustment = Decimal::ONE - total_trading_fee;
 
-        if output_is_usdi {
-            invariant / (pool_usdi - output / fee_adjustment) - pool_iasset
+        let output_before_fees = output / fee_adjustment;
+        let result = if output_is_usdi {
+            invariant / (pool_usdi - output_before_fees) - pool_iasset
         } else {
-            invariant / (pool_iasset - output / fee_adjustment) - pool_usdi
+            invariant / (pool_iasset - output_before_fees) - pool_usdi
+        };
+        let total_fees_paid = output_before_fees - output;
+        let liquidity_fees_paid = total_fees_paid * liquidity_trading_fee / total_trading_fee;
+        let treasury_fees_paid = total_fees_paid - liquidity_fees_paid;
+
+        SwapSummary {
+            result,
+            liquidity_fees_paid,
+            treasury_fees_paid,
         }
     }
 }
