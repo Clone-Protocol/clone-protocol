@@ -74,12 +74,7 @@ pub fn execute(
 
     let added_collateral_value = Decimal::new(
         collateral_amount.try_into().unwrap(),
-        collateral
-            .vault_comet_supply
-            .to_decimal()
-            .scale()
-            .try_into()
-            .unwrap(),
+        collateral.vault_comet_supply.to_decimal().scale(),
     );
 
     let current_vault_comet_supply = collateral.vault_comet_supply.to_decimal();

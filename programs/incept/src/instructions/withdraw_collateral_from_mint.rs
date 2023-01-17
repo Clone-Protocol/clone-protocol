@@ -63,12 +63,7 @@ pub fn execute(
 
     let amount_value = Decimal::new(
         amount.try_into().unwrap(),
-        collateral
-            .vault_mint_supply
-            .to_decimal()
-            .scale()
-            .try_into()
-            .unwrap(),
+        collateral.vault_mint_supply.to_decimal().scale(),
     );
 
     // subtract collateral amount from vault supply
