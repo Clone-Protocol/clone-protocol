@@ -5,6 +5,7 @@ use std::convert::TryInto;
 
 pub const DEVNET_TOKEN_SCALE: u32 = 8;
 pub const USDI_COLLATERAL_INDEX: usize = 0;
+#[allow(dead_code)]
 pub const USDC_COLLATERAL_INDEX: usize = 1;
 pub const PERCENT_SCALE: u8 = 2;
 
