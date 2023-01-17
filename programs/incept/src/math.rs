@@ -19,7 +19,7 @@ pub fn calculate_price_from_iasset(
         let new_iasset_amm_value = iasset_amm_value - iasset_amount_value;
         return Ok(invariant / new_iasset_amm_value - usdi_amm_value);
     }
-    return Ok(usdi_amm_value - invariant / (iasset_amm_value + iasset_amount_value));
+    Ok(usdi_amm_value - invariant / (iasset_amm_value + iasset_amount_value))
 }
 
 // pub fn check_price_confidence(price: Decimal, confidence: Decimal) -> Result<()> {
@@ -51,7 +51,7 @@ pub fn calculate_liquidity_provider_values_from_iasset(
             * calculate_liquidity_proportion_from_usdi(usdi_liquidity_value, usdi_amm_value)?;
     }
 
-    return Ok((usdi_liquidity_value, liquidity_tokens_value));
+    Ok((usdi_liquidity_value, liquidity_tokens_value))
 }
 
 pub fn calculate_liquidity_provider_values_from_usdi(
@@ -78,7 +78,7 @@ pub fn calculate_liquidity_provider_values_from_usdi(
             liquidity_proportion * liquidity_token_supply / inverse_liquidity_proportion;
     }
 
-    return Ok((iasset_liquidity_value, liquidity_tokens_value));
+    Ok((iasset_liquidity_value, liquidity_tokens_value))
 }
 
 pub fn calculate_liquidity_provider_values_from_liquidity_tokens(
@@ -95,29 +95,29 @@ pub fn calculate_liquidity_provider_values_from_liquidity_tokens(
     let iasset_value = iasset_amm_value * liquidity_proportion;
     let usdi_value = usdi_amm_value * liquidity_proportion;
 
-    return Ok((iasset_value, usdi_value));
+    Ok((iasset_value, usdi_value))
 }
 
 pub fn calculate_amm_price(iasset_value: Decimal, usdi_value: Decimal) -> Decimal {
-    return usdi_value / iasset_value;
+    usdi_value / iasset_value
 }
 
 pub fn calculate_invariant(iasset_value: Decimal, usdi_value: Decimal) -> Decimal {
-    return usdi_value * iasset_value;
+    usdi_value * iasset_value
 }
 
 pub fn calculate_liquidity_proportion_from_liquidity_tokens(
     liquidity_token_value: Decimal,
     liquidity_token_supply: Decimal,
 ) -> Decimal {
-    return liquidity_token_value / liquidity_token_supply;
+    liquidity_token_value / liquidity_token_supply
 }
 
 pub fn calculate_liquidity_proportion_from_usdi(
     usdi_liquidity_value: Decimal,
     usdi_amm_value: Decimal,
 ) -> Result<Decimal> {
-    return Ok(usdi_liquidity_value / (usdi_amm_value + usdi_liquidity_value));
+    Ok(usdi_liquidity_value / (usdi_amm_value + usdi_liquidity_value))
 }
 
 pub fn calculate_recentering_values_with_usdi_surplus(
@@ -145,7 +145,7 @@ pub fn calculate_recentering_values_with_usdi_surplus(
 
     let usdi_amount = invariant / new_iasset_amm_value - usdi_amm_value;
 
-    return (usdi_surplus, usdi_amount, iasset_debt);
+    (usdi_surplus, usdi_amount, iasset_debt)
 }
 
 pub fn calculate_recentering_values_with_iasset_surplus(
@@ -174,7 +174,7 @@ pub fn calculate_recentering_values_with_iasset_surplus(
 
     let usdi_burned = usdi_amm_value - new_usdi_amm_value;
 
-    return (iasset_surplus, usdi_burned, usdi_debt);
+    (iasset_surplus, usdi_burned, usdi_debt)
 }
 
 pub fn check_mint_collateral_sufficient(
@@ -288,7 +288,7 @@ pub fn calculate_health_score(
         }
 
         let (impermanent_loss_term, position_term) =
-            calculate_comet_position_loss(&token_data, &comet_position)?;
+            calculate_comet_position_loss(token_data, &comet_position)?;
 
         total_il_term += impermanent_loss_term;
         total_position_term += position_term;

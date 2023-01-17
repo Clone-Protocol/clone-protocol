@@ -84,7 +84,7 @@ pub fn recenter_calculation(
     comet_collateral_index: usize,
 ) -> Result<RecenterResult> {
     let comet_position = comet.positions[comet_position_index];
-    let comet_collateral = comet.collaterals[comet_collateral_index];
+    let _comet_collateral = comet.collaterals[comet_collateral_index];
     let pool = token_data.pools[comet_position.pool_index as usize];
 
     let iasset_amm_value = pool.iasset_amount.to_decimal();

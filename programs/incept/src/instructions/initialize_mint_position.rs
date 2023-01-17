@@ -59,7 +59,7 @@ pub fn execute(
     ctx: Context<InitializeMintPosition>,
     manager_nonce: u8,
     pool_index: u8,
-    collateral_index: u8,
+    _collateral_index: u8,
     iasset_amount: u64,
     collateral_amount: u64,
 ) -> Result<()> {

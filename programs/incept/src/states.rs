@@ -9,7 +9,7 @@ pub const USDC_COLLATERAL_INDEX: usize = 1;
 pub const PERCENT_SCALE: u8 = 2;
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
+#[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct Value {
     // 24
     pub val: u128,  // 16
@@ -17,7 +17,7 @@ pub struct Value {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Debug, AnchorDeserialize, AnchorSerialize)]
+#[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct RawDecimal {
     // 16
     data: [u8; 16],
@@ -63,7 +63,7 @@ pub struct Manager {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
+#[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct LiquidationConfig {
     // 48
     pub liquidator_fee: RawDecimal,                        // 16,
@@ -87,7 +87,7 @@ pub struct TokenData {
 
 impl Default for TokenData {
     fn default() -> Self {
-        return Self {
+        Self {
             manager: Pubkey::default(),
             num_pools: 0,
             num_collaterals: 0,
@@ -97,7 +97,7 @@ impl Default for TokenData {
             il_health_score_coefficient: RawDecimal::default(),
             il_health_score_cutoff: RawDecimal::default(),
             il_liquidation_reward_pct: RawDecimal::default(),
-        };
+        }
     }
 }
 
@@ -145,7 +145,7 @@ impl TokenData {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug)]
+#[derive(PartialEq, Eq, Default, Debug)]
 pub struct AssetInfo {
     // 208
     pub iasset_mint: Pubkey,                   // 32
@@ -252,7 +252,7 @@ impl Pool {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug)]
+#[derive(PartialEq, Eq, Default, Debug)]
 pub struct Collateral {
     // 144
     pub pool_index: u64,                     // 8
@@ -343,7 +343,7 @@ impl Comet {
     pub fn get_total_collateral_amount(&self) -> Decimal {
         let mut sum = Decimal::new(0, DEVNET_TOKEN_SCALE);
         for i in 0..self.num_collaterals {
-            sum = sum + self.collaterals[i as usize].collateral_amount.to_decimal();
+            sum += self.collaterals[i as usize].collateral_amount.to_decimal();
         }
         sum
     }
@@ -361,7 +361,7 @@ impl Comet {
         token_data: &TokenData,
         single_collateral_position_index: Option<usize>,
     ) -> Decimal {
-        let mut total_value = Decimal::new(0, DEVNET_TOKEN_SCALE.into());
+        let mut total_value = Decimal::new(0, DEVNET_TOKEN_SCALE);
 
         self.collaterals[0..(self.num_collaterals as usize)]
             .iter()
@@ -444,7 +444,7 @@ impl Default for CometCollateral {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug)]
+#[derive(PartialEq, Eq, Default, Debug)]
 pub struct CometLiquidation {
     // 32
     pub status: u64,                     // 8
@@ -453,7 +453,7 @@ pub struct CometLiquidation {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
+#[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct CometManager {
     // 40
     pub membership_token_mint: Pubkey, // 8

@@ -9,7 +9,7 @@ use crate::states::*;
 pub const MAX_SIZE: usize = 128;
 
 #[zero_copy]
-#[derive(PartialEq, Debug, AnchorDeserialize, AnchorSerialize)]
+#[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct PoolIndices {
     pub indices: [u8; MAX_SIZE],
 }
