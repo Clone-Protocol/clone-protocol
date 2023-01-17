@@ -5,6 +5,7 @@ use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
+use std::cmp::Ordering;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
@@ -122,20 +123,24 @@ pub fn recenter_calculation(
 
     let mut collateral_deficit = usdi_ild; // Start off with how much usdi ILD.
 
-    if iasset_ild > Decimal::ZERO {
-        // Figure out how much usdi required to pay off ILD of iasset.
-        let mut usdi_to_pay = temp_k / (temp_amm_iasset - iasset_ild) - temp_amm_usdi;
-        usdi_to_pay.rescale(DEVNET_TOKEN_SCALE);
-        collateral_deficit += usdi_to_pay;
-        temp_amm_usdi += usdi_to_pay;
-        temp_amm_iasset -= iasset_ild;
-    } else if iasset_ild < Decimal::ZERO {
-        // Sell your extra iasset.
-        let mut usdi_to_receive = temp_amm_usdi - temp_k / (temp_amm_iasset - iasset_ild);
-        usdi_to_receive.rescale(DEVNET_TOKEN_SCALE);
-        collateral_deficit -= usdi_to_receive;
-        temp_amm_usdi -= usdi_to_receive;
-        temp_amm_iasset -= iasset_ild;
+    match iasset_ild.cmp(&Decimal::ZERO) {
+        Ordering::Equal => (),
+        Ordering::Greater => {
+            // Figure out how much usdi required to pay off ILD of iasset.
+            let mut usdi_to_pay = temp_k / (temp_amm_iasset - iasset_ild) - temp_amm_usdi;
+            usdi_to_pay.rescale(DEVNET_TOKEN_SCALE);
+            collateral_deficit += usdi_to_pay;
+            temp_amm_usdi += usdi_to_pay;
+            temp_amm_iasset -= iasset_ild;
+        }
+        Ordering::Less => {
+            // Sell your extra iasset.
+            let mut usdi_to_receive = temp_amm_usdi - temp_k / (temp_amm_iasset - iasset_ild);
+            usdi_to_receive.rescale(DEVNET_TOKEN_SCALE);
+            collateral_deficit -= usdi_to_receive;
+            temp_amm_usdi -= usdi_to_receive;
+            temp_amm_iasset -= iasset_ild;
+        }
     }
 
     let inverse_ratio = liquidity_tokens / (liquidity_token_supply - liquidity_tokens);
@@ -204,111 +209,15 @@ pub fn execute(
         RawDecimal::from(recenter_result.user_borrowed_iasset);
 
     // Burn or mint for amm
-    if recenter_result.amm_usdi_burn > Decimal::ZERO {
-        token::burn(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                Burn {
-                    mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                    from: ctx
-                        .accounts
-                        .amm_usdi_token_account
-                        .to_account_info()
-                        .clone(),
-                    authority: ctx.accounts.manager.to_account_info().clone(),
-                },
-                seeds,
-            ),
-            recenter_result.amm_usdi_burn.mantissa().try_into().unwrap(),
-        )?;
-    } else if recenter_result.amm_usdi_burn < Decimal::ZERO {
-        token::mint_to(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                MintTo {
-                    mint: ctx.accounts.usdi_mint.to_account_info().clone(),
-                    to: ctx
-                        .accounts
-                        .amm_usdi_token_account
-                        .to_account_info()
-                        .clone(),
-                    authority: ctx.accounts.manager.to_account_info().clone(),
-                },
-                seeds,
-            ),
-            recenter_result
-                .amm_usdi_burn
-                .abs()
-                .mantissa()
-                .try_into()
-                .unwrap(),
-        )?;
-    }
-
-    if recenter_result.amm_iasset_burn > Decimal::ZERO {
-        token::burn(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                Burn {
-                    mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-                    from: ctx
-                        .accounts
-                        .amm_iasset_token_account
-                        .to_account_info()
-                        .clone(),
-                    authority: ctx.accounts.manager.to_account_info().clone(),
-                },
-                seeds,
-            ),
-            recenter_result
-                .amm_iasset_burn
-                .mantissa()
-                .try_into()
-                .unwrap(),
-        )?;
-    } else if recenter_result.amm_iasset_burn < Decimal::ZERO {
-        token::mint_to(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                MintTo {
-                    mint: ctx.accounts.iasset_mint.to_account_info().clone(),
-                    to: ctx
-                        .accounts
-                        .amm_iasset_token_account
-                        .to_account_info()
-                        .clone(),
-                    authority: ctx.accounts.manager.to_account_info().clone(),
-                },
-                seeds,
-            ),
-            recenter_result
-                .amm_iasset_burn
-                .abs()
-                .mantissa()
-                .try_into()
-                .unwrap(),
-        )?;
-    }
-
-    // Update collateral.
-    let mut new_collateral_amount = comet_collateral.collateral_amount.to_decimal()
-        - recenter_result.user_usdi_collateral_deficit;
-    new_collateral_amount.rescale(DEVNET_TOKEN_SCALE);
-    comet.collaterals[comet_collateral_index as usize].collateral_amount =
-        RawDecimal::from(new_collateral_amount);
-
-    let using_usdi_collateral = comet_collateral.collateral_index as usize == USDI_COLLATERAL_INDEX;
-
-    if recenter_result.user_usdi_collateral_deficit > Decimal::ZERO {
-        // If collateral is USDi Transfer from vault to amm.
-        // Else mint usdi into amm.
-        if using_usdi_collateral {
-            token::transfer(
+    match recenter_result.amm_usdi_burn.cmp(&Decimal::ZERO) {
+        Ordering::Equal => (),
+        Ordering::Greater => {
+            token::burn(
                 CpiContext::new_with_signer(
                     ctx.accounts.token_program.to_account_info().clone(),
-                    Transfer {
-                        from: ctx.accounts.vault.to_account_info().clone(),
-                        to: ctx
+                    Burn {
+                        mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                        from: ctx
                             .accounts
                             .amm_usdi_token_account
                             .to_account_info()
@@ -317,13 +226,10 @@ pub fn execute(
                     },
                     seeds,
                 ),
-                recenter_result
-                    .user_usdi_collateral_deficit
-                    .mantissa()
-                    .try_into()
-                    .unwrap(),
+                recenter_result.amm_usdi_burn.mantissa().try_into().unwrap(),
             )?;
-        } else {
+        }
+        Ordering::Less => {
             token::mint_to(
                 CpiContext::new_with_signer(
                     ctx.accounts.token_program.to_account_info().clone(),
@@ -339,46 +245,26 @@ pub fn execute(
                     seeds,
                 ),
                 recenter_result
-                    .user_usdi_collateral_deficit
+                    .amm_usdi_burn
+                    .abs()
                     .mantissa()
                     .try_into()
                     .unwrap(),
             )?;
         }
-    } else if recenter_result.user_usdi_collateral_deficit < Decimal::ZERO {
-        // If collateral is USDi transfer from amm to vault
-        // Else burn usdi in amm.
-        if using_usdi_collateral {
-            token::transfer(
-                CpiContext::new_with_signer(
-                    ctx.accounts.token_program.to_account_info().clone(),
-                    Transfer {
-                        to: ctx.accounts.vault.to_account_info().clone(),
-                        from: ctx
-                            .accounts
-                            .amm_usdi_token_account
-                            .to_account_info()
-                            .clone(),
-                        authority: ctx.accounts.manager.to_account_info().clone(),
-                    },
-                    seeds,
-                ),
-                recenter_result
-                    .user_usdi_collateral_deficit
-                    .abs()
-                    .mantissa()
-                    .try_into()
-                    .unwrap(),
-            )?;
-        } else {
+    };
+
+    match recenter_result.amm_iasset_burn.cmp(&Decimal::ZERO) {
+        Ordering::Equal => (),
+        Ordering::Greater => {
             token::burn(
                 CpiContext::new_with_signer(
                     ctx.accounts.token_program.to_account_info().clone(),
                     Burn {
-                        mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                        mint: ctx.accounts.iasset_mint.to_account_info().clone(),
                         from: ctx
                             .accounts
-                            .amm_usdi_token_account
+                            .amm_iasset_token_account
                             .to_account_info()
                             .clone(),
                         authority: ctx.accounts.manager.to_account_info().clone(),
@@ -386,12 +272,146 @@ pub fn execute(
                     seeds,
                 ),
                 recenter_result
-                    .user_usdi_collateral_deficit
+                    .amm_iasset_burn
+                    .mantissa()
+                    .try_into()
+                    .unwrap(),
+            )?;
+        }
+        Ordering::Less => {
+            token::mint_to(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    MintTo {
+                        mint: ctx.accounts.iasset_mint.to_account_info().clone(),
+                        to: ctx
+                            .accounts
+                            .amm_iasset_token_account
+                            .to_account_info()
+                            .clone(),
+                        authority: ctx.accounts.manager.to_account_info().clone(),
+                    },
+                    seeds,
+                ),
+                recenter_result
+                    .amm_iasset_burn
                     .abs()
                     .mantissa()
                     .try_into()
                     .unwrap(),
             )?;
+        }
+    }
+
+    // Update collateral.
+    let mut new_collateral_amount = comet_collateral.collateral_amount.to_decimal()
+        - recenter_result.user_usdi_collateral_deficit;
+    new_collateral_amount.rescale(DEVNET_TOKEN_SCALE);
+    comet.collaterals[comet_collateral_index as usize].collateral_amount =
+        RawDecimal::from(new_collateral_amount);
+
+    let using_usdi_collateral = comet_collateral.collateral_index as usize == USDI_COLLATERAL_INDEX;
+
+    match recenter_result
+        .user_usdi_collateral_deficit
+        .cmp(&Decimal::ZERO)
+    {
+        Ordering::Equal => (),
+        Ordering::Greater => {
+            // If collateral is USDi Transfer from vault to amm.
+            // Else mint usdi into amm.
+            if using_usdi_collateral {
+                token::transfer(
+                    CpiContext::new_with_signer(
+                        ctx.accounts.token_program.to_account_info().clone(),
+                        Transfer {
+                            from: ctx.accounts.vault.to_account_info().clone(),
+                            to: ctx
+                                .accounts
+                                .amm_usdi_token_account
+                                .to_account_info()
+                                .clone(),
+                            authority: ctx.accounts.manager.to_account_info().clone(),
+                        },
+                        seeds,
+                    ),
+                    recenter_result
+                        .user_usdi_collateral_deficit
+                        .mantissa()
+                        .try_into()
+                        .unwrap(),
+                )?;
+            } else {
+                token::mint_to(
+                    CpiContext::new_with_signer(
+                        ctx.accounts.token_program.to_account_info().clone(),
+                        MintTo {
+                            mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                            to: ctx
+                                .accounts
+                                .amm_usdi_token_account
+                                .to_account_info()
+                                .clone(),
+                            authority: ctx.accounts.manager.to_account_info().clone(),
+                        },
+                        seeds,
+                    ),
+                    recenter_result
+                        .user_usdi_collateral_deficit
+                        .mantissa()
+                        .try_into()
+                        .unwrap(),
+                )?;
+            }
+        }
+        Ordering::Less => {
+            // If collateral is USDi transfer from amm to vault
+            // Else burn usdi in amm.
+            if using_usdi_collateral {
+                token::transfer(
+                    CpiContext::new_with_signer(
+                        ctx.accounts.token_program.to_account_info().clone(),
+                        Transfer {
+                            to: ctx.accounts.vault.to_account_info().clone(),
+                            from: ctx
+                                .accounts
+                                .amm_usdi_token_account
+                                .to_account_info()
+                                .clone(),
+                            authority: ctx.accounts.manager.to_account_info().clone(),
+                        },
+                        seeds,
+                    ),
+                    recenter_result
+                        .user_usdi_collateral_deficit
+                        .abs()
+                        .mantissa()
+                        .try_into()
+                        .unwrap(),
+                )?;
+            } else {
+                token::burn(
+                    CpiContext::new_with_signer(
+                        ctx.accounts.token_program.to_account_info().clone(),
+                        Burn {
+                            mint: ctx.accounts.usdi_mint.to_account_info().clone(),
+                            from: ctx
+                                .accounts
+                                .amm_usdi_token_account
+                                .to_account_info()
+                                .clone(),
+                            authority: ctx.accounts.manager.to_account_info().clone(),
+                        },
+                        seeds,
+                    ),
+                    recenter_result
+                        .user_usdi_collateral_deficit
+                        .abs()
+                        .mantissa()
+                        .try_into()
+                        .unwrap(),
+                )?;
+            }
         }
     }
 
