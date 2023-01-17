@@ -291,14 +291,14 @@ pub struct Comet {
 
 impl Default for Comet {
     fn default() -> Self {
-        return Self {
+        Self {
             is_single_pool: 0,
             owner: Pubkey::default(),
             num_positions: 0,
             num_collaterals: 0,
             positions: [CometPosition::default(); 255],
             collaterals: [CometCollateral::default(); 255],
-        };
+        }
     }
 }
 
@@ -326,7 +326,7 @@ impl Comet {
                 break;
             }
         }
-        return index;
+        index
     }
     pub fn get_pool_index(&self, pool_index: u8) -> usize {
         let mut index: usize = usize::MAX;
@@ -337,7 +337,7 @@ impl Comet {
                 break;
             }
         }
-        return index;
+        index
     }
     // TODO: update to work with nonstables
     pub fn get_total_collateral_amount(&self) -> Decimal {
@@ -345,7 +345,7 @@ impl Comet {
         for i in 0..self.num_collaterals {
             sum = sum + self.collaterals[i as usize].collateral_amount.to_decimal();
         }
-        return sum;
+        sum
     }
     pub fn add_collateral(&mut self, new_collateral: CometCollateral) {
         self.collaterals[(self.num_collaterals) as usize] = new_collateral;
@@ -406,14 +406,14 @@ pub struct CometPosition {
 }
 impl Default for CometPosition {
     fn default() -> Self {
-        return Self {
+        Self {
             authority: Pubkey::default(),
             pool_index: u8::MAX.into(),
             borrowed_usdi: RawDecimal::default(),
             borrowed_iasset: RawDecimal::default(),
             liquidity_token_value: RawDecimal::default(),
             comet_liquidation: CometLiquidation::default(),
-        };
+        }
     }
 }
 
@@ -435,11 +435,11 @@ pub struct CometCollateral {
 }
 impl Default for CometCollateral {
     fn default() -> Self {
-        return Self {
+        Self {
             authority: Pubkey::default(),
             collateral_amount: RawDecimal::default(),
             collateral_index: u8::MAX.into(),
-        };
+        }
     }
 }
 
@@ -470,11 +470,11 @@ pub struct LiquidityPositions {
 
 impl Default for LiquidityPositions {
     fn default() -> Self {
-        return Self {
+        Self {
             owner: Pubkey::default(),
             num_positions: 0,
             liquidity_positions: [LiquidityPosition::default(); 255],
-        };
+        }
     }
 }
 
@@ -508,11 +508,11 @@ pub struct MintPositions {
 
 impl Default for MintPositions {
     fn default() -> Self {
-        return Self {
+        Self {
             owner: Pubkey::default(),
             num_positions: 0,
             mint_positions: [MintPosition::default(); 255],
-        };
+        }
     }
 }
 
