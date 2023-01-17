@@ -32,11 +32,11 @@ impl RawDecimal {
             data: decimal.serialize(),
         }
     }
-    pub fn to_decimal(&self) -> Decimal {
+    pub fn to_decimal(self) -> Decimal {
         Decimal::deserialize(self.data)
     }
 
-    pub fn to_u64(&self) -> u64 {
+    pub fn to_u64(self) -> u64 {
         self.to_decimal().mantissa().try_into().unwrap()
     }
     pub fn from_percent(percent: u16) -> Self {
