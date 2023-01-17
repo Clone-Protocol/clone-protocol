@@ -89,19 +89,15 @@ pub mod jupiter_agg_mock {
         // Get oracle price
         let price_feed = Price::load(&ctx.accounts.pyth_oracle)?;
         let price = rust_decimal::Decimal::new(
-            price_feed.agg.price.try_into().unwrap(),
+            price_feed.agg.price,
             price_feed.expo.abs().try_into().unwrap(),
         );
 
-        let mut result;
-
         if is_amount_asset {
             let iasset_decimal =
-                rust_decimal::Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE.into());
+                rust_decimal::Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
             let mut usdc_amount = iasset_decimal * price;
             usdc_amount.rescale(USDC_TOKEN_SCALE.into());
-
-            result = usdc_amount;
 
             if is_amount_input {
                 // burn amount asset
@@ -180,8 +176,6 @@ pub mod jupiter_agg_mock {
                 rust_decimal::Decimal::new(amount.try_into().unwrap(), USDC_TOKEN_SCALE.into());
             let mut asset_amount = usdi_decimal / price;
             asset_amount.rescale(DEVNET_TOKEN_SCALE);
-
-            result = asset_amount;
 
             if is_amount_input {
                 // burn amount usdc
@@ -402,7 +396,7 @@ pub struct Swap<'info> {
 
 /// States
 #[zero_copy]
-#[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
+#[derive(Eq, PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct RawDecimal {
     data: [u8; 16],
 }
