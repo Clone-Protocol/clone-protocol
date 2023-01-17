@@ -6,6 +6,8 @@ declare_id!("7741WpkbdmZPGmqzPpsP3LdbzCwtMgxWH9tjdERnAzg8");
 
 #[program]
 pub mod pyth {
+    #![allow(clippy::all)]
+
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, price: i64, expo: i32, _conf: u64) -> Result<()> {
