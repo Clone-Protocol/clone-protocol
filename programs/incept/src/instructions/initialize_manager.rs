@@ -42,6 +42,7 @@ pub struct InitializeManager<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn execute(
     ctx: Context<InitializeManager>,
     il_health_score_coefficient: u64,
