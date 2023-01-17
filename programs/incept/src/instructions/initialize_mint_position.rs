@@ -51,7 +51,6 @@ pub struct InitializeMintPosition<'info> {
         associated_token::authority = user
     )]
     pub user_iasset_token_account: Account<'info, TokenAccount>,
-    pub oracle: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
 }
 

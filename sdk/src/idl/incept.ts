@@ -604,11 +604,6 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "oracle",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -4033,11 +4028,6 @@ export const IDL: Incept = {
         {
           "name": "userIassetTokenAccount",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "oracle",
-          "isMut": false,
           "isSigner": false
         },
         {

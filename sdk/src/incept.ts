@@ -563,7 +563,6 @@ export class Incept {
         userCollateralTokenAccount: userCollateralTokenAccount,
         iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
         userIassetTokenAccount: userIassetTokenAccount,
-        oracle: tokenData.pools[poolIndex].assetInfo.priceFeedAddresses[0],
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
