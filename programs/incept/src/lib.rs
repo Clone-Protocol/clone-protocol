@@ -6,7 +6,6 @@ mod error;
 mod instructions;
 mod math;
 mod states;
-mod value;
 
 use instructions::*;
 
@@ -17,6 +16,7 @@ pub mod incept {
 
     use super::*;
 
+    #[allow(clippy::too_many_arguments)]
     pub fn initialize_manager(
         ctx: Context<InitializeManager>,
         il_health_score_coefficient: u64,

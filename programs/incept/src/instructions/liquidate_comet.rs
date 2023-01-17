@@ -22,6 +22,10 @@ pub struct LiquidateComet<'info> {
         has_one = manager
     )]
     pub token_data: AccountLoader<'info, TokenData>,
+    /// CHECK: Only used for address validation.
+    #[account(
+        address = user_account.authority
+    )]
     pub user: AccountInfo<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
@@ -179,7 +183,7 @@ pub fn execute(ctx: Context<LiquidateComet>, _user_nonce: u8, position_index: u8
     // Need to calculate fee based off of what the health score increase from recentering and withdrawing liquidity would be.
     // Close out comet position if withdrawing all collateral leaves health score less than the max liquidation value.
     //
-    let liquidation_config = ctx.accounts.manager.liquidation_config.clone();
+    let liquidation_config = ctx.accounts.manager.liquidation_config;
 
     // Case 1: More than one comet position,
     // Withdraw all liquidity for this position, reward some collateral.

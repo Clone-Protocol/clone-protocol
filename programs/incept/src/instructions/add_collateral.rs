@@ -66,8 +66,8 @@ pub fn execute(
         pool_index = TokenData::get_pool_tuple_from_oracle(
             token_data,
             [
-                &ctx.remaining_accounts[0].to_account_info().key,
-                &ctx.remaining_accounts[1].to_account_info().key,
+                (ctx.remaining_accounts[0].to_account_info().key),
+                (ctx.remaining_accounts[1].to_account_info().key),
             ],
         )
         .unwrap()

@@ -51,7 +51,6 @@ pub struct InitializeMintPosition<'info> {
         associated_token::authority = user
     )]
     pub user_iasset_token_account: Account<'info, TokenAccount>,
-    pub oracle: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
 }
 
@@ -59,7 +58,7 @@ pub fn execute(
     ctx: Context<InitializeMintPosition>,
     manager_nonce: u8,
     pool_index: u8,
-    collateral_index: u8,
+    _collateral_index: u8,
     iasset_amount: u64,
     collateral_amount: u64,
 ) -> Result<()> {

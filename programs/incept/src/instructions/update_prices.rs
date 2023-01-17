@@ -9,7 +9,7 @@ use crate::states::*;
 pub const MAX_SIZE: usize = 128;
 
 #[zero_copy]
-#[derive(PartialEq, Debug, AnchorDeserialize, AnchorSerialize)]
+#[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct PoolIndices {
     pub indices: [u8; MAX_SIZE],
 }
@@ -51,12 +51,11 @@ pub fn execute<'info>(
 
         let price_feed = Price::load(pyth_oracle)?;
         let expo: u32 = price_feed.expo.abs().try_into().unwrap();
-        let pyth_price = Decimal::new(price_feed.agg.price.try_into().unwrap(), expo);
+        let pyth_price = Decimal::new(price_feed.agg.price, expo);
 
         // update price data
         token_data.pools[pool_index].asset_info.price = RawDecimal::from(pyth_price);
-        token_data.pools[pool_index].asset_info.twap =
-            RawDecimal::new(price_feed.twap.try_into().unwrap(), expo);
+        token_data.pools[pool_index].asset_info.twap = RawDecimal::new(price_feed.twap, expo);
         token_data.pools[pool_index].asset_info.confidence =
             RawDecimal::new(price_feed.agg.conf.try_into().unwrap(), expo);
         token_data.pools[pool_index].asset_info.status = price_feed.agg.status as u64;

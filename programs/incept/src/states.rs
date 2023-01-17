@@ -1,15 +1,16 @@
 use crate::error::*;
-use crate::value::*;
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 pub const DEVNET_TOKEN_SCALE: u32 = 8;
 pub const USDI_COLLATERAL_INDEX: usize = 0;
+#[allow(dead_code)]
 pub const USDC_COLLATERAL_INDEX: usize = 1;
+pub const PERCENT_SCALE: u8 = 2;
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
+#[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct Value {
     // 24
     pub val: u128,  // 16
@@ -17,7 +18,7 @@ pub struct Value {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Debug, AnchorDeserialize, AnchorSerialize)]
+#[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct RawDecimal {
     // 16
     data: [u8; 16],
@@ -32,11 +33,11 @@ impl RawDecimal {
             data: decimal.serialize(),
         }
     }
-    pub fn to_decimal(&self) -> Decimal {
+    pub fn to_decimal(self) -> Decimal {
         Decimal::deserialize(self.data)
     }
 
-    pub fn to_u64(&self) -> u64 {
+    pub fn to_u64(self) -> u64 {
         self.to_decimal().mantissa().try_into().unwrap()
     }
     pub fn from_percent(percent: u16) -> Self {
@@ -63,7 +64,7 @@ pub struct Manager {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
+#[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct LiquidationConfig {
     // 48
     pub liquidator_fee: RawDecimal,                        // 16,
@@ -87,7 +88,7 @@ pub struct TokenData {
 
 impl Default for TokenData {
     fn default() -> Self {
-        return Self {
+        Self {
             manager: Pubkey::default(),
             num_pools: 0,
             num_collaterals: 0,
@@ -97,7 +98,7 @@ impl Default for TokenData {
             il_health_score_coefficient: RawDecimal::default(),
             il_health_score_cutoff: RawDecimal::default(),
             il_liquidation_reward_pct: RawDecimal::default(),
-        };
+        }
     }
 }
 
@@ -145,7 +146,7 @@ impl TokenData {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug)]
+#[derive(PartialEq, Eq, Default, Debug)]
 pub struct AssetInfo {
     // 208
     pub iasset_mint: Pubkey,                   // 32
@@ -162,7 +163,7 @@ pub struct AssetInfo {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug)]
+#[derive(PartialEq, Eq, Default, Debug)]
 pub struct Pool {
     // 480
     pub iasset_token_account: Pubkey,                // 32
@@ -252,7 +253,7 @@ impl Pool {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug)]
+#[derive(PartialEq, Eq, Default, Debug)]
 pub struct Collateral {
     // 144
     pub pool_index: u64,                     // 8
@@ -291,14 +292,14 @@ pub struct Comet {
 
 impl Default for Comet {
     fn default() -> Self {
-        return Self {
+        Self {
             is_single_pool: 0,
             owner: Pubkey::default(),
             num_positions: 0,
             num_collaterals: 0,
             positions: [CometPosition::default(); 255],
             collaterals: [CometCollateral::default(); 255],
-        };
+        }
     }
 }
 
@@ -326,7 +327,7 @@ impl Comet {
                 break;
             }
         }
-        return index;
+        index
     }
     pub fn get_pool_index(&self, pool_index: u8) -> usize {
         let mut index: usize = usize::MAX;
@@ -337,15 +338,15 @@ impl Comet {
                 break;
             }
         }
-        return index;
+        index
     }
     // TODO: update to work with nonstables
     pub fn get_total_collateral_amount(&self) -> Decimal {
         let mut sum = Decimal::new(0, DEVNET_TOKEN_SCALE);
         for i in 0..self.num_collaterals {
-            sum = sum + self.collaterals[i as usize].collateral_amount.to_decimal();
+            sum += self.collaterals[i as usize].collateral_amount.to_decimal();
         }
-        return sum;
+        sum
     }
     pub fn add_collateral(&mut self, new_collateral: CometCollateral) {
         self.collaterals[(self.num_collaterals) as usize] = new_collateral;
@@ -361,7 +362,7 @@ impl Comet {
         token_data: &TokenData,
         single_collateral_position_index: Option<usize>,
     ) -> Decimal {
-        let mut total_value = Decimal::new(0, DEVNET_TOKEN_SCALE.into());
+        let mut total_value = Decimal::new(0, DEVNET_TOKEN_SCALE);
 
         self.collaterals[0..(self.num_collaterals as usize)]
             .iter()
@@ -406,14 +407,14 @@ pub struct CometPosition {
 }
 impl Default for CometPosition {
     fn default() -> Self {
-        return Self {
+        Self {
             authority: Pubkey::default(),
             pool_index: u8::MAX.into(),
             borrowed_usdi: RawDecimal::default(),
             borrowed_iasset: RawDecimal::default(),
             liquidity_token_value: RawDecimal::default(),
             comet_liquidation: CometLiquidation::default(),
-        };
+        }
     }
 }
 
@@ -435,16 +436,16 @@ pub struct CometCollateral {
 }
 impl Default for CometCollateral {
     fn default() -> Self {
-        return Self {
+        Self {
             authority: Pubkey::default(),
             collateral_amount: RawDecimal::default(),
             collateral_index: u8::MAX.into(),
-        };
+        }
     }
 }
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug)]
+#[derive(PartialEq, Eq, Default, Debug)]
 pub struct CometLiquidation {
     // 32
     pub status: u64,                     // 8
@@ -453,7 +454,7 @@ pub struct CometLiquidation {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
+#[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct CometManager {
     // 40
     pub membership_token_mint: Pubkey, // 8
@@ -470,11 +471,11 @@ pub struct LiquidityPositions {
 
 impl Default for LiquidityPositions {
     fn default() -> Self {
-        return Self {
+        Self {
             owner: Pubkey::default(),
             num_positions: 0,
             liquidity_positions: [LiquidityPosition::default(); 255],
-        };
+        }
     }
 }
 
@@ -508,11 +509,11 @@ pub struct MintPositions {
 
 impl Default for MintPositions {
     fn default() -> Self {
-        return Self {
+        Self {
             owner: Pubkey::default(),
             num_positions: 0,
             mint_positions: [MintPosition::default(); 255],
-        };
+        }
     }
 }
 

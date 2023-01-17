@@ -1,6 +1,6 @@
 use crate::error::*;
 //use crate::instructions::WithdrawLiquidityFromComet;
-use crate::math::*;
+
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -61,7 +61,7 @@ pub struct WithdrawLiquidityFromComet<'info> {
     #[account(
         mut,
         address = token_data.load()?.collaterals[0].vault,
-        constraint = &vault.mint == &usdi_mint.key()
+        constraint = vault.mint == usdi_mint.key()
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
@@ -72,7 +72,7 @@ pub fn execute(
     manager_nonce: u8,
     comet_position_index: u8,
     liquidity_token_amount: u64,
-    comet_collateral_index: u8,
+    _comet_collateral_index: u8,
 ) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
@@ -93,7 +93,7 @@ pub fn execute(
     )
     .min(comet_liquidity_tokens);
 
-    let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
+    let _collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
 
     let iasset_amm_value = Decimal::new(
         ctx.accounts

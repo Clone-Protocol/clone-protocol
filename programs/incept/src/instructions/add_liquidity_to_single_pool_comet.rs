@@ -71,7 +71,7 @@ pub struct AddLiquidityToSinglePoolComet<'info> {
 
 pub fn execute(
     ctx: Context<AddLiquidityToSinglePoolComet>,
-    user_nonce: u8,
+    _user_nonce: u8,
     manager_nonce: u8,
     position_index: u8,
     usdi_amount: u64,

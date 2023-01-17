@@ -89,19 +89,15 @@ pub mod jupiter_agg_mock {
         // Get oracle price
         let price_feed = Price::load(&ctx.accounts.pyth_oracle)?;
         let price = rust_decimal::Decimal::new(
-            price_feed.agg.price.try_into().unwrap(),
+            price_feed.agg.price,
             price_feed.expo.abs().try_into().unwrap(),
         );
 
-        let mut result;
-
         if is_amount_asset {
             let iasset_decimal =
-                rust_decimal::Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE.into());
+                rust_decimal::Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
             let mut usdc_amount = iasset_decimal * price;
             usdc_amount.rescale(USDC_TOKEN_SCALE.into());
-
-            result = usdc_amount;
 
             if is_amount_input {
                 // burn amount asset
@@ -180,8 +176,6 @@ pub mod jupiter_agg_mock {
                 rust_decimal::Decimal::new(amount.try_into().unwrap(), USDC_TOKEN_SCALE.into());
             let mut asset_amount = usdi_decimal / price;
             asset_amount.rescale(DEVNET_TOKEN_SCALE);
-
-            result = asset_amount;
 
             if is_amount_input {
                 // burn amount usdc
@@ -304,8 +298,7 @@ pub struct CreateAsset<'info> {
     #[account(mut)]
     pub jupiter_account: AccountLoader<'info, Jupiter>,
     pub rent: Sysvar<'info, Rent>,
-    /// CHECK: This is for mock program.
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 
@@ -324,7 +317,7 @@ pub struct MintAsset<'info> {
         bump = nonce,
     )]
     pub jupiter_account: AccountLoader<'info, Jupiter>,
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
@@ -339,7 +332,7 @@ pub struct MintUsdc<'info> {
         bump = nonce,
     )]
     pub jupiter_account: AccountLoader<'info, Jupiter>,
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
@@ -371,11 +364,12 @@ pub struct Swap<'info> {
         constraint = user_asset_token_account.owner == user.key()
     )]
     pub user_usdc_token_account: Box<Account<'info, TokenAccount>>,
+    /// CHECK: Mock program
     #[account(
         address = jupiter_account.load()?.oracles[asset_index as usize]
     )]
     pub pyth_oracle: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 // TODO: Write a wrapper around this.
@@ -402,7 +396,7 @@ pub struct Swap<'info> {
 
 /// States
 #[zero_copy]
-#[derive(PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
+#[derive(Eq, PartialEq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct RawDecimal {
     data: [u8; 16],
 }

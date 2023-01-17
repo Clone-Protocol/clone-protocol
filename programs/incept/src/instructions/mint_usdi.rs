@@ -62,7 +62,7 @@ pub fn execute(ctx: Context<MintUSDI>, manager_nonce: u8, amount: u64) -> Result
             .to_string(),
     )
     .unwrap()
-        / Decimal::new(1, collateral_scale.try_into().unwrap());
+        / Decimal::new(1, collateral_scale);
 
     // check to see if the collateral used to mint usdi is stable
     let is_stable: Result<bool> = match collateral.stable {

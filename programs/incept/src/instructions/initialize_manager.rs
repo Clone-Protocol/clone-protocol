@@ -38,10 +38,12 @@ pub struct InitializeManager<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
+    /// CHECK: External Chainlink program, instruction can only be executed by admin
     pub chainlink_program: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn execute(
     ctx: Context<InitializeManager>,
     il_health_score_coefficient: u64,
