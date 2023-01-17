@@ -162,7 +162,7 @@ pub struct AssetInfo {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Default, Debug)]
+#[derive(PartialEq, Eq, Default, Debug)]
 pub struct Pool {
     // 480
     pub iasset_token_account: Pubkey,                // 32
