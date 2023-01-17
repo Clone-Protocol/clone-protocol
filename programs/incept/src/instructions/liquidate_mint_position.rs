@@ -42,7 +42,7 @@ pub struct LiquidateMintPosition<'info> {
     #[account(
         mut,
         address = token_data.load()?.collaterals[mint_positions.load()?.mint_positions[mint_index as usize].collateral_index as usize].vault,
-        constraint = &vault.mint == &token_data.load()?.collaterals[mint_positions.load()?.mint_positions[mint_index as usize].collateral_index as usize].mint
+        constraint = vault.mint == token_data.load()?.collaterals[mint_positions.load()?.mint_positions[mint_index as usize].collateral_index as usize].mint
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(

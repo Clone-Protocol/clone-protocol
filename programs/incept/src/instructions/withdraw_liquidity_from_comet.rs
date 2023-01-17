@@ -61,7 +61,7 @@ pub struct WithdrawLiquidityFromComet<'info> {
     #[account(
         mut,
         address = token_data.load()?.collaterals[0].vault,
-        constraint = &vault.mint == &usdi_mint.key()
+        constraint = vault.mint == usdi_mint.key()
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
