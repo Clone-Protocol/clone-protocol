@@ -40,5 +40,5 @@ pub struct MintMockUSDC<'info> {
         has_one = mock_usdc_mint
     )]
     pub mock_usdc_account: Account<'info, MockUsdc>,
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }

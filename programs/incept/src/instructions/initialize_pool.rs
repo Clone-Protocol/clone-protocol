@@ -68,7 +68,9 @@ pub struct InitializePool<'info> {
         payer = admin
     )]
     pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
+    /// CHECK: External pyth oracle, instruction can only be executed by admin
     pub pyth_oracle: AccountInfo<'info>,
+    /// CHECK: External chainlink oracle, instruction can only be executed by admin
     pub chainlink_oracle: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,

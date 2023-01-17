@@ -298,8 +298,7 @@ pub struct CreateAsset<'info> {
     #[account(mut)]
     pub jupiter_account: AccountLoader<'info, Jupiter>,
     pub rent: Sysvar<'info, Rent>,
-    /// CHECK: This is for mock program.
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 
@@ -318,7 +317,7 @@ pub struct MintAsset<'info> {
         bump = nonce,
     )]
     pub jupiter_account: AccountLoader<'info, Jupiter>,
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
@@ -333,7 +332,7 @@ pub struct MintUsdc<'info> {
         bump = nonce,
     )]
     pub jupiter_account: AccountLoader<'info, Jupiter>,
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
@@ -365,11 +364,12 @@ pub struct Swap<'info> {
         constraint = user_asset_token_account.owner == user.key()
     )]
     pub user_usdc_token_account: Box<Account<'info, TokenAccount>>,
+    /// CHECK: Mock program
     #[account(
         address = jupiter_account.load()?.oracles[asset_index as usize]
     )]
     pub pyth_oracle: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 // TODO: Write a wrapper around this.

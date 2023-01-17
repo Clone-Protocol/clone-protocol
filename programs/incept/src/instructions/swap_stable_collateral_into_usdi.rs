@@ -20,6 +20,10 @@ pub struct SwapStableCollateralIntoUsdi<'info> {
         has_one = manager
     )]
     pub token_data: AccountLoader<'info, TokenData>,
+    /// CHECK: Only used for address validation.
+    #[account(
+        address = user_account.authority
+    )]
     pub user: AccountInfo<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
