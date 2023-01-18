@@ -1,13 +1,6 @@
 import * as anchor from "@project-serum/anchor";
 import { BN, Program, Provider } from "@project-serum/anchor";
-import {
-  TOKEN_PROGRAM_ID,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  createAssociatedTokenAccountInstruction,
-  getAccount,
-  getAssociatedTokenAddress,
-  TokenAccountNotFoundError,
-} from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Incept as InceptProgram, IDL } from "./idl/incept";
 import {
   PublicKey,
@@ -17,14 +10,20 @@ import {
   Transaction,
   Keypair,
 } from "@solana/web3.js";
-import { calculateInputFromOutput, sleep } from "./utils";
 import {
   MintPositionsUninitialized,
   SinglePoolCometUninitialized,
-  CalculationError,
   LiquidityPositionsUninitialized,
 } from "./error";
-import { RawDecimal, toNumber, getMantissa } from "./decimal";
+import { getMantissa } from "./decimal";
+import {
+  Manager,
+  TokenData,
+  Comet,
+  User,
+  LiquidityPositions,
+  MintPositions,
+} from "./interfaces";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -34,10 +33,6 @@ export const MAX_PRICE_SIZE = 128;
 export const toDevnetScale = (x: number) => {
   return new BN(x * 10 ** DEVNET_TOKEN_SCALE);
 };
-
-const SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID: PublicKey = new PublicKey(
-  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-);
 
 export class Incept {
   connection: Connection;
@@ -111,27 +106,6 @@ export class Incept {
   public async loadManager() {
     this.managerAddress = await this.getManagerAddress();
     this.manager = (await this.getManagerAccount()) as Manager;
-  }
-
-  public onManagerAccountChange(fn: (state: Manager) => void) {
-    this.program.account.manager
-      .subscribe(this.managerAddress[0])
-      .on("change", (state: Manager) => {
-        fn(state);
-      });
-  }
-
-  public onTokenDataChange(fn: (state: TokenData) => void) {
-    this.program.account.tokenData
-      .subscribe(this.manager!.tokenData)
-      .on("change", (state: TokenData) => {
-        fn(state);
-      });
-  }
-
-  public async getCollateral(collateralIndex: number) {
-    const tokenData = (await this.getTokenData()) as TokenData;
-    return tokenData.collaterals[collateralIndex];
   }
 
   public async initializeUser(user?: PublicKey) {
@@ -257,46 +231,6 @@ export class Incept {
       .rpc();
   }
 
-  public async getPool(poolIndex: number) {
-    const tokenData = (await this.getTokenData()) as TokenData;
-    return tokenData.pools[poolIndex];
-  }
-
-  public async getPoolBalances(poolIndex: number) {
-    let pool = await this.getPool(poolIndex);
-
-    let iasset = 0;
-    let usdi = 0;
-
-    try {
-      iasset = Number(
-        (
-          await this.connection.getTokenAccountBalance(
-            pool.iassetTokenAccount,
-            "confirmed"
-          )
-        ).value!.uiAmount
-      );
-    } catch {}
-
-    try {
-      usdi = Number(
-        (
-          await this.connection.getTokenAccountBalance(
-            pool.usdiTokenAccount,
-            "confirmed"
-          )
-        ).value!.uiAmount
-      );
-    } catch {}
-    return [Number(iasset), Number(usdi)];
-  }
-
-  public async getAssetInfo(poolIndex: number) {
-    const tokenData = (await this.getTokenData()) as TokenData;
-    return tokenData.pools[poolIndex].assetInfo as AssetInfo;
-  }
-
   public async updatePrices(poolIndices?: number[], signers?: Array<Keypair>) {
     let txn = new Transaction();
     // const additionalComputeBudgetInstruction =
@@ -366,12 +300,6 @@ export class Incept {
     )) as LiquidityPositions;
   }
 
-  public async getLiquidityPosition(liquidityIndex: number) {
-    return (await this.getLiquidityPositions()).liquidityPositions[
-      liquidityIndex
-    ];
-  }
-
   public async getMintPositions() {
     const userAccountData = (await this.getUserAccount()) as User;
 
@@ -386,10 +314,6 @@ export class Incept {
     )) as MintPositions;
   }
 
-  public async getMintPosition(mintIndex: number) {
-    return (await this.getMintPositions()).mintPositions[mintIndex];
-  }
-
   public async getSinglePoolComets(address?: PublicKey) {
     const userAccountData = (await this.getUserAccount(address)) as User;
     if (userAccountData.singlePoolComets.equals(PublicKey.default)) {
@@ -398,10 +322,6 @@ export class Incept {
     return (await this.program.account.comet.fetch(
       userAccountData.singlePoolComets
     )) as Comet;
-  }
-  public async getSinglePoolComet(cometIndex: number, address?: PublicKey) {
-    const singlePoolComets = await this.getSinglePoolComets(address);
-    return singlePoolComets.positions[cometIndex];
   }
 
   public async getComet(forManager?: boolean, address?: PublicKey) {
@@ -592,7 +512,9 @@ export class Incept {
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
-    const mintPosition = await this.getMintPosition(mintIndex);
+    const mintPosition = (await this.getMintPositions()).mintPositions[
+      mintIndex
+    ];
 
     return await this.program.methods
       .addCollateralToMint(this.managerAddress[1], mintIndex, collateralAmount)
@@ -636,7 +558,9 @@ export class Incept {
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
-    const mintPosition = await this.getMintPosition(mintIndex);
+    const mintPosition = (await this.getMintPositions()).mintPositions[
+      mintIndex
+    ];
 
     return await this.program.methods
       .withdrawCollateralFromMint(
@@ -677,8 +601,9 @@ export class Incept {
     iassetAmount: BN,
     mintIndex: number
   ) {
-    let mint = await this.getMintPosition(mintIndex);
-    let assetInfo = await this.getAssetInfo(mint.poolIndex);
+    let mint = (await this.getMintPositions()).mintPositions[mintIndex];
+    let tokenData = await this.getTokenData();
+    let assetInfo = await tokenData.pools[mint.poolIndex].assetInfo;
     let userAccount = await this.getUserAccount();
 
     return await this.program.methods
@@ -717,8 +642,9 @@ export class Incept {
     iassetAmount: BN,
     mintIndex: number
   ) {
-    let mint = await this.getMintPosition(mintIndex);
-    let assetInfo = await this.getAssetInfo(mint.poolIndex);
+    let mint = (await this.getMintPositions()).mintPositions[mintIndex];
+    let tokenData = await this.getTokenData();
+    let assetInfo = await tokenData.pools[mint.poolIndex].assetInfo;
     let userAccount = await this.getUserAccount();
 
     return await this.program.methods
@@ -741,7 +667,7 @@ export class Incept {
     userCollateralTokenAccount: PublicKey,
     signers: Array<Keypair>
   ) {
-    const mintPosition = await this.getMintPosition(mintIndex);
+    let mintPosition = (await this.getMintPositions()).mintPositions[mintIndex];
 
     const payBackiAssetToMintIx = await this.payBackiAssetToMintInstruction(
       userIassetTokenAccount,
@@ -852,7 +778,6 @@ export class Incept {
   public async initializeLiquidityPositionsInstruction(
     liquidityPositionsAccount: Keypair
   ) {
-    // const liquidityPositionsAccount = anchor.web3.Keypair.generate();
     let { userPubkey, bump } = await this.getUserAddress();
     return await this.program.instruction.initializeLiquidityPositions(bump, {
       accounts: {
@@ -863,12 +788,6 @@ export class Incept {
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SYSTEM_PROGRAM_ID,
       },
-      // preInstructions: [
-      //   await this.program.account.liquidityPositions.createInstruction(
-      //     liquidityPositionsAccount
-      //   ),
-      // ],
-      // signers: [liquidityPositionsAccount],
     });
   }
 
@@ -901,9 +820,8 @@ export class Incept {
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
-    let userLiquidityPosition = await this.getLiquidityPosition(
-      liquidityPosition
-    );
+    let userLiquidityPosition = (await this.getLiquidityPositions())
+      .liquidityPositions[liquidityPosition];
     let pool = tokenData.pools[userLiquidityPosition.poolIndex];
 
     return await this.program.methods
@@ -957,9 +875,8 @@ export class Incept {
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
-    let liquidityPosition = await this.getLiquidityPosition(
-      liquidityPositionIndex
-    );
+    let liquidityPosition = (await this.getLiquidityPositions())
+      .liquidityPositions[liquidityPositionIndex];
 
     let pool = tokenData.pools[liquidityPosition.poolIndex];
 
@@ -1098,10 +1015,8 @@ export class Incept {
     collateralIndex: number,
     signers?: Array<Keypair>
   ) {
-    const userAccount = await this.getUserAccount();
     const singlePoolComets = await this.getSinglePoolComets();
     const newIndex = singlePoolComets.numPositions.toNumber();
-    // await this.initializeSinglePoolComet(poolIndex, collateralIndex);
     const updatePricesIx = await this.updatePricesInstruction();
 
     const initializeSinglePoolCometInstruction =
@@ -1109,12 +1024,6 @@ export class Incept {
         poolIndex,
         collateralIndex
       );
-    // const initializeSinglePoolCometInstruction =
-    //   await this.initializeCometInstruction(
-    //     cometAccount,
-    //     poolIndex,
-    //     collateralIndex
-    //   );
     const addCollateralToSinglePoolCometIx =
       await this.addCollateralToSinglePoolCometInstruction(
         userCollateralTokenAccount,
@@ -1320,7 +1229,9 @@ export class Incept {
     signers?: Array<Keypair>
   ) {
     const updatePricesIx = await this.updatePricesInstruction();
-    const singlePoolComet = await this.getSinglePoolComet(positionIndex);
+    const singlePoolComet = (await this.getSinglePoolComets()).positions[
+      positionIndex
+    ];
     const addLiquidityToSinglePoolCometIx =
       await this.addLiquidityToSinglePoolCometInstruction(
         usdiAmount,
@@ -2041,59 +1952,6 @@ export class Incept {
       .instruction();
   }
 
-  public async getOrCreateUsdiAssociatedTokenAccount() {
-    return await this.getOrCreateAssociatedTokenAccount(this.manager!.usdiMint);
-  }
-
-  public async getOrCreateAssociatedTokenAccount(mint: PublicKey) {
-    const associatedToken = await getAssociatedTokenAddress(
-      mint,
-      this.provider.publicKey!,
-      false,
-      TOKEN_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    );
-
-    let account;
-    try {
-      account = await getAccount(
-        this.connection,
-        associatedToken,
-        "recent",
-        TOKEN_PROGRAM_ID
-      );
-    } catch (error: unknown) {
-      if (error instanceof TokenAccountNotFoundError) {
-        const transaction = new Transaction().add(
-          createAssociatedTokenAccountInstruction(
-            this.provider.publicKey!,
-            associatedToken,
-            this.provider.publicKey!,
-            mint,
-            TOKEN_PROGRAM_ID,
-            ASSOCIATED_TOKEN_PROGRAM_ID
-          )
-        );
-
-        await this.provider.sendAndConfirm!(transaction);
-        await sleep(200);
-        account = await getAccount(
-          this.connection,
-          associatedToken,
-          "recent",
-          TOKEN_PROGRAM_ID
-        );
-      } else {
-        throw error;
-      }
-    }
-
-    if (!account) {
-      throw Error("Could not create account!");
-    }
-    return account;
-  }
-
   public async hackathonMintUsdi(
     userUsdiTokenAccount: PublicKey,
     amount: number
@@ -2108,13 +1966,17 @@ export class Incept {
   public async liquidateMintPosition(
     liquidateAccount: PublicKey,
     liquidateAccountBump: number,
-    mintIndex: number
+    mintIndex: number,
+    liquidatorCollateralTokenAccount: PublicKey,
+    liquidatoriAssetTokenAccount: PublicKey
   ) {
     const updatePricesIx = await this.updatePricesInstruction();
     const liquidateMintTx = await this.liquidateMintPositionInstruction(
       liquidateAccount,
       liquidateAccountBump,
-      mintIndex
+      mintIndex,
+      liquidatorCollateralTokenAccount,
+      liquidatoriAssetTokenAccount
     );
     await this.provider.sendAndConfirm!(
       new Transaction().add(updatePricesIx).add(liquidateMintTx)
@@ -2124,19 +1986,18 @@ export class Incept {
   public async liquidateMintPositionInstruction(
     liquidateAccount: PublicKey,
     liquidateAccountBump: number,
-    mintIndex: number
+    mintIndex: number,
+    liquidatorCollateralTokenAccount: PublicKey,
+    liquidatoriAssetTokenAccount: PublicKey
   ) {
     const userAccount = await this.getUserAccount(liquidateAccount);
     const tokenData = await this.getTokenData();
 
-    const mintPosition = await this.getMintPosition(mintIndex);
+    const mintPosition = (await this.getMintPositions()).mintPositions[
+      mintIndex
+    ];
     const pool = tokenData.pools[mintPosition.poolIndex];
     const collateral = tokenData.collaterals[mintPosition.collateralIndex];
-
-    const liquidatorCollateralTokenAccount =
-      await this.getOrCreateAssociatedTokenAccount(collateral.mint);
-    const liquidatoriAssetTokenAccount =
-      await this.getOrCreateAssociatedTokenAccount(pool.assetInfo.iassetMint);
 
     return this.program.methods
       .liquidateMintPosition(
@@ -2155,345 +2016,11 @@ export class Incept {
         vault: collateral.vault,
         ammUsdiTokenAccount: pool.usdiTokenAccount,
         ammIassetTokenAccount: pool.iassetTokenAccount,
-        liquidatorCollateralTokenAccount:
-          liquidatorCollateralTokenAccount.address,
-        liquidatorIassetTokenAccount: liquidatoriAssetTokenAccount.address,
+        liquidatorCollateralTokenAccount: liquidatorCollateralTokenAccount,
+        liquidatorIassetTokenAccount: liquidatoriAssetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
-  }
-
-  public async getiAssetInfo() {
-    const mints = await this.getiAssetMints();
-    const iassetInfo = [];
-    let i = 0;
-    for (var _ of mints) {
-      let poolBalances = await this.getPoolBalances(i);
-      let price = poolBalances[1] / poolBalances[0];
-      iassetInfo.push([i, price]);
-      i++;
-    }
-    return iassetInfo;
-  }
-
-  public async getiAssetMints() {
-    const tokenData = await this.getTokenData();
-    let mints: PublicKey[] = [];
-    let index = 0;
-    for (const pool of tokenData.pools) {
-      if (index === Number(tokenData.numPools)) {
-        break;
-      }
-      mints.push(pool.assetInfo.iassetMint);
-      index++;
-    }
-    return mints;
-  }
-
-  public async getMintiAssetData(index: number) {
-    let assetInfo = await this.getAssetInfo(index);
-    let associatedTokenAddress = (
-      await this.getOrCreateAssociatedTokenAccount(assetInfo.iassetMint)
-    ).address;
-    let amount = (
-      await this.connection.getTokenAccountBalance(
-        associatedTokenAddress,
-        "confirmed"
-      )
-    ).value!.uiAmount;
-    return [
-      toNumber(assetInfo.price),
-      getMantissa(assetInfo.stableCollateralRatio),
-      getMantissa(assetInfo.cryptoCollateralRatio),
-      amount,
-    ];
-  }
-
-  public async getUseriAssetInfo() {
-    const mints = await this.getiAssetMints();
-    const userInfo = [];
-    let i = 0;
-    for (var mint of mints) {
-      let associatedTokenAddress = (
-        await PublicKey.findProgramAddress(
-          [
-            this.provider.publicKey!.toBuffer(),
-            TOKEN_PROGRAM_ID.toBuffer(),
-            mint.toBuffer(),
-          ],
-          SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID
-        )
-      )[0];
-      let amount;
-      try {
-        amount = (
-          await this.connection.getTokenAccountBalance(
-            associatedTokenAddress,
-            "confirmed"
-          )
-        ).value!.uiAmount;
-      } catch {
-        amount = 0;
-      }
-
-      if (amount !== null && amount > 0) {
-        let poolBalances = await this.getPoolBalances(i);
-        let price = poolBalances[1] / poolBalances[0];
-        userInfo.push([i, price, amount]);
-      }
-      i++;
-    }
-    return userInfo;
-  }
-
-  public async getUserMintInfos() {
-    let mintPositions: MintPositions;
-    try {
-      mintPositions = await this.getMintPositions();
-    } catch (error) {
-      if (error instanceof MintPositionsUninitialized) {
-        return [];
-      }
-      throw error;
-    }
-
-    const mintInfos = [];
-    for (let i = 0; i < Number(mintPositions.numPositions); i++) {
-      let mintPosition = mintPositions.mintPositions[i];
-      let poolIndex = mintPosition.poolIndex;
-      let collateralIndex = mintPosition.collateralIndex;
-      let assetInfo = await this.getAssetInfo(poolIndex);
-      let collateral = await this.getCollateral(collateralIndex);
-      let collateralAmount = toNumber(mintPosition.collateralAmount);
-      let price = toNumber(assetInfo.price);
-      let borrowedIasset = toNumber(mintPosition.borrowedIasset);
-      let collateralRatio: Number;
-      let minCollateralRatio: Number;
-      if (collateral.stable) {
-        collateralRatio = collateralAmount / (price * borrowedIasset);
-        minCollateralRatio = toNumber(assetInfo.stableCollateralRatio);
-      } else {
-        let collateralAssetInfo = await this.getAssetInfo(
-          collateral.poolIndex.toNumber()
-        );
-        let collateralPrice = toNumber(collateralAssetInfo.price);
-        let collateralAmount = toNumber(mintPosition.collateralAmount);
-        collateralRatio =
-          (collateralPrice * collateralAmount) / (price * borrowedIasset);
-        minCollateralRatio = toNumber(assetInfo.cryptoCollateralRatio);
-      }
-      mintInfos.push([
-        poolIndex,
-        collateralIndex,
-        price,
-        borrowedIasset,
-        collateralAmount,
-        collateralRatio,
-        minCollateralRatio,
-      ]);
-    }
-    return mintInfos;
-  }
-
-  public async getUserMintInfo(index: number) {
-    const mintPositions = await this.getMintPositions();
-    let mintPosition = mintPositions.mintPositions[index];
-    let poolIndex = mintPosition.poolIndex;
-    let collateralIndex = mintPosition.collateralIndex;
-    let assetInfo = await this.getAssetInfo(poolIndex);
-    let collateral = await this.getCollateral(collateralIndex);
-    let collateralAmount = toNumber(mintPosition.collateralAmount);
-    let price = toNumber(assetInfo.price);
-    let borrowedIasset = toNumber(mintPosition.borrowedIasset);
-    let collateralRatio: number;
-    let minCollateralRatio: number;
-    if (collateral.stable) {
-      collateralRatio = collateralAmount / (price * borrowedIasset);
-      minCollateralRatio = toNumber(assetInfo.stableCollateralRatio);
-    } else {
-      let collateralAssetInfo = await this.getAssetInfo(
-        collateral.poolIndex.toNumber()
-      );
-      let collateralPrice = toNumber(collateralAssetInfo.price);
-      let collateralAmount = toNumber(mintPosition.collateralAmount);
-      collateralRatio =
-        (collateralPrice * collateralAmount) / (price * borrowedIasset);
-      minCollateralRatio = toNumber(assetInfo.cryptoCollateralRatio);
-    }
-    return [
-      borrowedIasset,
-      collateralAmount,
-      collateralRatio,
-      minCollateralRatio,
-    ];
-  }
-
-  public async getUserLiquidityInfos() {
-    const liquidityPositions = await this.getLiquidityPositions();
-    const liquidityInfos = [];
-    for (let i = 0; i < Number(liquidityPositions.numPositions); i++) {
-      let liquidityPosition = liquidityPositions.liquidityPositions[i];
-      let poolIndex = liquidityPosition.poolIndex;
-      let pool = await this.getPool(poolIndex);
-      let poolBalances = await this.getPoolBalances(poolIndex);
-      let price = poolBalances[1] / poolBalances[0];
-      let liquidityTokenAmount = toNumber(
-        liquidityPosition.liquidityTokenValue
-      );
-      let liquidityTokenSupply = (
-        await this.connection.getTokenSupply(pool.liquidityTokenMint)
-      ).value!.uiAmount;
-      if (liquidityTokenSupply === null) {
-        throw new Error("Couldn't get token supply");
-      }
-      let iassetValue =
-        (poolBalances[0] * liquidityTokenAmount) / liquidityTokenSupply;
-      let usdiValue =
-        (poolBalances[1] * liquidityTokenAmount) / liquidityTokenSupply;
-      liquidityInfos.push([
-        poolIndex,
-        price,
-        iassetValue,
-        usdiValue,
-        liquidityTokenAmount,
-      ]);
-    }
-    return liquidityInfos;
-  }
-
-  public async getUserSinglePoolCometInfos() {
-    let singlePoolComets;
-    let cometInfos: any[] = [];
-    const tokenData = await this.getTokenData();
-    try {
-      singlePoolComets = await this.getSinglePoolComets();
-    } catch (error) {
-      if (error instanceof SinglePoolCometUninitialized) {
-        return cometInfos;
-      }
-      throw error;
-    }
-
-    for (let i = 0; i < Number(singlePoolComets.numPositions); i++) {
-      try {
-        let cometPosition = singlePoolComets.positions[i];
-        let cometCollateral = singlePoolComets.collaterals[i];
-        let poolIndex = cometPosition.poolIndex;
-        if (Number(poolIndex) === 255) {
-          cometInfos.push([
-            poolIndex,
-            cometCollateral.collateralIndex,
-            null,
-            null,
-            null,
-            null,
-            toNumber(cometCollateral.collateralAmount),
-            null,
-            null,
-            0,
-            0,
-            0,
-            false,
-          ]);
-          continue;
-        }
-        let pool = tokenData.pools[poolIndex];
-        let collateralIndex = cometCollateral.collateralIndex;
-        let assetInfo = pool.assetInfo;
-        let poolBalances = [
-          toNumber(pool.usdiAmount),
-          toNumber(pool.iassetAmount),
-        ]; //await this.getPoolBalances(poolIndex);
-        let ammPrice = poolBalances[1] / poolBalances[0];
-        let oraclePrice = toNumber(assetInfo.price);
-        let borrowedIasset = toNumber(cometPosition.borrowedIasset);
-        let borrowedUsdi = toNumber(cometPosition.borrowedIasset);
-        let totalCollateralAmount = toNumber(cometCollateral.collateralAmount);
-        let data = this.calculateEditCometSinglePoolWithUsdiBorrowed(
-          tokenData,
-          singlePoolComets,
-          i,
-          0,
-          0
-        );
-        let range = [data.lowerPrice, data.upperPrice];
-        let lowerPriceRange = range[0];
-        let upperPriceRange = range[1];
-
-        let gaps = [
-          oraclePrice - lowerPriceRange,
-          ammPrice - lowerPriceRange,
-          upperPriceRange - oraclePrice,
-          upperPriceRange - ammPrice,
-        ];
-        let minGapIndex = 0;
-        for (let i = 0; i < gaps.length; i++) {
-          if (gaps[minGapIndex] > gaps[i]) {
-            minGapIndex = i;
-          }
-        }
-        let indicatorPrice =
-          minGapIndex == 0 || minGapIndex == 2 ? oraclePrice : ammPrice;
-
-        let centerPrice =
-          toNumber(cometPosition.borrowedUsdi) /
-          toNumber(cometPosition.borrowedIasset);
-
-        let liquidityTokenAmount = toNumber(cometPosition.liquidityTokenValue);
-        let liquidityTokenSupply = toNumber(pool.liquidityTokenSupply);
-        // let liquidityTokenSupply = (
-        //   await this.connection.getTokenSupply(pool.liquidityTokenMint)
-        // ).value!.uiAmount;
-        if (liquidityTokenSupply === null) {
-          throw new Error("Couldn't get token supply");
-        }
-        let iassetValue =
-          (poolBalances[0] * liquidityTokenAmount) / liquidityTokenSupply;
-        let usdiValue =
-          (poolBalances[0] * liquidityTokenAmount) / liquidityTokenSupply;
-        let ildIsIasset: boolean;
-        let ild: number;
-        if (borrowedIasset > iassetValue) {
-          ildIsIasset = true;
-          ild = borrowedIasset - iassetValue;
-        } else if (borrowedUsdi > usdiValue) {
-          ildIsIasset = false;
-          ild = borrowedUsdi - usdiValue;
-        } else {
-          ildIsIasset = false;
-          ild = 0;
-        }
-        cometInfos.push([
-          poolIndex,
-          collateralIndex,
-          indicatorPrice,
-          centerPrice,
-          lowerPriceRange,
-          upperPriceRange,
-          totalCollateralAmount,
-          ildIsIasset,
-          ild,
-          borrowedIasset,
-          borrowedUsdi,
-          liquidityTokenAmount,
-          true,
-        ]);
-      } catch (e) {
-        console.log(e);
-      }
-    }
-    return cometInfos;
-  }
-
-  public async getiAssetInfos() {
-    const iassetInfo = [];
-    for (let i = 0; i < Number((await this.getTokenData()).numPools); i++) {
-      let poolBalances = await this.getPoolBalances(i);
-      let price = poolBalances[1] / poolBalances[0];
-      let liquidity = poolBalances[1] * 2;
-      iassetInfo.push([i, price, liquidity]);
-    }
-    return iassetInfo;
   }
 
   public async updateILHealthScoreCoefficient(coefficient: number) {
@@ -2526,237 +2053,6 @@ export class Incept {
         tokenData: this.manager!.tokenData,
       })
       .rpc();
-  }
-
-  public getEffectiveUSDCollateralValue(tokenData: TokenData, comet: Comet) {
-    // Iterate through collaterals.
-    let effectiveUSDCollateral = 0;
-
-    comet.collaterals
-      .slice(0, comet.numCollaterals.toNumber())
-      .forEach((cometCollateral) => {
-        const collateral =
-          tokenData.collaterals[cometCollateral.collateralIndex];
-        if (collateral.stable.toNumber() === 1) {
-          effectiveUSDCollateral += toNumber(cometCollateral.collateralAmount);
-        } else {
-          const pool = tokenData.pools[collateral.poolIndex.toNumber()];
-          const oraclePrice = toNumber(pool.assetInfo.price);
-          effectiveUSDCollateral +=
-            (oraclePrice * toNumber(cometCollateral.collateralAmount)) /
-            toNumber(pool.assetInfo.cryptoCollateralRatio);
-        }
-      });
-
-    return effectiveUSDCollateral;
-  }
-
-  public getHealthScore(
-    tokenData: TokenData,
-    comet: Comet
-  ): {
-    healthScore: number;
-    ildHealthImpact: number;
-  } {
-    const totalCollateralAmount = this.getEffectiveUSDCollateralValue(
-      tokenData,
-      comet
-    );
-    let totalIldHealthImpact = 0;
-
-    const loss =
-      comet.positions
-        .slice(0, Number(comet.numPositions))
-        .map((position) => {
-          let pool = tokenData.pools[position.poolIndex];
-          let poolUsdiAmount = toNumber(pool.usdiAmount);
-          let poolIassetAmount = toNumber(pool.iassetAmount);
-          let borrowedUsdi = toNumber(position.borrowedUsdi);
-          let borrowedIasset = toNumber(position.borrowedIasset);
-
-          let claimableRatio =
-            toNumber(position.liquidityTokenValue) /
-            toNumber(pool.liquidityTokenSupply);
-
-          let claimableUsdi = poolUsdiAmount * claimableRatio;
-          let claimableIasset = poolIassetAmount * claimableRatio;
-
-          let ilHealthScoreCoefficient = toNumber(
-            tokenData.ilHealthScoreCoefficient
-          );
-          let poolHealthScoreCoefficient = toNumber(
-            pool.assetInfo.healthScoreCoefficient
-          );
-
-          let ild = 0;
-          if (borrowedUsdi > claimableUsdi) {
-            ild += borrowedUsdi - claimableUsdi;
-          }
-          if (borrowedIasset > claimableIasset) {
-            const iassetDebt = borrowedIasset - claimableIasset;
-
-            const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt;
-            const effectiveDebt = iassetDebt / (1 - claimableRatio);
-            const poolMarked = calculateInputFromOutput(
-              pool,
-              effectiveDebt,
-              false
-            );
-
-            ild += Math.max(oracleMarked, poolMarked);
-          }
-
-          let ilHealthImpact = ild * ilHealthScoreCoefficient;
-          let positionHealthImpact = poolHealthScoreCoefficient * borrowedUsdi;
-
-          totalIldHealthImpact += ilHealthImpact;
-
-          return positionHealthImpact + ilHealthImpact;
-        })
-        .reduce((partialSum, a) => partialSum + a, 0) / totalCollateralAmount;
-
-    return {
-      healthScore: 100 - loss,
-      ildHealthImpact: totalIldHealthImpact / totalCollateralAmount,
-    };
-  }
-
-  public getSinglePoolHealthScore(
-    cometIndex: number,
-    tokenData: TokenData,
-    comet: Comet
-  ): { healthScore: number; ILD: number; ildInUsdi: boolean } {
-    let position = comet.positions[cometIndex];
-    let pool = tokenData.pools[position.poolIndex];
-    let poolUsdiAmount = toNumber(pool.usdiAmount);
-    let poolIassetAmount = toNumber(pool.iassetAmount);
-    let borrowedUsdi = toNumber(position.borrowedUsdi);
-    let borrowedIasset = toNumber(position.borrowedIasset);
-
-    let claimableRatio =
-      toNumber(position.liquidityTokenValue) /
-      toNumber(pool.liquidityTokenSupply);
-
-    let claimableUsdi = poolUsdiAmount * claimableRatio;
-    let claimableIasset = poolIassetAmount * claimableRatio;
-
-    let ILD = 0;
-    let isUsdi = true;
-
-    if (borrowedUsdi > claimableUsdi) {
-      ILD += borrowedUsdi - claimableUsdi;
-    }
-    if (borrowedIasset > claimableIasset) {
-      const iassetDebt = borrowedIasset - claimableIasset;
-
-      const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt;
-      const effectiveDebt = iassetDebt / (1 - claimableRatio);
-      const poolMarked = calculateInputFromOutput(pool, effectiveDebt, false);
-
-      ILD += Math.max(oracleMarked, poolMarked);
-      isUsdi = false;
-    }
-
-    const ilCoefficient = toNumber(tokenData.ilHealthScoreCoefficient);
-    const assetCoefficient = toNumber(
-      tokenData.pools[position.poolIndex].assetInfo.healthScoreCoefficient
-    );
-    let totalLoss = ilCoefficient * ILD + assetCoefficient * borrowedUsdi;
-    const healthScore =
-      100 -
-      totalLoss / toNumber(comet.collaterals[cometIndex].collateralAmount);
-
-    return { healthScore: healthScore, ILD: ILD, ildInUsdi: isUsdi };
-  }
-
-  public async getSinglePoolILD(
-    cometIndex: number
-  ): Promise<{ ILD: number; ildInUsdi: boolean }> {
-    const tokenData = await this.getTokenData();
-    const comet = await this.getSinglePoolComets();
-
-    let position = comet.positions[cometIndex];
-    let pool = tokenData.pools[position.poolIndex];
-    let poolUsdiAmount = toNumber(pool.usdiAmount);
-    let poolIassetAmount = toNumber(pool.iassetAmount);
-    let poolPrice = poolUsdiAmount / poolIassetAmount;
-    let borrowedUsdi = toNumber(position.borrowedUsdi);
-    let borrowedIasset = toNumber(position.borrowedIasset);
-    let initPrice = borrowedUsdi / borrowedIasset;
-
-    let claimableRatio =
-      toNumber(position.liquidityTokenValue) /
-      toNumber(pool.liquidityTokenSupply);
-
-    let markPrice = Math.max(toNumber(pool.assetInfo.price), poolPrice);
-
-    let claimableUsdi = poolUsdiAmount * claimableRatio;
-    let claimableIasset = poolIassetAmount * claimableRatio;
-    let ILD = 0;
-    let isUsdi = true;
-    if (borrowedUsdi > claimableUsdi) {
-      ILD += borrowedUsdi - claimableUsdi;
-    }
-    if (borrowedIasset > claimableIasset) {
-      const iassetDebt = borrowedIasset - claimableIasset;
-
-      const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt;
-      const effectiveDebt = iassetDebt / (1 - claimableRatio);
-      const poolMarked = calculateInputFromOutput(pool, effectiveDebt, false);
-
-      ILD += Math.max(oracleMarked, poolMarked);
-      isUsdi = false;
-    }
-
-    return { ILD: ILD, ildInUsdi: isUsdi };
-  }
-
-  public async getILD(
-    poolIndex?: number
-  ): Promise<{ isUsdi: boolean; ILD: number; poolIndex: number }[]> {
-    const tokenData = await this.getTokenData();
-    const comet = await this.getComet();
-
-    let results: { isUsdi: boolean; ILD: number; poolIndex: number }[] = [];
-
-    comet.positions.slice(0, Number(comet.numPositions)).forEach((position) => {
-      if (poolIndex !== undefined && poolIndex !== Number(position.poolIndex)) {
-        return;
-      }
-
-      let pool = tokenData.pools[position.poolIndex];
-      let poolUsdiAmount = toNumber(pool.usdiAmount);
-      let poolIassetAmount = toNumber(pool.iassetAmount);
-
-      let borrowedUsdi = toNumber(position.borrowedUsdi);
-      let borrowedIasset = toNumber(position.borrowedIasset);
-
-      let claimableRatio =
-        toNumber(position.liquidityTokenValue) /
-        toNumber(pool.liquidityTokenSupply);
-
-      let claimableUsdi = poolUsdiAmount * claimableRatio;
-      let claimableIasset = poolIassetAmount * claimableRatio;
-      let ILD = 0;
-      let isUsdi = true;
-      if (borrowedUsdi > claimableUsdi) {
-        ILD += borrowedUsdi - claimableUsdi;
-      }
-      if (borrowedIasset > claimableIasset) {
-        const iassetDebt = borrowedIasset - claimableIasset;
-
-        const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt;
-        const effectiveDebt = iassetDebt / (1 - claimableRatio);
-        const poolMarked = calculateInputFromOutput(pool, effectiveDebt, false);
-
-        ILD += Math.max(oracleMarked, poolMarked);
-        isUsdi = false;
-      }
-
-      results.push({ isUsdi: isUsdi, ILD: ILD, poolIndex: position.poolIndex });
-    });
-
-    return results;
   }
 
   public async liquidateSinglePoolComet(
@@ -2819,640 +2115,6 @@ export class Incept {
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
-  }
-
-  public calculateNewSinglePoolCometFromUsdiBorrowed(
-    poolIndex: number,
-    collateralProvided: number,
-    usdiBorrowed: number,
-    tokenData: TokenData
-  ): {
-    healthScore: number;
-    lowerPrice: number;
-    upperPrice: number;
-    maxUsdiPosition: number;
-  } {
-    const pool = tokenData.pools[poolIndex];
-
-    const poolUsdi = toNumber(pool.usdiAmount);
-    const poolIasset = toNumber(pool.iassetAmount);
-    const poolPrice = poolUsdi / poolIasset;
-
-    const iassetBorrowed = usdiBorrowed / poolPrice;
-
-    const claimableRatio = usdiBorrowed / (usdiBorrowed + poolUsdi);
-
-    const poolCoefficient = toNumber(pool.assetInfo.healthScoreCoefficient);
-
-    const loss = poolCoefficient * usdiBorrowed;
-
-    const healthScore = 100 - loss / collateralProvided;
-
-    const ilHealthScoreCoefficient = toNumber(
-      tokenData.ilHealthScoreCoefficient
-    );
-
-    const maxILD = (100 * collateralProvided - loss) / ilHealthScoreCoefficient;
-
-    const invariant = (poolUsdi + usdiBorrowed) * (poolIasset + iassetBorrowed);
-
-    // Solution 1: Price goes down, IL is in USDi
-    let y1 = Math.max((usdiBorrowed - maxILD) / claimableRatio, 0);
-    const lowerPrice = (y1 * y1) / invariant;
-
-    // Solution 2: Price goes up, IL is in iAsset
-    let a = usdiBorrowed / poolPrice / invariant;
-    let b = -claimableRatio;
-    let c = -maxILD;
-    let y2 = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
-    const upperPrice = (y2 * y2) / invariant;
-
-    let maxUsdiPosition = (100 * collateralProvided) / poolCoefficient;
-
-    return {
-      healthScore: healthScore,
-      lowerPrice: lowerPrice,
-      upperPrice: upperPrice,
-      maxUsdiPosition: maxUsdiPosition,
-    };
-  }
-
-  public calculateNewSinglePoolCometFromRange(
-    poolIndex: number,
-    collateralProvided: number,
-    price: number,
-    isLowerPrice: boolean,
-    tokenData: TokenData
-  ): {
-    healthScore: number;
-    lowerPrice: number;
-    upperPrice: number;
-    usdiBorrowed: number;
-    maxUsdiPosition: number;
-  } {
-    const pool = tokenData.pools[poolIndex];
-
-    const poolUsdi = toNumber(pool.usdiAmount);
-    const poolIasset = toNumber(pool.iassetAmount);
-    const poolPrice = poolUsdi / poolIasset;
-
-    const poolCoefficient = toNumber(pool.assetInfo.healthScoreCoefficient);
-    const ilHealthScoreCoefficient = toNumber(
-      tokenData.ilHealthScoreCoefficient
-    );
-
-    let maxUsdiPosition = (100 * collateralProvided) / poolCoefficient;
-
-    const priceRange = (usdiBorrowed: number): number => {
-      const claimableRatio = usdiBorrowed / (usdiBorrowed + poolUsdi);
-
-      const loss = poolCoefficient * usdiBorrowed;
-
-      const healthScore = 100 - loss / collateralProvided;
-
-      const maxILD =
-        (100 * collateralProvided - loss) / ilHealthScoreCoefficient;
-
-      const iassetBorrowed = usdiBorrowed / poolPrice;
-
-      const invariant =
-        (poolUsdi + usdiBorrowed) * (poolIasset + iassetBorrowed);
-
-      // Solution 1: Price goes down, IL is in USDi
-      let y1 = Math.max((usdiBorrowed - maxILD) / claimableRatio, 0);
-      const lowerPrice = (y1 * y1) / invariant;
-      // Solution 2: Price goes up, IL is in iAsset
-      let a = usdiBorrowed / poolPrice / invariant;
-      let b = -claimableRatio;
-      let c = -maxILD;
-      let y2 = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
-      const upperPrice = (y2 * y2) / invariant;
-
-      return isLowerPrice ? lowerPrice : upperPrice;
-    };
-
-    let maxIter = 1000;
-    let tolerance = 1e-9;
-    let startSearch = 0;
-    let stopSearch = maxUsdiPosition;
-    let positionGuess = (startSearch + stopSearch) * 0.5;
-    let iter = 0;
-    let range = priceRange(positionGuess);
-    while (iter < maxIter) {
-      positionGuess = (startSearch + stopSearch) * 0.5;
-
-      let estPrice = priceRange(positionGuess);
-
-      if (isLowerPrice) {
-        let diff = estPrice - price;
-        if (Math.abs(diff) < tolerance) {
-          break;
-        }
-
-        if (diff < 0) {
-          // Increase position to increase lower
-          startSearch = positionGuess;
-        } else {
-          stopSearch = positionGuess;
-        }
-      } else {
-        let diff = estPrice - price;
-        if (Math.abs(diff) < tolerance) {
-          break;
-        }
-
-        if (diff < 0) {
-          // Reduce position to increase upper
-          stopSearch = positionGuess;
-        } else {
-          startSearch = positionGuess;
-        }
-      }
-      iter += 1;
-    }
-
-    if (iter === maxIter) {
-      throw new CalculationError("Max iterations reached!");
-    }
-
-    const results = this.calculateNewSinglePoolCometFromUsdiBorrowed(
-      poolIndex,
-      collateralProvided,
-      positionGuess,
-      tokenData
-    );
-
-    return { ...results, usdiBorrowed: positionGuess };
-  }
-
-  public calculateEditCometSinglePoolWithUsdiBorrowed(
-    tokenData: TokenData,
-    comet: Comet,
-    cometIndex: number,
-    collateralChange: number,
-    usdiBorrowedChange: number
-  ): {
-    maxCollateralWithdrawable: number;
-    maxUsdiPosition: number;
-    healthScore: number;
-    lowerPrice: number;
-    upperPrice: number;
-  } {
-    const position = comet.positions[cometIndex];
-    const pool = tokenData.pools[position.poolIndex];
-
-    let lpTokens = toNumber(position.liquidityTokenValue);
-    let positionBorrowedUsdi = toNumber(position.borrowedUsdi);
-    let positionBorrowedIasset = toNumber(position.borrowedIasset);
-    const poolUsdi = toNumber(pool.usdiAmount);
-    const poolIasset = toNumber(pool.iassetAmount);
-    const poolLpTokens = toNumber(pool.liquidityTokenSupply);
-    const claimableRatio = lpTokens / poolLpTokens;
-
-    const poolPrice = poolUsdi / poolIasset;
-    const iassetBorrowedChange = usdiBorrowedChange / poolPrice;
-    const initPrice = positionBorrowedUsdi / positionBorrowedIasset;
-
-    const newPoolUsdi = poolUsdi + usdiBorrowedChange;
-    const newPooliAsset = poolIasset + iassetBorrowedChange;
-
-    let markPrice = Math.max(toNumber(pool.assetInfo.price), poolPrice);
-    let newClaimableRatio = claimableRatio;
-    // Calculate total lp tokens
-    const claimableUsdi = claimableRatio * poolUsdi;
-    const newLpTokens =
-      (lpTokens * (positionBorrowedUsdi + usdiBorrowedChange)) / claimableUsdi;
-    newClaimableRatio = newLpTokens / (poolLpTokens - lpTokens + newLpTokens);
-    let newPositionBorrowedUsdi = positionBorrowedUsdi + usdiBorrowedChange;
-    let newPositionBorrowedIasset =
-      positionBorrowedIasset + iassetBorrowedChange;
-
-    const currentCollateral = toNumber(
-      comet.collaterals[cometIndex].collateralAmount
-    );
-    let newCollateralAmount = currentCollateral + collateralChange;
-
-    let claimableIasset = poolIasset * claimableRatio;
-    let ILD = 0; // ILD doesnt change.
-    let isUsdi = false;
-    if (initPrice < poolPrice) {
-      ILD += (positionBorrowedIasset - claimableIasset) * markPrice;
-    } else if (poolPrice < initPrice) {
-      ILD += positionBorrowedUsdi - claimableUsdi;
-      isUsdi = true;
-    }
-
-    const ilHealthScoreCoefficient = toNumber(
-      tokenData.ilHealthScoreCoefficient
-    );
-
-    const poolCoefficient = toNumber(pool.assetInfo.healthScoreCoefficient);
-    const newPositionLoss = poolCoefficient * newPositionBorrowedUsdi;
-    const ildLoss = ilHealthScoreCoefficient * ILD;
-    const loss = ildLoss + newPositionLoss;
-
-    const newHealthScore = 100 - loss / newCollateralAmount;
-    const maxCollateralWithdrawable = currentCollateral - loss / 100;
-
-    const maxILD =
-      (100 * newCollateralAmount - newPositionLoss) / ilHealthScoreCoefficient;
-
-    const newInvariant = newPoolUsdi * newPooliAsset;
-
-    // Solution 1: Price goes down, IL is in USDi
-    let y1 = Math.max(
-      (newPositionBorrowedUsdi - maxILD) / newClaimableRatio,
-      0
-    );
-    const lowerPrice = (y1 * y1) / newInvariant;
-
-    // Solution 2: Price goes up, IL is in iAsset
-    let a = newPositionBorrowedIasset / newInvariant;
-    let b = -newClaimableRatio;
-    let c = -maxILD;
-    let y2 = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
-    const upperPrice = (y2 * y2) / newInvariant;
-
-    // Max USDi borrowed position possible before health = 0
-    let maxUsdiPosition = Math.max(
-      0,
-      (100 * newCollateralAmount - ildLoss) / poolCoefficient
-    );
-
-    return {
-      maxCollateralWithdrawable: maxCollateralWithdrawable,
-      healthScore: newHealthScore,
-      maxUsdiPosition: maxUsdiPosition,
-      lowerPrice: lowerPrice,
-      upperPrice: upperPrice,
-    };
-  }
-
-  public calculateEditCometSinglePoolWithRange(
-    cometIndex: number,
-    collateralChange: number,
-    price: number,
-    isLowerPrice: boolean,
-    comet: Comet,
-    tokenData: TokenData
-  ): {
-    maxCollateralWithdrawable: number;
-    usdiPosition: number;
-    healthScore: number;
-    lowerPrice: number;
-    upperPrice: number;
-  } {
-    const tolerance = 1e-9;
-    const maxIter = 100000;
-    const position = comet.positions[cometIndex];
-    const currentUsdiPosition = toNumber(position.borrowedUsdi);
-    const currentIassetPosition = toNumber(position.borrowedIasset);
-    const pool = tokenData.pools[position.poolIndex];
-    const poolUsdi = toNumber(pool.usdiAmount);
-    const poolIasset = toNumber(pool.iassetAmount);
-    const poolPrice = poolUsdi / poolIasset;
-    const ilHealthScoreCoefficient = toNumber(
-      tokenData.ilHealthScoreCoefficient
-    );
-    const poolCoefficient = toNumber(pool.assetInfo.healthScoreCoefficient);
-    const poolLpTokens = toNumber(pool.liquidityTokenSupply);
-    const lpTokens = toNumber(position.liquidityTokenValue);
-    const claimableRatio = lpTokens / poolLpTokens;
-
-    const currentCollateral = toNumber(
-      comet.collaterals[cometIndex].collateralAmount
-    );
-    let newCollateralAmount = currentCollateral + collateralChange;
-
-    const initData = this.calculateEditCometSinglePoolWithUsdiBorrowed(
-      tokenData,
-      comet,
-      cometIndex,
-      collateralChange,
-      0
-    );
-
-    const priceRange = (
-      usdPosition: number
-    ): { lower: number; upper: number } => {
-      const usdiBorrowedChange = usdPosition - currentUsdiPosition;
-      let positionBorrowedUsdi = currentUsdiPosition;
-      let positionBorrowedIasset = currentIassetPosition;
-      const iassetBorrowedChange = usdiBorrowedChange / poolPrice;
-
-      let newClaimableRatio = claimableRatio;
-      // Calculate total lp tokens
-      if (usdiBorrowedChange > 0) {
-        newClaimableRatio +=
-          usdiBorrowedChange / (usdiBorrowedChange + poolUsdi);
-      } else if (usdiBorrowedChange < 0) {
-        const claimableUsdi = claimableRatio * poolUsdi;
-        const newLpTokens =
-          (lpTokens * (positionBorrowedUsdi + usdiBorrowedChange)) /
-          claimableUsdi;
-        newClaimableRatio =
-          newLpTokens / (poolLpTokens - lpTokens + newLpTokens);
-      }
-      positionBorrowedUsdi += usdiBorrowedChange;
-      positionBorrowedIasset += iassetBorrowedChange;
-
-      let newPoolUsdi = poolUsdi + usdiBorrowedChange;
-      let newPooliAsset = poolIasset + iassetBorrowedChange;
-
-      const positionLoss = poolCoefficient * positionBorrowedUsdi;
-
-      const maxILD =
-        (100 * newCollateralAmount - positionLoss) / ilHealthScoreCoefficient;
-
-      const newInvariant = newPoolUsdi * newPooliAsset;
-
-      // Solution 1: Price goes down, IL is in USDi
-      let y1 = Math.max((positionBorrowedUsdi - maxILD) / newClaimableRatio, 0);
-      const lowerPrice = (y1 * y1) / newInvariant;
-
-      // Solution 2: Price goes up, IL is in iAsset
-      let a = positionBorrowedIasset / newInvariant;
-      let b = -newClaimableRatio;
-      let c = -maxILD;
-      let y2 = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
-      const upperPrice = (y2 * y2) / newInvariant;
-
-      // Max USDi borrowed position possible before health = 0
-      a = ilHealthScoreCoefficient + poolCoefficient;
-      b = poolCoefficient * newPoolUsdi - 100 * newCollateralAmount;
-      c = -100 * newCollateralAmount * newPoolUsdi;
-
-      return { lower: lowerPrice, upper: upperPrice };
-    };
-
-    let startSearch = 0;
-    let stopSearch = initData.maxUsdiPosition;
-    let positionGuess = (startSearch + stopSearch) * 0.5;
-    let iter = 0;
-    while (iter < maxIter) {
-      positionGuess = (startSearch + stopSearch) * 0.5;
-
-      let range = priceRange(positionGuess);
-
-      if (isLowerPrice) {
-        let diff = range.lower - price;
-        if (Math.abs(diff) < tolerance) {
-          break;
-        }
-
-        if (diff < 0) {
-          // Increase position to increase lower
-          startSearch = positionGuess;
-        } else {
-          stopSearch = positionGuess;
-        }
-      } else {
-        let diff = range.upper - price;
-        if (Math.abs(diff) < tolerance) {
-          break;
-        }
-
-        if (diff < 0) {
-          // Reduce position to increase upper
-          stopSearch = positionGuess;
-        } else {
-          startSearch = positionGuess;
-        }
-      }
-      iter += 1;
-    }
-
-    if (iter === maxIter) {
-      throw new CalculationError("Max iterations reached!");
-    }
-
-    const finalData = this.calculateEditCometSinglePoolWithUsdiBorrowed(
-      tokenData,
-      comet,
-      cometIndex,
-      collateralChange,
-      positionGuess - currentUsdiPosition
-    );
-    return {
-      maxCollateralWithdrawable: finalData.maxCollateralWithdrawable,
-      usdiPosition: positionGuess,
-      healthScore: finalData.healthScore,
-      lowerPrice: isLowerPrice ? price : finalData.lowerPrice,
-      upperPrice: !isLowerPrice ? price : finalData.upperPrice,
-    };
-  }
-
-  public calculateCometRecenterSinglePool(
-    cometIndex: number,
-    tokenData: TokenData,
-    comet: Comet
-  ): {
-    healthScore: number;
-    usdiCost: number;
-    lowerPrice: number;
-    upperPrice: number;
-  } {
-    const position = comet.positions[cometIndex];
-    const pool = tokenData.pools[position.poolIndex];
-
-    const ilCoefficient = toNumber(tokenData.ilHealthScoreCoefficient);
-    const assetCoefficient = toNumber(pool.assetInfo.healthScoreCoefficient);
-
-    const borrowedUsdi = toNumber(position.borrowedUsdi);
-    const borrowedIasset = toNumber(position.borrowedIasset);
-    const lpTokens = toNumber(position.liquidityTokenValue);
-
-    const initPrice = borrowedUsdi / borrowedIasset;
-    let poolUsdiAmount = toNumber(pool.usdiAmount);
-    let poolIassetAmount = toNumber(pool.iassetAmount);
-    let poolPrice = poolUsdiAmount / poolIassetAmount;
-    const invariant = poolUsdiAmount * poolIassetAmount;
-
-    const claimableRatio = lpTokens / toNumber(pool.liquidityTokenSupply);
-    const invClaimableRatio = 1 - claimableRatio;
-
-    if (Math.abs(initPrice - poolPrice) < 1e-8) {
-      const prevHealthScore = this.getSinglePoolHealthScore(
-        cometIndex,
-        tokenData,
-        comet
-      );
-      const estData = this.calculateEditCometSinglePoolWithUsdiBorrowed(
-        tokenData,
-        comet,
-        cometIndex,
-        0,
-        0
-      );
-      return {
-        usdiCost: 0,
-        healthScore: prevHealthScore.healthScore,
-        lowerPrice: estData.lowerPrice,
-        upperPrice: estData.upperPrice,
-      };
-    }
-    const iAssetDiff = Math.abs(
-      borrowedIasset - claimableRatio * poolIassetAmount
-    );
-    let usdiCost;
-    if (initPrice < poolPrice) {
-      const iAssetDebt = iAssetDiff / invClaimableRatio;
-      // calculate extra usdi comet can claim, iasset debt that comet cannot claim, and usdi amount needed to buy iasset and cover debt
-      const newPooliAssetAmount = poolIassetAmount - iAssetDebt;
-      const newPoolUsdiAmount = invariant / newPooliAssetAmount;
-      const requiredUsdi = invariant / newPooliAssetAmount - poolUsdiAmount;
-      const usdiSurplus = claimableRatio * newPoolUsdiAmount - borrowedUsdi;
-      usdiCost = requiredUsdi - usdiSurplus;
-      poolIassetAmount = newPooliAssetAmount;
-      poolUsdiAmount = newPoolUsdiAmount;
-    } else {
-      const iassetSurplus = iAssetDiff / invClaimableRatio;
-      const newPooliAssetAmount = poolIassetAmount + iassetSurplus;
-      const newPoolUsdiAmount = invariant / newPooliAssetAmount;
-      // calculate extra iAsset comet can claim, usdi debt that comet cannot claim, and amount of usdi gained from trading iasset.
-      const usdiDebt = borrowedUsdi - claimableRatio * newPoolUsdiAmount;
-      const usdiBurned = poolUsdiAmount - newPoolUsdiAmount;
-      usdiCost = usdiDebt - usdiBurned;
-      poolIassetAmount = newPooliAssetAmount;
-      poolUsdiAmount = newPoolUsdiAmount;
-    }
-
-    const newBorrowedUsdi = claimableRatio * poolUsdiAmount;
-    const newBorrowedIasset = claimableRatio * poolIassetAmount;
-    const prevCollateral = toNumber(
-      comet.collaterals[cometIndex].collateralAmount
-    );
-    const newCollateral = prevCollateral - usdiCost;
-
-    const positionLoss = assetCoefficient * newBorrowedUsdi;
-
-    const healthScore = 100 - positionLoss / newCollateral;
-
-    const maxILD = (100 * newCollateral - positionLoss) / ilCoefficient;
-
-    // Solution 1: Price goes down, IL is in USDi
-    let y1 = Math.max((newBorrowedUsdi - maxILD) / claimableRatio, 0);
-
-    // Solution 2: Price goes up, IL is in iAsset
-    let a = newBorrowedIasset / invariant;
-    let b = -claimableRatio;
-    let c = -maxILD;
-    let y2 = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
-
-    return {
-      usdiCost: usdiCost,
-      healthScore: healthScore,
-      lowerPrice: (y1 * y1) / invariant,
-      upperPrice: (y2 * y2) / invariant,
-    };
-  }
-
-  public calculateCometRecenterMultiPool(
-    cometIndex: number,
-    tokenData: TokenData,
-    comet: Comet
-  ): {
-    healthScore: number;
-    usdiCost: number;
-  } {
-    const position = comet.positions[cometIndex];
-    const pool = tokenData.pools[position.poolIndex];
-
-    const ilCoefficient = toNumber(tokenData.ilHealthScoreCoefficient);
-    const assetCoefficient = toNumber(pool.assetInfo.healthScoreCoefficient);
-
-    const borrowedUsdi = toNumber(position.borrowedUsdi);
-    const borrowedIasset = toNumber(position.borrowedIasset);
-    const lpTokens = toNumber(position.liquidityTokenValue);
-    const prevCollateral = this.getEffectiveUSDCollateralValue(
-      tokenData,
-      comet
-    );
-
-    const initPrice = borrowedUsdi / borrowedIasset;
-    let poolUsdiAmount = toNumber(pool.usdiAmount);
-    let poolIassetAmount = toNumber(pool.iassetAmount);
-    let poolPrice = poolUsdiAmount / poolIassetAmount;
-    const invariant = poolUsdiAmount * poolIassetAmount;
-
-    const claimableRatio = lpTokens / toNumber(pool.liquidityTokenSupply);
-    const invClaimableRatio = 1 - claimableRatio;
-
-    const prevHealthScore = this.getHealthScore(tokenData, comet);
-
-    if (Math.abs(initPrice - poolPrice) < 1e-8) {
-      return {
-        usdiCost: 0,
-        healthScore: prevHealthScore.healthScore,
-      };
-    }
-
-    const iAssetDiff = Math.abs(
-      borrowedIasset - claimableRatio * poolIassetAmount
-    );
-    const usdiDiff = Math.abs(borrowedUsdi - claimableRatio * poolUsdiAmount);
-    let usdiCost;
-    let ildLoss;
-    if (initPrice < poolPrice) {
-      const iAssetDebt =
-        (borrowedIasset - claimableRatio * poolIassetAmount) /
-        invClaimableRatio;
-      // calculate extra usdi comet can claim, iasset debt that comet cannot claim, and usdi amount needed to buy iasset and cover debt
-      const newPooliAssetAmount = poolIassetAmount - iAssetDebt;
-      const newPoolUsdiAmount = invariant / newPooliAssetAmount;
-      const requiredUsdi = invariant / newPooliAssetAmount - poolUsdiAmount;
-      const usdiSurplus = claimableRatio * newPoolUsdiAmount - borrowedUsdi;
-      usdiCost = requiredUsdi - usdiSurplus;
-      ildLoss = usdiDiff * ilCoefficient;
-      poolIassetAmount = newPooliAssetAmount;
-      poolUsdiAmount = newPoolUsdiAmount;
-    } else {
-      const iassetSurplus =
-        (claimableRatio * poolIassetAmount - borrowedIasset) /
-        invClaimableRatio;
-      const newPooliAssetAmount = poolIassetAmount + iassetSurplus;
-      const newPoolUsdiAmount = invariant / newPooliAssetAmount;
-      // calculate extra iAsset comet can claim, usdi debt that comet cannot claim, and amount of usdi gained from trading iasset.
-      const usdiDebt = borrowedUsdi - claimableRatio * newPoolUsdiAmount;
-      const usdiBurned = poolUsdiAmount - newPoolUsdiAmount;
-      usdiCost = usdiDebt - usdiBurned;
-      poolIassetAmount = newPooliAssetAmount;
-      poolUsdiAmount = newPoolUsdiAmount;
-      const markPrice = Math.max(toNumber(pool.assetInfo.price), poolPrice);
-      ildLoss = iAssetDiff * markPrice * ilCoefficient;
-    }
-
-    const newBorrowedUsdi = claimableRatio * poolUsdiAmount;
-
-    const newCollateral = prevCollateral - usdiCost;
-    const prevLoss = (100 - prevHealthScore.healthScore) * prevCollateral;
-    const newLoss =
-      prevLoss - ildLoss - (borrowedUsdi - newBorrowedUsdi) * assetCoefficient;
-    const healthScore = 100 - newLoss / newCollateral;
-
-    return {
-      usdiCost: usdiCost,
-      healthScore: healthScore,
-    };
-  }
-
-  public async getUSDiAndiAssetAmountsFromLiquidtyTokens(
-    cometIndex: number
-  ): Promise<{ usdiClaim: number; iAssetClaim: number }> {
-    let comet = await this.getSinglePoolComets();
-    let tokenData = await this.getTokenData();
-    let position = comet.positions[cometIndex];
-    let pool = tokenData.pools[position.poolIndex];
-
-    let lpTokensClaimed = toNumber(position.liquidityTokenValue);
-    let totalLpTokens = toNumber(pool.liquidityTokenSupply);
-
-    let claimableRatio = lpTokensClaimed / totalLpTokens;
-
-    return {
-      usdiClaim: claimableRatio * toNumber(pool.usdiAmount),
-      iAssetClaim: claimableRatio * toNumber(pool.iassetAmount),
-    };
   }
 
   public async swapCometNonstableCollateralInstruction(
@@ -3568,155 +2230,4 @@ export class Incept {
       })
       .instruction();
   }
-}
-
-export interface Manager {
-  usdiMint: PublicKey;
-  tokenData: PublicKey;
-  admin: PublicKey;
-  bump: number;
-  liquidationConfig: LiquidationConfig;
-}
-
-export interface LiquidationConfig {
-  liquidatorFee: RawDecimal;
-  collateralFullLiquidationThreshold: RawDecimal;
-  maxHealthLiquidation: RawDecimal;
-}
-
-export interface User {
-  isManager: BN;
-  authority: PublicKey;
-  singlePoolComets: PublicKey;
-  mintPositions: PublicKey;
-  liquidityPositions: PublicKey;
-  comet: PublicKey;
-  cometManager: CometManager;
-}
-
-export interface TokenData {
-  manager: PublicKey;
-  numPools: BN;
-  numCollaterals: BN;
-  pools: Array<Pool>;
-  collaterals: Array<Collateral>;
-  chainlinkProgram: PublicKey;
-  ilHealthScoreCoefficient: RawDecimal;
-}
-
-export interface LiquidityPositions {
-  owner: PublicKey;
-  numPositions: BN;
-  liquidityPositions: Array<LiquidityPosition>;
-}
-
-export interface LiquidityPosition {
-  authority: PublicKey;
-  liquidityTokenValue: RawDecimal;
-  poolIndex: number;
-}
-
-export interface MintPositions {
-  owner: PublicKey;
-  numPositions: BN;
-  mintPositions: Array<MintPosition>;
-}
-
-export interface MintPosition {
-  authority: PublicKey;
-  collateralAmount: RawDecimal;
-  poolIndex: number;
-  collateralIndex: number;
-  borrowedIasset: RawDecimal;
-}
-
-export interface LiquidationStatus {
-  healthy: object;
-  partially: object;
-  fully: object;
-}
-
-export interface CometLiquidation {
-  status: number;
-  excessTokenTypeIsUsdi: number;
-  excessTokenAmount: RawDecimal;
-}
-
-export interface Comet {
-  isSinglePool: BN;
-  owner: PublicKey;
-  numPositions: BN;
-  numCollaterals: BN;
-  positions: Array<CometPosition>;
-  collaterals: Array<CometCollateral>;
-}
-
-export interface CometPosition {
-  authority: PublicKey;
-  poolIndex: number;
-  borrowedUsdi: RawDecimal;
-  borrowedIasset: RawDecimal;
-  liquidityTokenValue: RawDecimal;
-  cometLiquidation: CometLiquidation;
-}
-
-export interface CometCollateral {
-  authority: PublicKey;
-  collateralAmount: RawDecimal;
-  collateralIndex: number;
-}
-
-export interface SinglePoolComets {
-  owner: PublicKey;
-  numComets: BN;
-  comets: Array<PublicKey>;
-}
-
-export interface CometManager {
-  membershipTokenMint: PublicKey;
-  comet: PublicKey;
-}
-
-export interface Value {
-  val: BN;
-  scale: BN;
-}
-
-export interface AssetInfo {
-  iassetMint: PublicKey;
-  priceFeedAddresses: Array<PublicKey>;
-  price: RawDecimal;
-  twap: RawDecimal;
-  confidence: RawDecimal;
-  status: number;
-  lastUpdate: number;
-  stableCollateralRatio: RawDecimal;
-  cryptoCollateralRatio: RawDecimal;
-  healthScoreCoefficient: RawDecimal;
-}
-
-export interface Pool {
-  iassetTokenAccount: PublicKey;
-  usdiTokenAccount: PublicKey;
-  liquidityTokenMint: PublicKey;
-  liquidationIassetTokenAccount: PublicKey;
-  cometLiquidityTokenAccount: PublicKey;
-  iassetAmount: RawDecimal;
-  usdiAmount: RawDecimal;
-  liquidityTokenSupply: RawDecimal;
-  treasuryTradingFee: RawDecimal;
-  liquidityTradingFee: RawDecimal;
-  totalMintedAmount: RawDecimal;
-  suppliedMintCollateralAmount: RawDecimal;
-  assetInfo: AssetInfo;
-}
-
-export interface Collateral {
-  poolIndex: BN;
-  mint: PublicKey;
-  vault: PublicKey;
-  vaultUsdiSupply: RawDecimal;
-  vaultMintSupply: RawDecimal;
-  vaultCometSupply: RawDecimal;
-  stable: BN;
 }
