@@ -171,6 +171,10 @@ pub enum InceptError {
     /// 41. Incorrect Oracle Address
     #[error("Incorrect oracle address provided")]
     IncorrectOracleAddress,
+
+    /// 42. Failed to Load Pyth Price Feed
+    #[error("Failed to Load Pyth Price Feed")]
+    FailedToLoadPyth,
 }
 
 impl From<InceptError> for ProgramError {
