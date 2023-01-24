@@ -10,7 +10,7 @@ fn load_price_from_pyth(pyth_oracle: &AccountInfo) -> Result<Price, InceptError>
     if let Ok(price_feed) = LocalPrice::load(pyth_oracle) {
         Ok(Price {
             price: price_feed.agg.price,
-            expo: price_feed.expo.abs(),
+            expo: price_feed.expo,
             conf: price_feed.agg.conf,
             publish_time: price_feed.valid_slot.try_into().unwrap(),
         })
@@ -22,7 +22,6 @@ fn load_price_from_pyth(pyth_oracle: &AccountInfo) -> Result<Price, InceptError>
 #[cfg(not(feature = "pyth-local"))]
 fn load_price_from_pyth(pyth_oracle: &AccountInfo) -> Result<Price, InceptError> {
     use pyth_sdk_solana::load_price_feed_from_account_info;
-    let account_info = pyth_oracle.to_account_info().clone();
     if let Ok(price_feed) = load_price_feed_from_account_info(pyth_oracle) {
         // TODO: Switch over to `get_price_no_older_than` method.
         Ok(price_feed.get_price_unchecked())
@@ -76,11 +75,11 @@ pub fn execute<'info>(
         );
 
         let price = load_price_from_pyth(pyth_oracle)?;
-        let expo = price.expo.try_into().unwrap();
+        let expo = (price.expo * -1).try_into().unwrap();
 
         // update price data
         token_data.pools[pool_index].asset_info.price =
-            RawDecimal::new(price.price.try_into().unwrap(), expo);
+            RawDecimal::new(price.price, expo);
         // token_data.pools[pool_index].asset_info.twap =
         //     RawDecimal::new(price_feed.twap.try_into().unwrap(), expo);
         token_data.pools[pool_index].asset_info.confidence =
