@@ -2251,12 +2251,12 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "liquidatorCollateralTokenAccount",
+          "name": "liquidatorUsdiTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "vault",
+          "name": "usdiVault",
           "isMut": true,
           "isSigner": false
         },
@@ -2292,7 +2292,7 @@ export type Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -5678,12 +5678,12 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "liquidatorCollateralTokenAccount",
+          "name": "liquidatorUsdiTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "vault",
+          "name": "usdiVault",
           "isMut": true,
           "isSigner": false
         },
@@ -5719,7 +5719,7 @@ export const IDL: Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {

@@ -2096,7 +2096,7 @@ export class Incept {
         userComet.collaterals[positionIndex].collateralIndex
       ];
     return await this.program.methods
-      .liquidateSinglePoolComet(userAddress.bump, positionIndex)
+      .liquidateComet(userAddress.bump, positionIndex)
       .accounts({
         liquidator: this.provider.publicKey!,
         manager: this.managerAddress[0],
@@ -2110,8 +2110,8 @@ export class Incept {
         ammUsdiTokenAccount: pool.usdiTokenAccount,
         liquidityTokenMint: pool.liquidityTokenMint,
         cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
-        liquidatorCollateralTokenAccount: liquidatorUsdiCollateralTokenAccount,
-        vault: collateral.vault,
+        liquidatorUsdiTokenAccount: liquidatorUsdiCollateralTokenAccount,
+        usdiVault: collateral.vault,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
