@@ -1,41 +1,36 @@
+use crate::error::*;
+use crate::states::*;
 use anchor_lang::prelude::*;
-use pyth_sdk_solana::{load_price_feed_from_account_info, Price};
-use rust_decimal::prelude::*;
+use pyth_sdk_solana::Price;
 use std::convert::TryInto;
 
 #[cfg(feature = "pyth-local")]
-use pyth::pc::Price as LocalPrice;
+fn load_price_from_pyth(pyth_oracle: &AccountInfo) -> Result<Price, InceptError> {
+    use pyth::pc::Price as LocalPrice;
+    if let Ok(price_feed) = LocalPrice::load(pyth_oracle) {
+        Ok(Price {
+            price: price_feed.agg.price,
+            expo: price_feed.expo,
+            conf: price_feed.agg.conf,
+            publish_time: price_feed.valid_slot.try_into().unwrap(),
+        })
+    } else {
+        Err(InceptError::FailedToLoadPyth)
+    }
+}
 
-use crate::error::*;
-use crate::states::*;
+#[cfg(not(feature = "pyth-local"))]
+fn load_price_from_pyth(pyth_oracle: &AccountInfo) -> Result<Price, InceptError> {
+    use pyth_sdk_solana::load_price_feed_from_account_info;
+    if let Ok(price_feed) = load_price_feed_from_account_info(pyth_oracle) {
+        // TODO: Switch over to `get_price_no_older_than` method.
+        Ok(price_feed.get_price_unchecked())
+    } else {
+        Err(InceptError::FailedToLoadPyth)
+    }
+}
 
 pub const MAX_SIZE: usize = 128;
-
-fn load_price_from_pyth(pyth_oracle: &AccountInfo) -> Result<Price, InceptError> {
-    let pyth_price = if cfg!(feature = "pyth-local") {
-        if let Ok(price_feed) = LocalPrice::load(pyth_oracle) {
-            let price = Price {
-                price: price_feed.agg.price,
-                expo: price_feed.expo.abs(),
-                conf: price_feed.agg.conf,
-                publish_time: price_feed.valid_slot.try_into().unwrap(),
-            };
-            price
-        } else {
-            return Err(InceptError::FailedToLoadPyth);
-        }
-    } else {
-        let account_info = pyth_oracle.to_account_info().clone();
-        if let Ok(price_feed) = load_price_feed_from_account_info(pyth_oracle) {
-            // TODO: Switch over to `get_price_no_older_than` method.
-            price_feed.get_price_unchecked()
-        } else {
-            return Err(InceptError::FailedToLoadPyth);
-        }
-    };
-
-    Ok(pyth_price)
-}
 
 #[zero_copy]
 #[derive(PartialEq, Debug, AnchorDeserialize, AnchorSerialize)]
@@ -80,11 +75,11 @@ pub fn execute<'info>(
         );
 
         let price = load_price_from_pyth(pyth_oracle)?;
-        let expo = price.expo.try_into().unwrap();
+        let expo = (price.expo * -1).try_into().unwrap();
 
         // update price data
         token_data.pools[pool_index].asset_info.price =
-            RawDecimal::new(price.price.try_into().unwrap(), expo);
+            RawDecimal::new(price.price, expo);
         // token_data.pools[pool_index].asset_info.twap =
         //     RawDecimal::new(price_feed.twap.try_into().unwrap(), expo);
         token_data.pools[pool_index].asset_info.confidence =
