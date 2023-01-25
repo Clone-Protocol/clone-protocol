@@ -2388,11 +2388,6 @@ export type Incept = {
           "name": "tokenData",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -5576,11 +5571,6 @@ export const IDL: Incept = {
         {
           "name": "tokenData",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
           "isSigner": false
         }
       ],
