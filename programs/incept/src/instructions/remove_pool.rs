@@ -5,7 +5,6 @@ use anchor_lang::prelude::*;
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, pool_index: u8, force_removal: bool)]
 pub struct RemovePool<'info> {
-    #[account(address = manager.admin)]
     pub admin: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
@@ -13,14 +12,13 @@ pub struct RemovePool<'info> {
         has_one = token_data,
         has_one = admin
     )]
-    pub manager: Box<Account<'info, Manager>>,
+    pub manager: Account<'info, Manager>,
     #[account(
         mut,
         has_one = manager,
         constraint = token_data.load()?.num_pools > (pool_index as u64) @ InceptError::InvalidInputPositionIndex
     )]
-    pub token_data: AccountLoader<'info, TokenData>,
-    pub system_program: Program<'info, System>,
+    pub token_data: AccountLoader<'info, TokenData>
 }
 
 pub fn execute(
