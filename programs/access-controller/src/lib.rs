@@ -4,7 +4,7 @@ use std::mem;
 
 use arrayvec::arrayvec;
 
-declare_id!("FvSzDSyxvu72HhTgAVnBkwVAwR9NvTqjR4tFBXia4bkv");
+declare_id!("DrnK2nD8HFqiooNuY7HdWQPRsRV6Q7aMtMWfYY28xKLv");
 
 #[constant]
 pub const MAX_ADDRS: usize = 64;
