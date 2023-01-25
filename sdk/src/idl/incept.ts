@@ -2370,6 +2370,45 @@ export type Incept = {
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "removePool",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "forceRemoval",
+          "type": "bool"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -3108,6 +3147,9 @@ export type Incept = {
           },
           {
             "name": "IncorrectOracleAddress"
+          },
+          {
+            "name": "FailedToLoadPyth"
           }
         ]
       }
@@ -5517,6 +5559,45 @@ export const IDL: Incept = {
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "removePool",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "managerNonce",
+          "type": "u8"
+        },
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "forceRemoval",
+          "type": "bool"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -6255,6 +6336,9 @@ export const IDL: Incept = {
           },
           {
             "name": "IncorrectOracleAddress"
+          },
+          {
+            "name": "FailedToLoadPyth"
           }
         ]
       }

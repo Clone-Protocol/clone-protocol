@@ -476,4 +476,13 @@ pub mod incept {
             collateral_amount,
         )
     }
+
+    pub fn remove_pool(
+        ctx: Context<RemovePool>,
+        manager_nonce: u8,
+        pool_index: u8,
+        force_removal: bool,
+    ) -> ProgramResult {
+        instructions::remove_pool::execute(ctx, manager_nonce, pool_index, force_removal)
+    }
 }
