@@ -7,7 +7,7 @@ mod state;
 use crate::state::with_store;
 pub use crate::state::{NewTransmission, Store as State, Transmission, Transmissions};
 
-declare_id!("Haz47L8yvvthM99yy7hGi9jcPjVJSL1anMS238Ta6RFp");
+declare_id!("Ef5PwEgoGcXV98XcebNKLMxNktCY911WYbD9CMjPTpxF");
 
 static THRESHOLD_MULTIPLIER: u128 = 100000;
 

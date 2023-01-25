@@ -9,11 +9,12 @@ crate-type = ["cdylib", "lib"]
 name = "incept"
 
 [features]
+pyth-local = []
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
-default = []
+default = ["pyth-local"]
 
 [dependencies]
 anchor-lang = "0.20.1"

@@ -28,7 +28,6 @@ import {
 } from "../sdk/src/oracle";
 import { sleep, signAndSend, toScaledNumber } from "../sdk/src/utils";
 import { toNumber } from "../sdk/src/decimal";
-import { getUSDiAccount } from "../scripts/run_action";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -197,6 +196,40 @@ describe("incept", async () => {
       chainlink.priceFeedPubkey(),
       healthScoreCoefficient
     );
+  });
+
+  it("2nd pool initialized and removed", async () => {
+    await inceptClient.initializePool(
+      walletPubkey,
+      150,
+      200,
+      0,
+      priceFeed,
+      chainlink.priceFeedPubkey(),
+      healthScoreCoefficient
+    );
+    await sleep(200);
+
+    let tokenData = await inceptClient.getTokenData();
+    assert.equal(tokenData.numPools.toNumber(), 2);
+
+    await inceptClient.program.rpc.removePool(
+      inceptClient.managerAddress[1],
+      1,
+      false,
+      {
+        accounts: {
+          admin: inceptClient.manager!.admin,
+          manager: inceptClient.managerAddress[0],
+          tokenData: inceptClient.manager!.tokenData
+        }
+      }
+    );
+
+    await sleep(200);
+
+    tokenData = await inceptClient.getTokenData();
+    assert.equal(tokenData.numPools.toNumber(), 1);
   });
 
   it("non-stable mock asset added as a collateral!", async () => {

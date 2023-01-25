@@ -10,7 +10,7 @@ mod value;
 
 use instructions::*;
 
-declare_id!("FbFjJC5XVPszxumC5jGVkDkV19TgJP7LWmsX21cRSXKL");
+declare_id!("65ifrH76MWRp4JqePYDQrCDDd5LFnxHwonXhMw55jcCx");
 
 #[program]
 pub mod incept {
@@ -475,5 +475,14 @@ pub mod incept {
             comet_collateral_index,
             collateral_amount,
         )
+    }
+
+    pub fn remove_pool(
+        ctx: Context<RemovePool>,
+        manager_nonce: u8,
+        pool_index: u8,
+        force_removal: bool,
+    ) -> ProgramResult {
+        instructions::remove_pool::execute(ctx, manager_nonce, pool_index, force_removal)
     }
 }
