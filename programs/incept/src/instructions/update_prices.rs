@@ -78,8 +78,7 @@ pub fn execute<'info>(
         let expo = (price.expo * -1).try_into().unwrap();
 
         // update price data
-        token_data.pools[pool_index].asset_info.price =
-            RawDecimal::new(price.price, expo);
+        token_data.pools[pool_index].asset_info.price = RawDecimal::new(price.price, expo);
         // token_data.pools[pool_index].asset_info.twap =
         //     RawDecimal::new(price_feed.twap.try_into().unwrap(), expo);
         token_data.pools[pool_index].asset_info.confidence =
