@@ -9,7 +9,7 @@ use std::cmp::Ordering;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8, position_index: u8, comet_collateral_index: u8)]
+#[instruction(user_nonce: u8, position_index: u8)]
 pub struct LiquidateComet<'info> {
     pub liquidator: Signer<'info>,
     #[account(
