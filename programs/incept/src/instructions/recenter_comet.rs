@@ -69,6 +69,7 @@ pub struct RecenterComet<'info> {
     pub token_program: Program<'info, Token>,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct RecenterResult {
     pub user_usdi_collateral_deficit: Decimal,
     pub user_borrowed_usdi: Decimal,
