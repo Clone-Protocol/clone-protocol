@@ -170,14 +170,6 @@ pub fn execute(
             RawDecimal::from(new_borrowed_iasset);
     }
 
-    msg!("usdi reward: {:?}", usdi_reward);
-    msg!("usdi_to_burn: {:?}", usdi_to_burn);
-    msg!("iasset_to_burn: {:?}", iasset_to_burn);
-    msg!("liquidity_token_value: {:?}", liquidity_token_value);
-    msg!("borrowed_usdi: {:?}", borrowed_usdi);
-    msg!("borrowed_iasset: {:?}", borrowed_iasset);
-    msg!("liquidity_token_supply: {:?}", liquidity_token_supply);
-
     // Send usdi reward from amm to collateral vault
     if usdi_reward > Decimal::ZERO {
         let cpi_accounts = Transfer {
