@@ -130,9 +130,9 @@ pub enum InceptError {
     #[msg("Inequality comparison violated")]
     InequalityComparisonViolated,
 
-    /// 32. Not Single Pool Comet
-    #[msg("Not Single Pool Comet")]
-    NotSinglePoolComet,
+    /// 32. Wrong Comet Type
+    #[msg("Wrong Comet Type")]
+    WrongCometType,
 
     /// 33. Single Pool Comet Not Empty
     #[msg("Single Pool Comet Not Empty")]

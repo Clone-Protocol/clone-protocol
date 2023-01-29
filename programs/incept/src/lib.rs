@@ -468,9 +468,9 @@ pub mod incept {
         user_nonce: u8,
         position_index: u8,
     ) -> Result<()> {
-        assert!(
+        require!(
             ctx.accounts.comet.load()?.is_single_pool == 1,
-            "Require single pool comet!"
+            InceptError::WrongCometType
         );
         instructions::liquidate_comet::execute(ctx, user_nonce, position_index, position_index)
     }
@@ -508,9 +508,9 @@ pub mod incept {
         user_nonce: u8,
         position_index: u8,
     ) -> Result<()> {
-        assert!(
+        require!(
             ctx.accounts.comet.load()?.is_single_pool == 0,
-            "Require multipool comet!"
+            InceptError::WrongCometType
         );
         instructions::liquidate_comet::execute(ctx, user_nonce, position_index, 0)
     }
