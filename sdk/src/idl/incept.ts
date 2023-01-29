@@ -3349,8 +3349,8 @@ export type Incept = {
     },
     {
       "code": 6032,
-      "name": "NotSinglePoolComet",
-      "msg": "Not Single Pool Comet"
+      "name": "WrongCometType",
+      "msg": "Wrong Comet Type"
     },
     {
       "code": 6033,
@@ -6776,8 +6776,8 @@ export const IDL: Incept = {
     },
     {
       "code": 6032,
-      "name": "NotSinglePoolComet",
-      "msg": "Not Single Pool Comet"
+      "name": "WrongCometType",
+      "msg": "Wrong Comet Type"
     },
     {
       "code": 6033,
