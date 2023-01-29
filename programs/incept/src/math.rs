@@ -111,7 +111,7 @@ pub fn check_mint_collateral_sufficient(
     if (asset_info.price.to_decimal() * asset_amount_borrowed * collateral_ratio)
         > collateral_amount
     {
-        return Err(InceptError::InvalidMintCollateralRatio.into());
+        return Err(error!(InceptError::InvalidMintCollateralRatio));
     }
     Ok(())
 }
@@ -217,7 +217,6 @@ pub fn calculate_health_score(
 
     let effective_collateral =
         comet.calculate_effective_collateral_value(token_data, single_pool_position_index);
-
     let score = Decimal::new(100, 0) - (total_il_term + total_position_term) / effective_collateral;
 
     Ok(HealthScore {
