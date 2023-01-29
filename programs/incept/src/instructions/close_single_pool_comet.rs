@@ -17,7 +17,7 @@ pub struct CloseSinglePoolComet<'info> {
     #[account(
         mut,
         constraint = single_pool_comet.load()?.owner == *user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
-        constraint = single_pool_comet.load()?.is_single_pool == 1 @ InceptError::NotSinglePoolComet,
+        constraint = single_pool_comet.load()?.is_single_pool == 1 @ InceptError::WrongCometType,
         address = user_account.single_pool_comets
     )]
     pub single_pool_comet: AccountLoader<'info, Comet>,

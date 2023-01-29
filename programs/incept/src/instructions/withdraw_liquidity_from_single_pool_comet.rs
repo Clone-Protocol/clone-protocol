@@ -31,7 +31,7 @@ pub struct WithdrawLiquidityFromSinglePoolComet<'info> {
         address = user_account.single_pool_comets,
         constraint = single_pool_comet.load()?.num_positions > position_index as u64,
         constraint = &single_pool_comet.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
-        constraint = single_pool_comet.load()?.is_single_pool == 1 @ InceptError::NotSinglePoolComet
+        constraint = single_pool_comet.load()?.is_single_pool == 1 @ InceptError::WrongCometType
     )]
     pub single_pool_comet: AccountLoader<'info, Comet>,
     #[account(
@@ -169,14 +169,6 @@ pub fn execute(
         single_pool_comet.positions[position_index as usize].borrowed_iasset =
             RawDecimal::from(new_borrowed_iasset);
     }
-
-    msg!("usdi reward: {:?}", usdi_reward);
-    msg!("usdi_to_burn: {:?}", usdi_to_burn);
-    msg!("iasset_to_burn: {:?}", iasset_to_burn);
-    msg!("liquidity_token_value: {:?}", liquidity_token_value);
-    msg!("borrowed_usdi: {:?}", borrowed_usdi);
-    msg!("borrowed_iasset: {:?}", borrowed_iasset);
-    msg!("liquidity_token_supply: {:?}", liquidity_token_supply);
 
     // Send usdi reward from amm to collateral vault
     if usdi_reward > Decimal::ZERO {

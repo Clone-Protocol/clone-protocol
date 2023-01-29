@@ -2251,12 +2251,12 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "liquidatorCollateralTokenAccount",
+          "name": "liquidatorUsdiTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "vault",
+          "name": "usdiVault",
           "isMut": true,
           "isSigner": false
         },
@@ -2292,7 +2292,7 @@ export type Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -3349,8 +3349,8 @@ export type Incept = {
     },
     {
       "code": 6032,
-      "name": "NotSinglePoolComet",
-      "msg": "Not Single Pool Comet"
+      "name": "WrongCometType",
+      "msg": "Wrong Comet Type"
     },
     {
       "code": 6033,
@@ -5678,12 +5678,12 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "liquidatorCollateralTokenAccount",
+          "name": "liquidatorUsdiTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "vault",
+          "name": "usdiVault",
           "isMut": true,
           "isSigner": false
         },
@@ -5719,7 +5719,7 @@ export const IDL: Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -6776,8 +6776,8 @@ export const IDL: Incept = {
     },
     {
       "code": 6032,
-      "name": "NotSinglePoolComet",
-      "msg": "Not Single Pool Comet"
+      "name": "WrongCometType",
+      "msg": "Wrong Comet Type"
     },
     {
       "code": 6033,

@@ -17,6 +17,7 @@ pub struct SwapCometNonStableCollateral<'info> {
     )]
     pub manager: Box<Account<'info, Manager>>,
     #[account(
+        mut,
         has_one = manager
     )]
     pub token_data: AccountLoader<'info, TokenData>,

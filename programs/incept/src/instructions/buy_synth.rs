@@ -80,7 +80,6 @@ pub fn execute(
     // ensure it's within slippage tolerance
     let max_usdi_to_spend =
         Decimal::new(usdi_spend_threshold.try_into().unwrap(), DEVNET_TOKEN_SCALE);
-    msg!("{:?}, {:?}", max_usdi_to_spend, swap_summary);
 
     require!(
         max_usdi_to_spend >= usdi_amount_value,

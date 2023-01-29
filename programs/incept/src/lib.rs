@@ -464,11 +464,15 @@ pub mod incept {
     }
 
     pub fn liquidate_single_pool_comet(
-        ctx: Context<LiquidateSinglePoolComet>,
+        ctx: Context<LiquidateComet>,
         user_nonce: u8,
         position_index: u8,
     ) -> Result<()> {
-        instructions::liquidate_single_pool_comet::execute(ctx, user_nonce, position_index)
+        require!(
+            ctx.accounts.comet.load()?.is_single_pool == 1,
+            InceptError::WrongCometType
+        );
+        instructions::liquidate_comet::execute(ctx, user_nonce, position_index, position_index)
     }
 
     pub fn swap_nonstable_collateral(
@@ -504,6 +508,10 @@ pub mod incept {
         user_nonce: u8,
         position_index: u8,
     ) -> Result<()> {
-        instructions::liquidate_comet::execute(ctx, user_nonce, position_index)
+        require!(
+            ctx.accounts.comet.load()?.is_single_pool == 0,
+            InceptError::WrongCometType
+        );
+        instructions::liquidate_comet::execute(ctx, user_nonce, position_index, 0)
     }
 }

@@ -81,7 +81,6 @@ pub fn execute(
         DEVNET_TOKEN_SCALE,
     );
     if usdi_amount_value < min_usdi_to_receive {
-        msg!("{:?} {:?}", swap_summary, min_usdi_to_receive);
         return Ok(());
     }
     require!(
