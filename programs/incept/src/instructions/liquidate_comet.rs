@@ -1,6 +1,6 @@
 use crate::error::*;
 use crate::math::*;
-use crate::recenter_comet::{RecenterResult, recenter_calculation};
+use crate::recenter_comet::{recenter_calculation, RecenterResult};
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -24,13 +24,13 @@ pub struct LiquidateComet<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     /// CHECK: Only used for address validation.
     #[account(
-        address = user_account.authority
+        address = user_account.authority,
     )]
     pub user: AccountInfo<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
         bump = user_nonce,
-        has_one = comet,
+        constraint = (user_account.comet == *comet.to_account_info().key) || (user_account.single_pool_comets == *comet.to_account_info().key)
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
@@ -41,7 +41,7 @@ pub struct LiquidateComet<'info> {
     pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
-        address = manager.usdi_mint
+        address = manager.usdi_mint,
     )]
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -83,6 +83,7 @@ pub struct LiquidateComet<'info> {
     pub token_program: Program<'info, Token>,
 }
 
+#[derive(Debug, Clone, Copy)]
 struct LiquidationResult {
     pub lp_tokens_to_withdraw: Decimal,
     pub reward_from_collateral: Decimal,
@@ -101,16 +102,8 @@ fn calculate_liquidation_result(
     let comet_lp_tokens = comet_position.liquidity_token_value.to_decimal();
     let pool = token_data.pools[comet_position.pool_index as usize];
     let total_lp_tokens = pool.liquidity_token_supply.to_decimal();
-    let claimable_ratio = comet_lp_tokens / total_lp_tokens;
-    let comet_position_il = (comet_position.borrowed_usdi.to_decimal()
-        - claimable_ratio * pool.usdi_amount.to_decimal())
-    .max(Decimal::ZERO)
-        + (comet_position.borrowed_iasset.to_decimal()
-            - claimable_ratio * pool.iasset_amount.to_decimal())
-        .max(Decimal::ZERO);
-    let comet_position_il_term =
-        comet_position_il * token_data.il_health_score_coefficient.to_decimal();
-
+    let (comet_position_il_term, _position_term) =
+        calculate_comet_position_loss(token_data, &comet_position)?;
     // Take collateral reward
     let collateral =
         comet.calculate_effective_collateral_value(token_data, Some(collateral_position_index));
@@ -126,16 +119,53 @@ fn calculate_liquidation_result(
 
     // After recenter, ILD should be zero or very near zero.
     // Assume we can ignore its impact on the health score.
-    let collateral_after_recenter =
-        collateral - recenter_result.user_usdi_collateral_deficit - collateral_reward;
+    let collateral_after_recenter = collateral - recenter_result.user_usdi_collateral_deficit;
+    let collateral_after_liquidation = collateral_after_recenter - collateral_reward;
+
+    let liquidity_proportion = comet_lp_tokens / total_lp_tokens;
+    let mut usdi_pool_after_recenter = pool.usdi_amount.to_decimal()
+        - recenter_result.amm_usdi_burn
+        + recenter_result.user_usdi_collateral_deficit;
+    usdi_pool_after_recenter.rescale(DEVNET_TOKEN_SCALE);
+    let mut iasset_pool_after_recenter =
+        pool.iasset_amount.to_decimal() - recenter_result.amm_iasset_burn;
+    iasset_pool_after_recenter.rescale(DEVNET_TOKEN_SCALE);
+    let mut claimable_usdi_after_recenter = liquidity_proportion * usdi_pool_after_recenter;
+    claimable_usdi_after_recenter.rescale(DEVNET_TOKEN_SCALE);
+    let mut claimable_iasset_after_recenter = liquidity_proportion * iasset_pool_after_recenter;
+    claimable_iasset_after_recenter.rescale(DEVNET_TOKEN_SCALE);
+
+    let mut ild_after_recenter =
+        (recenter_result.user_borrowed_usdi - claimable_usdi_after_recenter).max(Decimal::ZERO);
+
+    if recenter_result.user_borrowed_iasset > claimable_iasset_after_recenter {
+        let mut pool_after_recenter = pool.clone();
+        pool_after_recenter.iasset_amount = RawDecimal::from(iasset_pool_after_recenter);
+        pool_after_recenter.usdi_amount = RawDecimal::from(usdi_pool_after_recenter);
+
+        let iasset_debt = recenter_result.user_borrowed_iasset - claimable_iasset_after_recenter;
+
+        let oracle_marked_debt = pool.asset_info.price.to_decimal() * iasset_debt;
+
+        // Adjust the debt since as we buywe increase the effective debt.
+        let effective_iasset_debt = iasset_debt / (Decimal::ONE - liquidity_proportion);
+        // Marked as the required USDi to buy back the iasset debt,
+        let pool_marked_debt = pool_after_recenter
+            .calculate_input_from_output(effective_iasset_debt, false)
+            .result;
+
+        ild_after_recenter += oracle_marked_debt.max(pool_marked_debt);
+    }
+    let ild_term_after_recenter =
+        token_data.il_health_score_coefficient.to_decimal() * ild_after_recenter;
 
     // Calculate how much liquidity we can withdraw.
     let health_score_cutoff = token_data.il_health_score_cutoff.to_decimal();
-    let position_il_coefficient = pool.asset_info.health_score_coefficient.to_decimal();
-
-    let total_il_term_after_recenter = health_score.total_il_term - comet_position_il_term;
+    let position_health_coefficient = pool.asset_info.health_score_coefficient.to_decimal();
+    let total_il_term_after_recenter =
+        health_score.total_il_term - comet_position_il_term + ild_term_after_recenter;
     let total_position_term_after_recenter = health_score.total_position_term
-        - position_il_coefficient
+        - position_health_coefficient
             * (comet_position.borrowed_usdi.to_decimal() - recenter_result.user_borrowed_usdi);
     let health_score_after_recenter = Decimal::new(100, 0)
         - (total_il_term_after_recenter + total_position_term_after_recenter)
@@ -148,13 +178,14 @@ fn calculate_liquidation_result(
             recenter_result,
         });
     }
+    let target_position_term = (Decimal::new(100, 0) - health_score_cutoff)
+        * collateral_after_liquidation
+        - total_il_term_after_recenter;
 
-    let usdi_position_reduction = (health_score_cutoff - health_score_after_recenter)
-        * collateral_after_recenter
-        / position_il_coefficient;
+    let usdi_position_reduction =
+        (total_position_term_after_recenter - target_position_term) / position_health_coefficient;
 
-    let required_lp_tokens = total_lp_tokens * usdi_position_reduction
-        / (pool.usdi_amount.to_decimal() - recenter_result.amm_usdi_burn);
+    let required_lp_tokens = total_lp_tokens * usdi_position_reduction / usdi_pool_after_recenter;
 
     if required_lp_tokens <= comet_lp_tokens {
         Ok(LiquidationResult {
@@ -171,63 +202,77 @@ fn calculate_liquidation_result(
     }
 }
 
-pub fn execute(ctx: Context<LiquidateComet>, _user_nonce: u8, position_index: u8, comet_collateral_index: u8) -> Result<()> {
+pub fn execute(
+    ctx: Context<LiquidateComet>,
+    _user_nonce: u8,
+    position_index: u8,
+    comet_collateral_index: u8,
+) -> Result<()> {
     let position_index = position_index as usize;
     let manager_nonce = ctx.accounts.manager.bump;
     let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
+    let is_multi_pool_comet = comet.is_single_pool == 0;
+
     let pool_index = comet.positions[position_index].pool_index as usize;
     let pool = token_data.pools[pool_index];
 
     let usdi_comet_collateral = comet.collaterals[comet_collateral_index as usize];
-    
     require!(
         usdi_comet_collateral.collateral_index as usize == USDI_COLLATERAL_INDEX,
         InceptError::InvalidCollateralType
     );
-    
     let comet_position = comet.positions[position_index];
 
+    require!(
+        usdi_comet_collateral.collateral_amount.to_decimal() > Decimal::ZERO,
+        InceptError::InvalidTokenAmount
+    );
+
     // Require unhealthy comet
-    let health_score = calculate_health_score(&comet, &token_data, None)?;
+    let health_score = calculate_health_score(
+        &comet,
+        &token_data,
+        if is_multi_pool_comet {
+            None
+        } else {
+            Some(position_index)
+        },
+    )?;
     require!(
         !health_score.is_healthy(),
         InceptError::NotSubjectToLiquidation
     );
 
-    // Require that all collateral is in USDI
-    for i in 1..comet.num_collaterals as usize {
-        assert!(
-            comet.collaterals[i]
-                .collateral_amount
-                .to_decimal()
-                .is_zero(),
-            "All collaterals must be converted to USDI!"
-        );
-    }
-    assert!(
-        usdi_comet_collateral
-            .collateral_amount
-            .to_decimal() > Decimal::ZERO,
-        "Must have USDI collateral!"
-    );
-
-    // Require that you liquidate the largest IL position first!
-    let (impermanent_loss_term, _position_loss_term) =
-        calculate_comet_position_loss(&token_data, &comet_position)?;
-
-    for i in 0..comet.num_positions as usize {
-        if i == position_index {
-            continue;
+    if is_multi_pool_comet {
+        // Require that all collateral is in USDI
+        for i in 1..comet.num_collaterals as usize {
+            assert!(
+                comet.collaterals[i]
+                    .collateral_amount
+                    .to_decimal()
+                    .is_zero(),
+                "All collaterals must be converted to USDI!"
+            );
         }
-        let (other_impermanent_loss_term, _) =
-            calculate_comet_position_loss(&token_data, &comet.positions[i])?;
-        assert!(
-            impermanent_loss_term >= other_impermanent_loss_term,
-            "Must liquidate largest IL position first!"
-        )
+
+        // Require that you liquidate the largest IL position first!
+        let (impermanent_loss_term, _position_loss_term) =
+            calculate_comet_position_loss(&token_data, &comet_position)?;
+
+        for i in 0..comet.num_positions as usize {
+            if i == position_index {
+                continue;
+            }
+            let (other_impermanent_loss_term, _) =
+                calculate_comet_position_loss(&token_data, &comet.positions[i])?;
+            assert!(
+                impermanent_loss_term >= other_impermanent_loss_term,
+                "Must liquidate largest IL position first!"
+            )
+        }
     }
 
     let liquidation_config = ctx.accounts.manager.liquidation_config;
@@ -244,7 +289,8 @@ pub fn execute(ctx: Context<LiquidateComet>, _user_nonce: u8, position_index: u8
     // Claim LP tokens, close position if needed.
     let claimable_ratio =
         liquidation_result.lp_tokens_to_withdraw / pool.liquidity_token_supply.to_decimal();
-    let usdi_pool_after_recentering = pool.usdi_amount.to_decimal() - recenter_result.amm_usdi_burn;
+    let usdi_pool_after_recentering = pool.usdi_amount.to_decimal() - recenter_result.amm_usdi_burn
+        + recenter_result.user_usdi_collateral_deficit;
     let iasset_pool_after_recentering =
         pool.iasset_amount.to_decimal() - recenter_result.amm_iasset_burn;
     let usdi_claimed = claimable_ratio * usdi_pool_after_recentering;
@@ -252,8 +298,9 @@ pub fn execute(ctx: Context<LiquidateComet>, _user_nonce: u8, position_index: u8
 
     // Adjust comet position values
     let mut liquidity_token_value = comet_position.liquidity_token_value.to_decimal()
-        - liquidation_result.lp_tokens_to_withdraw;
-    if liquidity_token_value.is_zero() {
+        - &liquidation_result.lp_tokens_to_withdraw;
+    if liquidity_token_value.is_zero() && is_multi_pool_comet {
+        // NOTE: In theory should never be possible to fully liquidate a single pool comet.
         comet.remove_position(position_index);
     } else {
         liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
@@ -272,11 +319,14 @@ pub fn execute(ctx: Context<LiquidateComet>, _user_nonce: u8, position_index: u8
     }
 
     // Adjust collateral values in comet data.
-    let mut new_collateral = comet.collaterals[0].collateral_amount.to_decimal()
+    let mut new_collateral = comet.collaterals[comet_collateral_index as usize]
+        .collateral_amount
+        .to_decimal()
         - recenter_result.user_usdi_collateral_deficit
         - liquidation_result.reward_from_collateral;
     new_collateral.rescale(DEVNET_TOKEN_SCALE);
-    comet.collaterals[0].collateral_amount = RawDecimal::from(new_collateral);
+    comet.collaterals[comet_collateral_index as usize].collateral_amount =
+        RawDecimal::from(new_collateral);
 
     // Transfer collateral between vault and amm
     match recenter_result
