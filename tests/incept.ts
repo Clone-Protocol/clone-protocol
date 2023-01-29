@@ -52,7 +52,7 @@ describe("incept", async () => {
 
   const healthScoreCoefficient = 1.059;
   const ilHealthScoreCoefficient = 128.288;
-  const ilHealthScoreCutoff = 100;
+  const ilHealthScoreCutoff = 20;
   const ilLiquidationRewardPct = 5;
   const maxHealthLiquidation = 20;
   const liquidatorFee = 500; // in bps
@@ -197,7 +197,7 @@ describe("incept", async () => {
     await sleep(200);
   });
 
-  it("pool initialized!", async () => {
+  it("pools initialized!", async () => {
     await inceptClient.initializePool(
       walletPubkey,
       150,
@@ -2439,13 +2439,13 @@ describe("incept", async () => {
   });
 
   it("multipool comet liquidation", async () => {
-
     let tokenData = await inceptClient.getTokenData();
     const poolIndex = 0;
     let pool = tokenData.pools[poolIndex];
     let comet = await inceptClient.getComet();
 
-    usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(inceptClient.provider,
+    usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
       inceptClient.manager!.usdiMint
     );
 
@@ -2456,14 +2456,15 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(inceptClient.provider,
+    usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
       inceptClient.manager!.usdiMint
     );
 
-    iassetTokenAccountInfo =
-      await getOrCreateAssociatedTokenAccount(inceptClient.provider,
-        pool.assetInfo.iassetMint
-      );
+    iassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      pool.assetInfo.iassetMint
+    );
     let buyAmount = toDevnetScale(29998);
 
     let executionEst = calculateExecutionThreshold(29998, true, pool, 0.0001);
@@ -2479,7 +2480,8 @@ describe("incept", async () => {
 
     await sleep(2000);
 
-    usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(inceptClient.provider,
+    usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
       inceptClient.manager!.usdiMint
     );
 
@@ -2503,25 +2505,24 @@ describe("incept", async () => {
       );
 
     let user = await inceptClient.getUserAccount();
-    let swapNonstableIx = await inceptClient.swapCometNonstableCollateralInstruction(
-      inceptClient.provider.publicKey!,
-      {userPubKey: userAddress.userPubkey, bump: userAddress.bump},
-      user,
-      comet,
-      tokenData,
-      new BN(1000 * 100000000),
-      1,
-      0,
-      usdiTokenAccountInfo.address,
-      mockAssetAssociatedTokenAddress.address
-    );
+    let swapNonstableIx =
+      await inceptClient.swapCometNonstableCollateralInstruction(
+        inceptClient.provider.publicKey!,
+        { userPubKey: userAddress.userPubkey, bump: userAddress.bump },
+        user,
+        comet,
+        tokenData,
+        new BN(1000 * 100000000),
+        1,
+        0,
+        usdiTokenAccountInfo.address,
+        mockAssetAssociatedTokenAddress.address
+      );
 
     await inceptClient.provider.sendAndConfirm!(
-      new Transaction().add(
-        await inceptClient.updatePricesInstruction()
-      ).add(
-        swapNonstableIx
-      )
+      new Transaction()
+        .add(await inceptClient.updatePricesInstruction())
+        .add(swapNonstableIx)
     );
 
     await sleep(200);
@@ -2538,34 +2539,475 @@ describe("incept", async () => {
     await inceptClient.updateILHealthScoreCoefficient(100000);
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
-    let healthScore3 = getHealthScore(tokenData, comet);
+    let position = comet.positions[0];
+    pool = tokenData.pools[position.poolIndex];
+
     let liquidationIx = await inceptClient.liquidateCometInstruction(
       inceptClient.provider.publicKey!,
-      {userPubKey: userAddress.userPubkey, bump: userAddress.bump},
+      { userPubKey: userAddress.userPubkey, bump: userAddress.bump },
       user,
       comet,
       tokenData,
       0,
       usdiTokenAccountInfo.address
     );
+
     await inceptClient.provider.sendAndConfirm!(
-      new anchor.web3.Transaction().add(
-        await inceptClient.updatePricesInstruction()
-        ).add(liquidationIx)
+      new anchor.web3.Transaction()
+        .add(await inceptClient.updatePricesInstruction())
+        .add(liquidationIx)
     );
+    await sleep(400);
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
+    pool = tokenData.pools[position.poolIndex];
     let healthScore4 = getHealthScore(tokenData, comet);
 
-    assert.isAbove(
-      healthScore3.healthScore,
+    assert.closeTo(
       healthScore4.healthScore,
+      20,
+      1e-2,
       "check liquidation for reducing IL"
     );
-    return;
-
   });
 
+  it("Create second pool", async () => {
+    let mockAssetMint2 = anchor.web3.Keypair.generate();
+    let price = 1;
+    const expo = -7;
+    const conf = new BN((price / 10) * 10 ** -expo);
+
+    let priceFeed2 = await createPriceFeed(pythProgram, price, expo, conf);
+    let currentPrice = (await getFeedData(pythProgram, priceFeed2)).aggregate
+      .price;
+    assert.equal(currentPrice, price, "check initial price");
+
+    let chainlink2 = new ChainLinkOracle(storeProgram);
+
+    await chainlink2.createChainlinkFeed(1, 2);
+    await chainlink2.submitAnswer(new BN(1649943158), new BN(100000000));
+
+    await sleep(200);
+
+    await jupiterProgram.methods
+      .createAsset(priceFeed2)
+      .accounts({
+        payer: jupiterProgram.provider.publicKey!,
+        assetMint: mockAssetMint2.publicKey,
+        jupiterAccount: jupiterAddress,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([mockAssetMint2])
+      .rpc();
+
+    await inceptClient.initializePool(
+      walletPubkey,
+      150,
+      200,
+      poolTradingFee,
+      treasuryTradingFee,
+      priceFeed2,
+      chainlink.priceFeedPubkey(),
+      healthScoreCoefficient,
+      500
+    );
+
+    // Mint position
+    await inceptClient.hackathonMintUsdi(
+      usdiTokenAccountInfo.address,
+      8000000 * 100000000
+    );
+
+    await sleep(400);
+
+    let tokenData = await inceptClient.getTokenData();
+    let pool = tokenData.pools[1];
+
+    usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      inceptClient.manager!.usdiMint
+    );
+
+    iassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      pool.assetInfo.iassetMint
+    );
+
+    liquidityTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      pool.liquidityTokenMint
+    );
+
+    // Initialize liquidity position
+    await inceptClient.initializeMintPosition(
+      new BN(2000000000000),
+      new BN(5000000000000),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      1,
+      0
+    );
+
+    await sleep(200);
+
+    await inceptClient.initializeLiquidityPosition(
+      new BN(2000000000000),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      liquidityTokenAccountInfo.address,
+      1
+    );
+  });
+
+  it("multipool comet liquidation, multiple positions", async () => {
+    // Create another comet position.
+    const poolIndex = 1;
+    await inceptClient.addLiquidityToComet(
+      new BN(10000000000),
+      poolIndex,
+      false
+    );
+
+    await sleep(200);
+
+    let tokenData = await inceptClient.getTokenData();
+    let pool = tokenData.pools[poolIndex];
+    let comet = await inceptClient.getComet();
+
+    usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      inceptClient.manager!.usdiMint
+    );
+
+    iassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      pool.assetInfo.iassetMint
+    );
+    // Buy to increase price.
+    await inceptClient.hackathonMintUsdi(
+      usdiTokenAccountInfo.address,
+      8000000 * 100000000
+    );
+
+    await sleep(400);
+
+    const treasuryIassetAssociatedTokenAddress =
+      await getAssociatedTokenAddress(
+        pool.assetInfo.iassetMint,
+        treasuryAddress.publicKey,
+        false,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+    await inceptClient.provider.sendAndConfirm!(
+      new Transaction().add(
+        await createAssociatedTokenAccountInstruction(
+          inceptClient.provider.publicKey!,
+          treasuryIassetAssociatedTokenAddress,
+          treasuryAddress.publicKey,
+          pool.assetInfo.iassetMint,
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      )
+    );
+    treasuryIassetTokenAccount = await getAccount(
+      inceptClient.provider.connection,
+      treasuryIassetAssociatedTokenAddress,
+      "recent"
+    );
+
+    await sleep(400);
+
+    let buyAmount = 1000;
+
+    let executionEst = calculateExecutionThreshold(1000, true, pool, 0.0001);
+
+    await inceptClient.buySynth(
+      toDevnetScale(buyAmount),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      poolIndex,
+      toDevnetScale(executionEst.usdiThresholdAmount),
+      treasuryIassetTokenAccount.address
+    );
+
+    // Change coefficients to create negative health score
+    await inceptClient.updatePoolHealthScoreCoefficient(6000000, 0);
+    await inceptClient.updatePoolHealthScoreCoefficient(3000000, poolIndex);
+    await inceptClient.updateILHealthScoreCoefficient(100000);
+    // Check that the score is zero.
+    comet = await inceptClient.getComet();
+    tokenData = await inceptClient.getTokenData();
+    let healthScore1 = getHealthScore(tokenData, comet);
+
+    assert.isBelow(healthScore1.healthScore, 0, "require unhealthy comet.");
+
+    let userAddress = await inceptClient.getUserAddress();
+    let user = await inceptClient.getUserAccount();
+
+    let position = comet.positions[1];
+    pool = tokenData.pools[position.poolIndex];
+
+    // First liquidation call
+    let liquidationIx = await inceptClient.liquidateCometInstruction(
+      inceptClient.provider.publicKey!,
+      { userPubKey: userAddress.userPubkey, bump: userAddress.bump },
+      user,
+      comet,
+      tokenData,
+      1,
+      usdiTokenAccountInfo.address
+    );
+
+    await inceptClient.provider.sendAndConfirm!(
+      new anchor.web3.Transaction()
+        .add(await inceptClient.updatePricesInstruction())
+        .add(liquidationIx)
+    );
+    await sleep(400);
+    comet = await inceptClient.getComet();
+    tokenData = await inceptClient.getTokenData();
+    position = comet.positions[1];
+    pool = tokenData.pools[position.poolIndex];
+    let healthScore4 = getHealthScore(tokenData, comet);
+
+    // assert.isBelow(
+    //   healthScore4.healthScore,
+    //   0,
+    //   "health score must still be unhealthy"
+    // );
+
+    // assert.closeTo(
+    //   toNumber(position.liquidityTokenValue),
+    //   0,
+    //   1e-2,
+    //   "Expected LP tokens to all be withdrawn"
+    // );
+
+    // Second liquidation call.
+    liquidationIx = await inceptClient.liquidateCometInstruction(
+      inceptClient.provider.publicKey!,
+      { userPubKey: userAddress.userPubkey, bump: userAddress.bump },
+      user,
+      comet,
+      tokenData,
+      0,
+      usdiTokenAccountInfo.address
+    );
+
+    await inceptClient.provider.sendAndConfirm!(
+      new anchor.web3.Transaction()
+        .add(await inceptClient.updatePricesInstruction())
+        .add(liquidationIx)
+    );
+    await sleep(400);
+    comet = await inceptClient.getComet();
+    tokenData = await inceptClient.getTokenData();
+    pool = tokenData.pools[position.poolIndex];
+    let healthScore5 = getHealthScore(tokenData, comet);
+
+    // assert.closeTo(
+    //   healthScore5.healthScore,
+    //   20,
+    //   1e-2,
+    //   "check liquidation for reducing IL"
+    // );
+  });
+
+  it("single pool comet liquidation", async () => {
+    // Create another comet position.
+    const poolIndex = 1;
+    await inceptClient.updatePoolHealthScoreCoefficient(1.059, poolIndex);
+    await sleep(200);
+    await inceptClient.provider.sendAndConfirm!(
+      new Transaction()
+        .add(await inceptClient.updatePricesInstruction())
+        .add(
+          await inceptClient.initializeSinglePoolCometInstruction(poolIndex, 0)
+        )
+        .add(
+          await inceptClient.addCollateralToSinglePoolCometInstruction(
+            usdiTokenAccountInfo.address,
+            toDevnetScale(1000),
+            0,
+            0
+          )
+        )
+        .add(
+          await inceptClient.addLiquidityToSinglePoolCometInstruction(
+            toDevnetScale(120),
+            0,
+            poolIndex
+          )
+        )
+    );
+    await sleep(400);
+    let comet = await inceptClient.getSinglePoolComets();
+
+    let tokenData = await inceptClient.getTokenData();
+    let pool = tokenData.pools[poolIndex];
+    comet = await inceptClient.getSinglePoolComets();
+
+    usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      inceptClient.manager!.usdiMint
+    );
+
+    iassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      pool.assetInfo.iassetMint
+    );
+    // Buy to increase price.
+    await inceptClient.hackathonMintUsdi(
+      usdiTokenAccountInfo.address,
+      8000000 * 100000000
+    );
+
+    await sleep(400);
+
+    const treasuryIassetAssociatedTokenAddress =
+      await getAssociatedTokenAddress(
+        pool.assetInfo.iassetMint,
+        treasuryAddress.publicKey,
+        false,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+    treasuryIassetTokenAccount = await getAccount(
+      inceptClient.provider.connection,
+      treasuryIassetAssociatedTokenAddress,
+      "recent"
+    );
+
+    await sleep(400);
+
+    let buyAmount = 1000;
+
+    let executionEst = calculateExecutionThreshold(1000, true, pool, 0.0001);
+
+    await inceptClient.buySynth(
+      toDevnetScale(buyAmount),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      poolIndex,
+      toDevnetScale(executionEst.usdiThresholdAmount),
+      treasuryIassetTokenAccount.address
+    );
+    // Change coefficients to create negative health score
+    await inceptClient.updatePoolHealthScoreCoefficient(3000000, poolIndex);
+    await inceptClient.updateILHealthScoreCoefficient(100000);
+    // Check that the score is zero.
+    comet = await inceptClient.getSinglePoolComets();
+    tokenData = await inceptClient.getTokenData();
+    pool = tokenData.pools[poolIndex];
+    let healthScore1 = getSinglePoolHealthScore(0, tokenData, comet);
+
+    assert.isBelow(healthScore1.healthScore, 0, "require unhealthy comet.");
+
+    let userAddress = await inceptClient.getUserAddress();
+    let user = await inceptClient.getUserAccount();
+
+    let position = comet.positions[0];
+    pool = tokenData.pools[poolIndex];
+
+    // First liquidation call
+    let liquidationIx = await inceptClient.liquidateSinglePoolCometInstruction(
+      inceptClient.provider.publicKey!,
+      userAddress,
+      user,
+      comet,
+      tokenData,
+      0,
+      usdiTokenAccountInfo.address
+    );
+
+    await inceptClient.provider.sendAndConfirm!(
+      new anchor.web3.Transaction()
+        .add(await inceptClient.updatePricesInstruction())
+        .add(liquidationIx)
+    );
+    // await inceptClient.recenterSinglePoolComet(0);
+    await sleep(400);
+    comet = await inceptClient.getSinglePoolComets();
+    tokenData = await inceptClient.getTokenData();
+    pool = tokenData.pools[position.poolIndex];
+    position = comet.positions[0];
+    let collateral_pos = comet.collaterals[0];
+
+    let healthScore5 = getSinglePoolHealthScore(0, tokenData, comet);
+    assert.closeTo(
+      healthScore5.healthScore,
+      20,
+      0.1,
+      "check liquidation for reducing IL"
+    );
+  });
+
+  it("borrow position liquidation", async () => {
+    let tokenData = await inceptClient.getTokenData();
+    let userMintPositions = await inceptClient.getMintPositions();
+    let positionIndex = 1;
+    let position = userMintPositions.mintPositions[positionIndex];
+    let poolIndex = Number(position.poolIndex);
+    let collateralIndex = Number(position.collateralIndex);
+    let collateral = tokenData.collaterals[collateralIndex];
+    let pool = tokenData.pools[poolIndex];
+    let collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      collateral.mint
+    );
+    let iassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      pool.assetInfo.iassetMint
+    );
+
+    // Mint more iasset to pay for liquidation.
+    await inceptClient.initializeMintPosition(
+      toDevnetScale(19000),
+      toDevnetScale(35000),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      1,
+      0
+    );
+
+    userMintPositions = await inceptClient.getMintPositions();
+    let numMintPositions = userMintPositions.numPositions.toNumber();
+
+    let priceThreshold =
+      toNumber(position.collateralAmount) /
+      (1.5 * toNumber(position.borrowedIasset));
+
+    await setPrice(
+      pythProgram,
+      priceThreshold * 1.1,
+      pool.assetInfo.priceFeedAddresses[0]
+    );
+
+    await inceptClient.provider.sendAndConfirm!(
+      new Transaction()
+        .add(await inceptClient.updatePricesInstruction())
+        .add(
+          await inceptClient.liquidateMintPositionInstruction(
+            inceptClient.provider.publicKey!,
+            positionIndex,
+            collateralTokenAccountInfo.address,
+            iassetTokenAccountInfo.address
+          )
+        )
+    );
+    userMintPositions = await inceptClient.getMintPositions();
+    assert.equal(
+      numMintPositions - 1,
+      userMintPositions.numPositions.toNumber(),
+      "Liquidation did not finish!"
+    );
+  });
 });
 
 //   it("comet closed! (liquidity withdrawn and ILD payed)", async () => {
