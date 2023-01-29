@@ -1965,7 +1965,6 @@ export class Incept {
 
   public async liquidateMintPosition(
     liquidateAccount: PublicKey,
-    liquidateAccountBump: number,
     mintIndex: number,
     liquidatorCollateralTokenAccount: PublicKey,
     liquidatoriAssetTokenAccount: PublicKey
@@ -1973,7 +1972,6 @@ export class Incept {
     const updatePricesIx = await this.updatePricesInstruction();
     const liquidateMintTx = await this.liquidateMintPositionInstruction(
       liquidateAccount,
-      liquidateAccountBump,
       mintIndex,
       liquidatorCollateralTokenAccount,
       liquidatoriAssetTokenAccount
@@ -1985,12 +1983,12 @@ export class Incept {
 
   public async liquidateMintPositionInstruction(
     liquidateAccount: PublicKey,
-    liquidateAccountBump: number,
     mintIndex: number,
     liquidatorCollateralTokenAccount: PublicKey,
     liquidatoriAssetTokenAccount: PublicKey
   ) {
-    const userAccount = await this.getUserAccount(liquidateAccount);
+    const { userPubkey, bump } = await this.getUserAddress(liquidateAccount);
+    const userAccount = await this.getUserAccount(userPubkey);
     const tokenData = await this.getTokenData();
 
     const mintPosition = (await this.getMintPositions()).mintPositions[
@@ -2000,17 +1998,13 @@ export class Incept {
     const collateral = tokenData.collaterals[mintPosition.collateralIndex];
 
     return this.program.methods
-      .liquidateMintPosition(
-        this.managerAddress[1],
-        liquidateAccountBump,
-        mintIndex
-      )
+      .liquidateMintPosition(this.managerAddress[1], bump, mintIndex)
       .accounts({
         liquidator: this.provider.publicKey!,
         manager: this.managerAddress[0],
         tokenData: this.manager!.tokenData,
-        userAccount: liquidateAccount,
-        user: liquidateAccount,
+        userAccount: userPubkey,
+        user: userAccount.authority,
         iassetMint: pool.assetInfo.iassetMint,
         mintPositions: userAccount.mintPositions,
         vault: collateral.vault,
@@ -2061,33 +2055,33 @@ export class Incept {
     liquidatorUsdiCollateralTokenAccount: PublicKey,
     userAddress: { userPubkey: PublicKey; bump: number },
     userAccount: User,
-    tokenData: TokenData,
-    userComet: Comet
+    userComet: Comet,
+    tokenData: TokenData
   ) {
     let tx = new Transaction()
       .add(await this.updatePricesInstruction())
       .add(
         await this.liquidateSinglePoolCometInstruction(
-          positionIndex,
           user,
-          liquidatorUsdiCollateralTokenAccount,
           userAddress,
           userAccount,
+          userComet,
           tokenData,
-          userComet
+          positionIndex,
+          liquidatorUsdiCollateralTokenAccount
         )
       );
     await this.provider.sendAndConfirm!(tx);
   }
 
   public async liquidateSinglePoolCometInstruction(
-    positionIndex: number,
     user: PublicKey,
-    liquidatorUsdiCollateralTokenAccount: PublicKey,
     userAddress: { userPubkey: PublicKey; bump: number },
     userAccount: User,
+    userComet: Comet,
     tokenData: TokenData,
-    userComet: Comet
+    positionIndex: number,
+    liquidatorUsdiCollateralTokenAccount: PublicKey
   ) {
     let pool =
       tokenData.pools[Number(userComet.positions[positionIndex].poolIndex)];
@@ -2096,14 +2090,14 @@ export class Incept {
         userComet.collaterals[positionIndex].collateralIndex
       ];
     return await this.program.methods
-      .liquidateComet(userAddress.bump, positionIndex)
+      .liquidateSinglePoolComet(userAddress.bump, positionIndex)
       .accounts({
         liquidator: this.provider.publicKey!,
         manager: this.managerAddress[0],
         tokenData: this.manager!.tokenData,
         user: user,
         userAccount: userAddress.userPubkey,
-        comet: userAccount.comet,
+        comet: userAccount.singlePoolComets,
         usdiMint: this.manager!.usdiMint,
         iassetMint: pool.assetInfo.iassetMint,
         ammIassetTokenAccount: pool.iassetTokenAccount,
