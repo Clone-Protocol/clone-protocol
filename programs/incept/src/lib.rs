@@ -289,14 +289,6 @@ pub mod incept {
         instructions::close_single_pool_comet::execute(ctx, user_nonce, comet_index)
     }
 
-    pub fn initialize_comet_manager(
-        ctx: Context<InitializeCometManager>,
-        manager_nonce: u8,
-        user_nonce: u8,
-    ) -> Result<()> {
-        instructions::initialize_comet_manager::execute(ctx, manager_nonce, user_nonce)
-    }
-
     pub fn add_collateral_to_comet(
         ctx: Context<AddCollateralToComet>,
         manager_nonce: u8,
