@@ -23,7 +23,6 @@ export interface User {
   mintPositions: PublicKey;
   liquidityPositions: PublicKey;
   comet: PublicKey;
-  cometManager: CometManager;
 }
 
 export interface TokenData {
@@ -96,11 +95,6 @@ export interface CometCollateral {
   authority: PublicKey;
   collateralAmount: RawDecimal;
   collateralIndex: number;
-}
-
-export interface CometManager {
-  membershipTokenMint: PublicKey;
-  comet: PublicKey;
 }
 
 export interface Value {

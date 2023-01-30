@@ -324,10 +324,10 @@ export class Incept {
     )) as Comet;
   }
 
-  public async getComet(forManager?: boolean, address?: PublicKey) {
+  public async getComet(address?: PublicKey) {
     const userAccountData = (await this.getUserAccount(address)) as User;
     return (await this.program.account.comet.fetch(
-      forManager ? userAccountData.cometManager.comet : userAccountData.comet
+      userAccountData.comet
     )) as Comet;
   }
 
@@ -1558,14 +1558,12 @@ export class Incept {
     userCollateralTokenAccount: PublicKey,
     collateralAmount: BN,
     collateralIndex: number,
-    forManager: boolean,
     signers?: Array<Keypair>
   ) {
     const addCollateralToCometIx = await this.addCollateralToCometInstruction(
       userCollateralTokenAccount,
       collateralAmount,
-      collateralIndex,
-      forManager
+      collateralIndex
     );
     await this.provider.sendAndConfirm!(
       new Transaction().add(addCollateralToCometIx),
@@ -1624,14 +1622,11 @@ export class Incept {
   public async addCollateralToCometInstruction(
     userCollateralTokenAccount: PublicKey,
     collateralAmount: BN,
-    collateralIndex: number,
-    forManager: boolean
+    collateralIndex: number
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
-    let cometAddress = forManager
-      ? userAccount.cometManager.comet
-      : userAccount.comet;
+    let cometAddress = userAccount.comet;
 
     return await this.program.methods
       .addCollateralToComet(
@@ -1655,7 +1650,6 @@ export class Incept {
     userCollateralTokenAccount: PublicKey,
     collateralAmount: BN,
     cometCollateralIndex: number,
-    forManager: boolean,
     signers?: Array<Keypair>
   ) {
     const updatePricesIx = await this.updatePricesInstruction();
@@ -1663,8 +1657,7 @@ export class Incept {
       await this.withdrawCollateralFromCometInstruction(
         userCollateralTokenAccount,
         collateralAmount,
-        cometCollateralIndex,
-        forManager
+        cometCollateralIndex
       );
     await this.provider.sendAndConfirm!(
       new Transaction().add(updatePricesIx).add(withdrawCollateralFromCometIx),
@@ -1674,16 +1667,13 @@ export class Incept {
   public async withdrawCollateralFromCometInstruction(
     userCollateralTokenAccount: PublicKey,
     collateralAmount: BN,
-    cometCollateralIndex: number,
-    forManager: boolean
+    cometCollateralIndex: number
   ) {
     const { userPubkey, bump } = await this.getUserAddress();
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
-    let comet = await this.getComet(forManager);
-    let cometAddress = forManager
-      ? userAccount.cometManager.comet
-      : userAccount.comet;
+    let comet = await this.getComet();
+    let cometAddress = userAccount.comet;
 
     return await this.program.methods
       .withdrawCollateralFromComet(
@@ -1711,14 +1701,12 @@ export class Incept {
   public async addLiquidityToComet(
     usdiAmount: BN,
     poolIndex: number,
-    forManager: boolean,
     signers?: Array<Keypair>
   ) {
     const updatePricesIx = await this.updatePricesInstruction();
     const addLiquidityToCometIx = await this.addLiquidityToCometInstruction(
       usdiAmount,
-      poolIndex,
-      forManager
+      poolIndex
     );
     await this.provider.sendAndConfirm!(
       new Transaction().add(updatePricesIx).add(addLiquidityToCometIx),
@@ -1727,14 +1715,11 @@ export class Incept {
   }
   public async addLiquidityToCometInstruction(
     usdiAmount: BN,
-    poolIndex: number,
-    forManager: boolean
+    poolIndex: number
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
-    let cometAddress = forManager
-      ? userAccount.cometManager.comet
-      : userAccount.comet;
+    let cometAddress = userAccount.comet;
 
     return await this.program.methods
       .addLiquidityToComet(this.managerAddress[1], poolIndex, usdiAmount)
@@ -1759,15 +1744,13 @@ export class Incept {
     liquidityTokenAmount: BN,
     cometPositionIndex: number,
     collateralIndex: number,
-    forManager: boolean,
     signers?: Array<Keypair>
   ) {
     const withdrawLiquidityFromCometIx =
       await this.withdrawLiquidityFromCometInstruction(
         liquidityTokenAmount,
         cometPositionIndex,
-        collateralIndex,
-        forManager
+        collateralIndex
       );
     await this.provider.sendAndConfirm!(
       new Transaction().add(withdrawLiquidityFromCometIx),
@@ -1777,15 +1760,12 @@ export class Incept {
   public async withdrawLiquidityFromCometInstruction(
     liquidityTokenAmount: BN,
     cometPositionIndex: number,
-    collateralIndex: number,
-    forManager: boolean
+    collateralIndex: number
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
-    let cometAddress = forManager
-      ? userAccount.cometManager.comet
-      : userAccount.comet;
-    let comet = await this.getComet(forManager);
+    let cometAddress = userAccount.comet;
+    let comet = await this.getComet();
     let position = comet.positions[cometPositionIndex];
 
     return await this.program.methods
@@ -1819,13 +1799,11 @@ export class Incept {
   public async recenterComet(
     cometPositionIndex: number,
     cometCollateralIndex: number,
-    forManager: boolean,
     signers?: Array<Keypair>
   ) {
     const recenterCometIx = await this.recenterCometInstruction(
       cometPositionIndex,
-      cometCollateralIndex,
-      forManager
+      cometCollateralIndex
     );
     await this.provider.sendAndConfirm!(
       new Transaction().add(recenterCometIx),
@@ -1834,15 +1812,12 @@ export class Incept {
   }
   public async recenterCometInstruction(
     cometPositionIndex: number,
-    cometCollateralIndex: number,
-    forManager: boolean
+    cometCollateralIndex: number
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
-    let cometAddress = forManager
-      ? userAccount.cometManager.comet
-      : userAccount.comet;
-    let comet = await this.getComet(forManager);
+    let cometAddress = userAccount.comet;
+    let comet = await this.getComet();
     let cometPosition = comet.positions[cometPositionIndex];
     let cometCollateral = comet.collaterals[cometCollateralIndex];
     let [managerAddress, managerNonce] = await this.getManagerAddress();
@@ -1880,14 +1855,12 @@ export class Incept {
     cometPositionIndex: number,
     cometCollateralIndex: number,
     collateralAmount: number,
-    forManager: boolean,
     signers?: Array<Keypair>
   ) {
     const payCometILDIx = await this.payCometILDInstruction(
       cometPositionIndex,
       cometCollateralIndex,
-      collateralAmount,
-      forManager
+      collateralAmount
     );
     await this.provider.sendAndConfirm!(
       new Transaction().add(payCometILDIx),
@@ -1897,15 +1870,12 @@ export class Incept {
   public async payCometILDInstruction(
     cometPositionIndex: number,
     cometCollateralIndex: number,
-    collateralAmount: number,
-    forManager: boolean
+    collateralAmount: number
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
-    let cometAddress = forManager
-      ? userAccount.cometManager.comet
-      : userAccount.comet;
-    let comet = await this.getComet(forManager);
+    let cometAddress = userAccount.comet;
+    let comet = await this.getComet();
     let cometPosition = comet.positions[cometPositionIndex];
     let cometCollateral = comet.collaterals[cometCollateralIndex];
 

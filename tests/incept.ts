@@ -1862,8 +1862,7 @@ describe("incept", async () => {
     await inceptClient.addCollateralToComet(
       usdiTokenAccountInfo.address,
       toDevnetScale(100000),
-      0,
-      false
+      0
     );
 
     await sleep(200);
@@ -1901,8 +1900,7 @@ describe("incept", async () => {
     await inceptClient.addCollateralToComet(
       mockAssetAssociatedTokenAddress.address,
       toDevnetScale(100),
-      2,
-      false
+      2
     );
 
     const nonStableVault = await inceptClient.connection.getTokenAccountBalance(
@@ -1927,16 +1925,15 @@ describe("incept", async () => {
       inceptClient.manager!.usdiMint
     );
 
-    let comet = await inceptClient.getComet(false);
+    let comet = await inceptClient.getComet();
 
     await inceptClient.withdrawCollateralFromComet(
       usdiTokenAccountInfo.address,
       toDevnetScale(10000),
-      0,
-      false
+      0
     );
 
-    comet = await inceptClient.getComet(false);
+    comet = await inceptClient.getComet();
 
     await sleep(200);
 
@@ -1971,7 +1968,7 @@ describe("incept", async () => {
       inceptClient.manager!.usdiMint
     );
 
-    await inceptClient.addLiquidityToComet(new BN(400000000), 0, false);
+    await inceptClient.addLiquidityToComet(new BN(400000000), 0);
 
     const tokenData = await inceptClient.getTokenData();
     const pool = tokenData.pools[0];
@@ -2045,12 +2042,7 @@ describe("incept", async () => {
       pool.assetInfo.iassetMint
     );
 
-    await inceptClient.withdrawLiquidityFromComet(
-      new BN(10000000),
-      0,
-      0,
-      false
-    );
+    await inceptClient.withdrawLiquidityFromComet(new BN(10000000), 0, 0);
     await sleep(200);
 
     const usdiAccountBalance =
@@ -2098,7 +2090,7 @@ describe("incept", async () => {
       inceptClient.provider,
       pool0.assetInfo.iassetMint
     );
-    await inceptClient.addLiquidityToComet(new BN(50000000), 0, false);
+    await inceptClient.addLiquidityToComet(new BN(50000000), 0);
 
     tokenData = await inceptClient.getTokenData();
     const pool1 = tokenData.pools[poolIndex];
@@ -2113,13 +2105,8 @@ describe("incept", async () => {
       toDevnetScale(executionEst.usdiThresholdAmount),
       treasuryIassetTokenAccount.address
     );
-    await inceptClient.recenterComet(0, 0, false);
-    await inceptClient.withdrawLiquidityFromComet(
-      new BN(50000000),
-      0,
-      0,
-      false
-    );
+    await inceptClient.recenterComet(0, 0);
+    await inceptClient.withdrawLiquidityFromComet(new BN(50000000), 0, 0);
 
     tokenData = await inceptClient.getTokenData();
     const pool2 = tokenData.pools[poolIndex];
@@ -2291,7 +2278,7 @@ describe("incept", async () => {
       comet
     );
 
-    await inceptClient.recenterComet(0, 0, false);
+    await inceptClient.recenterComet(0, 0);
 
     tokenData = await inceptClient.getTokenData();
     comet = await inceptClient.getComet();
@@ -2417,7 +2404,7 @@ describe("incept", async () => {
       comet
     );
     const healthScore1 = getHealthScore(tokenData, comet);
-    await inceptClient.payCometILD(0, 0, toDevnetScale(1).toNumber(), false);
+    await inceptClient.payCometILD(0, 0, toDevnetScale(1).toNumber());
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
     const comet2TotalCollateral = getEffectiveUSDCollateralValue(
@@ -2664,11 +2651,7 @@ describe("incept", async () => {
   it("multipool comet liquidation, multiple positions", async () => {
     // Create another comet position.
     const poolIndex = 1;
-    await inceptClient.addLiquidityToComet(
-      new BN(10000000000),
-      poolIndex,
-      false
-    );
+    await inceptClient.addLiquidityToComet(new BN(10000000000), poolIndex);
 
     await sleep(200);
 
