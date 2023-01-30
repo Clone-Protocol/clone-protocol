@@ -1281,66 +1281,6 @@ export type Incept = {
       ]
     },
     {
-      "name": "initializeCometManager",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "admin",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "manager",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometManager",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "membershipTokenMint",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
-    },
-    {
       "name": "addCollateralToComet",
       "accounts": [
         {
@@ -4703,66 +4643,6 @@ export const IDL: Incept = {
         },
         {
           "name": "cometIndex",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "initializeCometManager",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "admin",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "manager",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometManager",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "membershipTokenMint",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "userNonce",
           "type": "u8"
         }
       ]
