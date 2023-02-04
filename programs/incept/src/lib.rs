@@ -2,10 +2,10 @@ use anchor_lang::prelude::*;
 use error::*;
 use rust_decimal::prelude::*;
 
-mod error;
-mod instructions;
-mod math;
-mod states;
+pub mod error;
+pub mod instructions;
+pub mod math;
+pub mod states;
 
 use instructions::*;
 
@@ -51,8 +51,8 @@ pub mod incept {
         )
     }
 
-    pub fn initialize_user(ctx: Context<InitializeUser>, user_nonce: u8) -> Result<()> {
-        instructions::initialize_user::execute(ctx, user_nonce)
+    pub fn initialize_user(ctx: Context<InitializeUser>, authority: Pubkey) -> Result<()> {
+        instructions::initialize_user::execute(ctx, authority)
     }
 
     pub fn initialize_mint_positions(
