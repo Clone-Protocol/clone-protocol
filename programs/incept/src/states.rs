@@ -1,6 +1,8 @@
 use crate::error::*;
+use crate::math::*;
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
+use std::cmp::Ordering;
 use std::convert::TryInto;
 
 pub const DEVNET_TOKEN_SCALE: u32 = 8;
@@ -269,14 +271,12 @@ pub struct Collateral {
 #[account]
 #[derive(Default)]
 pub struct User {
-    // 208
-    pub is_manager: u64,             // 8
+    // 160
     pub authority: Pubkey,           // 32
     pub single_pool_comets: Pubkey,  // 32
     pub mint_positions: Pubkey,      // 32
     pub liquidity_positions: Pubkey, // 32
     pub comet: Pubkey,               // 32
-    pub comet_manager: CometManager, // 40
 }
 
 #[account(zero_copy)]
@@ -393,6 +393,63 @@ impl Comet {
 
         total_value
     }
+
+    pub fn estimate_usdi_value(&self, token_data: &TokenData) -> Decimal {
+        let mut usdi_value = self.calculate_effective_collateral_value(token_data, None);
+
+        self.positions[0..(self.num_positions as usize)]
+            .iter()
+            .for_each(|position| {
+                let mut pool = token_data.pools[position.pool_index as usize].clone();
+                let pool_usdi = pool.usdi_amount.to_decimal();
+                let pool_iasset = pool.iasset_amount.to_decimal();
+                let pool_lp_tokens = pool.liquidity_token_supply.to_decimal();
+
+                let position_lp_tokens = position.liquidity_token_value.to_decimal();
+
+                let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
+                    position_lp_tokens,
+                    pool_lp_tokens,
+                );
+                let claimable_usdi = liquidity_proportion * pool_usdi;
+                let claimable_iasset = liquidity_proportion * pool_iasset;
+
+                let borrowed_usdi = position.borrowed_usdi.to_decimal();
+                let borrowed_iasset = position.borrowed_iasset.to_decimal();
+
+                // Adjust pool by claiming amounts:
+                pool.iasset_amount = RawDecimal::from(pool_iasset - claimable_iasset);
+                pool.usdi_amount = RawDecimal::from(pool_usdi - claimable_usdi);
+                pool.liquidity_token_supply = RawDecimal::from(pool_lp_tokens - position_lp_tokens);
+
+                // Factor in usdi deficit:
+                usdi_value += claimable_usdi;
+                usdi_value -= borrowed_usdi;
+
+                // Factor in iasset difference.
+                let iasset_difference = (borrowed_iasset - claimable_iasset).abs();
+                let oracle_marked_iasset_value =
+                    pool.asset_info.price.to_decimal() * iasset_difference;
+
+                match borrowed_iasset.cmp(&claimable_iasset) {
+                    Ordering::Greater => {
+                        usdi_value -= pool
+                            .calculate_input_from_output(iasset_difference, false)
+                            .result
+                            .max(oracle_marked_iasset_value);
+                    }
+                    Ordering::Less => {
+                        usdi_value += pool
+                            .calculate_output_from_input(iasset_difference, false)
+                            .result
+                            .min(oracle_marked_iasset_value)
+                    }
+                    _ => (),
+                };
+            });
+
+        usdi_value
+    }
 }
 
 #[zero_copy]
@@ -451,14 +508,6 @@ pub struct CometLiquidation {
     pub status: u64,                     // 8
     pub excess_token_type_is_usdi: u64,  // 8
     pub excess_token_amount: RawDecimal, // 16
-}
-
-#[zero_copy]
-#[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
-pub struct CometManager {
-    // 40
-    pub membership_token_mint: Pubkey, // 8
-    pub comet: Pubkey,                 // 32
 }
 
 #[account(zero_copy)]
