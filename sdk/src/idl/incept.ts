@@ -143,8 +143,8 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
+          "name": "authority",
+          "type": "publicKey"
         }
       ]
     },
@@ -2566,10 +2566,6 @@ export type Incept = {
         "kind": "struct",
         "fields": [
           {
-            "name": "isManager",
-            "type": "u64"
-          },
-          {
             "name": "authority",
             "type": "publicKey"
           },
@@ -2588,12 +2584,6 @@ export type Incept = {
           {
             "name": "comet",
             "type": "publicKey"
-          },
-          {
-            "name": "cometManager",
-            "type": {
-              "defined": "CometManager"
-            }
           }
         ]
       }
@@ -3051,22 +3041,6 @@ export type Incept = {
             "type": {
               "defined": "RawDecimal"
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "CometManager",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "membershipTokenMint",
-            "type": "publicKey"
-          },
-          {
-            "name": "comet",
-            "type": "publicKey"
           }
         ]
       }
@@ -3510,8 +3484,8 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
+          "name": "authority",
+          "type": "publicKey"
         }
       ]
     },
@@ -5933,10 +5907,6 @@ export const IDL: Incept = {
         "kind": "struct",
         "fields": [
           {
-            "name": "isManager",
-            "type": "u64"
-          },
-          {
             "name": "authority",
             "type": "publicKey"
           },
@@ -5955,12 +5925,6 @@ export const IDL: Incept = {
           {
             "name": "comet",
             "type": "publicKey"
-          },
-          {
-            "name": "cometManager",
-            "type": {
-              "defined": "CometManager"
-            }
           }
         ]
       }
@@ -6418,22 +6382,6 @@ export const IDL: Incept = {
             "type": {
               "defined": "RawDecimal"
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "CometManager",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "membershipTokenMint",
-            "type": "publicKey"
-          },
-          {
-            "name": "comet",
-            "type": "publicKey"
           }
         ]
       }

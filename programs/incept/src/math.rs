@@ -217,7 +217,12 @@ pub fn calculate_health_score(
 
     let effective_collateral =
         comet.calculate_effective_collateral_value(token_data, single_pool_position_index);
-    let score = Decimal::new(100, 0) - (total_il_term + total_position_term) / effective_collateral;
+
+    let score = if total_il_term.is_zero() && total_position_term.is_zero() {
+        Decimal::new(100, 0)
+    } else {
+        Decimal::new(100, 0) - (total_il_term + total_position_term) / effective_collateral
+    };
 
     Ok(HealthScore {
         score,

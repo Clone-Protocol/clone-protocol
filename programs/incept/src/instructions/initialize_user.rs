@@ -4,14 +4,14 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8)]
+#[instruction(authority: Pubkey)]
 pub struct InitializeUser<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     #[account(
         init,
-        space = 8 + 308,
-        seeds = [b"user", user.key.as_ref()],
+        space = 8 + 160,
+        seeds = [b"user", authority.as_ref()],
         bump,
         payer = user
     )]
@@ -21,8 +21,8 @@ pub struct InitializeUser<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<InitializeUser>, _user_nonce: u8) -> Result<()> {
+pub fn execute(ctx: Context<InitializeUser>, authority: Pubkey) -> Result<()> {
     // set user authority
-    ctx.accounts.user_account.authority = *ctx.accounts.user.to_account_info().key;
+    ctx.accounts.user_account.authority = authority;
     Ok(())
 }

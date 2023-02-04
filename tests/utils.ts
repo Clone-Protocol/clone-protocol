@@ -1,6 +1,7 @@
 import { Keypair, PublicKey, Transaction } from "@solana/web3.js";
 import { Provider } from "@project-serum/anchor";
 import {
+  Account,
   getAccount,
   getAssociatedTokenAddress,
   TokenAccountNotFoundError,
@@ -16,17 +17,19 @@ export const DEFAULT_PUBLIC_KEY = new PublicKey(0);
 
 export const getOrCreateAssociatedTokenAccount = async (
   provider: Provider,
-  mint: PublicKey
-) => {
+  mint: PublicKey,
+  owner?: PublicKey,
+  ownerOffCurve?: boolean
+): Promise<Account> => {
   const associatedToken = await getAssociatedTokenAddress(
     mint,
-    provider.publicKey!,
-    false,
+    owner !== undefined ? owner : provider.publicKey!,
+    ownerOffCurve !== undefined ? ownerOffCurve : false,
     TOKEN_PROGRAM_ID,
     ASSOCIATED_TOKEN_PROGRAM_ID
   );
 
-  let account;
+  let account: Account;
   try {
     account = await getAccount(
       provider.connection,
@@ -40,7 +43,7 @@ export const getOrCreateAssociatedTokenAccount = async (
         createAssociatedTokenAccountInstruction(
           provider.publicKey!,
           associatedToken,
-          provider.publicKey!,
+          owner ? owner : provider.publicKey!,
           mint,
           TOKEN_PROGRAM_ID,
           ASSOCIATED_TOKEN_PROGRAM_ID

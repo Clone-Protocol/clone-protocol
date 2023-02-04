@@ -4,6 +4,7 @@ import { Incept } from "../sdk/src/idl/incept";
 import { Pyth } from "../sdk/src/idl/pyth";
 import { Store } from "../sdk/src/idl/store";
 import { JupiterAggMock } from "../sdk/src/idl/jupiter_agg_mock";
+import { InceptCometManager } from "../sdk/src/idl/incept_comet_manager";
 import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -32,6 +33,8 @@ import {
   calculateCometRecenterMultiPool,
   getILD,
 } from "../sdk/src/healthscore";
+import { Manager } from "../sdk/src/interfaces";
+import { ManagerInfo, Subscriber } from "../sdk/src/comet_manager";
 
 describe("incept", async () => {
   const provider = anchor.AnchorProvider.local();
@@ -43,6 +46,8 @@ describe("incept", async () => {
   let storeProgram = anchor.workspace.Store as Program<Store>;
   let jupiterProgram = anchor.workspace
     .JupiterAggMock as Program<JupiterAggMock>;
+  let cometManagerProgram = anchor.workspace
+    .InceptCometManager as Program<InceptCometManager>;
   let chainlink;
 
   const mockUSDCMint = anchor.web3.Keypair.generate();
@@ -371,7 +376,7 @@ describe("incept", async () => {
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 100000000,
       1000000,
-      "check iasset token amount"
+      "check usdi token amount"
     );
     assert.equal(
       Number(mockUSDCTokenAccountInfo.amount) / 10000000,
@@ -2990,6 +2995,650 @@ describe("incept", async () => {
       userMintPositions.numPositions.toNumber(),
       "Liquidation did not finish!"
     );
+
+    // Reset params
+    await inceptClient.updatePoolHealthScoreCoefficient(
+      healthScoreCoefficient,
+      0
+    );
+    await inceptClient.updateILHealthScoreCoefficient(ilHealthScoreCoefficient);
+  });
+
+  let cometManagerInfo;
+  let cometManagerInfoAddress;
+
+  it("comet manager initialized!", async () => {
+    let cometAccount = anchor.web3.Keypair.generate();
+
+    const [managerInfoAddress, managerInfoBump] =
+      await PublicKey.findProgramAddress(
+        [
+          Buffer.from("manager-info"),
+          inceptClient.provider.publicKey!.toBuffer(),
+        ],
+        cometManagerProgram.programId
+      );
+    cometManagerInfoAddress = managerInfoAddress;
+
+    const [userAccountAddress, userAccountBump] =
+      await PublicKey.findProgramAddress(
+        [Buffer.from("user"), managerInfoAddress.toBuffer()],
+        inceptClient.programId
+      );
+
+    let createIx = await inceptClient.program.account.comet.createInstruction(
+      cometAccount
+    );
+
+    let createManagerIx = await cometManagerProgram.methods
+      .initialize(userAccountBump, 20, 2000, 16)
+      .accounts({
+        admin: inceptClient.provider.publicKey!,
+        managerInfo: managerInfoAddress,
+        userAccount: userAccountAddress,
+        comet: cometAccount.publicKey,
+        inceptManager: inceptClient.managerAddress[0],
+        inceptProgram: inceptClient.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      })
+      .signers([])
+      .instruction();
+
+    await inceptClient.provider.sendAndConfirm!(
+      new Transaction().add(createIx).add(createManagerIx),
+      [cometAccount]
+    );
+
+    await sleep(400);
+
+    let cometManagerUser = await inceptClient.getUserAccount(
+      userAccountAddress
+    );
+    assert.isTrue(
+      cometManagerUser.authority.equals(managerInfoAddress),
+      "Authority"
+    );
+    assert.isTrue(
+      cometManagerUser.comet.equals(cometAccount.publicKey),
+      "comet account"
+    );
+
+    cometManagerInfo = (await cometManagerProgram.account.managerInfo.fetch(
+      managerInfoAddress
+    )) as ManagerInfo;
+    assert.isTrue(
+      cometManagerInfo.incept.equals(inceptClient.programId),
+      "incept program id"
+    );
+    assert.isTrue(
+      cometManagerInfo.inceptManager.equals(inceptClient.managerAddress[0]),
+      "incept manager"
+    );
+    assert.isTrue(
+      cometManagerInfo.owner.equals(inceptClient.provider.publicKey!),
+      "comet manager owner"
+    );
+    assert.isTrue(
+      cometManagerInfo.userAccount.equals(userAccountAddress),
+      "user account address"
+    );
+    assert.equal(cometManagerInfo.userBump, userAccountBump, "user bump");
+    assert.equal(cometManagerInfo.bump, managerInfoBump, "manager info bump");
+  });
+
+  let subscribeAccountAddress: PublicKey;
+  it("create comet manager subscriber", async () => {
+    subscribeAccountAddress = (
+      await PublicKey.findProgramAddress(
+        [
+          Buffer.from("subscriber"),
+          inceptClient.provider.publicKey!.toBuffer(),
+          cometManagerInfoAddress.toBuffer(),
+        ],
+        cometManagerProgram.programId
+      )
+    )[0];
+
+    await cometManagerProgram.methods
+      .initializeSubscription()
+      .accounts({
+        subscriber: subscribeAccountAddress,
+        subscriptionOwner: inceptClient.provider.publicKey!,
+        managerInfo: cometManagerInfoAddress,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      })
+      .signers([])
+      .rpc();
+
+    await sleep(400);
+
+    let subscriberAccount = (await cometManagerProgram.account.subscriber.fetch(
+      subscribeAccountAddress
+    )) as Subscriber;
+
+    assert.isTrue(
+      subscriberAccount.owner.equals(inceptClient.provider.publicKey!)
+    );
+    assert.isTrue(subscriberAccount.manager.equals(cometManagerInfoAddress));
+    assert.equal(subscriberAccount.principal.toNumber(), 0, "principal amount");
+    assert.equal(
+      subscriberAccount.membershipTokens.toNumber(),
+      0,
+      "membership tokens"
+    );
+  });
+
+  it("comet manager subscription!", async () => {
+    let subscriberUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+      cometManagerProgram.provider,
+      inceptClient.manager!.usdiMint
+    );
+    let currentUsdiBalance =
+      Number(subscriberUsdiTokenAccount.amount) / 100000000;
+    let cometManagerUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+      cometManagerProgram.provider,
+      inceptClient.manager!.usdiMint,
+      cometManagerInfoAddress,
+      true
+    );
+
+    let cometManagerUser = await inceptClient.getUserAccount(
+      cometManagerInfo.userAccount
+    );
+    let tokenData = await inceptClient.getTokenData();
+
+    await cometManagerProgram.methods
+      .subscribe(toDevnetScale(100))
+      .accounts({
+        subscriber: cometManagerProgram.provider.publicKey!,
+        subscriberAccount: subscribeAccountAddress,
+        managerInfo: cometManagerInfoAddress,
+        inceptManager: inceptClient.managerAddress[0],
+        managerInceptUser: cometManagerInfo.userAccount,
+        usdiMint: inceptClient.manager!.usdiMint,
+        subscriberUsdiTokenAccount: subscriberUsdiTokenAccount.address,
+        managerUsdiTokenAccount: cometManagerUsdiTokenAccount.address,
+        inceptProgram: inceptClient.programId,
+        comet: cometManagerUser.comet,
+        tokenData: inceptClient.manager!.tokenData,
+        inceptUsdiVault: tokenData.collaterals[0].vault,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+
+    await sleep(400);
+
+    let subscriberAccount = (await cometManagerProgram.account.subscriber.fetch(
+      subscribeAccountAddress
+    )) as Subscriber;
+    subscriberUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+      cometManagerProgram.provider,
+      inceptClient.manager!.usdiMint
+    );
+    let comet = await inceptClient.getComet(cometManagerInfo.userAccount);
+    cometManagerInfo = (await cometManagerProgram.account.managerInfo.fetch(
+      cometManagerInfoAddress
+    )) as ManagerInfo;
+
+    assert.equal(
+      Number(subscriberAccount.membershipTokens) / 100000000,
+      1,
+      "membership token"
+    );
+    assert.equal(
+      Number(subscriberAccount.principal) / 100000000,
+      100,
+      "principal"
+    );
+
+    assert.equal(
+      Number(cometManagerInfo.membershipTokenSupply) / 100000000,
+      1,
+      "membership token supply"
+    );
+
+    assert.equal(
+      Number(subscriberUsdiTokenAccount.amount) / 100000000,
+      currentUsdiBalance - 100,
+      "usdi balance"
+    );
+
+    assert.equal(
+      toNumber(comet.collaterals[0].collateralAmount),
+      100,
+      "collateral amount"
+    );
+
+    assert.equal(comet.collaterals[0].collateralIndex, 0, "collateral index");
+  });
+
+  it("comet manager add liquidity ", async () => {
+    let cometManagerUser = await inceptClient.getUserAccount(
+      cometManagerInfo.userAccount
+    );
+    let tokenData = await inceptClient.getTokenData();
+    let poolIndex = 0;
+    let usdiAmount = 120;
+
+    let tx = new Transaction()
+      .add(await inceptClient.updatePricesInstruction())
+      .add(
+        await cometManagerProgram.methods
+          .addLiquidity(poolIndex, toDevnetScale(usdiAmount))
+          .accounts({
+            managerOwner: inceptClient.provider.publicKey!,
+            managerInfo: cometManagerInfoAddress,
+            inceptManager: inceptClient.managerAddress[0],
+            managerInceptUser: cometManagerInfo.userAccount,
+            usdiMint: inceptClient.manager!.usdiMint,
+            inceptProgram: inceptClient.programId,
+            comet: cometManagerUser.comet,
+            tokenData: inceptClient.manager!.tokenData,
+            iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
+            ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
+            ammIassetTokenAccount:
+              tokenData.pools[poolIndex].iassetTokenAccount,
+            liquidityTokenMint: tokenData.pools[poolIndex].liquidityTokenMint,
+            cometLiquidityTokenAccount:
+              tokenData.pools[poolIndex].cometLiquidityTokenAccount,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .instruction()
+      );
+
+    await inceptClient.provider.sendAndConfirm!(tx);
+    await sleep(400);
+
+    let comet = await inceptClient.getComet(cometManagerInfo.userAccount);
+    assert.equal(Number(comet.numPositions), 1, "Number positions");
+    assert.equal(
+      toNumber(comet.positions[0].borrowedUsdi),
+      usdiAmount,
+      "Usdi position size"
+    );
+  });
+
+  it("comet manager recenter!", async () => {
+    let tokenData = await inceptClient.getTokenData();
+    let comet = await inceptClient.getComet(cometManagerInfo.userAccount);
+    let poolIndex = 0;
+    let pool = tokenData.pools[poolIndex];
+    let healthScore = getHealthScore(tokenData, comet);
+
+    // Sell to change the price,
+    let executionEst = calculateExecutionThreshold(100, false, pool, 0.0001);
+
+    let iassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      pool.assetInfo.iassetMint
+    );
+
+    await inceptClient.sellSynth(
+      toDevnetScale(100),
+      usdiTokenAccountInfo.address,
+      iassetTokenAccountInfo.address,
+      poolIndex,
+      new BN(executionEst.usdiThresholdAmount),
+      treasuryUsdiTokenAccount.address
+    );
+
+    // Recenter
+    tokenData = await inceptClient.getTokenData();
+    comet = await inceptClient.getComet(cometManagerInfo.userAccount);
+    let healthScoreFinal = getHealthScore(tokenData, comet);
+
+    assert.isAbove(
+      healthScore.healthScore,
+      healthScoreFinal.healthScore,
+      "ILD creation"
+    );
+    let cometManagerUser = await inceptClient.getUserAccount(
+      cometManagerInfo.userAccount
+    );
+    pool = tokenData.pools[poolIndex];
+
+    let ix = await cometManagerProgram.methods
+      .recenter(0)
+      .accounts({
+        managerOwner: inceptClient.provider.publicKey!,
+        managerInfo: cometManagerInfoAddress,
+        inceptManager: inceptClient.managerAddress[0],
+        managerInceptUser: cometManagerInfo.userAccount,
+        usdiMint: inceptClient.manager!.usdiMint,
+        inceptProgram: inceptClient.programId,
+        comet: cometManagerUser.comet,
+        tokenData: inceptClient.manager!.tokenData,
+        inceptUsdiVault: tokenData.collaterals[0].vault,
+        iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
+        ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
+        ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        liquidityTokenMint: tokenData.pools[poolIndex].liquidityTokenMint,
+      })
+      .instruction();
+
+    let tx = new Transaction().add(ix);
+
+    await inceptClient.provider.sendAndConfirm!(tx);
+  });
+
+  it("comet manager fee claim", async () => {
+    let subscriberAccount = (await cometManagerProgram.account.subscriber.fetch(
+      subscribeAccountAddress
+    )) as Subscriber;
+    let startingTokens = subscriberAccount.membershipTokens;
+
+    await cometManagerProgram.methods
+      .managementFeeClaim()
+      .accounts({
+        managerOwner: cometManagerProgram.provider.publicKey!,
+        managerInfo: cometManagerInfoAddress,
+        ownerAccount: subscribeAccountAddress,
+      })
+      .rpc();
+
+    await sleep(400);
+
+    subscriberAccount = (await cometManagerProgram.account.subscriber.fetch(
+      subscribeAccountAddress
+    )) as Subscriber;
+
+    assert.isAbove(
+      Number(subscriberAccount.membershipTokens),
+      Number(startingTokens),
+      "token claim"
+    );
+  });
+
+  it("comet manager withdraw liquidity", async () => {
+    let cometManagerUser = await inceptClient.getUserAccount(
+      cometManagerInfo.userAccount
+    );
+    let tokenData = await inceptClient.getTokenData();
+    let poolIndex = 0;
+    let comet = await inceptClient.getComet(cometManagerInfo.userAccount);
+
+    // Withdraw all liquidity
+    await cometManagerProgram.methods
+      .withdrawLiquidity(
+        0,
+        toDevnetScale(toNumber(comet.positions[0].liquidityTokenValue))
+      )
+      .accounts({
+        managerOwner: inceptClient.provider.publicKey!,
+        managerInfo: cometManagerInfoAddress,
+        inceptManager: inceptClient.managerAddress[0],
+        managerInceptUser: cometManagerInfo.userAccount,
+        usdiMint: inceptClient.manager!.usdiMint,
+        inceptProgram: inceptClient.programId,
+        comet: cometManagerUser.comet,
+        tokenData: inceptClient.manager!.tokenData,
+        inceptUsdiVault: tokenData.collaterals[0].vault,
+        iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
+        ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
+        ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
+        liquidityTokenMint: tokenData.pools[poolIndex].liquidityTokenMint,
+        cometLiquidityTokenAccount:
+          tokenData.pools[poolIndex].cometLiquidityTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    await sleep(400);
+
+    comet = await inceptClient.getComet(cometManagerInfo.userAccount);
+
+    assert.equal(
+      toNumber(comet.positions[0].borrowedUsdi),
+      0,
+      "Usdi position size"
+    );
+    assert.equal(
+      toNumber(comet.positions[0].borrowedIasset),
+      0,
+      "Iasset position size"
+    );
+    assert.equal(
+      toNumber(comet.collaterals[0].collateralAmount),
+      100.00499642,
+      "collateral amount"
+    );
+  });
+
+  it("comet manager redemption!", async () => {
+    let subscriberUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+      cometManagerProgram.provider,
+      inceptClient.manager!.usdiMint
+    );
+
+    let cometManagerUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+      cometManagerProgram.provider,
+      inceptClient.manager!.usdiMint,
+      cometManagerInfoAddress,
+      true
+    );
+
+    let cometManagerUser = await inceptClient.getUserAccount(
+      cometManagerInfo.userAccount
+    );
+    let tokenData = await inceptClient.getTokenData();
+    let subscriberAccount = (await cometManagerProgram.account.subscriber.fetch(
+      subscribeAccountAddress
+    )) as Subscriber;
+
+    let tx = new Transaction()
+      .add(await inceptClient.updatePricesInstruction())
+      .add(
+        await cometManagerProgram.methods
+          .redeem(subscriberAccount.membershipTokens)
+          .accounts({
+            subscriber: cometManagerProgram.provider.publicKey!,
+            subscriberAccount: subscribeAccountAddress,
+            managerInfo: cometManagerInfoAddress,
+            inceptManager: inceptClient.managerAddress[0],
+            managerInceptUser: cometManagerInfo.userAccount,
+            usdiMint: inceptClient.manager!.usdiMint,
+            subscriberUsdiTokenAccount: subscriberUsdiTokenAccount.address,
+            managerUsdiTokenAccount: cometManagerUsdiTokenAccount.address,
+            inceptProgram: inceptClient.programId,
+            comet: cometManagerUser.comet,
+            tokenData: inceptClient.manager!.tokenData,
+            inceptUsdiVault: tokenData.collaterals[0].vault,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: anchor.web3.SystemProgram.programId,
+          })
+          .instruction()
+      );
+
+    await inceptClient.provider.sendAndConfirm!(tx);
+
+    await sleep(400);
+
+    subscriberUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+      cometManagerProgram.provider,
+      inceptClient.manager!.usdiMint
+    );
+    subscriberAccount = (await cometManagerProgram.account.subscriber.fetch(
+      subscribeAccountAddress
+    )) as Subscriber;
+
+    assert.equal(
+      Number(subscriberAccount.membershipTokens.toNumber()),
+      0,
+      "membership tokens"
+    );
+    assert.equal(
+      Number(subscriberAccount.principal.toNumber()),
+      0,
+      "principal"
+    );
+    assert.equal(
+      Number(subscriberUsdiTokenAccount.amount) / 100000000,
+      36812562.9388657,
+      "Usdi account"
+    );
+  });
+
+  it("pay ILD to close out position!", async () => {
+    let cometManagerUser = await inceptClient.getUserAccount(
+      cometManagerInfo.userAccount
+    );
+    let comet = await inceptClient.getComet(cometManagerInfo.userAccount);
+    let tokenData = await inceptClient.getTokenData();
+    let positionIndex = 0;
+    let poolIndex = Number(comet.positions[positionIndex].poolIndex);
+    let ix = await cometManagerProgram.methods
+      .payIld(
+        positionIndex,
+        toDevnetScale(toNumber(comet.collaterals[0].collateralAmount))
+      )
+      .accounts({
+        managerOwner: inceptClient.provider.publicKey!,
+        managerInfo: cometManagerInfoAddress,
+        inceptManager: inceptClient.managerAddress[0],
+        managerInceptUser: cometManagerInfo.userAccount,
+        usdiMint: inceptClient.manager!.usdiMint,
+        inceptProgram: inceptClient.programId,
+        comet: cometManagerUser.comet,
+        tokenData: inceptClient.manager!.tokenData,
+        inceptUsdiVault: tokenData.collaterals[0].vault,
+        iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
+        ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
+        ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+
+    let tx = new Transaction().add(ix);
+
+    await inceptClient.provider.sendAndConfirm!(tx);
+
+    await sleep(400);
+
+    comet = await inceptClient.getComet(cometManagerInfo.userAccount);
+
+    assert.equal(comet.numPositions.toNumber(), 0, "num positions");
+  });
+
+  it("comet manager usdi withdraw", async () => {
+    let ownerUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+      cometManagerProgram.provider,
+      inceptClient.manager!.usdiMint
+    );
+
+    let currentUsdiBalance = ownerUsdiTokenAccount.amount;
+
+    let cometManagerUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+      cometManagerProgram.provider,
+      inceptClient.manager!.usdiMint,
+      cometManagerInfoAddress,
+      true
+    );
+
+    let managerUsdiBalance = cometManagerUsdiTokenAccount.amount;
+
+    await cometManagerProgram.methods
+      .ownerWithdrawal(new BN(managerUsdiBalance))
+      .accounts({
+        managerOwner: cometManagerProgram.provider.publicKey!,
+        managerInfo: cometManagerInfoAddress,
+        inceptManager: inceptClient.managerAddress[0],
+        usdiMint: inceptClient.manager!.usdiMint,
+        managerUsdiTokenAccount: cometManagerUsdiTokenAccount.address,
+        ownerUsdiTokenAccount: ownerUsdiTokenAccount.address,
+      })
+      .rpc();
+
+    await sleep(400);
+
+    ownerUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+      cometManagerProgram.provider,
+      inceptClient.manager!.usdiMint
+    );
+
+    cometManagerUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+      cometManagerProgram.provider,
+      inceptClient.manager!.usdiMint,
+      cometManagerInfoAddress,
+      true
+    );
+
+    assert.equal(
+      Number(ownerUsdiTokenAccount.amount),
+      Number(currentUsdiBalance + managerUsdiBalance),
+      "owner usdi account"
+    );
+    assert.equal(
+      Number(cometManagerUsdiTokenAccount.amount),
+      0,
+      "manager usdi account"
+    );
+  });
+
+  it("initializing comet manager termination!", async () => {
+    let cometManagerUser = await inceptClient.getUserAccount(
+      cometManagerInfo.userAccount
+    );
+    await cometManagerProgram.methods
+      .initiateCometManagerTermination()
+      .accounts({
+        managerOwner: cometManagerProgram.provider.publicKey!,
+        managerInfo: cometManagerInfoAddress,
+        managerInceptUser: cometManagerInfo.userAccount,
+        comet: cometManagerUser.comet,
+      })
+      .rpc();
+
+    cometManagerInfo = (await cometManagerProgram.account.managerInfo.fetch(
+      cometManagerInfoAddress
+    )) as ManagerInfo;
+
+    assert.isTrue(
+      cometManagerInfo.inClosingSequence,
+      "Should be in closing sequence"
+    );
+  });
+
+  it("comet manager terminated", async () => {
+    let cometManagerUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+      cometManagerProgram.provider,
+      inceptClient.manager!.usdiMint,
+      cometManagerInfoAddress,
+      true
+    );
+    let ownerUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+      cometManagerProgram.provider,
+      inceptClient.manager!.usdiMint
+    );
+    let tokenData = await inceptClient.getTokenData();
+
+    let cometManagerInceptUser = await inceptClient.getUserAccount(
+      cometManagerInfo.userAccount
+    );
+
+    await cometManagerProgram.methods
+      .terminateCometManager()
+      .accounts({
+        managerOwner: cometManagerProgram.provider.publicKey!,
+        managerInfo: cometManagerInfoAddress,
+        inceptManager: inceptClient.managerAddress[0],
+        managerInceptUser: cometManagerInfo.userAccount,
+        usdiMint: inceptClient.manager!.usdiMint,
+        managerUsdiTokenAccount: cometManagerUsdiTokenAccount.address,
+        inceptProgram: inceptClient.programId,
+        comet: cometManagerInceptUser.comet,
+        tokenData: inceptClient.manager!.tokenData,
+        inceptUsdiVault: tokenData.collaterals[0].vault,
+        ownerUsdiTokenAccount: ownerUsdiTokenAccount.address,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
   });
 });
 

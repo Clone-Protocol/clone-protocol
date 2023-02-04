@@ -116,9 +116,9 @@ export class Incept {
   public async initializeUserInstruction(user?: PublicKey) {
     const { userPubkey, bump } = await this.getUserAddress(user);
     return await this.program.methods
-      .initializeUser(bump)
+      .initializeUser(user ? user : this.provider.publicKey!)
       .accounts({
-        user: user ? user : this.provider.publicKey!,
+        user: this.provider.publicKey!,
         userAccount: userPubkey,
         rent: RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -1526,32 +1526,6 @@ export class Incept {
         .add(closeSinglePoolCometIx),
       signers
     );
-  }
-
-  public async initializeCometManager(user = this.provider.publicKey!) {
-    const { userPubkey, bump } = await this.getUserAddress(user);
-
-    const cometManagerAccount = anchor.web3.Keypair.generate();
-    const memberShipTokenMintAccount = anchor.web3.Keypair.generate();
-
-    await this.program.methods
-      .initializeCometManager(this.managerAddress[1], bump)
-      .accounts({
-        user: this.provider.publicKey!,
-        admin: this.provider.publicKey!,
-        manager: this.managerAddress[0],
-        userAccount: userPubkey,
-        cometManager: cometManagerAccount.publicKey,
-        membershipTokenMint: memberShipTokenMintAccount.publicKey,
-        rent: RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SYSTEM_PROGRAM_ID,
-      })
-      .preInstructions([
-        await this.program.account.comet.createInstruction(cometManagerAccount),
-      ])
-      .signers([cometManagerAccount, memberShipTokenMintAccount])
-      .rpc();
   }
 
   public async addCollateralToComet(

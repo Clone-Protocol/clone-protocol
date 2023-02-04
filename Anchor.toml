@@ -5,6 +5,7 @@ mock_usdc = "ED1yj7uXEZRFXwFU8QMtD2CCnpkLiTq46W1cNKFqo9qV"
 store = "Haz47L8yvvthM99yy7hGi9jcPjVJSL1anMS238Ta6RFp"
 access_controller = "FvSzDSyxvu72HhTgAVnBkwVAwR9NvTqjR4tFBXia4bkv"
 jupiter_agg_mock = "CBM3RJyXMmu2cCSmBc1Vb5BB4Xy8hks3QQD4TcFYHoVg"
+incept_comet_manager = "9UUKudw6whsFzWRxvyxQ1Ztet8cTqpHJJ5WpUfSbATYt"
 
 [registry]
 url = "https://anchor.projectserum.com"
