@@ -123,8 +123,10 @@ pub fn execute(
     let borrowed_usdi = comet_position.borrowed_usdi.to_decimal();
     let borrowed_iasset = comet_position.borrowed_iasset.to_decimal();
 
-    let claimable_usdi = lp_position_claimable_ratio * usdi_amm_value;
-    let claimable_iasset = lp_position_claimable_ratio * iasset_amm_value;
+    let mut claimable_usdi = lp_position_claimable_ratio * usdi_amm_value;
+    claimable_usdi.rescale(DEVNET_TOKEN_SCALE);
+    let mut claimable_iasset = lp_position_claimable_ratio * iasset_amm_value;
+    claimable_iasset.rescale(DEVNET_TOKEN_SCALE);
 
     let mut usdi_reward = Decimal::zero();
     let mut usdi_to_burn = Decimal::zero();
@@ -154,8 +156,9 @@ pub fn execute(
         let post_claim_iasset_amm = iasset_amm_value - claimable_iasset;
         let invariant = post_claim_usdi_amm * post_claim_iasset_amm;
 
-        let usdi_traded_for =
+        let mut usdi_traded_for =
             post_claim_usdi_amm - invariant / (post_claim_iasset_amm + iasset_reward);
+        usdi_traded_for.rescale(DEVNET_TOKEN_SCALE);
         usdi_reward += usdi_traded_for;
 
         comet.positions[comet_position_index as usize].borrowed_iasset =
