@@ -221,6 +221,10 @@ pub fn execute(
             .borrowed_usdi
             .to_decimal()
             .is_zero()
+        && comet.positions[comet_position_index as usize]
+            .liquidity_token_value
+            .to_decimal()
+            .is_zero()
         && comet.is_single_pool != 1
     {
         // if there is no debt, close the position
