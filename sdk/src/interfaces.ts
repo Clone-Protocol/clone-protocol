@@ -17,7 +17,6 @@ export interface LiquidationConfig {
 }
 
 export interface User {
-  isManager: BN;
   authority: PublicKey;
   singlePoolComets: PublicKey;
   mintPositions: PublicKey;

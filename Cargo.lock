@@ -688,6 +688,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "incept-comet-manager"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "bytemuck",
+ "incept",
+ "rust_decimal",
+ "rust_decimal_macros",
+]
+
+[[package]]
 name = "itertools"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
