@@ -1,6 +1,8 @@
+use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
+use incept::return_error_if_false;
 
 #[derive(Accounts)]
 #[instruction()]
@@ -27,9 +29,9 @@ pub struct InitializeSubscription<'info> {
 
 pub fn execute(ctx: Context<InitializeSubscription>) -> Result<()> {
     // Set Manager info data.
-    assert!(
+    return_error_if_false!(
         !ctx.accounts.manager_info.in_closing_sequence,
-        "Can't subscribe if closing."
+        InceptCometManagerError::InvalidActionWhenInTerminationSequence
     );
 
     let subscriber = &mut ctx.accounts.subscriber;

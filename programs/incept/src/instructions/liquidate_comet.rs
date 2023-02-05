@@ -1,6 +1,7 @@
 use crate::error::*;
 use crate::math::*;
 use crate::recenter_comet::{recenter_calculation, RecenterResult};
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -220,13 +221,13 @@ pub fn execute(
     let pool = token_data.pools[pool_index];
 
     let usdi_comet_collateral = comet.collaterals[comet_collateral_index as usize];
-    require!(
+    return_error_if_false!(
         usdi_comet_collateral.collateral_index as usize == USDI_COLLATERAL_INDEX,
         InceptError::InvalidCollateralType
     );
     let comet_position = comet.positions[position_index];
 
-    require!(
+    return_error_if_false!(
         usdi_comet_collateral.collateral_amount.to_decimal() > Decimal::ZERO,
         InceptError::InvalidTokenAmount
     );
@@ -241,7 +242,7 @@ pub fn execute(
             Some(position_index)
         },
     )?;
-    require!(
+    return_error_if_false!(
         !health_score.is_healthy(),
         InceptError::NotSubjectToLiquidation
     );
@@ -249,12 +250,12 @@ pub fn execute(
     if is_multi_pool_comet {
         // Require that all collateral is in USDI
         for i in 1..comet.num_collaterals as usize {
-            assert!(
+            return_error_if_false!(
                 comet.collaterals[i]
                     .collateral_amount
                     .to_decimal()
                     .is_zero(),
-                "All collaterals must be converted to USDI!"
+                InceptError::RequireOnlyUSDiCollateral
             );
         }
 
@@ -268,9 +269,9 @@ pub fn execute(
             }
             let (other_impermanent_loss_term, _) =
                 calculate_comet_position_loss(&token_data, &comet.positions[i])?;
-            assert!(
+            return_error_if_false!(
                 impermanent_loss_term >= other_impermanent_loss_term,
-                "Must liquidate largest IL position first!"
+                InceptError::RequireLargestILDPositionFirst
             )
         }
     }

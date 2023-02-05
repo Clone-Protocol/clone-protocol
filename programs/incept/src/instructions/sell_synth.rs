@@ -1,12 +1,11 @@
 use crate::error::*;
 
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-
-//use crate::instructions::SellSynth;
 
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, pool_index: u8, iasset_amount: u64, usdi_amount_threshold: u64)]
@@ -83,7 +82,7 @@ pub fn execute(
     if usdi_amount_value < min_usdi_to_receive {
         return Ok(());
     }
-    require!(
+    return_error_if_false!(
         usdi_amount_value >= min_usdi_to_receive,
         InceptError::SlippageToleranceExceeded
     );

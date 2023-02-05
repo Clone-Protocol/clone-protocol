@@ -1,12 +1,11 @@
 use crate::error::*;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-
-//use crate::instructions::InitializeMintPosition;
 
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, pool_index: u8, collateral_index: u8, iasset_amount: u64, collateral_amount: u64)]
@@ -78,7 +77,7 @@ pub fn execute(
     let iasset_amount_value = Decimal::new(iasset_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
     // check to see if collateral is stable
-    require!(collateral.stable == 1, InceptError::InvalidCollateralType);
+    return_error_if_false!(collateral.stable == 1, InceptError::InvalidCollateralType);
 
     let collateral_ratio = pool.asset_info.stable_collateral_ratio.to_decimal();
 

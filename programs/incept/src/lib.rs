@@ -460,7 +460,7 @@ pub mod incept {
         user_nonce: u8,
         position_index: u8,
     ) -> Result<()> {
-        require!(
+        return_error_if_false!(
             ctx.accounts.comet.load()?.is_single_pool == 1,
             InceptError::WrongCometType
         );
@@ -500,7 +500,7 @@ pub mod incept {
         user_nonce: u8,
         position_index: u8,
     ) -> Result<()> {
-        require!(
+        return_error_if_false!(
             ctx.accounts.comet.load()?.is_single_pool == 0,
             InceptError::WrongCometType
         );

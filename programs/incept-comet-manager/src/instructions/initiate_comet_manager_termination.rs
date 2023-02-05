@@ -1,6 +1,10 @@
+use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
-use incept::states::{Comet, User};
+use incept::{
+    return_error_if_false,
+    states::{Comet, User},
+};
 
 #[cfg(feature = "local-testing")]
 const TERMINATION_SLOT_TIMEOUT: u64 = 0;
@@ -29,13 +33,13 @@ pub struct InitiateCometManagerTermination<'info> {
 pub fn execute(ctx: Context<InitiateCometManagerTermination>) -> Result<()> {
     // Calculate usdi value to withdraw according to tokens redeemed.
     // Withdraw collateral from comet
-    assert!(
+    return_error_if_false!(
         !ctx.accounts.manager_info.in_closing_sequence,
-        "Already in closing sequence!"
+        InceptCometManagerError::InvalidActionWhenInTerminationSequence
     );
-    assert!(
+    return_error_if_false!(
         ctx.accounts.comet.load()?.num_positions == 0,
-        "All must be positions closed!"
+        InceptCometManagerError::CometMustHaveNoPositions
     );
 
     ctx.accounts.manager_info.in_closing_sequence = true;

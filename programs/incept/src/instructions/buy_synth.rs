@@ -1,12 +1,11 @@
 use crate::error::*;
-
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
-//use crate::instructions::BuySynth;
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, pool_index: u8, iasset_amount: u64, usdi_amount_threshold: u64)]
 pub struct BuySynth<'info> {
@@ -72,7 +71,7 @@ pub fn execute(
     let mut usdi_amount_value = swap_summary.result;
     usdi_amount_value.rescale(DEVNET_TOKEN_SCALE);
     // ensure that the user has sufficient usdi
-    require!(
+    return_error_if_false!(
         ctx.accounts.user_usdi_token_account.amount
             >= usdi_amount_value.mantissa().try_into().unwrap(),
         InceptError::InvalidTokenAmount
@@ -81,7 +80,7 @@ pub fn execute(
     let max_usdi_to_spend =
         Decimal::new(usdi_spend_threshold.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
-    require!(
+    return_error_if_false!(
         max_usdi_to_spend >= usdi_amount_value,
         InceptError::SlippageToleranceExceeded
     );

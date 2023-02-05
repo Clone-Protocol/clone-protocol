@@ -1,12 +1,11 @@
 use crate::error::*;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-
-//use crate::instructions::AddLiquidityToComet;
 
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, pool_index: u8, usdi_amount: u64)]
@@ -240,7 +239,7 @@ pub fn execute(
     // Require a healthy score after transactions
     let health_score = calculate_health_score(&comet, token_data, None)?;
 
-    require!(health_score.is_healthy(), InceptError::HealthScoreTooLow);
+    return_error_if_false!(health_score.is_healthy(), InceptError::HealthScoreTooLow);
 
     Ok(())
 }

@@ -1,8 +1,10 @@
+use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use incept::cpi::accounts::{InitializeComet, InitializeUser};
 use incept::program::Incept;
+use incept::return_error_if_false;
 use incept::states::{Comet, Manager};
 
 pub const PROTOCOL_HEALTH_SCORE_THRESHOLD: u8 = 5;
@@ -43,9 +45,9 @@ pub fn execute(
     management_fee_bps: u16,
 ) -> Result<()> {
     // Set Manager info data.
-    assert!(
+    return_error_if_false!(
         PROTOCOL_HEALTH_SCORE_THRESHOLD <= health_score_threshold,
-        "Threshold must be greater than protocol threshold."
+        InceptCometManagerError::ThresholdTooLow
     );
     let manager_info = &mut ctx.accounts.manager_info;
     let manager_bump = *ctx.bumps.get("manager_info").unwrap();

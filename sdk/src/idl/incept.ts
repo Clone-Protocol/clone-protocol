@@ -3314,7 +3314,7 @@ export type Incept = {
     {
       "code": 6042,
       "name": "CenteredCometRequired",
-      "msg": "Comet must be centered!"
+      "msg": "Comet must be centered"
     },
     {
       "code": 6043,
@@ -3324,17 +3324,32 @@ export type Incept = {
     {
       "code": 6044,
       "name": "InvalidValueRange",
-      "msg": "Value is in an incorrect range."
+      "msg": "Value is in an incorrect range"
     },
     {
       "code": 6045,
       "name": "InvalidAssetStability",
-      "msg": "Asset stable requirement violated!"
+      "msg": "Asset stable requirement violated"
     },
     {
       "code": 6046,
       "name": "SlippageToleranceExceeded",
-      "msg": "Slippage tolerance exceeded!"
+      "msg": "Slippage tolerance exceeded"
+    },
+    {
+      "code": 6047,
+      "name": "PositionMustBeEmpty",
+      "msg": "Position must be empty"
+    },
+    {
+      "code": 6048,
+      "name": "RequireOnlyUSDiCollateral",
+      "msg": "Collateral must be all in USDi"
+    },
+    {
+      "code": 6049,
+      "name": "RequireLargestILDPositionFirst",
+      "msg": "Require largest ILD position first"
     }
   ]
 };
@@ -6655,7 +6670,7 @@ export const IDL: Incept = {
     {
       "code": 6042,
       "name": "CenteredCometRequired",
-      "msg": "Comet must be centered!"
+      "msg": "Comet must be centered"
     },
     {
       "code": 6043,
@@ -6665,17 +6680,32 @@ export const IDL: Incept = {
     {
       "code": 6044,
       "name": "InvalidValueRange",
-      "msg": "Value is in an incorrect range."
+      "msg": "Value is in an incorrect range"
     },
     {
       "code": 6045,
       "name": "InvalidAssetStability",
-      "msg": "Asset stable requirement violated!"
+      "msg": "Asset stable requirement violated"
     },
     {
       "code": 6046,
       "name": "SlippageToleranceExceeded",
-      "msg": "Slippage tolerance exceeded!"
+      "msg": "Slippage tolerance exceeded"
+    },
+    {
+      "code": 6047,
+      "name": "PositionMustBeEmpty",
+      "msg": "Position must be empty"
+    },
+    {
+      "code": 6048,
+      "name": "RequireOnlyUSDiCollateral",
+      "msg": "Collateral must be all in USDi"
+    },
+    {
+      "code": 6049,
+      "name": "RequireLargestILDPositionFirst",
+      "msg": "Require largest ILD position first"
     }
   ]
 };

@@ -1,8 +1,10 @@
+use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use incept::cpi::accounts::AddLiquidityToComet;
 use incept::program::Incept;
+use incept::return_error_if_false;
 use incept::states::{Comet, Manager, TokenData, User};
 
 #[derive(Accounts)]
@@ -73,9 +75,9 @@ pub struct AddLiquidity<'info> {
 pub fn execute(ctx: Context<AddLiquidity>, pool_index: u8, usdi_amount: u64) -> Result<()> {
     // Calculate usdi value to withdraw according to tokens redeemed.
     // Withdraw collateral from comet
-    assert!(
+    return_error_if_false!(
         !ctx.accounts.manager_info.in_closing_sequence,
-        "Can't add liquidity if closing."
+        InceptCometManagerError::InvalidActionWhenInTerminationSequence
     );
 
     let manager_info = ctx.accounts.manager_info.clone();

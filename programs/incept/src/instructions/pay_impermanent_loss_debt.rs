@@ -1,6 +1,7 @@
 use crate::error::*;
 //use crate::instructions::PayImpermanentLossDebt;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -70,7 +71,7 @@ pub fn execute(
     let mut comet = ctx.accounts.comet.load_mut()?;
 
     if comet.is_single_pool == 1 {
-        require!(
+        return_error_if_false!(
             comet_position_index == comet_collateral_index,
             InceptError::InvalidInputPositionIndex
         );
@@ -80,7 +81,7 @@ pub fn execute(
     let comet_collateral = comet.collaterals[comet_collateral_index as usize];
     let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
 
-    require!(collateral.stable == 1, InceptError::NonStablesNotSupported);
+    return_error_if_false!(collateral.stable == 1, InceptError::NonStablesNotSupported);
 
     let pool = token_data.pools[comet_position.pool_index as usize];
 
@@ -113,7 +114,12 @@ pub fn execute(
             collateral_reduction_value = invariant / new_iasset_pool_amount - pool_usdi;
             iasset_reduction_value = borrowed_iasset;
         }
-        assert!(collateral_reduction_value > Decimal::ZERO);
+
+        return_error_if_false!(
+            collateral_reduction_value > Decimal::ZERO,
+            InceptError::InequalityComparisonViolated
+        );
+
         let mut new_borrowed_iasset = borrowed_iasset - iasset_reduction_value;
         new_borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
         comet.positions[comet_position_index as usize].borrowed_iasset =

@@ -1,6 +1,7 @@
 use crate::error::*;
 //use crate::instructions::WithdrawLiquidityFromComet;
 
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -82,7 +83,7 @@ pub fn execute(
 
     let comet_liquidity_tokens = comet_position.liquidity_token_value.to_decimal();
 
-    require!(
+    return_error_if_false!(
         comet_collateral.collateral_index as usize == USDI_COLLATERAL_INDEX,
         InceptError::InvalidCollateralType
     );

@@ -1,3 +1,4 @@
+use crate::error::InceptCometManagerError;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -5,6 +6,7 @@ use incept::cpi::accounts::WithdrawCollateralFromComet;
 use incept::error::InceptError;
 use incept::math::calculate_health_score;
 use incept::program::Incept;
+use incept::return_error_if_false;
 use incept::states::{Comet, Manager, TokenData, User, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX};
 use rust_decimal::prelude::*;
 
@@ -84,12 +86,15 @@ pub fn execute(ctx: Context<Redeem>, membership_tokens_to_redeem: u64) -> Result
     let health_score_threshold =
         Decimal::new(ctx.accounts.manager_info.health_score_threshold.into(), 0);
 
-    require!(
+    return_error_if_false!(
         current_health_score.score > health_score_threshold,
         InceptError::HealthScoreTooLow
     );
-    assert!(membership_tokens_to_redeem > 0);
-    assert!(membership_tokens_to_redeem <= ctx.accounts.subscriber_account.membership_tokens);
+    return_error_if_false!(
+        membership_tokens_to_redeem > 0
+            && membership_tokens_to_redeem <= ctx.accounts.subscriber_account.membership_tokens,
+        InceptCometManagerError::InvalidMembershipTokenBalance
+    );
 
     let estimated_usdi_comet_value = comet.estimate_usdi_value(&token_data);
     let tokens_redeemed = Decimal::new(
@@ -119,7 +124,7 @@ pub fn execute(ctx: Context<Redeem>, membership_tokens_to_redeem: u64) -> Result
                 / (current_health_score.effective_collateral - usdi_collateral_to_withdraw)
     };
 
-    require!(
+    return_error_if_false!(
         estimated_health_score_after_redemption >= health_score_threshold,
         InceptError::HealthScoreTooLow
     );
@@ -209,17 +214,12 @@ pub fn execute(ctx: Context<Redeem>, membership_tokens_to_redeem: u64) -> Result
         let principal_mantissa: u64 = principal_value_deficit.mantissa().try_into().unwrap();
         ctx.accounts.subscriber_account.principal = ctx.accounts.subscriber_account.principal
             - principal_mantissa.min(ctx.accounts.subscriber_account.principal);
-        msg!("principal value deficit: {:?}", principal_value_deficit);
-        msg!("return: {:?}", effective_return);
-        msg!("profit: {:?}", total_profit);
 
         usdi_collateral_to_withdraw - total_manager_fee
     } else {
         // No principal pure reward
         usdi_collateral_to_withdraw * (Decimal::ONE - withdrawal_fee_rate)
     };
-    msg!("principal: {:?}", principal_value);
-    msg!("claimable value: {:?}", usdi_collateral_to_withdraw);
 
     // Transfer USDi back to redeemer
     usdi_to_subscriber.rescale(DEVNET_TOKEN_SCALE);

@@ -854,6 +854,43 @@ export type InceptCometManager = {
         ]
       }
     }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidActionWhenInTerminationSequence",
+      "msg": "Can't perform this action when in termination sequence"
+    },
+    {
+      "code": 6001,
+      "name": "MustBeInTerminationSequence",
+      "msg": "Must perform this action when in termination sequence"
+    },
+    {
+      "code": 6002,
+      "name": "ThresholdTooLow",
+      "msg": "Threshold must be greater than protocol threshold"
+    },
+    {
+      "code": 6003,
+      "name": "CometMustHaveNoPositions",
+      "msg": "Comet must have no liquidity positions"
+    },
+    {
+      "code": 6004,
+      "name": "TooEarlyToClaimReward",
+      "msg": "Too early to claim reward"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidMembershipTokenBalance",
+      "msg": "Invalid membership token balance"
+    },
+    {
+      "code": 6006,
+      "name": "TooEarlyToPerformTermination",
+      "msg": "Too early to perform final termination"
+    }
   ]
 };
 
@@ -1712,6 +1749,43 @@ export const IDL: InceptCometManager = {
           }
         ]
       }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidActionWhenInTerminationSequence",
+      "msg": "Can't perform this action when in termination sequence"
+    },
+    {
+      "code": 6001,
+      "name": "MustBeInTerminationSequence",
+      "msg": "Must perform this action when in termination sequence"
+    },
+    {
+      "code": 6002,
+      "name": "ThresholdTooLow",
+      "msg": "Threshold must be greater than protocol threshold"
+    },
+    {
+      "code": 6003,
+      "name": "CometMustHaveNoPositions",
+      "msg": "Comet must have no liquidity positions"
+    },
+    {
+      "code": 6004,
+      "name": "TooEarlyToClaimReward",
+      "msg": "Too early to claim reward"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidMembershipTokenBalance",
+      "msg": "Invalid membership token balance"
+    },
+    {
+      "code": 6006,
+      "name": "TooEarlyToPerformTermination",
+      "msg": "Too early to perform final termination"
     }
   ]
 };

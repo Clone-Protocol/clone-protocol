@@ -1,5 +1,7 @@
+use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
+use incept::return_error_if_false;
 use incept::states::DEVNET_TOKEN_SCALE;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
@@ -29,14 +31,14 @@ pub struct ManagementFeeClaim<'info> {
 
 pub fn execute(ctx: Context<ManagementFeeClaim>) -> Result<()> {
     // Calculate membership amount to mint
-    assert!(
+    return_error_if_false!(
         !ctx.accounts.manager_info.in_closing_sequence,
-        "Can't claim if closing."
+        InceptCometManagerError::InvalidActionWhenInTerminationSequence
     );
     let current_slot = Clock::get()?.slot;
-    assert!(
+    return_error_if_false!(
         current_slot >= ctx.accounts.manager_info.fee_claim_slot + FEE_CLAIM_INTERVAL_SLOTS,
-        "Too early to claim!"
+        InceptCometManagerError::TooEarlyToClaimReward
     );
     let management_fee_rate = Decimal::new(
         ctx.accounts

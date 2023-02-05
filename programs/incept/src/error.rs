@@ -171,7 +171,7 @@ pub enum InceptError {
     IncorrectOracleAddress,
 
     /// 42. Centered Comet Required
-    #[msg("Comet must be centered!")]
+    #[msg("Comet must be centered")]
     CenteredCometRequired,
 
     /// 43. Invalid Resulting Comet
@@ -179,16 +179,28 @@ pub enum InceptError {
     InvalidResultingComet,
 
     /// 44. Invalid value range
-    #[msg("Value is in an incorrect range.")]
+    #[msg("Value is in an incorrect range")]
     InvalidValueRange,
 
     /// 45. Invalid value range
-    #[msg("Asset stable requirement violated!")]
+    #[msg("Asset stable requirement violated")]
     InvalidAssetStability,
 
     /// 45. Trade exceeds desired slippage
-    #[msg("Slippage tolerance exceeded!")]
+    #[msg("Slippage tolerance exceeded")]
     SlippageToleranceExceeded,
+
+    /// 46. Position must be empty
+    #[msg("Position must be empty")]
+    PositionMustBeEmpty,
+
+    /// 46. Collateral must be all in USDi
+    #[msg("Collateral must be all in USDi")]
+    RequireOnlyUSDiCollateral,
+
+    /// 46. Require largest ILD position first
+    #[msg("Require largest ILD position first")]
+    RequireLargestILDPositionFirst,
 }
 
 impl From<InceptError> for ProgramError {
@@ -206,4 +218,42 @@ macro_rules! math_error {
             error_code
         }
     }};
+}
+
+#[macro_export]
+macro_rules! return_error_if_false {
+    ($boolean:expr, $err:expr) => {
+        if !$boolean {
+            return Err(error!($err));
+        }
+    };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    pub fn func_with_error() -> Result<()> {
+        return_error_if_false!(10 < 2, InceptError::InequalityComparisonViolated);
+
+        Ok(())
+    }
+
+    pub fn func_no_error() -> Result<()> {
+        return_error_if_false!(10 > 2, InceptError::InequalityComparisonViolated);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_return_error_if_false_0() {
+        let res = func_with_error();
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_return_error_if_false_1() {
+        let res = func_no_error();
+        assert!(res.is_ok());
+    }
 }

@@ -1,5 +1,6 @@
 use crate::error::*;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -106,7 +107,7 @@ pub fn execute(
 
     let health_score = calculate_health_score(&comet, &token_data, None)?;
 
-    require!(
+    return_error_if_false!(
         !health_score.is_healthy(),
         InceptError::NotSubjectToLiquidation
     );
@@ -203,7 +204,7 @@ pub fn execute(
 
     let health_score = calculate_health_score(&comet, &token_data, None)?;
 
-    require!(
+    return_error_if_false!(
         health_score.score
             <= ctx
                 .accounts

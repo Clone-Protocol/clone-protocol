@@ -1,10 +1,10 @@
+use crate::error::*;
+use crate::return_error_if_false;
+use crate::states::*;
 use anchor_lang::prelude::*;
 use pyth::pc::Price;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-
-use crate::error::*;
-use crate::states::*;
 
 pub const MAX_SIZE: usize = 128;
 
@@ -37,13 +37,13 @@ pub fn execute<'info>(
 ) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let n_accounts = ctx.remaining_accounts.iter().len();
-    require!(n_accounts > 0, InceptError::NoRemainingAccountsSupplied);
+    return_error_if_false!(n_accounts > 0, InceptError::NoRemainingAccountsSupplied);
 
     // generate data from  pyth oracle
     for i in 0..n_accounts {
         let pool_index = pool_indices.indices[i] as usize;
         let pyth_oracle = &ctx.remaining_accounts[i];
-        require!(
+        return_error_if_false!(
             pyth_oracle.key()
                 == token_data.pools[pool_index].asset_info.price_feed_addresses[0].key(),
             InceptError::IncorrectOracleAddress

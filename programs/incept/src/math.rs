@@ -183,20 +183,22 @@ pub fn calculate_health_score(
 ) -> Result<HealthScore> {
     let slot = Clock::get().expect("Failed to get slot.").slot;
 
-    let single_index = if comet.is_single_pool == 1 {
-        assert!(single_pool_position_index.is_some());
-        let index = single_pool_position_index.unwrap();
-        assert!(index < comet.num_positions as usize);
-        Some(index)
-    } else {
-        None
-    };
+    if comet.is_single_pool == 1 {
+        return_error_if_false!(
+            single_pool_position_index.is_some(),
+            InceptError::InvalidBool
+        );
+        return_error_if_false!(
+            single_pool_position_index.unwrap() < (comet.num_positions as usize),
+            InceptError::InvalidInputPositionIndex
+        );
+    }
 
     let mut total_il_term = Decimal::zero();
     let mut total_position_term = Decimal::zero();
 
     for index in 0..(comet.num_positions as usize) {
-        if let Some(s_index) = single_index {
+        if let Some(s_index) = single_pool_position_index {
             if s_index != index {
                 continue;
             }
