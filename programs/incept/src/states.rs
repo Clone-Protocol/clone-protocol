@@ -400,7 +400,7 @@ impl Comet {
         self.positions[0..(self.num_positions as usize)]
             .iter()
             .for_each(|position| {
-                let mut pool = token_data.pools[position.pool_index as usize].clone();
+                let mut pool = token_data.pools[position.pool_index as usize];
                 let pool_usdi = pool.usdi_amount.to_decimal();
                 let pool_iasset = pool.iasset_amount.to_decimal();
                 let pool_lp_tokens = pool.liquidity_token_supply.to_decimal();

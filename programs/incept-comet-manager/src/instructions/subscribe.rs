@@ -97,16 +97,13 @@ pub fn execute(ctx: Context<Subscribe>, collateral_to_provide: u64) -> Result<()
 
     // Mint membership
     let tokens_to_add: u64 = membership_token_to_mint.mantissa().try_into().unwrap();
-    ctx.accounts.subscriber_account.membership_tokens =
-        ctx.accounts.subscriber_account.membership_tokens + tokens_to_add;
-    ctx.accounts.manager_info.membership_token_supply =
-        ctx.accounts.manager_info.membership_token_supply + tokens_to_add;
+    ctx.accounts.subscriber_account.membership_tokens += tokens_to_add;
+    ctx.accounts.manager_info.membership_token_supply += tokens_to_add;
     // Adjust principal
-    ctx.accounts.subscriber_account.principal =
-        ctx.accounts.subscriber_account.principal + collateral_to_provide;
+    ctx.accounts.subscriber_account.principal += collateral_to_provide;
 
-    let manager_bump = ctx.accounts.manager_info.bump.clone();
-    let owner = ctx.accounts.manager_info.owner.clone();
+    let manager_bump = ctx.accounts.manager_info.bump;
+    let owner = ctx.accounts.manager_info.owner;
 
     let manager_seeds = &[&[
         b"manager-info",

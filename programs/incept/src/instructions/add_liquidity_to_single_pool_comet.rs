@@ -200,7 +200,7 @@ pub fn execute(
     ctx.accounts.amm_usdi_token_account.reload()?;
     ctx.accounts.liquidity_token_mint.reload()?;
 
-    token_data.pools[pool_index as usize].iasset_amount = RawDecimal::new(
+    token_data.pools[pool_index].iasset_amount = RawDecimal::new(
         ctx.accounts
             .amm_iasset_token_account
             .amount
@@ -208,7 +208,7 @@ pub fn execute(
             .unwrap(),
         DEVNET_TOKEN_SCALE,
     );
-    token_data.pools[pool_index as usize].usdi_amount = RawDecimal::new(
+    token_data.pools[pool_index].usdi_amount = RawDecimal::new(
         ctx.accounts
             .amm_usdi_token_account
             .amount
@@ -216,7 +216,7 @@ pub fn execute(
             .unwrap(),
         DEVNET_TOKEN_SCALE,
     );
-    token_data.pools[pool_index as usize].liquidity_token_supply = RawDecimal::new(
+    token_data.pools[pool_index].liquidity_token_supply = RawDecimal::new(
         ctx.accounts.liquidity_token_mint.supply.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,
     );

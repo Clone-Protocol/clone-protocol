@@ -199,7 +199,7 @@ pub fn execute(
 
     let recenter_result = recenter_calculation(
         &comet,
-        &**token_data,
+        token_data,
         comet_position_index as usize,
         comet_collateral_index as usize,
     )?;

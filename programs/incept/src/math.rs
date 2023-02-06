@@ -203,7 +203,7 @@ pub fn calculate_health_score(
                 continue;
             }
         }
-        let comet_position = comet.positions[index as usize];
+        let comet_position = comet.positions[index];
         let pool = token_data.pools[comet_position.pool_index as usize];
 
         if check_feed_update(pool.asset_info, slot).is_err() {

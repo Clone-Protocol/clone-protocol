@@ -212,8 +212,8 @@ pub fn execute(ctx: Context<Redeem>, membership_tokens_to_redeem: u64) -> Result
         let mut principal_value_deficit = usdi_collateral_to_withdraw - total_profit;
         principal_value_deficit.rescale(DEVNET_TOKEN_SCALE);
         let principal_mantissa: u64 = principal_value_deficit.mantissa().try_into().unwrap();
-        ctx.accounts.subscriber_account.principal = ctx.accounts.subscriber_account.principal
-            - principal_mantissa.min(ctx.accounts.subscriber_account.principal);
+        ctx.accounts.subscriber_account.principal -=
+            principal_mantissa.min(ctx.accounts.subscriber_account.principal);
 
         usdi_collateral_to_withdraw - total_manager_fee
     } else {
@@ -237,15 +237,13 @@ pub fn execute(ctx: Context<Redeem>, membership_tokens_to_redeem: u64) -> Result
     )?;
 
     // Burn membership tokens from total supply.
-    ctx.accounts.manager_info.membership_token_supply =
-        ctx.accounts.manager_info.membership_token_supply - membership_tokens_to_redeem;
+    ctx.accounts.manager_info.membership_token_supply -= membership_tokens_to_redeem;
 
     // Adjust subscriber tokens, if fully redeemed, set principal to zero.
     if ctx.accounts.subscriber_account.membership_tokens == membership_tokens_to_redeem {
         ctx.accounts.subscriber_account.principal = 0;
     }
-    ctx.accounts.subscriber_account.membership_tokens =
-        ctx.accounts.subscriber_account.membership_tokens - membership_tokens_to_redeem;
+    ctx.accounts.subscriber_account.membership_tokens -= membership_tokens_to_redeem;
 
     Ok(())
 }

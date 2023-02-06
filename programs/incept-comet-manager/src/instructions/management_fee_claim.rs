@@ -63,11 +63,9 @@ pub fn execute(ctx: Context<ManagementFeeClaim>) -> Result<()> {
 
     // Mint membership
     let tokens_to_add: u64 = membership_token_to_mint.mantissa().try_into().unwrap();
-    ctx.accounts.owner_account.membership_tokens =
-        ctx.accounts.owner_account.membership_tokens + tokens_to_add;
+    ctx.accounts.owner_account.membership_tokens += tokens_to_add;
     // Adjust supply
-    ctx.accounts.manager_info.membership_token_supply =
-        ctx.accounts.manager_info.membership_token_supply + tokens_to_add;
+    ctx.accounts.manager_info.membership_token_supply += tokens_to_add;
     // Update slot
     ctx.accounts.manager_info.fee_claim_slot = current_slot;
 

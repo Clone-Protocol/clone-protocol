@@ -90,7 +90,7 @@ pub fn execute(
         let mut new_collateral_amount =
             comet_collateral.collateral_amount.to_decimal() - subtracted_collateral_value;
         new_collateral_amount.rescale(collateral_scale);
-        comet.collaterals[comet_collateral_index as usize].collateral_amount =
+        comet.collaterals[comet_collateral_index].collateral_amount =
             RawDecimal::from(new_collateral_amount);
 
         // remove collateral if empty
