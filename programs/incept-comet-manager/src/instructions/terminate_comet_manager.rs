@@ -1,8 +1,10 @@
+use crate::error::InceptCometManagerError;
 use crate::states::*;
 use anchor_lang::{prelude::*, AccountsClose};
 use anchor_spl::token::{self, *};
 use incept::cpi::accounts::WithdrawCollateralFromComet;
 use incept::program::Incept;
+use incept::return_error_if_false;
 use incept::states::{Comet, Manager, TokenData, User, USDI_COLLATERAL_INDEX};
 use rust_decimal::prelude::*;
 
@@ -70,14 +72,14 @@ pub fn execute(ctx: Context<TerminateCometManager>) -> Result<()> {
     // Calculate usdi value to withdraw according to tokens redeemed.
     // Withdraw collateral from comet
     let manager_info = &ctx.accounts.manager_info;
-    assert!(
+    return_error_if_false!(
         manager_info.in_closing_sequence,
-        "Must be in closing sequence!"
+        InceptCometManagerError::MustBeInTerminationSequence
     );
     let current_slot = Clock::get()?.slot;
-    assert!(
+    return_error_if_false!(
         current_slot >= manager_info.termination_slot,
-        "All must be positions closed!"
+        InceptCometManagerError::TooEarlyToPerformTermination
     );
 
     let comet = ctx.accounts.comet.load()?;

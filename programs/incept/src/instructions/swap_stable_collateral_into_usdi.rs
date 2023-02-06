@@ -1,5 +1,6 @@
 use crate::error::*;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -69,7 +70,7 @@ pub fn execute(
     let comet_collateral = comet.collaterals[comet_collateral_index as usize];
     let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
 
-    require!(
+    return_error_if_false!(
         comet_collateral.collateral_index as usize != USDI_COLLATERAL_INDEX
             && collateral.stable == 1,
         InceptError::InvalidCollateralType
@@ -78,7 +79,7 @@ pub fn execute(
     // Require a healthy score after transactions
     let health_score = calculate_health_score(&comet, &token_data, None)?;
 
-    require!(
+    return_error_if_false!(
         !health_score.is_healthy(),
         InceptError::NotSubjectToLiquidation
     );

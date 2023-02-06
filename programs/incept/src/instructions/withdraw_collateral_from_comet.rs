@@ -1,6 +1,6 @@
 use crate::error::*;
-//use crate::instructions::WithdrawCollateralFromComet;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_lang::AccountsClose;
@@ -81,7 +81,7 @@ pub fn execute(
             RawDecimal::from(vault_comet_supply);
 
         // ensure the position holds sufficient collateral
-        require!(
+        return_error_if_false!(
             subtracted_collateral_value <= comet_collateral.collateral_amount.to_decimal(),
             InceptError::InsufficientCollateral
         );
@@ -122,7 +122,7 @@ pub fn execute(
 
             let health_score = calculate_health_score(&comet, token_data, None)?;
 
-            require!(health_score.is_healthy(), InceptError::HealthScoreTooLow);
+            return_error_if_false!(health_score.is_healthy(), InceptError::HealthScoreTooLow);
         }
     }
     if close {

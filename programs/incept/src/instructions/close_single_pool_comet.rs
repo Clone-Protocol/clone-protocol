@@ -1,5 +1,6 @@
 //use crate::instructions::CloseSinglePoolComet;
 use crate::error::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
@@ -32,11 +33,12 @@ pub fn execute(ctx: Context<CloseSinglePoolComet>, _user_nonce: u8, comet_index:
     let collateral_position = single_pool_comet.collaterals[position_index];
 
     // TODO: Check liquidation status? move to a require statement w/ InceptError
-    assert!(
+    return_error_if_false!(
         comet_position.liquidity_token_value.to_decimal().is_zero()
             && comet_position.borrowed_usdi.to_decimal().is_zero()
             && comet_position.borrowed_iasset.to_decimal().is_zero()
-            && collateral_position.collateral_amount.to_decimal().is_zero()
+            && collateral_position.collateral_amount.to_decimal().is_zero(),
+        InceptError::PositionMustBeEmpty
     );
 
     single_pool_comet.remove_position(position_index);

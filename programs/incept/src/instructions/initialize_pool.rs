@@ -1,5 +1,6 @@
 use crate::error::InceptError;
 ////use crate::instructions::InitializePool;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
@@ -87,7 +88,7 @@ pub fn execute(
     liquidation_discount_rate: u64,
 ) -> Result<()> {
     // ensure valid health score coefficient
-    require!(
+    return_error_if_false!(
         liquidation_discount_rate < 10000,
         InceptError::InvalidValueRange
     );

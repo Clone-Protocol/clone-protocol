@@ -1,5 +1,5 @@
 use crate::error::InceptError;
-//use crate::instructions::AddCollateral;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
@@ -42,7 +42,7 @@ pub fn execute(
     stable: u8,
     collateralization_ratio: u64,
 ) -> Result<()> {
-    require!(
+    return_error_if_false!(
         if stable == 0 {
             collateralization_ratio > 0
         } else {

@@ -1,9 +1,8 @@
 use crate::error::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use std::convert::TryInto;
-
-//use crate::instructions::UpdatePoolHealthScore;
 
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, pool_index: u8, health_score_coefficient: u64)]
@@ -30,7 +29,7 @@ pub fn execute(
     health_score_coefficient: u64,
 ) -> Result<()> {
     // ensure that a valid coefficient was entered
-    require!(
+    return_error_if_false!(
         health_score_coefficient > 0,
         InceptError::InvalidHealthScoreCoefficient
     );

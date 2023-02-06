@@ -1,8 +1,10 @@
+use crate::error::InceptCometManagerError;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use incept::cpi::accounts::AddCollateralToComet;
 use incept::program::Incept;
+use incept::return_error_if_false;
 use incept::states::{Comet, Manager, TokenData, User, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
@@ -74,9 +76,9 @@ pub struct Subscribe<'info> {
 
 pub fn execute(ctx: Context<Subscribe>, collateral_to_provide: u64) -> Result<()> {
     // Calculate membership amount to mint
-    assert!(
+    return_error_if_false!(
         !ctx.accounts.manager_info.in_closing_sequence,
-        "Can't subscribe if closing."
+        InceptCometManagerError::InvalidActionWhenInTerminationSequence
     );
 
     let token_data = ctx.accounts.token_data.load()?;

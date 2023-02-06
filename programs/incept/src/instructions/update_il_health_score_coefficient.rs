@@ -1,5 +1,5 @@
 use crate::error::*;
-////use crate::instructions::UpdateILHealthScoreCoefficient;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use std::convert::TryInto;
@@ -28,7 +28,7 @@ pub fn execute(
     _il_health_score_coefficient: u64,
 ) -> Result<()> {
     // ensure that a valid coefficient was entered
-    require!(
+    return_error_if_false!(
         _il_health_score_coefficient > 0,
         InceptError::InvalidHealthScoreCoefficient
     );

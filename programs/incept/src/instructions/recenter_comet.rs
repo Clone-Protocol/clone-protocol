@@ -1,6 +1,7 @@
 use crate::error::*;
 //use crate::instructions::RecenterComet;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -110,7 +111,7 @@ pub fn recenter_calculation(
     let usdi_ild = borrowed_usdi - claimable_usdi; // If negative its a reward.
     let iasset_ild = borrowed_iasset - claimable_iasset;
 
-    require!(
+    return_error_if_false!(
         !usdi_ild.is_zero() && !iasset_ild.is_zero(),
         InceptError::NoPriceDeviationDetected
     );
@@ -194,7 +195,7 @@ pub fn execute(
     };
 
     // if collateral is not stable, we throw an error
-    require!(is_stable?, InceptError::InvalidCollateralType);
+    return_error_if_false!(is_stable?, InceptError::InvalidCollateralType);
 
     let recenter_result = recenter_calculation(
         &comet,

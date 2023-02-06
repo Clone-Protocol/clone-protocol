@@ -1,11 +1,10 @@
 use crate::error::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-
-////use crate::instructions::InitializeManager;
 
 #[derive(Accounts)]
 #[instruction(manager_nonce: u8, il_health_score_coefficient: u64, il_health_score_cutoff: u64, il_liquidation_reward_pct: u64)]
@@ -54,8 +53,8 @@ pub fn execute(
     collateral_full_liquidation_threshold: u64,
     treasury_address: Pubkey,
 ) -> Result<()> {
-    require!(max_health_liquidation < 100, InceptError::InvalidValueRange);
-    require!(liquidator_fee < 10000, InceptError::InvalidValueRange);
+    return_error_if_false!(max_health_liquidation < 100, InceptError::InvalidValueRange);
+    return_error_if_false!(liquidator_fee < 10000, InceptError::InvalidValueRange);
     let mut token_data = ctx.accounts.token_data.load_init()?;
 
     // set manager data
