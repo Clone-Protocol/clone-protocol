@@ -2,7 +2,7 @@ use crate::error::InceptCometManagerError;
 use crate::states::*;
 use anchor_lang::{prelude::*, AccountsClose};
 use anchor_spl::token::{self, *};
-use incept::cpi::accounts::WithdrawCollateralFromComet;
+use incept::cpi::accounts::{CloseCometAccount, CloseUserAccount, WithdrawCollateralFromComet};
 use incept::program::Incept;
 use incept::return_error_if_false;
 use incept::states::{Comet, Manager, TokenData, User, USDI_COLLATERAL_INDEX};
@@ -99,11 +99,11 @@ pub fn execute(ctx: Context<TerminateCometManager>) -> Result<()> {
                 ctx.accounts.incept_program.to_account_info(),
                 WithdrawCollateralFromComet {
                     user: ctx.accounts.manager_info.to_account_info(),
-                    user_account: ctx.accounts.manager_incept_user.to_account_info(),
+                    user_account: ctx.accounts.manager_incept_user.to_account_info().clone(),
                     manager: ctx.accounts.incept_manager.to_account_info(),
                     token_data: ctx.accounts.token_data.to_account_info(),
                     token_program: ctx.accounts.token_program.to_account_info(),
-                    comet: ctx.accounts.comet.to_account_info(),
+                    comet: ctx.accounts.comet.to_account_info().clone(),
                     vault: ctx.accounts.incept_usdi_vault.to_account_info(),
                     user_collateral_token_account: ctx
                         .accounts
@@ -120,36 +120,59 @@ pub fn execute(ctx: Context<TerminateCometManager>) -> Result<()> {
     }
     // Transfer USDi to owner.
     ctx.accounts.manager_usdi_token_account.reload()?;
-    token::transfer(
+    if ctx.accounts.manager_usdi_token_account.amount > 0 {
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                Transfer {
+                    from: ctx
+                        .accounts
+                        .manager_usdi_token_account
+                        .to_account_info()
+                        .clone(),
+                    to: ctx
+                        .accounts
+                        .owner_usdi_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager_info.to_account_info().clone(),
+                },
+                manager_seeds,
+            ),
+            ctx.accounts.manager_usdi_token_account.amount,
+        )?;
+    }
+
+    // Close out accounts.
+    incept::cpi::close_comet_account(
         CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            Transfer {
-                from: ctx
-                    .accounts
-                    .manager_usdi_token_account
-                    .to_account_info()
-                    .clone(),
-                to: ctx
-                    .accounts
-                    .owner_usdi_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.manager_info.to_account_info().clone(),
+            ctx.accounts.incept_program.to_account_info(),
+            CloseCometAccount {
+                user: ctx.accounts.manager_info.to_account_info(),
+                user_account: ctx.accounts.manager_incept_user.to_account_info(),
+                comet: ctx.accounts.comet.to_account_info(),
+                system_program: ctx.accounts.system_program.to_account_info(),
+                destination: ctx.accounts.manager_owner.to_account_info(),
             },
             manager_seeds,
         ),
-        ctx.accounts.manager_usdi_token_account.amount,
+        manager_info.user_bump,
     )?;
 
-    // Close out accounts.
-    // TODO: Figure out how to close out these two accounts.
-    // May need another instruction created on Incept to do it.
-    // ctx.accounts
-    //     .comet
-    //     .close(ctx.accounts.manager_info.to_account_info())?;
-    // ctx.accounts
-    //     .manager_incept_user
-    //     .close(ctx.accounts.manager_owner.to_account_info())?;
+    incept::cpi::close_user_account(
+        CpiContext::new_with_signer(
+            ctx.accounts.incept_program.to_account_info(),
+            CloseUserAccount {
+                user: ctx.accounts.manager_info.to_account_info(),
+                user_account: ctx.accounts.manager_incept_user.to_account_info(),
+                system_program: ctx.accounts.system_program.to_account_info(),
+                destination: ctx.accounts.manager_owner.to_account_info(),
+            },
+            manager_seeds,
+        ),
+        manager_info.user_bump,
+    )?;
+
     ctx.accounts
         .manager_info
         .close(ctx.accounts.manager_owner.to_account_info())?;

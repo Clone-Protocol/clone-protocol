@@ -506,4 +506,33 @@ pub mod incept {
         );
         instructions::liquidate_comet::execute(ctx, user_nonce, position_index, 0)
     }
+
+    pub fn close_comet_account(ctx: Context<CloseCometAccount>, user_nonce: u8) -> Result<()> {
+        instructions::close_comet_account::execute(ctx, user_nonce)
+    }
+
+    pub fn close_single_pool_comet_account(
+        ctx: Context<CloseSinglePoolCometAccount>,
+        user_nonce: u8,
+    ) -> Result<()> {
+        instructions::close_single_pool_comet_account::execute(ctx, user_nonce)
+    }
+
+    pub fn close_mint_positions_account(
+        ctx: Context<CloseMintPositionsAccount>,
+        user_nonce: u8,
+    ) -> Result<()> {
+        instructions::close_mint_positions_account::execute(ctx, user_nonce)
+    }
+
+    pub fn close_liquidity_positions_account(
+        ctx: Context<CloseLiquidityPositionsAccount>,
+        user_nonce: u8,
+    ) -> Result<()> {
+        instructions::close_liquidity_positions_account::execute(ctx, user_nonce)
+    }
+
+    pub fn close_user_account(ctx: Context<CloseUserAccount>, user_nonce: u8) -> Result<()> {
+        instructions::close_user_account::execute(ctx, user_nonce)
+    }
 }

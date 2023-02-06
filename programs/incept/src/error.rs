@@ -134,9 +134,9 @@ pub enum InceptError {
     #[msg("Wrong Comet Type")]
     WrongCometType,
 
-    /// 33. Single Pool Comet Not Empty
-    #[msg("Single Pool Comet Not Empty")]
-    SinglePoolCometNotEmpty,
+    /// 33. Comet Not Empty
+    #[msg("Comet Not Empty")]
+    CometNotEmpty,
 
     /// 34. Liquidity Not Withdrawn
     #[msg("Liquidity Not Withdrawn")]
@@ -201,6 +201,10 @@ pub enum InceptError {
     /// 46. Require largest ILD position first
     #[msg("Require largest ILD position first")]
     RequireLargestILDPositionFirst,
+
+    /// 46. Require largest ILD position first
+    #[msg("Positions must be all closed")]
+    RequireAllPositionsClosed,
 }
 
 impl From<InceptError> for ProgramError {

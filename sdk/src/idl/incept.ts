@@ -2459,6 +2459,181 @@ export type Incept = {
           "type": "u8"
         }
       ]
+    },
+    {
+      "name": "closeCometAccount",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "closeSinglePoolCometAccount",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "singlePoolComet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "closeMintPositionsAccount",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mintPositions",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "closeLiquidityPositionsAccount",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityPositions",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "closeUserAccount",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -3268,8 +3443,8 @@ export type Incept = {
     },
     {
       "code": 6033,
-      "name": "SinglePoolCometNotEmpty",
-      "msg": "Single Pool Comet Not Empty"
+      "name": "CometNotEmpty",
+      "msg": "Comet Not Empty"
     },
     {
       "code": 6034,
@@ -3350,6 +3525,11 @@ export type Incept = {
       "code": 6049,
       "name": "RequireLargestILDPositionFirst",
       "msg": "Require largest ILD position first"
+    },
+    {
+      "code": 6050,
+      "name": "RequireAllPositionsClosed",
+      "msg": "Positions must be all closed"
     }
   ]
 };
@@ -5815,6 +5995,181 @@ export const IDL: Incept = {
           "type": "u8"
         }
       ]
+    },
+    {
+      "name": "closeCometAccount",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "closeSinglePoolCometAccount",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "singlePoolComet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "closeMintPositionsAccount",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mintPositions",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "closeLiquidityPositionsAccount",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityPositions",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "closeUserAccount",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userNonce",
+          "type": "u8"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -6624,8 +6979,8 @@ export const IDL: Incept = {
     },
     {
       "code": 6033,
-      "name": "SinglePoolCometNotEmpty",
-      "msg": "Single Pool Comet Not Empty"
+      "name": "CometNotEmpty",
+      "msg": "Comet Not Empty"
     },
     {
       "code": 6034,
@@ -6706,6 +7061,11 @@ export const IDL: Incept = {
       "code": 6049,
       "name": "RequireLargestILDPositionFirst",
       "msg": "Require largest ILD position first"
+    },
+    {
+      "code": 6050,
+      "name": "RequireAllPositionsClosed",
+      "msg": "Positions must be all closed"
     }
   ]
 };
