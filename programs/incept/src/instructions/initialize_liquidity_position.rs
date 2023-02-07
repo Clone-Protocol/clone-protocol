@@ -6,14 +6,19 @@ use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
-//use crate::instructions::InitializeLiquidityPosition;
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, pool_index: u8, iasset_amount: u64)]
+#[instruction( pool_index: u8, iasset_amount: u64)]
 pub struct InitializeLiquidityPosition<'info> {
+    #[account(address = liquidity_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_account.bump,
+    )]
+    pub user_account: Account<'info, User>,
+    #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data
     )]
     pub manager: Box<Account<'info, Manager>>,
@@ -25,7 +30,7 @@ pub struct InitializeLiquidityPosition<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        constraint = &liquidity_positions.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner
+        address = user_account.liquidity_positions,
     )]
     pub liquidity_positions: AccountLoader<'info, LiquidityPositions>,
     #[account(
@@ -67,11 +72,11 @@ pub struct InitializeLiquidityPosition<'info> {
 
 pub fn execute(
     ctx: Context<InitializeLiquidityPosition>,
-    manager_nonce: u8,
+
     pool_index: u8,
     iasset_amount: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let iasset_liquidity_value =

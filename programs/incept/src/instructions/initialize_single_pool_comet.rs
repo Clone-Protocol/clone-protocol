@@ -1,15 +1,19 @@
-//use crate::instructions::InitializeSinglePoolComet;
-use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
-// use anchor_spl::token::*;
+
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, pool_index: u8, collateral_index: u8)]
+#[instruction( pool_index: u8, collateral_index: u8)]
 pub struct InitializeSinglePoolComet<'info> {
+    #[account(address = single_pool_comets.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_account.bump,
+    )]
+    pub user_account: Account<'info, User>,
+    #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data,
     )]
     pub manager: Box<Account<'info, Manager>>,
@@ -22,15 +26,15 @@ pub struct InitializeSinglePoolComet<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
+        address = user_account.single_pool_comets,
         constraint = single_pool_comets.load()?.is_single_pool == 1,
-        constraint = &single_pool_comets.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner
     )]
     pub single_pool_comets: AccountLoader<'info, Comet>,
 }
 
 pub fn execute(
     ctx: Context<InitializeSinglePoolComet>,
-    _manager_nonce: u8,
+
     pool_index: u8,
     collateral_index: u8,
 ) -> Result<()> {

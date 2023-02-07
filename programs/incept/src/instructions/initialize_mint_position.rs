@@ -8,15 +8,21 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, pool_index: u8, collateral_index: u8, iasset_amount: u64, collateral_amount: u64)]
+#[instruction( pool_index: u8, collateral_index: u8, iasset_amount: u64, collateral_amount: u64)]
 pub struct InitializeMintPosition<'info> {
+    #[account(address = mint_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_account.bump,
+    )]
+    pub user_account: Box<Account<'info, User>>,
+    #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data,
     )]
-    pub manager: Account<'info, Manager>,
+    pub manager: Box<Account<'info, Manager>>,
     #[account(
         mut,
         has_one = manager
@@ -24,21 +30,21 @@ pub struct InitializeMintPosition<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        constraint = &mint_positions.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner
+        address = user_account.mint_positions,
     )]
     pub mint_positions: AccountLoader<'info, MintPositions>,
     #[account(
         mut,
         address = token_data.load()?.collaterals[collateral_index as usize].vault
     )]
-    pub vault: Account<'info, TokenAccount>,
+    pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         constraint = user_collateral_token_account.amount >= collateral_amount @ InceptError::InvalidTokenAccountBalance,
         associated_token::mint = vault.mint,
         associated_token::authority = user
     )]
-    pub user_collateral_token_account: Account<'info, TokenAccount>,
+    pub user_collateral_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         address = token_data.load()?.pools[pool_index as usize].asset_info.iasset_mint,
@@ -49,19 +55,19 @@ pub struct InitializeMintPosition<'info> {
         associated_token::mint = iasset_mint,
         associated_token::authority = user
     )]
-    pub user_iasset_token_account: Account<'info, TokenAccount>,
+    pub user_iasset_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 
 pub fn execute(
     ctx: Context<InitializeMintPosition>,
-    manager_nonce: u8,
+
     pool_index: u8,
     _collateral_index: u8,
     iasset_amount: u64,
     collateral_amount: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let pool = token_data.pools[pool_index as usize];

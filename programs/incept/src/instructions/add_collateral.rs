@@ -6,13 +6,13 @@ use anchor_spl::token::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, scale: u8, stable: u8, collateralization_ratio: u64)]
+#[instruction( scale: u8, stable: u8, collateralization_ratio: u64)]
 pub struct AddCollateral<'info> {
     #[account(mut, address = manager.admin)]
     pub admin: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data,
         has_one = admin
     )]
@@ -37,7 +37,7 @@ pub struct AddCollateral<'info> {
 
 pub fn execute(
     ctx: Context<AddCollateral>,
-    _manager_nonce: u8,
+
     scale: u8,
     stable: u8,
     collateralization_ratio: u64,

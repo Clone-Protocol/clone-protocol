@@ -3,13 +3,12 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8)]
 pub struct InitializeLiquidityPositions<'info> {
     pub user: Signer<'info>,
     #[account(
         mut,
         seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce
+        bump = user_account.bump
     )]
     pub user_account: Account<'info, User>,
     #[account(zero)]
@@ -19,7 +18,7 @@ pub struct InitializeLiquidityPositions<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<InitializeLiquidityPositions>, _user_nonce: u8) -> Result<()> {
+pub fn execute(ctx: Context<InitializeLiquidityPositions>) -> Result<()> {
     let mut liquidity_positions = ctx.accounts.liquidity_positions.load_init()?;
 
     // set user data

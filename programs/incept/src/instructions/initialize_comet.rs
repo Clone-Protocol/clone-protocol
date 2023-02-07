@@ -5,13 +5,13 @@ use anchor_spl::token::*;
 use rust_decimal::prelude::*;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8, is_single_pool: bool)]
+#[instruction(is_single_pool: bool)]
 pub struct InitializeComet<'info> {
     pub user: Signer<'info>,
     #[account(
         mut,
         seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce
+        bump = user_account.bump
     )]
     pub user_account: Account<'info, User>,
     #[account(zero)]
@@ -21,7 +21,7 @@ pub struct InitializeComet<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<InitializeComet>, _user_nonce: u8, is_single_pool: bool) -> Result<()> {
+pub fn execute(ctx: Context<InitializeComet>, is_single_pool: bool) -> Result<()> {
     let mut comet = ctx.accounts.comet.load_init()?;
 
     // set user data

@@ -272,12 +272,13 @@ pub struct Collateral {
 #[account]
 #[derive(Default)]
 pub struct User {
-    // 160
+    // 161
     pub authority: Pubkey,           // 32
     pub single_pool_comets: Pubkey,  // 32
     pub mint_positions: Pubkey,      // 32
     pub liquidity_positions: Pubkey, // 32
     pub comet: Pubkey,               // 32
+    pub bump: u8,                    // 1
 }
 
 #[account(zero_copy)]

@@ -10,7 +10,7 @@ use std::cmp::Ordering;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8, position_index: u8)]
+#[instruction(position_index: u8)]
 pub struct LiquidateComet<'info> {
     pub liquidator: Signer<'info>,
     #[account(
@@ -30,7 +30,7 @@ pub struct LiquidateComet<'info> {
     pub user: AccountInfo<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
+        bump = user_account.bump,
         constraint = (user_account.comet == *comet.to_account_info().key) || (user_account.single_pool_comets == *comet.to_account_info().key)
     )]
     pub user_account: Box<Account<'info, User>>,
@@ -205,13 +205,11 @@ fn calculate_liquidation_result(
 
 pub fn execute(
     ctx: Context<LiquidateComet>,
-    _user_nonce: u8,
     position_index: u8,
     comet_collateral_index: u8,
 ) -> Result<()> {
     let position_index = position_index as usize;
-    let manager_nonce = ctx.accounts.manager.bump;
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;

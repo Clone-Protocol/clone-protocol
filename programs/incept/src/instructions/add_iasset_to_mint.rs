@@ -9,12 +9,18 @@ use std::convert::TryInto;
 //use crate::instructions::AddiAssetToMint;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, mint_index: u8, amount: u64)]
+#[instruction( mint_index: u8, amount: u64)]
 pub struct AddiAssetToMint<'info> {
+    #[account(address = mint_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_account.bump,
+    )]
+    pub user_account: Account<'info, User>,
+    #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data,
     )]
     pub manager: Account<'info, Manager>,
@@ -31,7 +37,7 @@ pub struct AddiAssetToMint<'info> {
     pub user_iasset_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
-        constraint = &mint_positions.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
+        address = user_account.mint_positions,
         constraint = (mint_index as u64) < mint_positions.load()?.num_positions @ InceptError::InvalidInputPositionIndex
     )]
     pub mint_positions: AccountLoader<'info, MintPositions>,
@@ -43,13 +49,8 @@ pub struct AddiAssetToMint<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(
-    ctx: Context<AddiAssetToMint>,
-    manager_nonce: u8,
-    mint_index: u8,
-    amount: u64,
-) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+pub fn execute(ctx: Context<AddiAssetToMint>, mint_index: u8, amount: u64) -> Result<()> {
+    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
     let mint_positions = &mut ctx.accounts.mint_positions.load_mut()?;

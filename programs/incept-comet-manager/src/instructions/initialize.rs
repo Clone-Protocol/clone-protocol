@@ -101,7 +101,6 @@ pub fn execute(
             },
             manager_seeds,
         ),
-        user_bump,
         false,
     )?;
 

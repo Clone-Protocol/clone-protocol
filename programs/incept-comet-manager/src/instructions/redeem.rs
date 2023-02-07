@@ -157,8 +157,6 @@ pub fn execute(ctx: Context<Redeem>, membership_tokens_to_redeem: u64) -> Result
             },
             manager_seeds,
         ),
-        ctx.accounts.incept_manager.bump,
-        manager_info.user_bump,
         0,
         usdi_collateral_to_withdraw.mantissa().try_into().unwrap(),
     )?;

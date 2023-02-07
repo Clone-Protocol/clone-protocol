@@ -7,18 +7,19 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8, manager_nonce: u8, liquidity_token_amount: u64, position_index: u8)]
+#[instruction(liquidity_token_amount: u64, position_index: u8)]
 pub struct WithdrawLiquidityFromSinglePoolComet<'info> {
+    #[account(address = single_pool_comet.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data,
     )]
     pub manager: Account<'info, Manager>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
+        bump = user_account.bump,
     )]
     pub user_account: Account<'info, User>,
     #[account(
@@ -30,7 +31,6 @@ pub struct WithdrawLiquidityFromSinglePoolComet<'info> {
         mut,
         address = user_account.single_pool_comets,
         constraint = single_pool_comet.load()?.num_positions > position_index as u64,
-        constraint = &single_pool_comet.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
         constraint = single_pool_comet.load()?.is_single_pool == 1 @ InceptError::WrongCometType
     )]
     pub single_pool_comet: AccountLoader<'info, Comet>,
@@ -74,12 +74,10 @@ pub struct WithdrawLiquidityFromSinglePoolComet<'info> {
 
 pub fn execute(
     ctx: Context<WithdrawLiquidityFromSinglePoolComet>,
-    _user_nonce: u8,
-    manager_nonce: u8,
     liquidity_token_amount: u64,
     position_index: u8,
 ) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut single_pool_comet = ctx.accounts.single_pool_comet.load_mut()?;
     let comet_position = single_pool_comet.positions[position_index as usize];

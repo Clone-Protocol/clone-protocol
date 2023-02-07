@@ -10,7 +10,7 @@ pub struct InitializeUser<'info> {
     pub user: Signer<'info>,
     #[account(
         init,
-        space = 8 + 160,
+        space = 8 + 161,
         seeds = [b"user", authority.as_ref()],
         bump,
         payer = user
@@ -23,6 +23,8 @@ pub struct InitializeUser<'info> {
 
 pub fn execute(ctx: Context<InitializeUser>, authority: Pubkey) -> Result<()> {
     // set user authority
+    let bump = *ctx.bumps.get("user_account").unwrap();
     ctx.accounts.user_account.authority = authority;
+    ctx.accounts.user_account.bump = bump;
     Ok(())
 }

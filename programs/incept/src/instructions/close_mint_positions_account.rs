@@ -5,18 +5,17 @@ use anchor_lang::prelude::*;
 use anchor_lang::AccountsClose;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8)]
 pub struct CloseMintPositionsAccount<'info> {
+    #[account(address = mint_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
         mut,
         seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
+        bump = user_account.bump,
     )]
     pub user_account: Account<'info, User>,
     #[account(
         mut,
-        constraint = mint_positions.load()?.owner == *user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
         address = user_account.mint_positions
     )]
     pub mint_positions: AccountLoader<'info, MintPositions>,
@@ -26,7 +25,7 @@ pub struct CloseMintPositionsAccount<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<CloseMintPositionsAccount>, _user_nonce: u8) -> Result<()> {
+pub fn execute(ctx: Context<CloseMintPositionsAccount>) -> Result<()> {
     let mint_positions = ctx.accounts.mint_positions.load()?;
     return_error_if_false!(
         mint_positions.num_positions == 0,

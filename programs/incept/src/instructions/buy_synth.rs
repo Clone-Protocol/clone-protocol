@@ -7,12 +7,12 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, pool_index: u8, iasset_amount: u64, usdi_amount_threshold: u64)]
+#[instruction( pool_index: u8, iasset_amount: u64, usdi_amount_threshold: u64)]
 pub struct BuySynth<'info> {
     pub user: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data
     )]
     pub manager: Box<Account<'info, Manager>>,
@@ -55,12 +55,12 @@ pub struct BuySynth<'info> {
 
 pub fn execute(
     ctx: Context<BuySynth>,
-    manager_nonce: u8,
+
     pool_index: u8,
     amount: u64,
     usdi_spend_threshold: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let pool = token_data.pools[pool_index as usize];
 
