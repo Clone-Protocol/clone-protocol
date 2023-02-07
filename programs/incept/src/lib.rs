@@ -101,6 +101,7 @@ pub mod incept {
         treasury_trading_fee: u16,
         health_score_coefficient: u64,
         liquidation_discount_rate: u64,
+        max_ownership_pct: u64,
     ) -> Result<()> {
         instructions::initialize_pool::execute(
             ctx,
@@ -110,6 +111,7 @@ pub mod incept {
             treasury_trading_fee,
             health_score_coefficient,
             liquidation_discount_rate,
+            max_ownership_pct,
         )
     }
 

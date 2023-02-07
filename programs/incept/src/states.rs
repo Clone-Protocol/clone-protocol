@@ -76,11 +76,11 @@ pub struct LiquidationConfig {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 159,248
+    // 163,328
     pub manager: Pubkey,                         // 32
     pub num_pools: u64,                          // 8
     pub num_collaterals: u64,                    // 8
-    pub pools: [Pool; 255],                      // 255 * 480 = 122,400
+    pub pools: [Pool; 255],                      // 255 * 496 = 126,480
     pub collaterals: [Collateral; 255],          // 255 * 144 = 36,720
     pub chainlink_program: Pubkey,               // 32
     pub il_health_score_coefficient: RawDecimal, // 16
@@ -162,12 +162,13 @@ pub struct AssetInfo {
     pub crypto_collateral_ratio: RawDecimal,   // 16
     pub health_score_coefficient: RawDecimal,  // 16
     pub liquidation_discount_rate: RawDecimal, // 16
+    pub max_ownership_pct: RawDecimal,         // 16
 }
 
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct Pool {
-    // 480
+    // 496
     pub iasset_token_account: Pubkey,                // 32
     pub usdi_token_account: Pubkey,                  // 32
     pub liquidity_token_mint: Pubkey,                // 32
@@ -180,7 +181,7 @@ pub struct Pool {
     pub liquidity_trading_fee: RawDecimal,           // 16
     pub total_minted_amount: RawDecimal,             // 16
     pub supplied_mint_collateral_amount: RawDecimal, // 16
-    pub asset_info: AssetInfo,                       // 208
+    pub asset_info: AssetInfo,                       // 224
 }
 
 #[derive(Default, Debug)]

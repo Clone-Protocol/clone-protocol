@@ -1,5 +1,4 @@
 use crate::error::InceptError;
-////use crate::instructions::InitializePool;
 use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -7,7 +6,7 @@ use anchor_spl::token::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(stable_collateral_ratio: u16, crypto_collateral_ratio: u16, health_score_coefficient: u64)]
+#[instruction(stable_collateral_ratio: u16, crypto_collateral_ratio: u16, health_score_coefficient: u64, max_ownership_pct: u64)]
 pub struct InitializePool<'info> {
     #[account(mut, address = manager.admin)]
     pub admin: Signer<'info>,
@@ -86,6 +85,7 @@ pub fn execute(
     treasury_trading_fee: u16,
     health_score_coefficient: u64,
     liquidation_discount_rate: u64,
+    max_ownership_pct: u64,
 ) -> Result<()> {
     // ensure valid health score coefficient
     return_error_if_false!(
@@ -145,6 +145,9 @@ pub fn execute(
         .asset_info
         .liquidation_discount_rate =
         RawDecimal::new(liquidation_discount_rate.try_into().unwrap(), 4);
+    token_data.pools[index as usize]
+        .asset_info
+        .max_ownership_pct = RawDecimal::from_percent(max_ownership_pct.try_into().unwrap());
 
     Ok(())
 }
