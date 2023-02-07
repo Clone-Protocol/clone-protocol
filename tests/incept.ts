@@ -212,7 +212,8 @@ describe("incept", async () => {
       priceFeed,
       chainlink.priceFeedPubkey(),
       healthScoreCoefficient,
-      500
+      500,
+      10
     );
   });
 
@@ -692,12 +693,14 @@ describe("incept", async () => {
     );
 
     let userAccountData = await inceptClient.getUserAccount();
+    let userAddress = await inceptClient.getUserAddress();
     let assetInfo = tokenData.pools[0].assetInfo;
 
     await inceptProgram.methods
-      .payBackMint(inceptClient.managerAddress[1], new BN(0), new BN(5000000))
+      .payBackMint(new BN(0), new BN(5000000))
       .accounts({
         user: walletPubkey,
+        userAccount: userAddress.userPubkey,
         manager: inceptClient.managerAddress[0],
         tokenData: inceptClient.manager!.tokenData,
         userIassetTokenAccount: iassetTokenAccountInfo.address,
@@ -2603,7 +2606,8 @@ describe("incept", async () => {
       priceFeed2,
       chainlink.priceFeedPubkey(),
       healthScoreCoefficient,
-      500
+      500,
+      10
     );
 
     // Mint position

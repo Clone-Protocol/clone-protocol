@@ -103,10 +103,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "ilHealthScoreCoefficient",
           "type": "u64"
         }
@@ -182,12 +178,7 @@ export type Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "initializeLiquidityPositions",
@@ -223,12 +214,7 @@ export type Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "initializeComet",
@@ -265,10 +251,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
         {
           "name": "isSinglePool",
           "type": "bool"
@@ -320,10 +302,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "scale",
           "type": "u8"
@@ -441,6 +419,10 @@ export type Incept = {
         {
           "name": "liquidationDiscountRate",
           "type": "u64"
+        },
+        {
+          "name": "maxOwnershipPct",
+          "type": "u64"
         }
       ]
     },
@@ -464,10 +446,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndex",
           "type": "u8"
@@ -493,10 +471,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndices",
           "type": {
@@ -551,10 +525,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "amount",
           "type": "u64"
         }
@@ -567,6 +537,11 @@ export type Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -610,10 +585,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndex",
           "type": "u8"
@@ -641,6 +612,11 @@ export type Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -672,10 +648,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "mintIndex",
           "type": "u8"
@@ -695,6 +667,11 @@ export type Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -727,10 +704,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "mintIndex",
           "type": "u8"
         },
@@ -747,6 +720,11 @@ export type Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -780,10 +758,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "mintIndex",
           "type": "u8"
@@ -803,6 +777,11 @@ export type Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -835,10 +814,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "mintIndex",
           "type": "u8"
         },
@@ -855,6 +830,11 @@ export type Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -908,10 +888,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndex",
           "type": "u8"
@@ -931,6 +907,11 @@ export type Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -982,10 +963,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "liquidityPositionIndex",
           "type": "u8"
@@ -1005,6 +982,11 @@ export type Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -1056,10 +1038,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "liquidityPositionIndex",
           "type": "u8"
@@ -1120,10 +1098,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndex",
           "type": "u8"
@@ -1189,10 +1163,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "poolIndex",
           "type": "u8"
         },
@@ -1215,6 +1185,11 @@ export type Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -1231,10 +1206,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndex",
           "type": "u8"
@@ -1271,10 +1242,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
           "name": "cometIndex",
           "type": "u8"
         }
@@ -1287,6 +1254,11 @@ export type Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -1321,10 +1293,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "collateralIndex",
           "type": "u8"
         },
@@ -1341,6 +1309,11 @@ export type Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -1375,10 +1348,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "positionIndex",
           "type": "u8"
         },
@@ -1398,7 +1367,7 @@ export type Incept = {
         },
         {
           "name": "userAccount",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -1433,14 +1402,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
         {
           "name": "positionIndex",
           "type": "u8"
@@ -1461,7 +1422,7 @@ export type Incept = {
         },
         {
           "name": "userAccount",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -1497,14 +1458,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
           "name": "cometCollateralIndex",
           "type": "u8"
         },
@@ -1521,6 +1474,11 @@ export type Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -1574,10 +1532,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndex",
           "type": "u8"
@@ -1654,14 +1608,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "positionIndex",
           "type": "u8"
         },
@@ -1678,6 +1624,11 @@ export type Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -1736,10 +1687,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "cometPositionIndex",
           "type": "u8"
@@ -1825,14 +1772,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "liquidityTokenAmount",
           "type": "u64"
         },
@@ -1908,14 +1847,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "cometPositionIndex",
           "type": "u8"
         },
@@ -1960,10 +1891,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "amount",
           "type": "u64"
@@ -2041,14 +1968,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
           "name": "mintIndex",
           "type": "u8"
         }
@@ -2061,6 +1980,11 @@ export type Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -2109,10 +2033,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "cometPositionIndex",
           "type": "u8"
@@ -2208,10 +2128,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
           "name": "positionIndex",
           "type": "u8"
         }
@@ -2288,10 +2204,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
           "name": "stableSwapInAmount",
           "type": "u64"
         },
@@ -2360,10 +2272,6 @@ export type Incept = {
         }
       ],
       "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
         {
           "name": "cometCollateralIndex",
           "type": "u8"
@@ -2451,10 +2359,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
           "name": "positionIndex",
           "type": "u8"
         }
@@ -2489,12 +2393,7 @@ export type Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "closeSinglePoolCometAccount",
@@ -2525,12 +2424,7 @@ export type Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "closeMintPositionsAccount",
@@ -2561,12 +2455,7 @@ export type Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "closeLiquidityPositionsAccount",
@@ -2597,12 +2486,7 @@ export type Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "closeUserAccount",
@@ -2628,12 +2512,7 @@ export type Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     }
   ],
   "accounts": [
@@ -2759,6 +2638,10 @@ export type Incept = {
           {
             "name": "comet",
             "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
@@ -3005,6 +2888,12 @@ export type Incept = {
           },
           {
             "name": "liquidationDiscountRate",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "maxOwnershipPct",
             "type": {
               "defined": "RawDecimal"
             }
@@ -3639,10 +3528,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "ilHealthScoreCoefficient",
           "type": "u64"
         }
@@ -3718,12 +3603,7 @@ export const IDL: Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "initializeLiquidityPositions",
@@ -3759,12 +3639,7 @@ export const IDL: Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "initializeComet",
@@ -3801,10 +3676,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
         {
           "name": "isSinglePool",
           "type": "bool"
@@ -3856,10 +3727,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "scale",
           "type": "u8"
@@ -3977,6 +3844,10 @@ export const IDL: Incept = {
         {
           "name": "liquidationDiscountRate",
           "type": "u64"
+        },
+        {
+          "name": "maxOwnershipPct",
+          "type": "u64"
         }
       ]
     },
@@ -4000,10 +3871,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndex",
           "type": "u8"
@@ -4029,10 +3896,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndices",
           "type": {
@@ -4087,10 +3950,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "amount",
           "type": "u64"
         }
@@ -4103,6 +3962,11 @@ export const IDL: Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -4146,10 +4010,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndex",
           "type": "u8"
@@ -4177,6 +4037,11 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -4208,10 +4073,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "mintIndex",
           "type": "u8"
@@ -4231,6 +4092,11 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -4263,10 +4129,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "mintIndex",
           "type": "u8"
         },
@@ -4283,6 +4145,11 @@ export const IDL: Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": true,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -4316,10 +4183,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "mintIndex",
           "type": "u8"
@@ -4339,6 +4202,11 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -4371,10 +4239,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "mintIndex",
           "type": "u8"
         },
@@ -4391,6 +4255,11 @@ export const IDL: Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -4444,10 +4313,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndex",
           "type": "u8"
@@ -4467,6 +4332,11 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -4518,10 +4388,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "liquidityPositionIndex",
           "type": "u8"
@@ -4541,6 +4407,11 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -4592,10 +4463,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "liquidityPositionIndex",
           "type": "u8"
@@ -4656,10 +4523,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndex",
           "type": "u8"
@@ -4725,10 +4588,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "poolIndex",
           "type": "u8"
         },
@@ -4751,6 +4610,11 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "manager",
           "isMut": false,
           "isSigner": false
@@ -4767,10 +4631,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndex",
           "type": "u8"
@@ -4807,10 +4667,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
           "name": "cometIndex",
           "type": "u8"
         }
@@ -4823,6 +4679,11 @@ export const IDL: Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -4857,10 +4718,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "collateralIndex",
           "type": "u8"
         },
@@ -4877,6 +4734,11 @@ export const IDL: Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -4911,10 +4773,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "positionIndex",
           "type": "u8"
         },
@@ -4934,7 +4792,7 @@ export const IDL: Incept = {
         },
         {
           "name": "userAccount",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -4969,14 +4827,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
         {
           "name": "positionIndex",
           "type": "u8"
@@ -4997,7 +4847,7 @@ export const IDL: Incept = {
         },
         {
           "name": "userAccount",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -5033,14 +4883,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
           "name": "cometCollateralIndex",
           "type": "u8"
         },
@@ -5057,6 +4899,11 @@ export const IDL: Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -5110,10 +4957,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "poolIndex",
           "type": "u8"
@@ -5190,14 +5033,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "positionIndex",
           "type": "u8"
         },
@@ -5214,6 +5049,11 @@ export const IDL: Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -5272,10 +5112,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "cometPositionIndex",
           "type": "u8"
@@ -5361,14 +5197,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "liquidityTokenAmount",
           "type": "u64"
         },
@@ -5444,14 +5272,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
           "name": "cometPositionIndex",
           "type": "u8"
         },
@@ -5496,10 +5316,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "amount",
           "type": "u64"
@@ -5577,14 +5393,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "managerNonce",
-          "type": "u8"
-        },
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
           "name": "mintIndex",
           "type": "u8"
         }
@@ -5597,6 +5405,11 @@ export const IDL: Incept = {
           "name": "user",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "manager",
@@ -5645,10 +5458,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "managerNonce",
-          "type": "u8"
-        },
         {
           "name": "cometPositionIndex",
           "type": "u8"
@@ -5744,10 +5553,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
           "name": "positionIndex",
           "type": "u8"
         }
@@ -5824,10 +5629,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
           "name": "stableSwapInAmount",
           "type": "u64"
         },
@@ -5896,10 +5697,6 @@ export const IDL: Incept = {
         }
       ],
       "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        },
         {
           "name": "cometCollateralIndex",
           "type": "u8"
@@ -5987,10 +5784,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "userNonce",
-          "type": "u8"
-        },
-        {
           "name": "positionIndex",
           "type": "u8"
         }
@@ -6025,12 +5818,7 @@ export const IDL: Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "closeSinglePoolCometAccount",
@@ -6061,12 +5849,7 @@ export const IDL: Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "closeMintPositionsAccount",
@@ -6097,12 +5880,7 @@ export const IDL: Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "closeLiquidityPositionsAccount",
@@ -6133,12 +5911,7 @@ export const IDL: Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "closeUserAccount",
@@ -6164,12 +5937,7 @@ export const IDL: Incept = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "userNonce",
-          "type": "u8"
-        }
-      ]
+      "args": []
     }
   ],
   "accounts": [
@@ -6295,6 +6063,10 @@ export const IDL: Incept = {
           {
             "name": "comet",
             "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
@@ -6541,6 +6313,12 @@ export const IDL: Incept = {
           },
           {
             "name": "liquidationDiscountRate",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "maxOwnershipPct",
             "type": {
               "defined": "RawDecimal"
             }

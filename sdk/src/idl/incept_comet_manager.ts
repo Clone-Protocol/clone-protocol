@@ -890,6 +890,11 @@ export type InceptCometManager = {
       "code": 6006,
       "name": "TooEarlyToPerformTermination",
       "msg": "Too early to perform final termination"
+    },
+    {
+      "code": 6007,
+      "name": "HealthScoreBelowThreshold",
+      "msg": "Health score below threshold"
     }
   ]
 };
@@ -1786,6 +1791,11 @@ export const IDL: InceptCometManager = {
       "code": 6006,
       "name": "TooEarlyToPerformTermination",
       "msg": "Too early to perform final termination"
+    },
+    {
+      "code": 6007,
+      "name": "HealthScoreBelowThreshold",
+      "msg": "Health score below threshold"
     }
   ]
 };
