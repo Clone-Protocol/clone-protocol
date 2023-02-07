@@ -16,13 +16,13 @@ pub struct InitializeMintPosition<'info> {
         seeds = [b"user".as_ref(), user.key.as_ref()],
         bump = user_account.bump,
     )]
-    pub user_account: Account<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         seeds = [b"manager".as_ref()],
         bump = manager.bump,
         has_one = token_data,
     )]
-    pub manager: Account<'info, Manager>,
+    pub manager: Box<Account<'info, Manager>>,
     #[account(
         mut,
         has_one = manager
@@ -37,14 +37,14 @@ pub struct InitializeMintPosition<'info> {
         mut,
         address = token_data.load()?.collaterals[collateral_index as usize].vault
     )]
-    pub vault: Account<'info, TokenAccount>,
+    pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         constraint = user_collateral_token_account.amount >= collateral_amount @ InceptError::InvalidTokenAccountBalance,
         associated_token::mint = vault.mint,
         associated_token::authority = user
     )]
-    pub user_collateral_token_account: Account<'info, TokenAccount>,
+    pub user_collateral_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         address = token_data.load()?.pools[pool_index as usize].asset_info.iasset_mint,
@@ -55,7 +55,7 @@ pub struct InitializeMintPosition<'info> {
         associated_token::mint = iasset_mint,
         associated_token::authority = user
     )]
-    pub user_iasset_token_account: Account<'info, TokenAccount>,
+    pub user_iasset_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 
