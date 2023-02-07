@@ -83,6 +83,7 @@ pub fn execute(
             ctx.accounts.incept_program.to_account_info(),
             PayImpermanentLossDebt {
                 user: ctx.accounts.manager_info.to_account_info(),
+                user_account: ctx.accounts.manager_incept_user.to_account_info(),
                 manager: ctx.accounts.incept_manager.to_account_info(),
                 token_data: ctx.accounts.token_data.to_account_info(),
                 token_program: ctx.accounts.token_program.to_account_info(),
@@ -95,7 +96,6 @@ pub fn execute(
             },
             manager_seeds,
         ),
-        ctx.accounts.incept_manager.bump,
         comet_position_index,
         0,
         collateral_amount,

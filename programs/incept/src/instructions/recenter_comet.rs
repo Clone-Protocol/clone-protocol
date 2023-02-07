@@ -10,17 +10,18 @@ use std::cmp::Ordering;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8, manager_nonce: u8, comet_position_index: u8, comet_collateral_index: u8)]
+#[instruction(comet_position_index: u8, comet_collateral_index: u8)]
 pub struct RecenterComet<'info> {
+    #[account(address = comet.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce
+        bump = user_account.bump
     )]
     pub user_account: Account<'info, User>,
     #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data,
     )]
     pub manager: Box<Account<'info, Manager>>,
@@ -41,7 +42,7 @@ pub struct RecenterComet<'info> {
     pub iasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        constraint = &comet.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
+        constraint = comet.to_account_info().key() == user_account.comet || comet.to_account_info().key() == user_account.single_pool_comets @ InceptError::InvalidAccountLoaderOwner,
         constraint = (comet_position_index as u64) < comet.load()?.num_positions @ InceptError::InvalidInputPositionIndex
     )]
     pub comet: AccountLoader<'info, Comet>,
@@ -175,12 +176,10 @@ pub fn recenter_calculation(
 
 pub fn execute(
     ctx: Context<RecenterComet>,
-    _user_nonce: u8,
-    manager_nonce: u8,
     comet_position_index: u8,
     comet_collateral_index: u8,
 ) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
     let comet_position = comet.positions[comet_position_index as usize];

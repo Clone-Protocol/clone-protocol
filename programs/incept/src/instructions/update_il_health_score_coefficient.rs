@@ -5,13 +5,13 @@ use anchor_lang::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, il_health_score_coefficient: u64)]
+#[instruction( il_health_score_coefficient: u64)]
 pub struct UpdateILHealthScoreCoefficient<'info> {
     #[account(address = manager.admin)]
     pub admin: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data
     )]
     pub manager: Account<'info, Manager>,
@@ -24,7 +24,7 @@ pub struct UpdateILHealthScoreCoefficient<'info> {
 
 pub fn execute(
     ctx: Context<UpdateILHealthScoreCoefficient>,
-    _manager_nonce: u8,
+
     _il_health_score_coefficient: u64,
 ) -> Result<()> {
     // ensure that a valid coefficient was entered

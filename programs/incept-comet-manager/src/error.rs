@@ -16,4 +16,6 @@ pub enum InceptCometManagerError {
     InvalidMembershipTokenBalance,
     #[msg("Too early to perform final termination")]
     TooEarlyToPerformTermination,
+    #[msg("Health score below threshold")]
+    HealthScoreBelowThreshold,
 }

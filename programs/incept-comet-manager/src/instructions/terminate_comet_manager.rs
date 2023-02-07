@@ -112,8 +112,6 @@ pub fn execute(ctx: Context<TerminateCometManager>) -> Result<()> {
                 },
                 manager_seeds,
             ),
-            ctx.accounts.incept_manager.bump,
-            manager_info.user_bump,
             0,
             collateral_amount_left.mantissa().try_into().unwrap(),
         )?;
@@ -144,34 +142,28 @@ pub fn execute(ctx: Context<TerminateCometManager>) -> Result<()> {
     }
 
     // Close out accounts.
-    incept::cpi::close_comet_account(
-        CpiContext::new_with_signer(
-            ctx.accounts.incept_program.to_account_info(),
-            CloseCometAccount {
-                user: ctx.accounts.manager_info.to_account_info(),
-                user_account: ctx.accounts.manager_incept_user.to_account_info(),
-                comet: ctx.accounts.comet.to_account_info(),
-                system_program: ctx.accounts.system_program.to_account_info(),
-                destination: ctx.accounts.manager_owner.to_account_info(),
-            },
-            manager_seeds,
-        ),
-        manager_info.user_bump,
-    )?;
+    incept::cpi::close_comet_account(CpiContext::new_with_signer(
+        ctx.accounts.incept_program.to_account_info(),
+        CloseCometAccount {
+            user: ctx.accounts.manager_info.to_account_info(),
+            user_account: ctx.accounts.manager_incept_user.to_account_info(),
+            comet: ctx.accounts.comet.to_account_info(),
+            system_program: ctx.accounts.system_program.to_account_info(),
+            destination: ctx.accounts.manager_owner.to_account_info(),
+        },
+        manager_seeds,
+    ))?;
 
-    incept::cpi::close_user_account(
-        CpiContext::new_with_signer(
-            ctx.accounts.incept_program.to_account_info(),
-            CloseUserAccount {
-                user: ctx.accounts.manager_info.to_account_info(),
-                user_account: ctx.accounts.manager_incept_user.to_account_info(),
-                system_program: ctx.accounts.system_program.to_account_info(),
-                destination: ctx.accounts.manager_owner.to_account_info(),
-            },
-            manager_seeds,
-        ),
-        manager_info.user_bump,
-    )?;
+    incept::cpi::close_user_account(CpiContext::new_with_signer(
+        ctx.accounts.incept_program.to_account_info(),
+        CloseUserAccount {
+            user: ctx.accounts.manager_info.to_account_info(),
+            user_account: ctx.accounts.manager_incept_user.to_account_info(),
+            system_program: ctx.accounts.system_program.to_account_info(),
+            destination: ctx.accounts.manager_owner.to_account_info(),
+        },
+        manager_seeds,
+    ))?;
 
     ctx.accounts
         .manager_info

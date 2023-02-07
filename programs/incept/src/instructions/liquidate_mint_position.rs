@@ -7,12 +7,12 @@ use anchor_spl::token::{self, *};
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, user_nonce: u8, mint_index: u8)]
+#[instruction(mint_index: u8)]
 pub struct LiquidateMintPosition<'info> {
     pub liquidator: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data
     )]
     pub manager: Box<Account<'info, Manager>>,
@@ -28,7 +28,7 @@ pub struct LiquidateMintPosition<'info> {
     pub user: AccountInfo<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
+        bump = user_account.bump,
         has_one = mint_positions
     )]
     pub user_account: Box<Account<'info, User>>,
@@ -74,13 +74,8 @@ pub struct LiquidateMintPosition<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(
-    ctx: Context<LiquidateMintPosition>,
-    manager_nonce: u8,
-    _user_nonce: u8,
-    mint_index: u8,
-) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+pub fn execute(ctx: Context<LiquidateMintPosition>, mint_index: u8) -> Result<()> {
+    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
 
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut mint_positions = ctx.accounts.mint_positions.load_mut()?;

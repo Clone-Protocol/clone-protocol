@@ -8,12 +8,19 @@ use std::convert::TryInto;
 //use crate::instructions::PayBackiAssetToMint;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, mint_index: u8, amount: u64)]
+#[instruction( mint_index: u8, amount: u64)]
 pub struct PayBackiAssetToMint<'info> {
+    #[account(address = mint_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
+        mut,
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_account.bump,
+    )]
+    pub user_account: Account<'info, User>,
+    #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data,
     )]
     pub manager: Account<'info, Manager>,
@@ -31,7 +38,7 @@ pub struct PayBackiAssetToMint<'info> {
     pub user_iasset_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
-        constraint = &mint_positions.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
+        address = user_account.mint_positions,
         constraint = (mint_index as u64) < mint_positions.load()?.num_positions @ InceptError::InvalidInputPositionIndex,
     )]
     pub mint_positions: AccountLoader<'info, MintPositions>,
@@ -56,12 +63,7 @@ impl<'a, 'b, 'c, 'info> From<&PayBackiAssetToMint<'info>>
     }
 }
 
-pub fn execute(
-    ctx: Context<PayBackiAssetToMint>,
-    _manager_nonce: u8,
-    mint_index: u8,
-    amount: u64,
-) -> Result<()> {
+pub fn execute(ctx: Context<PayBackiAssetToMint>, mint_index: u8, amount: u64) -> Result<()> {
     let mut amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;

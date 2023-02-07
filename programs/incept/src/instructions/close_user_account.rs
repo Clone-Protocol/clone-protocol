@@ -3,13 +3,13 @@ use anchor_lang::prelude::*;
 use anchor_lang::AccountsClose;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8)]
 pub struct CloseUserAccount<'info> {
+    #[account(address = user_account.authority)]
     pub user: Signer<'info>,
     #[account(
         mut,
         seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
+        bump = user_account.bump,
     )]
     pub user_account: Account<'info, User>,
     /// CHECK: Should be a system owned address.
@@ -18,7 +18,7 @@ pub struct CloseUserAccount<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<CloseUserAccount>, _user_nonce: u8) -> Result<()> {
+pub fn execute(ctx: Context<CloseUserAccount>) -> Result<()> {
     // remove single pool comet
     let user_account = ctx.accounts.user_account.clone();
     assert!(

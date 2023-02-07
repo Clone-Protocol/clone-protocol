@@ -8,12 +8,18 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, pool_index: u8, usdi_amount: u64)]
+#[instruction( pool_index: u8, usdi_amount: u64)]
 pub struct AddLiquidityToComet<'info> {
+    #[account(address = comet.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_account.bump,
+    )]
+    pub user_account: Account<'info, User>,
+    #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data,
     )]
     pub manager: Account<'info, Manager>,
@@ -24,7 +30,8 @@ pub struct AddLiquidityToComet<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        constraint = &comet.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
+        address = user_account.comet,
+        constraint = comet.load()?.is_single_pool == 0 @ InceptError::WrongCometType,
     )]
     pub comet: AccountLoader<'info, Comet>,
     #[account(
@@ -60,13 +67,8 @@ pub struct AddLiquidityToComet<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(
-    ctx: Context<AddLiquidityToComet>,
-    manager_nonce: u8,
-    pool_index: u8,
-    usdi_amount: u64,
-) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, usdi_amount: u64) -> Result<()> {
+    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
 

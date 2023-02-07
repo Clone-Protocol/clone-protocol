@@ -8,7 +8,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8, comet_collateral_index: u8)]
+#[instruction(comet_collateral_index: u8)]
 pub struct SwapStableCollateralIntoUsdi<'info> {
     pub liquidator: Signer<'info>,
     #[account(
@@ -28,12 +28,13 @@ pub struct SwapStableCollateralIntoUsdi<'info> {
     pub user: AccountInfo<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
+        bump = user_account.bump,
         has_one = comet,
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
+        address = user_account.comet,
         constraint = comet.load()?.is_single_pool == 0,
         constraint = comet.load()?.owner == user_account.authority @ InceptError::InvalidAccountLoaderOwner,
         constraint = comet.load()?.num_collaterals > comet_collateral_index.into() @ InceptError::InvalidInputPositionIndex
@@ -59,11 +60,9 @@ pub struct SwapStableCollateralIntoUsdi<'info> {
 
 pub fn execute(
     ctx: Context<SwapStableCollateralIntoUsdi>,
-    _user_nonce: u8,
     comet_collateral_index: u8,
 ) -> Result<()> {
-    let manager_nonce = ctx.accounts.manager.bump;
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;

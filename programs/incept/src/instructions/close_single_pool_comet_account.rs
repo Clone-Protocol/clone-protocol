@@ -5,18 +5,17 @@ use anchor_lang::prelude::*;
 use anchor_lang::AccountsClose;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8)]
 pub struct CloseSinglePoolCometAccount<'info> {
+    #[account(address = single_pool_comet.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
         mut,
         seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
+        bump = user_account.bump,
     )]
     pub user_account: Account<'info, User>,
     #[account(
         mut,
-        constraint = single_pool_comet.load()?.owner == *user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
         constraint = single_pool_comet.load()?.is_single_pool == 1 @ InceptError::WrongCometType,
         address = user_account.single_pool_comets
     )]
@@ -27,7 +26,7 @@ pub struct CloseSinglePoolCometAccount<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<CloseSinglePoolCometAccount>, _user_nonce: u8) -> Result<()> {
+pub fn execute(ctx: Context<CloseSinglePoolCometAccount>) -> Result<()> {
     let single_pool_comet = ctx.accounts.single_pool_comet.load()?;
     return_error_if_false!(
         single_pool_comet.num_positions == 0 && single_pool_comet.num_collaterals == 0,

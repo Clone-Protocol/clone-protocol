@@ -7,12 +7,18 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, collateral_index: u8, collateral_amount: u64)]
+#[instruction(collateral_index: u8, collateral_amount: u64)]
 pub struct AddCollateralToComet<'info> {
+    #[account(address = comet.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_account.bump,
+    )]
+    pub user_account: Account<'info, User>,
+    #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data,
     )]
     pub manager: Account<'info, Manager>,
@@ -24,6 +30,8 @@ pub struct AddCollateralToComet<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
+        address = user_account.comet,
+        constraint = comet.load()?.is_single_pool == 0 @ InceptError::WrongCometType,
         constraint = &comet.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner,
     )]
     pub comet: AccountLoader<'info, Comet>,
@@ -63,7 +71,6 @@ impl<'a, 'b, 'c, 'info> From<&AddCollateralToComet<'info>>
 
 pub fn execute(
     ctx: Context<AddCollateralToComet>,
-    _manager_nonce: u8,
     collateral_index: u8,
     collateral_amount: u64,
 ) -> Result<()> {

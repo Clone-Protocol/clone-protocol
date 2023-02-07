@@ -134,12 +134,12 @@ pub fn execute(ctx: Context<Subscribe>, collateral_to_provide: u64) -> Result<()
     drop(token_data);
     drop(comet);
     // Add collateral to comet
-    let incept_manager_bump = ctx.accounts.incept_manager.bump;
     incept::cpi::add_collateral_to_comet(
         CpiContext::new_with_signer(
             ctx.accounts.incept_program.to_account_info(),
             AddCollateralToComet {
                 user: ctx.accounts.manager_info.to_account_info(),
+                user_account: ctx.accounts.manager_incept_user.to_account_info(),
                 manager: ctx.accounts.incept_manager.to_account_info(),
                 token_data: ctx.accounts.token_data.to_account_info(),
                 token_program: ctx.accounts.token_program.to_account_info(),
@@ -152,7 +152,6 @@ pub fn execute(ctx: Context<Subscribe>, collateral_to_provide: u64) -> Result<()
             },
             manager_seeds,
         ),
-        incept_manager_bump,
         USDI_COLLATERAL_INDEX.try_into().unwrap(),
         collateral_to_provide,
     )?;

@@ -15,11 +15,11 @@ pub struct PoolIndices {
 }
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, pool_indices: PoolIndices)]
+#[instruction( pool_indices: PoolIndices)]
 pub struct UpdatePrices<'info> {
     #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data
     )]
     pub manager: Account<'info, Manager>,
@@ -32,7 +32,7 @@ pub struct UpdatePrices<'info> {
 
 pub fn execute<'info>(
     ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
-    _manager_nonce: u8,
+
     pool_indices: PoolIndices,
 ) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;

@@ -8,12 +8,18 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, pool_index: u8, collateral_index: u8, iasset_amount: u64, collateral_amount: u64)]
+#[instruction( pool_index: u8, collateral_index: u8, iasset_amount: u64, collateral_amount: u64)]
 pub struct InitializeMintPosition<'info> {
+    #[account(address = mint_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
+        seeds = [b"user".as_ref(), user.key.as_ref()],
+        bump = user_account.bump,
+    )]
+    pub user_account: Account<'info, User>,
+    #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = token_data,
     )]
     pub manager: Account<'info, Manager>,
@@ -24,7 +30,7 @@ pub struct InitializeMintPosition<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        constraint = &mint_positions.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner
+        address = user_account.mint_positions,
     )]
     pub mint_positions: AccountLoader<'info, MintPositions>,
     #[account(
@@ -55,13 +61,13 @@ pub struct InitializeMintPosition<'info> {
 
 pub fn execute(
     ctx: Context<InitializeMintPosition>,
-    manager_nonce: u8,
+
     pool_index: u8,
     _collateral_index: u8,
     iasset_amount: u64,
     collateral_amount: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let pool = token_data.pools[pool_index as usize];

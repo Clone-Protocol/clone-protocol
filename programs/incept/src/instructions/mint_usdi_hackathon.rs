@@ -3,12 +3,12 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 
 #[derive(Accounts)]
-#[instruction(manager_nonce: u8, amount: u64)]
+#[instruction( amount: u64)]
 pub struct MintUSDIHackathon<'info> {
     pub user: Signer<'info>,
     #[account(
         seeds = [b"manager".as_ref()],
-        bump = manager_nonce,
+        bump = manager.bump,
         has_one = usdi_mint,
         has_one = token_data
     )]
@@ -32,9 +32,9 @@ pub struct MintUSDIHackathon<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(ctx: Context<MintUSDIHackathon>, manager_nonce: u8, amount: u64) -> Result<()> {
+pub fn execute(ctx: Context<MintUSDIHackathon>, amount: u64) -> Result<()> {
     //This instruction is for hackathon use ONLY!!!!
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
 
     // mint usdi to user
     let cpi_accounts = MintTo {

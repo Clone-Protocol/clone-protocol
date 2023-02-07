@@ -98,8 +98,6 @@ pub fn execute(ctx: Context<Recenter>, comet_position_index: u8) -> Result<()> {
             },
             manager_seeds,
         ),
-        ctx.accounts.manager_info.user_bump,
-        ctx.accounts.incept_manager.bump,
         comet_position_index,
         0,
     )

@@ -8,7 +8,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(user_nonce: u8, amount: u64, comet_nonstable_collateral_index: u8, comet_stable_collateral_index: u8,)]
+#[instruction(amount: u64, comet_nonstable_collateral_index: u8, comet_stable_collateral_index: u8,)]
 pub struct SwapCometNonStableCollateral<'info> {
     pub liquidator: Signer<'info>,
     #[account(
@@ -29,14 +29,14 @@ pub struct SwapCometNonStableCollateral<'info> {
     pub user: AccountInfo<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_nonce,
+        bump = user_account.bump,
         has_one = comet,
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
+        address = user_account.comet,
         constraint = comet.load()?.is_single_pool == 0,
-        constraint = comet.load()?.owner == user_account.authority @ InceptError::InvalidAccountLoaderOwner,
         constraint = comet.load()?.num_collaterals > comet_stable_collateral_index.into() @ InceptError::InvalidInputPositionIndex,
         constraint = comet.load()?.num_collaterals > comet_nonstable_collateral_index.into() @ InceptError::InvalidInputPositionIndex
     )]
@@ -81,17 +81,15 @@ pub struct SwapCometNonStableCollateral<'info> {
 
 pub fn execute(
     ctx: Context<SwapCometNonStableCollateral>,
-    user_nonce: u8,
     amount: u64,
     comet_nonstable_collateral_index: u8,
     comet_stable_collateral_index: u8,
 ) -> Result<()> {
-    let manager_nonce = ctx.accounts.manager.bump;
-    let manager_seeds = &[&[b"manager", bytemuck::bytes_of(&manager_nonce)][..]];
+    let manager_seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
     let user_seeds = &[&[
         b"user",
         ctx.accounts.user.key.as_ref(),
-        bytemuck::bytes_of(&user_nonce),
+        bytemuck::bytes_of(&ctx.accounts.user_account.bump),
     ][..]];
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
