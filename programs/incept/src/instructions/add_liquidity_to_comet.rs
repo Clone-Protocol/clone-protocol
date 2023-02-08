@@ -8,7 +8,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction( pool_index: u8, usdi_amount: u64)]
+#[instruction(pool_index: u8, usdi_amount: u64)]
 pub struct AddLiquidityToComet<'info> {
     #[account(address = comet.load()?.owner)]
     pub user: Signer<'info>,
@@ -71,6 +71,7 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, usdi_amount: u
     let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
+    let empty_pool = token_data.pools[pool_index as usize].is_empty();
 
     let usdi_liquidity_value = Decimal::new(usdi_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
     let iasset_amm_value = Decimal::new(
@@ -238,6 +239,15 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, usdi_amount: u
         DEVNET_TOKEN_SCALE,
     );
 
+    let pool = token_data.pools[pool_index as usize];
+
+    if !empty_pool {
+        return_error_if_false!(
+            liquidity_token_value / pool.liquidity_token_supply.to_decimal()
+                <= pool.asset_info.max_ownership_pct.to_decimal(),
+            InceptError::MaxPoolOwnershipExceeded
+        );
+    }
     // Require a healthy score after transactions
     let health_score = calculate_health_score(&comet, token_data, None)?;
 

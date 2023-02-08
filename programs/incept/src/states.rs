@@ -253,6 +253,10 @@ impl Pool {
             treasury_fees_paid,
         }
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.iasset_amount.to_decimal().is_zero() && self.usdi_amount.to_decimal().is_zero()
+    }
 }
 
 #[zero_copy]
