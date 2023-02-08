@@ -112,8 +112,8 @@ fn calculate_liquidation_result(
 
     // Apply recentering
     let recenter_result = recenter_calculation(
-        &comet,
-        &token_data,
+        comet,
+        token_data,
         comet_position_index,
         collateral_position_index,
     )?;
@@ -140,7 +140,7 @@ fn calculate_liquidation_result(
         (recenter_result.user_borrowed_usdi - claimable_usdi_after_recenter).max(Decimal::ZERO);
 
     if recenter_result.user_borrowed_iasset > claimable_iasset_after_recenter {
-        let mut pool_after_recenter = pool.clone();
+        let mut pool_after_recenter = pool;
         pool_after_recenter.iasset_amount = RawDecimal::from(iasset_pool_after_recenter);
         pool_after_recenter.usdi_amount = RawDecimal::from(usdi_pool_after_recenter);
 
@@ -297,7 +297,7 @@ pub fn execute(
 
     // Adjust comet position values
     let mut liquidity_token_value = comet_position.liquidity_token_value.to_decimal()
-        - &liquidation_result.lp_tokens_to_withdraw;
+        - liquidation_result.lp_tokens_to_withdraw;
     if liquidity_token_value.is_zero() && is_multi_pool_comet {
         // NOTE: In theory should never be possible to fully liquidate a single pool comet.
         comet.remove_position(position_index);
