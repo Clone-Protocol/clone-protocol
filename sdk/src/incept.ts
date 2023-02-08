@@ -1,6 +1,10 @@
 import * as anchor from "@project-serum/anchor";
 import { BN, Program, Provider } from "@project-serum/anchor";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  getAssociatedTokenAddress,
+  getOrCreateAssociatedTokenAccount,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import { Incept as InceptProgram, IDL } from "./idl/incept";
 import {
   PublicKey,
@@ -286,15 +290,24 @@ export class Incept {
   }
 
   public async getLiquidityPositions() {
-    const userAccountData = (await this.getUserAccount()) as User;
-    if (
-      userAccountData.liquidityPositions.equals(anchor.web3.PublicKey.default)
-    ) {
-      throw new LiquidityPositionsUninitialized();
-    }
-    return (await this.program.account.liquidityPositions.fetch(
-      userAccountData.liquidityPositions
-    )) as LiquidityPositions;
+    const tokenData = await this.getTokenData();
+
+    let balancesQueries = await Promise.allSettled(
+      tokenData.pools.map(async (pool) => {
+        let ata = await getAssociatedTokenAddress(
+          pool.assetInfo.iassetMint,
+          this.provider.publicKey!
+        );
+        let balance = await this.provider.connection.getTokenAccountBalance(
+          ata
+        );
+        return balance.value.uiAmount;
+      })
+    );
+
+    return balancesQueries.map((result) =>
+      result.status === "rejected" ? 0 : result.value
+    );
   }
 
   public async getMintPositions() {
@@ -694,107 +707,12 @@ export class Incept {
     );
   }
 
-  public async initializeLiquidityPosition(
-    iassetAmount: BN,
-    userUsdiTokenAccount: PublicKey,
-    userIassetTokenAccount: PublicKey,
-    userLiquidityTokenAccount: PublicKey,
-    poolIndex: number,
-    signers?: Array<Keypair>
-  ) {
-    let userAccount = await this.getUserAccount();
-    let newSigners = signers === undefined ? [] : signers;
-    let tx = new Transaction();
-    let liquidityPositionAddress = userAccount.liquidityPositions;
-    if (liquidityPositionAddress.equals(PublicKey.default)) {
-      const liquidityPositionsAccount = anchor.web3.Keypair.generate();
-      liquidityPositionAddress = liquidityPositionsAccount.publicKey;
-      tx.add(
-        await this.program.account.liquidityPositions.createInstruction(
-          liquidityPositionsAccount
-        )
-      );
-      tx.add(
-        await this.initializeLiquidityPositionsInstruction(
-          liquidityPositionsAccount
-        )
-      );
-      newSigners.push(liquidityPositionsAccount);
-    }
-
-    tx.add(
-      await this.initializeLiquidityPositionInstruction(
-        userUsdiTokenAccount,
-        userIassetTokenAccount,
-        userLiquidityTokenAccount,
-        iassetAmount,
-        poolIndex,
-        liquidityPositionAddress
-      )
-    );
-    await this.provider.sendAndConfirm!(
-      tx,
-      newSigners
-      //signers
-    );
-  }
-  public async initializeLiquidityPositionInstruction(
-    userUsdiTokenAccount: PublicKey,
-    userIassetTokenAccount: PublicKey,
-    userLiquidityTokenAccount: PublicKey,
-    iassetAmount: BN,
-    poolIndex: number,
-    liquidityPositionsAddress?: PublicKey
-  ) {
-    let tokenData = await this.getTokenData();
-    let userAccount = await this.getUserAccount();
-    let pool = await tokenData.pools[poolIndex];
-    let userAddress = await this.getUserAddress();
-
-    return await this.program.methods
-      .initializeLiquidityPosition(poolIndex, iassetAmount)
-      .accounts({
-        user: this.provider.publicKey!,
-        userAccount: userAddress.userPubkey,
-        manager: this.managerAddress[0],
-        tokenData: this.manager!.tokenData,
-        liquidityPositions:
-          liquidityPositionsAddress !== undefined
-            ? liquidityPositionsAddress
-            : userAccount.liquidityPositions,
-        userUsdiTokenAccount: userUsdiTokenAccount,
-        userIassetTokenAccount: userIassetTokenAccount,
-        userLiquidityTokenAccount: userLiquidityTokenAccount,
-        ammUsdiTokenAccount: pool.usdiTokenAccount,
-        ammIassetTokenAccount: pool.iassetTokenAccount,
-        liquidityTokenMint: pool.liquidityTokenMint,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
-  }
-
-  public async initializeLiquidityPositionsInstruction(
-    liquidityPositionsAccount: Keypair
-  ) {
-    let { userPubkey, bump } = await this.getUserAddress();
-    return await this.program.instruction.initializeLiquidityPositions({
-      accounts: {
-        user: this.provider.publicKey!,
-        userAccount: userPubkey,
-        liquidityPositions: liquidityPositionsAccount.publicKey,
-        rent: RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SYSTEM_PROGRAM_ID,
-      },
-    });
-  }
-
   public async provideLiquidity(
     iassetAmount: BN,
     userUsdiTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     userLiquidityTokenAccount: PublicKey,
-    liquidityPosition: number,
+    poolIndex: number,
     signers?: Array<Keypair>
   ) {
     const provideLiquidityIx = await this.provideLiquidityInstruction(
@@ -802,10 +720,12 @@ export class Incept {
       userIassetTokenAccount,
       userLiquidityTokenAccount,
       iassetAmount,
-      liquidityPosition
+      poolIndex
     );
     await this.provider.sendAndConfirm!(
-      new Transaction().add(provideLiquidityIx),
+      new Transaction()
+        .add(await this.updatePricesInstruction())
+        .add(provideLiquidityIx),
       signers
     );
   }
@@ -814,23 +734,19 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     userLiquidityTokenAccount: PublicKey,
     iassetAmount: BN,
-    liquidityPosition: number
+    poolIndex: number
   ) {
     let tokenData = await this.getTokenData();
-    let userAccount = await this.getUserAccount();
-    let userLiquidityPosition = (await this.getLiquidityPositions())
-      .liquidityPositions[liquidityPosition];
-    let pool = tokenData.pools[userLiquidityPosition.poolIndex];
+    let pool = tokenData.pools[poolIndex];
     let userAddress = await this.getUserAddress();
 
     return await this.program.methods
-      .provideLiquidity(userLiquidityPosition.poolIndex, iassetAmount)
+      .provideLiquidity(poolIndex, iassetAmount)
       .accounts({
         user: this.provider.publicKey!,
         userAccount: userAddress.userPubkey,
         manager: this.managerAddress[0],
         tokenData: this.manager!.tokenData,
-        liquidityPositions: userAccount.liquidityPositions,
         userUsdiTokenAccount: userUsdiTokenAccount,
         userIassetTokenAccount: userIassetTokenAccount,
         userLiquidityTokenAccount: userLiquidityTokenAccount,
@@ -867,24 +783,20 @@ export class Incept {
     userIassetTokenAccount: PublicKey,
     userLiquidityTokenAccount: PublicKey,
     liquidityTokenAmount: BN,
-    liquidityPositionIndex: number
+    poolIndex: number
   ) {
     let tokenData = await this.getTokenData();
-    let userAccount = await this.getUserAccount();
-    let liquidityPosition = (await this.getLiquidityPositions())
-      .liquidityPositions[liquidityPositionIndex];
     let userAddress = await this.getUserAddress();
 
-    let pool = tokenData.pools[liquidityPosition.poolIndex];
+    let pool = tokenData.pools[poolIndex];
 
     return await this.program.methods
-      .withdrawLiquidity(liquidityPositionIndex, liquidityTokenAmount)
+      .withdrawLiquidity(poolIndex, liquidityTokenAmount)
       .accounts({
         user: this.provider.publicKey!,
         userAccount: userAddress.userPubkey,
         manager: this.managerAddress[0],
         tokenData: this.manager!.tokenData,
-        liquidityPositions: userAccount.liquidityPositions,
         userUsdiTokenAccount: userUsdiTokenAccount,
         userIassetTokenAccount: userIassetTokenAccount,
         userLiquidityTokenAccount: userLiquidityTokenAccount,
