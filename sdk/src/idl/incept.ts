@@ -2361,6 +2361,36 @@ export type Incept = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "removePool",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "incept",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "forceRemoval",
+          "type": "bool"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -3219,6 +3249,11 @@ export type Incept = {
       "code": 6051,
       "name": "MaxPoolOwnershipExceeded",
       "msg": "Pool ownership exceeding max limit"
+    },
+    {
+      "code": 6052,
+      "name": "FailedToLoadPyth",
+      "msg": "Failed to Load Pyth Price Feed"
     }
   ]
 };
@@ -5586,6 +5621,36 @@ export const IDL: Incept = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "removePool",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "incept",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "forceRemoval",
+          "type": "bool"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -6444,6 +6509,11 @@ export const IDL: Incept = {
       "code": 6051,
       "name": "MaxPoolOwnershipExceeded",
       "msg": "Pool ownership exceeding max limit"
+    },
+    {
+      "code": 6052,
+      "name": "FailedToLoadPyth",
+      "msg": "Failed to Load Pyth Price Feed"
     }
   ]
 };

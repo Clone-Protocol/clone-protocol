@@ -327,7 +327,7 @@ impl Comet {
         let mut index: usize = usize::MAX;
         for i in 0..self.num_collaterals {
             let temp_collateral = self.collaterals[i as usize];
-            if temp_collateral.collateral_index == collateral_index.into() {
+            if temp_collateral.collateral_index == collateral_index as u64 {
                 index = i as usize;
                 break;
             }
@@ -338,7 +338,7 @@ impl Comet {
         let mut index: usize = usize::MAX;
         for i in 0..self.num_positions {
             let temp_position = self.positions[i as usize];
-            if temp_position.pool_index == pool_index.into() {
+            if temp_position.pool_index == pool_index as u64 {
                 index = i as usize;
                 break;
             }

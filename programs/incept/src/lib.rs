@@ -393,4 +393,12 @@ pub mod incept {
     pub fn close_user_account(ctx: Context<CloseUserAccount>) -> Result<()> {
         instructions::close_user_account::execute(ctx)
     }
+
+    pub fn remove_pool(
+        ctx: Context<RemovePool>,
+        pool_index: u8,
+        force_removal: bool,
+    ) -> Result<()> {
+        instructions::remove_pool::execute(ctx, pool_index, force_removal)
+    }
 }
