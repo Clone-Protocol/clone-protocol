@@ -276,13 +276,12 @@ pub struct Collateral {
 #[account]
 #[derive(Default)]
 pub struct User {
-    // 161
-    pub authority: Pubkey,           // 32
-    pub single_pool_comets: Pubkey,  // 32
-    pub mint_positions: Pubkey,      // 32
-    pub liquidity_positions: Pubkey, // 32
-    pub comet: Pubkey,               // 32
-    pub bump: u8,                    // 1
+    // 129
+    pub authority: Pubkey,          // 32
+    pub single_pool_comets: Pubkey, // 32
+    pub mint_positions: Pubkey,     // 32
+    pub comet: Pubkey,              // 32
+    pub bump: u8,                   // 1
 }
 
 #[account(zero_copy)]
@@ -516,43 +515,43 @@ pub struct CometLiquidation {
     pub excess_token_amount: RawDecimal, // 16
 }
 
-#[account(zero_copy)]
-pub struct LiquidityPositions {
-    // 14,320
-    pub owner: Pubkey,                                 // 32
-    pub num_positions: u64,                            // 8
-    pub liquidity_positions: [LiquidityPosition; 255], // 255 * 56 = 14,280
-}
+// #[account(zero_copy)]
+// pub struct LiquidityPositions {
+//     // 14,320
+//     pub owner: Pubkey,                                 // 32
+//     pub num_positions: u64,                            // 8
+//     pub liquidity_positions: [LiquidityPosition; 255], // 255 * 56 = 14,280
+// }
 
-impl Default for LiquidityPositions {
-    fn default() -> Self {
-        Self {
-            owner: Pubkey::default(),
-            num_positions: 0,
-            liquidity_positions: [LiquidityPosition::default(); 255],
-        }
-    }
-}
+// impl Default for LiquidityPositions {
+//     fn default() -> Self {
+//         Self {
+//             owner: Pubkey::default(),
+//             num_positions: 0,
+//             liquidity_positions: [LiquidityPosition::default(); 255],
+//         }
+//     }
+// }
 
-impl LiquidityPositions {
-    pub fn remove(&mut self, index: usize) {
-        self.liquidity_positions[index] =
-            self.liquidity_positions[(self.num_positions - 1) as usize];
-        self.liquidity_positions[(self.num_positions - 1) as usize] = LiquidityPosition {
-            ..Default::default()
-        };
-        self.num_positions -= 1;
-    }
-}
+// impl LiquidityPositions {
+//     pub fn remove(&mut self, index: usize) {
+//         self.liquidity_positions[index] =
+//             self.liquidity_positions[(self.num_positions - 1) as usize];
+//         self.liquidity_positions[(self.num_positions - 1) as usize] = LiquidityPosition {
+//             ..Default::default()
+//         };
+//         self.num_positions -= 1;
+//     }
+// }
 
-#[zero_copy]
-#[derive(Default)]
-pub struct LiquidityPosition {
-    // 56
-    pub authority: Pubkey,                 // 32
-    pub liquidity_token_value: RawDecimal, // 16
-    pub pool_index: u64,                   // 8
-}
+// #[zero_copy]
+// #[derive(Default)]
+// pub struct LiquidityPosition {
+//     // 56
+//     pub authority: Pubkey,                 // 32
+//     pub liquidity_token_value: RawDecimal, // 16
+//     pub pool_index: u64,                   // 8
+// }
 
 #[account(zero_copy)]
 pub struct MintPositions {

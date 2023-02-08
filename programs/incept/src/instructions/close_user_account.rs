@@ -25,7 +25,6 @@ pub fn execute(ctx: Context<CloseUserAccount>) -> Result<()> {
         user_account.comet == Pubkey::default()
             && user_account.single_pool_comets == Pubkey::default()
             && user_account.mint_positions == Pubkey::default()
-            && user_account.liquidity_positions == Pubkey::default()
     );
 
     ctx.accounts

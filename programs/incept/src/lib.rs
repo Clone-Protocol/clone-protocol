@@ -54,12 +54,6 @@ pub mod incept {
         instructions::initialize_mint_positions::execute(ctx)
     }
 
-    pub fn initialize_liquidity_positions(
-        ctx: Context<InitializeLiquidityPositions>,
-    ) -> Result<()> {
-        instructions::initialize_liquidity_positions::execute(ctx)
-    }
-
     pub fn initialize_comet(ctx: Context<InitializeComet>, is_single_pool: bool) -> Result<()> {
         instructions::initialize_comet::execute(ctx, is_single_pool)
     }
@@ -164,14 +158,6 @@ pub mod incept {
         amount: u64,
     ) -> Result<()> {
         instructions::add_iasset_to_mint::execute(ctx, mint_index, amount)
-    }
-
-    pub fn initialize_liquidity_position(
-        ctx: Context<InitializeLiquidityPosition>,
-        pool_index: u8,
-        iasset_amount: u64,
-    ) -> Result<()> {
-        instructions::initialize_liquidity_position::execute(ctx, pool_index, iasset_amount)
     }
 
     pub fn provide_liquidity(
@@ -398,12 +384,6 @@ pub mod incept {
 
     pub fn close_mint_positions_account(ctx: Context<CloseMintPositionsAccount>) -> Result<()> {
         instructions::close_mint_positions_account::execute(ctx)
-    }
-
-    pub fn close_liquidity_positions_account(
-        ctx: Context<CloseLiquidityPositionsAccount>,
-    ) -> Result<()> {
-        instructions::close_liquidity_positions_account::execute(ctx)
     }
 
     pub fn close_user_account(ctx: Context<CloseUserAccount>) -> Result<()> {
