@@ -186,29 +186,33 @@ pub enum InceptError {
     #[msg("Asset stable requirement violated")]
     InvalidAssetStability,
 
-    /// 45. Trade exceeds desired slippage
+    /// 46. Trade exceeds desired slippage
     #[msg("Slippage tolerance exceeded")]
     SlippageToleranceExceeded,
 
-    /// 46. Position must be empty
+    /// 47. Position must be empty
     #[msg("Position must be empty")]
     PositionMustBeEmpty,
 
-    /// 46. Collateral must be all in USDi
+    /// 48. Collateral must be all in USDi
     #[msg("Collateral must be all in USDi")]
     RequireOnlyUSDiCollateral,
 
-    /// 46. Require largest ILD position first
+    /// 49. Require largest ILD position first
     #[msg("Require largest ILD position first")]
     RequireLargestILDPositionFirst,
 
-    /// 46. Require largest ILD position first
+    /// 50. Require largest ILD position first
     #[msg("Positions must be all closed")]
     RequireAllPositionsClosed,
 
-    /// 47. Pool ownership exceeding max limit
+    /// 51. Pool ownership exceeding max limit
     #[msg("Pool ownership exceeding max limit")]
     MaxPoolOwnershipExceeded,
+
+    /// 52. Failed to Load Pyth Price Feed
+    #[msg("Failed to Load Pyth Price Feed")]
+    FailedToLoadPyth,
 }
 
 impl From<InceptError> for ProgramError {

@@ -3249,6 +3249,11 @@ export type Incept = {
       "code": 6051,
       "name": "MaxPoolOwnershipExceeded",
       "msg": "Pool ownership exceeding max limit"
+    },
+    {
+      "code": 6052,
+      "name": "FailedToLoadPyth",
+      "msg": "Failed to Load Pyth Price Feed"
     }
   ]
 };
@@ -6504,6 +6509,11 @@ export const IDL: Incept = {
       "code": 6051,
       "name": "MaxPoolOwnershipExceeded",
       "msg": "Pool ownership exceeding max limit"
+    },
+    {
+      "code": 6052,
+      "name": "FailedToLoadPyth",
+      "msg": "Failed to Load Pyth Price Feed"
     }
   ]
 };
