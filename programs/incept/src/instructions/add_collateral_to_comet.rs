@@ -17,14 +17,14 @@ pub struct AddCollateralToComet<'info> {
     )]
     pub user_account: Account<'info, User>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data,
     )]
-    pub manager: Account<'info, Manager>,
+    pub incept: Account<'info, Incept>,
     #[account(
         mut,
-        has_one = manager,
+        has_one = incept,
         constraint = (collateral_index as u64) < token_data.load()?.num_collaterals @ InceptError::InvalidInputPositionIndex
     )]
     pub token_data: AccountLoader<'info, TokenData>,

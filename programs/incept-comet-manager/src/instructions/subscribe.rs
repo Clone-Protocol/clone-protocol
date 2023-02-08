@@ -3,9 +3,9 @@ use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use incept::cpi::accounts::AddCollateralToComet;
-use incept::program::Incept;
+use incept::program::Incept as InceptProgram;
 use incept::return_error_if_false;
-use incept::states::{Comet, Manager, TokenData, User, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX};
+use incept::states::{Comet, Incept, TokenData, User, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
@@ -27,16 +27,16 @@ pub struct Subscribe<'info> {
     )]
     pub manager_info: Box<Account<'info, ManagerInfo>>,
     #[account(
-        address = manager_info.incept_manager
+        address = manager_info.incept
     )]
-    pub incept_manager: Box<Account<'info, Manager>>,
+    pub incept: Box<Account<'info, Incept>>,
     #[account(
         address = manager_info.user_account
     )]
     pub manager_incept_user: Box<Account<'info, User>>,
     #[account(
         mut,
-        address = incept_manager.usdi_mint
+        address = incept.usdi_mint
     )]
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -52,9 +52,9 @@ pub struct Subscribe<'info> {
     )]
     pub manager_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
-        address = manager_info.incept
+        address = manager_info.incept_program
     )]
-    pub incept_program: Program<'info, Incept>,
+    pub incept_program: Program<'info, InceptProgram>,
     #[account(
         mut,
         address = manager_incept_user.comet
@@ -62,7 +62,7 @@ pub struct Subscribe<'info> {
     pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
-        address = incept_manager.token_data
+        address = incept.token_data
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -140,7 +140,7 @@ pub fn execute(ctx: Context<Subscribe>, collateral_to_provide: u64) -> Result<()
             AddCollateralToComet {
                 user: ctx.accounts.manager_info.to_account_info(),
                 user_account: ctx.accounts.manager_incept_user.to_account_info(),
-                manager: ctx.accounts.incept_manager.to_account_info(),
+                incept: ctx.accounts.incept.to_account_info(),
                 token_data: ctx.accounts.token_data.to_account_info(),
                 token_program: ctx.accounts.token_program.to_account_info(),
                 comet: ctx.accounts.comet.to_account_info(),

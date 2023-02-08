@@ -8,9 +8,9 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction( pool_index: u8, collateral_index: u8, iasset_amount: u64, collateral_amount: u64)]
-pub struct InitializeMintPosition<'info> {
-    #[account(address = mint_positions.load()?.owner)]
+#[instruction(pool_index: u8, collateral_index: u8, iasset_amount: u64, collateral_amount: u64)]
+pub struct InitializeBorrowPosition<'info> {
+    #[account(address = borrow_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
@@ -18,21 +18,21 @@ pub struct InitializeMintPosition<'info> {
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data,
     )]
-    pub manager: Box<Account<'info, Manager>>,
+    pub incept: Box<Account<'info, Incept>>,
     #[account(
         mut,
-        has_one = manager
+        has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        address = user_account.mint_positions,
+        address = user_account.borrow_positions,
     )]
-    pub mint_positions: AccountLoader<'info, MintPositions>,
+    pub borrow_positions: AccountLoader<'info, BorrowPositions>,
     #[account(
         mut,
         address = token_data.load()?.collaterals[collateral_index as usize].vault
@@ -60,14 +60,14 @@ pub struct InitializeMintPosition<'info> {
 }
 
 pub fn execute(
-    ctx: Context<InitializeMintPosition>,
+    ctx: Context<InitializeBorrowPosition>,
 
     pool_index: u8,
     _collateral_index: u8,
     iasset_amount: u64,
     collateral_amount: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
+    let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let pool = token_data.pools[pool_index as usize];
@@ -122,7 +122,7 @@ pub fn execute(
             .user_iasset_token_account
             .to_account_info()
             .clone(),
-        authority: ctx.accounts.manager.to_account_info().clone(),
+        authority: ctx.accounts.incept.to_account_info().clone(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::mint_to(
@@ -131,9 +131,9 @@ pub fn execute(
     )?;
 
     // set mint position data
-    let mut mint_positions = ctx.accounts.mint_positions.load_mut()?;
-    let num_positions = mint_positions.num_positions;
-    mint_positions.mint_positions[num_positions as usize] = MintPosition {
+    let mut borrow_positions = ctx.accounts.borrow_positions.load_mut()?;
+    let num_positions = borrow_positions.num_positions;
+    borrow_positions.borrow_positions[num_positions as usize] = BorrowPosition {
         authority: *ctx.accounts.user.to_account_info().key,
         collateral_amount: RawDecimal::from(collateral_amount_value),
         collateral_index: collateral_index.try_into().unwrap(),
@@ -166,7 +166,7 @@ pub fn execute(
         RawDecimal::from(supplied_collateral);
 
     // increment number of mint positions
-    mint_positions.num_positions += 1;
+    borrow_positions.num_positions += 1;
 
     Ok(())
 }

@@ -19,14 +19,14 @@ pub struct WithdrawLiquidityFromComet<'info> {
     )]
     pub user_account: Account<'info, User>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data,
     )]
-    pub manager: Account<'info, Manager>,
+    pub incept: Account<'info, Incept>,
     #[account(
         mut,
-        has_one = manager,
+        has_one = incept,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -38,7 +38,7 @@ pub struct WithdrawLiquidityFromComet<'info> {
     pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
-        address = manager.usdi_mint
+        address = incept.usdi_mint
     )]
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -82,7 +82,7 @@ pub fn execute(
     liquidity_token_amount: u64,
     _comet_collateral_index: u8,
 ) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
+    let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
     let comet_position = comet.positions[comet_position_index as usize];
@@ -188,7 +188,7 @@ pub fn execute(
                 .to_account_info()
                 .clone(),
             to: ctx.accounts.vault.to_account_info().clone(),
-            authority: ctx.accounts.manager.to_account_info().clone(),
+            authority: ctx.accounts.incept.to_account_info().clone(),
         };
         let transfer_usdi_context = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info().clone(),
@@ -216,7 +216,7 @@ pub fn execute(
                 .amm_usdi_token_account
                 .to_account_info()
                 .clone(),
-            authority: ctx.accounts.manager.to_account_info().clone(),
+            authority: ctx.accounts.incept.to_account_info().clone(),
         };
         let burn_iasset_context = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info().clone(),
@@ -242,7 +242,7 @@ pub fn execute(
                     .amm_iasset_token_account
                     .to_account_info()
                     .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
+                authority: ctx.accounts.incept.to_account_info().clone(),
             },
             seeds,
         );
@@ -263,7 +263,7 @@ pub fn execute(
                     .comet_liquidity_token_account
                     .to_account_info()
                     .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
+                authority: ctx.accounts.incept.to_account_info().clone(),
             },
             seeds,
         ),

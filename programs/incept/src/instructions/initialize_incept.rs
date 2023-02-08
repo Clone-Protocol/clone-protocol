@@ -8,28 +8,28 @@ use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(il_health_score_coefficient: u64, il_health_score_cutoff: u64, il_liquidation_reward_pct: u64)]
-pub struct InitializeManager<'info> {
+pub struct InitializeIncept<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
     #[account(
         init,
         space = 8 + 200,
-        seeds = [b"manager"],
+        seeds = [b"incept"],
         bump,
         payer = admin
     )]
-    pub manager: Account<'info, Manager>,
+    pub incept: Account<'info, Incept>,
     #[account(
         init,
         mint::decimals = 8,
-        mint::authority = manager,
+        mint::authority = incept,
         payer = admin
     )]
     pub usdi_mint: Account<'info, Mint>,
     #[account(
         init,
         token::mint = usdi_mint,
-        token::authority = manager,
+        token::authority = incept,
         payer = admin
     )]
     pub usdi_vault: Account<'info, TokenAccount>,
@@ -44,7 +44,7 @@ pub struct InitializeManager<'info> {
 
 #[allow(clippy::too_many_arguments)]
 pub fn execute(
-    ctx: Context<InitializeManager>,
+    ctx: Context<InitializeIncept>,
     il_health_score_coefficient: u64,
     il_health_score_cutoff: u64,
     il_liquidation_reward_pct: u64,
@@ -58,13 +58,13 @@ pub fn execute(
     let mut token_data = ctx.accounts.token_data.load_init()?;
 
     // set manager data
-    ctx.accounts.manager.token_data = *ctx.accounts.token_data.to_account_info().key;
-    ctx.accounts.manager.usdi_mint = *ctx.accounts.usdi_mint.to_account_info().key;
-    ctx.accounts.manager.admin = *ctx.accounts.admin.to_account_info().key;
-    ctx.accounts.manager.bump = *ctx.bumps.get("manager").unwrap();
-    ctx.accounts.manager.treasury_address = treasury_address;
+    ctx.accounts.incept.token_data = *ctx.accounts.token_data.to_account_info().key;
+    ctx.accounts.incept.usdi_mint = *ctx.accounts.usdi_mint.to_account_info().key;
+    ctx.accounts.incept.admin = *ctx.accounts.admin.to_account_info().key;
+    ctx.accounts.incept.bump = *ctx.bumps.get("incept").unwrap();
+    ctx.accounts.incept.treasury_address = treasury_address;
 
-    ctx.accounts.manager.liquidation_config = LiquidationConfig {
+    ctx.accounts.incept.liquidation_config = LiquidationConfig {
         max_health_liquidation: RawDecimal::new(max_health_liquidation.try_into().unwrap(), 0),
         liquidator_fee: RawDecimal::new(liquidator_fee.try_into().unwrap(), 4),
         collateral_full_liquidation_threshold: RawDecimal::new(
@@ -87,7 +87,7 @@ pub fn execute(
     token_data.num_collaterals = 1;
 
     // set token data
-    token_data.manager = *ctx.accounts.manager.to_account_info().key;
+    token_data.incept = *ctx.accounts.incept.to_account_info().key;
     token_data.chainlink_program = *ctx.accounts.chainlink_program.to_account_info().key;
     token_data.il_health_score_coefficient = RawDecimal::new(
         il_health_score_coefficient.try_into().unwrap(),

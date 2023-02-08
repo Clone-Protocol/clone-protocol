@@ -3,7 +3,7 @@ export type Incept = {
   "name": "incept",
   "instructions": [
     {
-      "name": "initializeManager",
+      "name": "initializeIncept",
       "accounts": [
         {
           "name": "admin",
@@ -11,7 +11,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": true,
           "isSigner": false
         },
@@ -91,7 +91,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -145,7 +145,7 @@ export type Incept = {
       ]
     },
     {
-      "name": "initializeMintPositions",
+      "name": "initializeBorrowPositions",
       "accounts": [
         {
           "name": "user",
@@ -158,7 +158,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -230,7 +230,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -289,7 +289,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -399,7 +399,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -424,7 +424,7 @@ export type Incept = {
       "name": "updatePrices",
       "accounts": [
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -452,7 +452,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -495,7 +495,7 @@ export type Incept = {
       ]
     },
     {
-      "name": "initializeMintPosition",
+      "name": "initializeBorrowPosition",
       "accounts": [
         {
           "name": "user",
@@ -508,7 +508,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -518,7 +518,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -568,7 +568,7 @@ export type Incept = {
       ]
     },
     {
-      "name": "addCollateralToMint",
+      "name": "addCollateralToBorrow",
       "accounts": [
         {
           "name": "user",
@@ -581,7 +581,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -591,7 +591,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -613,7 +613,7 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "mintIndex",
+          "name": "borrowIndex",
           "type": "u8"
         },
         {
@@ -623,7 +623,7 @@ export type Incept = {
       ]
     },
     {
-      "name": "withdrawCollateralFromMint",
+      "name": "withdrawCollateralFromBorrow",
       "accounts": [
         {
           "name": "user",
@@ -636,7 +636,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -646,7 +646,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -668,7 +668,7 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "mintIndex",
+          "name": "borrowIndex",
           "type": "u8"
         },
         {
@@ -678,7 +678,7 @@ export type Incept = {
       ]
     },
     {
-      "name": "payBackMint",
+      "name": "subtractIassetFromBorrow",
       "accounts": [
         {
           "name": "user",
@@ -691,7 +691,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -706,7 +706,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -723,7 +723,7 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "mintIndex",
+          "name": "borrowIndex",
           "type": "u8"
         },
         {
@@ -733,7 +733,7 @@ export type Incept = {
       ]
     },
     {
-      "name": "addIassetToMint",
+      "name": "addIassetToBorrow",
       "accounts": [
         {
           "name": "user",
@@ -746,7 +746,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -761,7 +761,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -778,7 +778,7 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "mintIndex",
+          "name": "borrowIndex",
           "type": "u8"
         },
         {
@@ -788,7 +788,7 @@ export type Incept = {
       ]
     },
     {
-      "name": "provideLiquidity",
+      "name": "provideUnconcentratedLiquidity",
       "accounts": [
         {
           "name": "user",
@@ -801,7 +801,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -858,7 +858,7 @@ export type Incept = {
       ]
     },
     {
-      "name": "withdrawLiquidity",
+      "name": "withdrawUnconcentratedLiquidity",
       "accounts": [
         {
           "name": "user",
@@ -871,7 +871,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -928,7 +928,7 @@ export type Incept = {
       ]
     },
     {
-      "name": "buySynth",
+      "name": "buyIasset",
       "accounts": [
         {
           "name": "user",
@@ -936,7 +936,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -992,7 +992,7 @@ export type Incept = {
       ]
     },
     {
-      "name": "sellSynth",
+      "name": "sellIasset",
       "accounts": [
         {
           "name": "user",
@@ -1000,7 +1000,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1069,7 +1069,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1140,7 +1140,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1195,7 +1195,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1250,7 +1250,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1305,7 +1305,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1360,7 +1360,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1435,7 +1435,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1510,7 +1510,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1589,7 +1589,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1674,7 +1674,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1744,7 +1744,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1777,7 +1777,7 @@ export type Incept = {
       ]
     },
     {
-      "name": "liquidateMintPosition",
+      "name": "liquidateBorrowPosition",
       "accounts": [
         {
           "name": "liquidator",
@@ -1785,7 +1785,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1810,7 +1810,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -1847,7 +1847,7 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "mintIndex",
+          "name": "borrowIndex",
           "type": "u8"
         }
       ]
@@ -1866,7 +1866,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1935,7 +1935,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -2021,7 +2021,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -2105,7 +2105,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -2166,7 +2166,7 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -2306,7 +2306,7 @@ export type Incept = {
       "args": []
     },
     {
-      "name": "closeMintPositionsAccount",
+      "name": "closeBorrowPositionsAccount",
       "accounts": [
         {
           "name": "user",
@@ -2319,7 +2319,7 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -2365,7 +2365,7 @@ export type Incept = {
   ],
   "accounts": [
     {
-      "name": "manager",
+      "name": "incept",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2404,7 +2404,7 @@ export type Incept = {
         "kind": "struct",
         "fields": [
           {
-            "name": "manager",
+            "name": "incept",
             "type": "publicKey"
           },
           {
@@ -2476,7 +2476,7 @@ export type Incept = {
             "type": "publicKey"
           },
           {
-            "name": "mintPositions",
+            "name": "borrowPositions",
             "type": "publicKey"
           },
           {
@@ -2537,7 +2537,7 @@ export type Incept = {
       }
     },
     {
-      "name": "mintPositions",
+      "name": "borrowPositions",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2550,11 +2550,11 @@ export type Incept = {
             "type": "u64"
           },
           {
-            "name": "mintPositions",
+            "name": "borrowPositions",
             "type": {
               "array": [
                 {
-                  "defined": "MintPosition"
+                  "defined": "BorrowPosition"
                 },
                 255
               ]
@@ -2927,7 +2927,7 @@ export type Incept = {
       }
     },
     {
-      "name": "MintPosition",
+      "name": "BorrowPosition",
       "type": {
         "kind": "struct",
         "fields": [
@@ -3228,7 +3228,7 @@ export const IDL: Incept = {
   "name": "incept",
   "instructions": [
     {
-      "name": "initializeManager",
+      "name": "initializeIncept",
       "accounts": [
         {
           "name": "admin",
@@ -3236,7 +3236,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": true,
           "isSigner": false
         },
@@ -3316,7 +3316,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -3370,7 +3370,7 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "initializeMintPositions",
+      "name": "initializeBorrowPositions",
       "accounts": [
         {
           "name": "user",
@@ -3383,7 +3383,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -3455,7 +3455,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -3514,7 +3514,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -3624,7 +3624,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -3649,7 +3649,7 @@ export const IDL: Incept = {
       "name": "updatePrices",
       "accounts": [
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -3677,7 +3677,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -3720,7 +3720,7 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "initializeMintPosition",
+      "name": "initializeBorrowPosition",
       "accounts": [
         {
           "name": "user",
@@ -3733,7 +3733,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -3743,7 +3743,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -3793,7 +3793,7 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "addCollateralToMint",
+      "name": "addCollateralToBorrow",
       "accounts": [
         {
           "name": "user",
@@ -3806,7 +3806,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -3816,7 +3816,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -3838,7 +3838,7 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "mintIndex",
+          "name": "borrowIndex",
           "type": "u8"
         },
         {
@@ -3848,7 +3848,7 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "withdrawCollateralFromMint",
+      "name": "withdrawCollateralFromBorrow",
       "accounts": [
         {
           "name": "user",
@@ -3861,7 +3861,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -3871,7 +3871,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -3893,7 +3893,7 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "mintIndex",
+          "name": "borrowIndex",
           "type": "u8"
         },
         {
@@ -3903,7 +3903,7 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "payBackMint",
+      "name": "subtractIassetFromBorrow",
       "accounts": [
         {
           "name": "user",
@@ -3916,7 +3916,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -3931,7 +3931,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -3948,7 +3948,7 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "mintIndex",
+          "name": "borrowIndex",
           "type": "u8"
         },
         {
@@ -3958,7 +3958,7 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "addIassetToMint",
+      "name": "addIassetToBorrow",
       "accounts": [
         {
           "name": "user",
@@ -3971,7 +3971,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -3986,7 +3986,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -4003,7 +4003,7 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "mintIndex",
+          "name": "borrowIndex",
           "type": "u8"
         },
         {
@@ -4013,7 +4013,7 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "provideLiquidity",
+      "name": "provideUnconcentratedLiquidity",
       "accounts": [
         {
           "name": "user",
@@ -4026,7 +4026,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4083,7 +4083,7 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "withdrawLiquidity",
+      "name": "withdrawUnconcentratedLiquidity",
       "accounts": [
         {
           "name": "user",
@@ -4096,7 +4096,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4153,7 +4153,7 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "buySynth",
+      "name": "buyIasset",
       "accounts": [
         {
           "name": "user",
@@ -4161,7 +4161,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4217,7 +4217,7 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "sellSynth",
+      "name": "sellIasset",
       "accounts": [
         {
           "name": "user",
@@ -4225,7 +4225,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4294,7 +4294,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4365,7 +4365,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4420,7 +4420,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4475,7 +4475,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4530,7 +4530,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4585,7 +4585,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4660,7 +4660,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4735,7 +4735,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4814,7 +4814,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4899,7 +4899,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -4969,7 +4969,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -5002,7 +5002,7 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "liquidateMintPosition",
+      "name": "liquidateBorrowPosition",
       "accounts": [
         {
           "name": "liquidator",
@@ -5010,7 +5010,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -5035,7 +5035,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -5072,7 +5072,7 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "mintIndex",
+          "name": "borrowIndex",
           "type": "u8"
         }
       ]
@@ -5091,7 +5091,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -5160,7 +5160,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -5246,7 +5246,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -5330,7 +5330,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -5391,7 +5391,7 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "manager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -5531,7 +5531,7 @@ export const IDL: Incept = {
       "args": []
     },
     {
-      "name": "closeMintPositionsAccount",
+      "name": "closeBorrowPositionsAccount",
       "accounts": [
         {
           "name": "user",
@@ -5544,7 +5544,7 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "mintPositions",
+          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -5590,7 +5590,7 @@ export const IDL: Incept = {
   ],
   "accounts": [
     {
-      "name": "manager",
+      "name": "incept",
       "type": {
         "kind": "struct",
         "fields": [
@@ -5629,7 +5629,7 @@ export const IDL: Incept = {
         "kind": "struct",
         "fields": [
           {
-            "name": "manager",
+            "name": "incept",
             "type": "publicKey"
           },
           {
@@ -5701,7 +5701,7 @@ export const IDL: Incept = {
             "type": "publicKey"
           },
           {
-            "name": "mintPositions",
+            "name": "borrowPositions",
             "type": "publicKey"
           },
           {
@@ -5762,7 +5762,7 @@ export const IDL: Incept = {
       }
     },
     {
-      "name": "mintPositions",
+      "name": "borrowPositions",
       "type": {
         "kind": "struct",
         "fields": [
@@ -5775,11 +5775,11 @@ export const IDL: Incept = {
             "type": "u64"
           },
           {
-            "name": "mintPositions",
+            "name": "borrowPositions",
             "type": {
               "array": [
                 {
-                  "defined": "MintPosition"
+                  "defined": "BorrowPosition"
                 },
                 255
               ]
@@ -6152,7 +6152,7 @@ export const IDL: Incept = {
       }
     },
     {
-      "name": "MintPosition",
+      "name": "BorrowPosition",
       "type": {
         "kind": "struct",
         "fields": [

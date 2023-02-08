@@ -54,7 +54,7 @@ describe("liquidation testing", function () {
       provider
     ) as InceptConnection;
 
-    await inceptClient.initializeManager();
+    await inceptClient.initializeIncept();
 
     await inceptClient.initializeUser();
 
@@ -129,7 +129,7 @@ describe("liquidation testing", function () {
 
     await sleep(200);
 
-    await inceptClient.initializeMintPositions(
+    await inceptClient.initializeBorrowPositions(
       new BN(20000000000000),
       new BN(200000000000000),
       mockUSDCTokenAccountInfo.address,
@@ -160,7 +160,7 @@ describe("liquidation testing", function () {
       0
     );
     // Make a trade to trigger the price
-    await inceptClient.sellSynth(
+    await inceptClient.selliAsset(
       new BN(4500000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
@@ -206,7 +206,7 @@ describe("liquidation testing", function () {
       0
     );
     // Make a trade to trigger the price
-    await inceptClient.buySynth(
+    await inceptClient.buyiAsset(
       new BN(4200000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
@@ -253,7 +253,7 @@ describe("liquidation testing", function () {
     );
 
     // // Make a trade to trigger the price
-    await inceptClient.sellSynth(
+    await inceptClient.selliAsset(
       new BN(500000000000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
@@ -324,7 +324,7 @@ describe("liquidation testing", function () {
     await sleep(200);
 
     // buy to burn
-    await inceptClient.buySynth(
+    await inceptClient.buyiAsset(
       new BN(20_350_000_000_000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
@@ -349,7 +349,7 @@ describe("liquidation testing", function () {
       );
 
     // call liquidation.
-    await inceptClient.liquidateMintPosition(userPubkey, 0);
+    await inceptClient.liquidateBorrowPosition(userPubkey, 0);
 
     await sleep(200);
 

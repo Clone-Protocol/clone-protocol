@@ -26,7 +26,7 @@ export type InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -146,7 +146,7 @@ export type InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -227,7 +227,7 @@ export type InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -303,7 +303,7 @@ export type InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -388,7 +388,7 @@ export type InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -478,7 +478,7 @@ export type InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -559,7 +559,7 @@ export type InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -639,7 +639,7 @@ export type InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -711,7 +711,7 @@ export type InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -776,11 +776,11 @@ export type InceptCometManager = {
         "kind": "struct",
         "fields": [
           {
-            "name": "incept",
+            "name": "inceptProgram",
             "type": "publicKey"
           },
           {
-            "name": "inceptManager",
+            "name": "incept",
             "type": "publicKey"
           },
           {
@@ -927,7 +927,7 @@ export const IDL: InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1047,7 +1047,7 @@ export const IDL: InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1128,7 +1128,7 @@ export const IDL: InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1204,7 +1204,7 @@ export const IDL: InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1289,7 +1289,7 @@ export const IDL: InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1379,7 +1379,7 @@ export const IDL: InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1460,7 +1460,7 @@ export const IDL: InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1540,7 +1540,7 @@ export const IDL: InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1612,7 +1612,7 @@ export const IDL: InceptCometManager = {
           "isSigner": false
         },
         {
-          "name": "inceptManager",
+          "name": "incept",
           "isMut": false,
           "isSigner": false
         },
@@ -1677,11 +1677,11 @@ export const IDL: InceptCometManager = {
         "kind": "struct",
         "fields": [
           {
-            "name": "incept",
+            "name": "inceptProgram",
             "type": "publicKey"
           },
           {
-            "name": "inceptManager",
+            "name": "incept",
             "type": "publicKey"
           },
           {

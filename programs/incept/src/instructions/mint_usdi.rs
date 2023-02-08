@@ -11,22 +11,22 @@ use std::convert::TryInto;
 pub struct MintUSDI<'info> {
     pub user: Signer<'info>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = usdi_mint,
         has_one = token_data
     )]
-    pub manager: Account<'info, Manager>,
+    pub incept: Account<'info, Incept>,
     #[account(
         mut,
-        has_one = manager
+        has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(mut)]
     pub vault: Account<'info, TokenAccount>,
     #[account(
         mut,
-        address = manager.usdi_mint
+        address = incept.usdi_mint
     )]
     pub usdi_mint: Account<'info, Mint>,
     #[account(
@@ -45,7 +45,7 @@ pub struct MintUSDI<'info> {
 }
 
 pub fn execute(ctx: Context<MintUSDI>, amount: u64) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
+    let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let (collateral, collateral_index) =
@@ -113,7 +113,7 @@ pub fn execute(ctx: Context<MintUSDI>, amount: u64) -> Result<()> {
             .user_usdi_token_account
             .to_account_info()
             .clone(),
-        authority: ctx.accounts.manager.to_account_info().clone(),
+        authority: ctx.accounts.incept.to_account_info().clone(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::mint_to(

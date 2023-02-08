@@ -8,7 +8,7 @@ use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(pool_index: u8, liquidity_token_amount: u64)]
-pub struct WithdrawLiquidity<'info> {
+pub struct WithdrawUnconcentratedLiquidity<'info> {
     pub user: Signer<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
@@ -16,19 +16,19 @@ pub struct WithdrawLiquidity<'info> {
     )]
     pub user_account: Account<'info, User>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data
     )]
-    pub manager: Box<Account<'info, Manager>>,
+    pub incept: Box<Account<'info, Incept>>,
     #[account(
         mut,
-        has_one = manager,
+        has_one = incept,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        associated_token::mint = manager.usdi_mint,
+        associated_token::mint = incept.usdi_mint,
         associated_token::authority = user
     )]
     pub user_usdi_token_account: Box<Account<'info, TokenAccount>>,
@@ -66,11 +66,11 @@ pub struct WithdrawLiquidity<'info> {
 }
 
 pub fn execute(
-    ctx: Context<WithdrawLiquidity>,
+    ctx: Context<WithdrawUnconcentratedLiquidity>,
     pool_index: u8,
     liquidity_token_amount: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
+    let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let liquidity_token_value = Decimal::new(
@@ -140,7 +140,7 @@ pub fn execute(
             .user_usdi_token_account
             .to_account_info()
             .clone(),
-        authority: ctx.accounts.manager.to_account_info().clone(),
+        authority: ctx.accounts.incept.to_account_info().clone(),
     };
     let send_usdi_to_user_context = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info().clone(),
@@ -165,7 +165,7 @@ pub fn execute(
             .user_iasset_token_account
             .to_account_info()
             .clone(),
-        authority: ctx.accounts.manager.to_account_info().clone(),
+        authority: ctx.accounts.incept.to_account_info().clone(),
     };
     let send_iasset_to_user_context = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info().clone(),

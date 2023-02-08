@@ -4,8 +4,8 @@ import {
   import { BN } from "@project-serum/anchor";
 
   export interface ManagerInfo {
+    inceptProgram: PublicKey;
     incept: PublicKey;
-    inceptManager: PublicKey;
     owner: PublicKey;
     membershipTokenSupply: BN;
     userAccount: PublicKey;

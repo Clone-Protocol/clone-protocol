@@ -3,9 +3,9 @@ use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use incept::cpi::accounts::{InitializeComet, InitializeUser};
-use incept::program::Incept;
+use incept::program::Incept as InceptProgram;
 use incept::return_error_if_false;
-use incept::states::{Comet, Manager};
+use incept::states::{Comet, Incept};
 
 pub const PROTOCOL_HEALTH_SCORE_THRESHOLD: u8 = 5;
 
@@ -28,10 +28,10 @@ pub struct Initialize<'info> {
     #[account(zero)]
     pub comet: AccountLoader<'info, Comet>,
     #[account(
-        address = Pubkey::find_program_address(&[b"manager"], incept_program.to_account_info().key).0
+        address = Pubkey::find_program_address(&[b"incept"], incept_program.to_account_info().key).0
     )]
-    pub incept_manager: Box<Account<'info, Manager>>,
-    pub incept_program: Program<'info, Incept>,
+    pub incept: Box<Account<'info, Incept>>,
+    pub incept_program: Program<'info, InceptProgram>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -52,20 +52,20 @@ pub fn execute(
     let manager_info = &mut ctx.accounts.manager_info;
     let manager_bump = *ctx.bumps.get("manager_info").unwrap();
 
-    manager_info.incept = ctx.accounts.incept_program.to_account_info().key();
+    manager_info.incept_program = ctx.accounts.incept_program.to_account_info().key();
     manager_info.owner = ctx.accounts.admin.to_account_info().key();
     manager_info.membership_token_supply = 0;
     manager_info.user_account = ctx.accounts.user_account.to_account_info().key();
     manager_info.user_bump = user_bump;
     manager_info.bump = manager_bump;
-    manager_info.incept_manager = ctx.accounts.incept_manager.to_account_info().key();
+    manager_info.incept = ctx.accounts.incept.to_account_info().key();
     manager_info.health_score_threshold = health_score_threshold;
     manager_info.in_closing_sequence = false;
     manager_info.withdrawal_fee_bps = withdrawal_fee_bps;
     manager_info.management_fee_bps = management_fee_bps;
     manager_info.fee_claim_slot = Clock::get()?.slot;
 
-    // PDA for incept_manager
+    // PDA for incept
     let manager_seeds = &[&[
         b"manager-info",
         ctx.accounts.admin.to_account_info().key.as_ref(),

@@ -7,17 +7,17 @@ use std::convert::TryInto;
 #[derive(Accounts)]
 #[instruction( pool_index: u8, health_score_coefficient: u64)]
 pub struct UpdatePoolHealthScore<'info> {
-    #[account(address = manager.admin)]
+    #[account(address = incept.admin)]
     pub admin: Signer<'info>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data
     )]
-    pub manager: Box<Account<'info, Manager>>,
+    pub incept: Box<Account<'info, Incept>>,
     #[account(
         mut,
-        has_one = manager
+        has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
 }

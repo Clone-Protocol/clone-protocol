@@ -8,63 +8,63 @@ use std::convert::TryInto;
 #[derive(Accounts)]
 #[instruction(stable_collateral_ratio: u16, crypto_collateral_ratio: u16, health_score_coefficient: u64, max_ownership_pct: u64)]
 pub struct InitializePool<'info> {
-    #[account(mut, address = manager.admin)]
+    #[account(mut, address = incept.admin)]
     pub admin: Signer<'info>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data,
         has_one = admin
     )]
-    pub manager: Box<Account<'info, Manager>>,
+    pub incept: Box<Account<'info, Incept>>,
     #[account(
         mut,
-        has_one = manager
+        has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
-        address = manager.usdi_mint
+        address = incept.usdi_mint
     )]
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
         init,
         token::mint = usdi_mint,
-        token::authority = manager,
+        token::authority = incept,
         payer = admin
     )]
     pub usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
         mint::decimals = 8,
-        mint::authority = manager,
+        mint::authority = incept,
         payer = admin
     )]
     pub iasset_mint: Box<Account<'info, Mint>>,
     #[account(
         init,
         token::mint = iasset_mint,
-        token::authority = manager,
+        token::authority = incept,
         payer = admin
     )]
     pub iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
         token::mint = iasset_mint,
-        token::authority = manager,
+        token::authority = incept,
         payer = admin
     )]
     pub liquidation_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
         mint::decimals = 8,
-        mint::authority = manager,
+        mint::authority = incept,
         payer = admin
     )]
     pub liquidity_token_mint: Box<Account<'info, Mint>>,
     #[account(
         init,
         token::mint = liquidity_token_mint,
-        token::authority = manager,
+        token::authority = incept,
         payer = admin
     )]
     pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,

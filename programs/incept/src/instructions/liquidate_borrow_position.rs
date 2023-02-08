@@ -1,24 +1,23 @@
 use crate::error::*;
-use crate::states::*;
-//use crate::instructions::LiquidateMintPosition;
 use crate::math::*;
+use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(mint_index: u8)]
-pub struct LiquidateMintPosition<'info> {
+#[instruction(borrow_index: u8)]
+pub struct LiquidateBorrowPosition<'info> {
     pub liquidator: Signer<'info>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data
     )]
-    pub manager: Box<Account<'info, Manager>>,
+    pub incept: Box<Account<'info, Incept>>,
     #[account(
         mut,
-        has_one = manager
+        has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     /// CHECK: Only used for address validation.
@@ -29,34 +28,34 @@ pub struct LiquidateMintPosition<'info> {
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
         bump = user_account.bump,
-        has_one = mint_positions
+        has_one = borrow_positions
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[mint_positions.load()?.mint_positions[mint_index as usize].pool_index as usize].asset_info.iasset_mint,
+        address = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].asset_info.iasset_mint,
     )]
     pub iasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
         owner = *user_account.to_account_info().owner,
-        constraint = (mint_index as u64) < mint_positions.load()?.num_positions @ InceptError::InvalidInputPositionIndex
+        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ InceptError::InvalidInputPositionIndex
     )]
-    pub mint_positions: AccountLoader<'info, MintPositions>,
+    pub borrow_positions: AccountLoader<'info, BorrowPositions>,
     #[account(
         mut,
-        address = token_data.load()?.collaterals[mint_positions.load()?.mint_positions[mint_index as usize].collateral_index as usize].vault,
-        constraint = vault.mint == token_data.load()?.collaterals[mint_positions.load()?.mint_positions[mint_index as usize].collateral_index as usize].mint
+        address = token_data.load()?.collaterals[borrow_positions.load()?.borrow_positions[borrow_index as usize].collateral_index as usize].vault,
+        constraint = vault.mint == token_data.load()?.collaterals[borrow_positions.load()?.borrow_positions[borrow_index as usize].collateral_index as usize].mint
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[mint_positions.load()?.mint_positions[mint_index as usize].pool_index as usize].usdi_token_account,
+        address = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].usdi_token_account,
     )]
     pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[mint_positions.load()?.mint_positions[mint_index as usize].pool_index as usize].iasset_token_account,
+        address = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].iasset_token_account,
     )]
     pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -74,12 +73,12 @@ pub struct LiquidateMintPosition<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(ctx: Context<LiquidateMintPosition>, mint_index: u8) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
+pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Result<()> {
+    let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
 
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let mut mint_positions = ctx.accounts.mint_positions.load_mut()?;
-    let mint_position = mint_positions.mint_positions[mint_index as usize];
+    let mut borrow_positions = ctx.accounts.borrow_positions.load_mut()?;
+    let mint_position = borrow_positions.borrow_positions[borrow_index as usize];
 
     let collateral = token_data.collaterals[mint_position.collateral_index as usize];
     let pool = token_data.pools[mint_position.pool_index as usize];
@@ -141,7 +140,7 @@ pub fn execute(ctx: Context<LiquidateMintPosition>, mint_index: u8) -> Result<()
             .liquidator_collateral_token_account
             .to_account_info()
             .clone(),
-        authority: ctx.accounts.manager.to_account_info().clone(),
+        authority: ctx.accounts.incept.to_account_info().clone(),
     };
     let send_usdc_context = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info().clone(),
@@ -172,7 +171,7 @@ pub fn execute(ctx: Context<LiquidateMintPosition>, mint_index: u8) -> Result<()
         RawDecimal::from(new_supplied_collateral);
 
     // Remove position
-    mint_positions.remove(mint_index as usize);
+    borrow_positions.remove(borrow_index as usize);
 
     Ok(())
 }

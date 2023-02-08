@@ -1,7 +1,7 @@
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
-use incept::states::Manager;
+use incept::states::Incept;
 
 #[derive(Accounts)]
 #[instruction(usdi_amount: u64)]
@@ -14,11 +14,11 @@ pub struct OwnerWithdrawal<'info> {
     )]
     pub manager_info: Box<Account<'info, ManagerInfo>>,
     #[account(
-        address = manager_info.incept_manager
+        address = manager_info.incept
     )]
-    pub incept_manager: Box<Account<'info, Manager>>,
+    pub incept: Box<Account<'info, Incept>>,
     #[account(
-        address = incept_manager.usdi_mint
+        address = incept.usdi_mint
     )]
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(

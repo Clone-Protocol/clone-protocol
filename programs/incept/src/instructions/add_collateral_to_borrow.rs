@@ -4,12 +4,11 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-//use crate::instructions::AddCollateralToMint;
 
 #[derive(Accounts)]
-#[instruction(mint_index: u8, amount: u64)]
-pub struct AddCollateralToMint<'info> {
-    #[account(address = mint_positions.load()?.owner)]
+#[instruction(borrow_index: u8, amount: u64)]
+pub struct AddCollateralToBorrow<'info> {
+    #[account(address = borrow_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
@@ -17,25 +16,25 @@ pub struct AddCollateralToMint<'info> {
     )]
     pub user_account: Account<'info, User>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data,
     )]
-    pub manager: Account<'info, Manager>,
+    pub incept: Account<'info, Incept>,
     #[account(
         mut,
-        has_one = manager
+        has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        address = user_account.mint_positions,
-        constraint = (mint_index as u64) < mint_positions.load()?.num_positions @ InceptError::InvalidInputPositionIndex
+        address = user_account.borrow_positions,
+        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ InceptError::InvalidInputPositionIndex
     )]
-    pub mint_positions: AccountLoader<'info, MintPositions>,
+    pub borrow_positions: AccountLoader<'info, BorrowPositions>,
     #[account(
         mut,
-        address = token_data.load()?.collaterals[mint_positions.load()?.mint_positions[mint_index as usize].collateral_index as usize].vault
+        address = token_data.load()?.collaterals[borrow_positions.load()?.borrow_positions[borrow_index as usize].collateral_index as usize].vault
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -48,13 +47,13 @@ pub struct AddCollateralToMint<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(ctx: Context<AddCollateralToMint>, mint_index: u8, amount: u64) -> Result<()> {
+pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u64) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let mint_positions = &mut ctx.accounts.mint_positions.load_mut()?;
+    let borrow_positions = &mut ctx.accounts.borrow_positions.load_mut()?;
 
     let collateral = token_data.collaterals
-        [mint_positions.mint_positions[mint_index as usize].collateral_index as usize];
-    let mint_position = mint_positions.mint_positions[mint_index as usize];
+        [borrow_positions.borrow_positions[borrow_index as usize].collateral_index as usize];
+    let mint_position = borrow_positions.borrow_positions[borrow_index as usize];
 
     let amount_value = Decimal::new(
         amount.try_into().unwrap(),
@@ -66,14 +65,14 @@ pub fn execute(ctx: Context<AddCollateralToMint>, mint_index: u8, amount: u64) -
     let mut new_vault_mint_supply = current_vault_mint_supply + amount_value;
     new_vault_mint_supply.rescale(current_vault_mint_supply.scale());
     token_data.collaterals
-        [mint_positions.mint_positions[mint_index as usize].collateral_index as usize]
+        [borrow_positions.borrow_positions[borrow_index as usize].collateral_index as usize]
         .vault_mint_supply = RawDecimal::from(new_vault_mint_supply);
 
     // add collateral amount to mint data
     let current_collateral_amount = mint_position.collateral_amount.to_decimal();
     let mut new_collateral_amount = current_collateral_amount + amount_value;
     new_collateral_amount.rescale(current_collateral_amount.scale());
-    mint_positions.mint_positions[mint_index as usize].collateral_amount =
+    borrow_positions.borrow_positions[borrow_index as usize].collateral_amount =
         RawDecimal::from(new_collateral_amount);
 
     // Add collateral to total collateral amount

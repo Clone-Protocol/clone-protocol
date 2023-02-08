@@ -18,14 +18,14 @@ pub struct WithdrawCollateralFromSinglePoolComet<'info> {
     )]
     pub user_account: Account<'info, User>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data,
     )]
-    pub manager: Account<'info, Manager>,
+    pub incept: Account<'info, Incept>,
     #[account(
         mut,
-        has_one = manager,
+        has_one = incept,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -54,7 +54,7 @@ pub fn execute(
     position_index: u8,
     collateral_amount: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
+    let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let mut comet = ctx.accounts.comet.load_mut()?;
@@ -101,7 +101,7 @@ pub fn execute(
             .user_collateral_token_account
             .to_account_info()
             .clone(),
-        authority: ctx.accounts.manager.to_account_info().clone(),
+        authority: ctx.accounts.incept.to_account_info().clone(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::transfer(

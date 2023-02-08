@@ -4,8 +4,8 @@ use anchor_lang::prelude::*;
 #[derive(Default)]
 pub struct ManagerInfo {
     // 160
+    pub incept_program: Pubkey,       // 32
     pub incept: Pubkey,               // 32
-    pub incept_manager: Pubkey,       // 32
     pub owner: Pubkey,                // 32
     pub membership_token_supply: u64, // 8
     pub user_account: Pubkey,         // 32

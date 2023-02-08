@@ -55,7 +55,7 @@ impl Default for RawDecimal {
 
 #[account]
 #[derive(Default)]
-pub struct Manager {
+pub struct Incept {
     // 177
     pub usdi_mint: Pubkey,                     // 32
     pub token_data: Pubkey,                    // 32
@@ -77,7 +77,7 @@ pub struct LiquidationConfig {
 #[account(zero_copy)]
 pub struct TokenData {
     // 163,328
-    pub manager: Pubkey,                         // 32
+    pub incept: Pubkey,                          // 32
     pub num_pools: u64,                          // 8
     pub num_collaterals: u64,                    // 8
     pub pools: [Pool; 255],                      // 255 * 496 = 126,480
@@ -91,7 +91,7 @@ pub struct TokenData {
 impl Default for TokenData {
     fn default() -> Self {
         Self {
-            manager: Pubkey::default(),
+            incept: Pubkey::default(),
             num_pools: 0,
             num_collaterals: 0,
             pools: [Pool::default(); 255],
@@ -279,7 +279,7 @@ pub struct User {
     // 129
     pub authority: Pubkey,          // 32
     pub single_pool_comets: Pubkey, // 32
-    pub mint_positions: Pubkey,     // 32
+    pub borrow_positions: Pubkey,   // 32
     pub comet: Pubkey,              // 32
     pub bump: u8,                   // 1
 }
@@ -554,27 +554,27 @@ pub struct CometLiquidation {
 // }
 
 #[account(zero_copy)]
-pub struct MintPositions {
+pub struct BorrowPositions {
     // 20,440
-    pub owner: Pubkey,                       // 32
-    pub num_positions: u64,                  // 8
-    pub mint_positions: [MintPosition; 255], // 255 * 80 = 20,400
+    pub owner: Pubkey,                           // 32
+    pub num_positions: u64,                      // 8
+    pub borrow_positions: [BorrowPosition; 255], // 255 * 80 = 20,400
 }
 
-impl Default for MintPositions {
+impl Default for BorrowPositions {
     fn default() -> Self {
         Self {
             owner: Pubkey::default(),
             num_positions: 0,
-            mint_positions: [MintPosition::default(); 255],
+            borrow_positions: [BorrowPosition::default(); 255],
         }
     }
 }
 
-impl MintPositions {
+impl BorrowPositions {
     pub fn remove(&mut self, index: usize) {
-        self.mint_positions[index] = self.mint_positions[(self.num_positions - 1) as usize];
-        self.mint_positions[(self.num_positions - 1) as usize] = MintPosition {
+        self.borrow_positions[index] = self.borrow_positions[(self.num_positions - 1) as usize];
+        self.borrow_positions[(self.num_positions - 1) as usize] = BorrowPosition {
             ..Default::default()
         };
         self.num_positions -= 1;
@@ -583,7 +583,7 @@ impl MintPositions {
 
 #[zero_copy]
 #[derive(Default)]
-pub struct MintPosition {
+pub struct BorrowPosition {
     // 80
     pub authority: Pubkey,             // 32
     pub collateral_amount: RawDecimal, // 16
