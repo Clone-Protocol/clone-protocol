@@ -8,7 +8,7 @@ use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(pool_index: u8, iasset_amount: u64)]
-pub struct ProvideLiquidity<'info> {
+pub struct ProvideUnconcentratedLiquidity<'info> {
     pub user: Signer<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
@@ -16,19 +16,19 @@ pub struct ProvideLiquidity<'info> {
     )]
     pub user_account: Account<'info, User>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data
     )]
-    pub manager: Box<Account<'info, Manager>>,
+    pub incept: Box<Account<'info, Incept>>,
     #[account(
         mut,
-        has_one = manager,
+        has_one = incept,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        associated_token::mint = manager.usdi_mint,
+        associated_token::mint = incept.usdi_mint,
         associated_token::authority = user
     )]
     pub user_usdi_token_account: Box<Account<'info, TokenAccount>>,
@@ -63,8 +63,12 @@ pub struct ProvideLiquidity<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(ctx: Context<ProvideLiquidity>, pool_index: u8, iasset_amount: u64) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
+pub fn execute(
+    ctx: Context<ProvideUnconcentratedLiquidity>,
+    pool_index: u8,
+    iasset_amount: u64,
+) -> Result<()> {
+    let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let pool = token_data.pools[pool_index as usize];
 
@@ -164,7 +168,7 @@ pub fn execute(ctx: Context<ProvideLiquidity>, pool_index: u8, iasset_amount: u6
             .user_liquidity_token_account
             .to_account_info()
             .clone(),
-        authority: ctx.accounts.manager.to_account_info().clone(),
+        authority: ctx.accounts.incept.to_account_info().clone(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::mint_to(

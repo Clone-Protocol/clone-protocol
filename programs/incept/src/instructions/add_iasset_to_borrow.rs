@@ -6,12 +6,10 @@ use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
-//use crate::instructions::AddiAssetToMint;
-
 #[derive(Accounts)]
-#[instruction( mint_index: u8, amount: u64)]
-pub struct AddiAssetToMint<'info> {
-    #[account(address = mint_positions.load()?.owner)]
+#[instruction( borrow_index: u8, amount: u64)]
+pub struct AddiAssetToBorrow<'info> {
+    #[account(address = borrow_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
@@ -19,14 +17,14 @@ pub struct AddiAssetToMint<'info> {
     )]
     pub user_account: Account<'info, User>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data,
     )]
-    pub manager: Account<'info, Manager>,
+    pub incept: Account<'info, Incept>,
     #[account(
         mut,
-        has_one = manager
+        has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -37,35 +35,35 @@ pub struct AddiAssetToMint<'info> {
     pub user_iasset_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
-        address = user_account.mint_positions,
-        constraint = (mint_index as u64) < mint_positions.load()?.num_positions @ InceptError::InvalidInputPositionIndex
+        address = user_account.borrow_positions,
+        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ InceptError::InvalidInputPositionIndex
     )]
-    pub mint_positions: AccountLoader<'info, MintPositions>,
+    pub borrow_positions: AccountLoader<'info, BorrowPositions>,
     #[account(
         mut,
-        address = token_data.load()?.pools[mint_positions.load()?.mint_positions[mint_index as usize].pool_index as usize].asset_info.iasset_mint,
+        address = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].asset_info.iasset_mint,
     )]
     pub iasset_mint: Box<Account<'info, Mint>>,
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(ctx: Context<AddiAssetToMint>, mint_index: u8, amount: u64) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
+pub fn execute(ctx: Context<AddiAssetToBorrow>, borrow_index: u8, amount: u64) -> Result<()> {
+    let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
-    let mint_positions = &mut ctx.accounts.mint_positions.load_mut()?;
+    let borrow_positions = &mut ctx.accounts.borrow_positions.load_mut()?;
 
     let amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
-    let pool_index = mint_positions.mint_positions[mint_index as usize].pool_index;
+    let pool_index = borrow_positions.borrow_positions[borrow_index as usize].pool_index;
     let pool = token_data.pools[pool_index as usize];
-    let mint_position = mint_positions.mint_positions[mint_index as usize];
+    let mint_position = borrow_positions.borrow_positions[borrow_index as usize];
     let collateral_ratio = pool.asset_info.stable_collateral_ratio.to_decimal();
 
     // update total amount of borrowed iasset
     let mut new_minted_amount = mint_position.borrowed_iasset.to_decimal() + amount_value;
     new_minted_amount.rescale(DEVNET_TOKEN_SCALE);
-    mint_positions.mint_positions[mint_index as usize].borrowed_iasset =
+    borrow_positions.borrow_positions[borrow_index as usize].borrowed_iasset =
         RawDecimal::from(new_minted_amount);
 
     let slot = Clock::get()?.slot;
@@ -78,7 +76,7 @@ pub fn execute(ctx: Context<AddiAssetToMint>, mint_index: u8, amount: u64) -> Re
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
         pool.asset_info,
-        mint_positions.mint_positions[mint_index as usize]
+        borrow_positions.borrow_positions[borrow_index as usize]
             .borrowed_iasset
             .to_decimal(),
         collateral_ratio,
@@ -95,7 +93,7 @@ pub fn execute(ctx: Context<AddiAssetToMint>, mint_index: u8, amount: u64) -> Re
             .user_iasset_token_account
             .to_account_info()
             .clone(),
-        authority: ctx.accounts.manager.to_account_info().clone(),
+        authority: ctx.accounts.incept.to_account_info().clone(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::mint_to(

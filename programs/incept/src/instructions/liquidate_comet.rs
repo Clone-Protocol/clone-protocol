@@ -14,13 +14,13 @@ use std::convert::TryInto;
 pub struct LiquidateComet<'info> {
     pub liquidator: Signer<'info>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data
     )]
-    pub manager: Box<Account<'info, Manager>>,
+    pub incept: Box<Account<'info, Incept>>,
     #[account(
-        has_one = manager
+        has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     /// CHECK: Only used for address validation.
@@ -42,7 +42,7 @@ pub struct LiquidateComet<'info> {
     pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
-        address = manager.usdi_mint,
+        address = incept.usdi_mint,
     )]
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -209,7 +209,7 @@ pub fn execute(
     comet_collateral_index: u8,
 ) -> Result<()> {
     let position_index = position_index as usize;
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
+    let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
@@ -274,7 +274,7 @@ pub fn execute(
         }
     }
 
-    let liquidation_config = ctx.accounts.manager.liquidation_config;
+    let liquidation_config = ctx.accounts.incept.liquidation_config;
     let mut liquidation_result = calculate_liquidation_result(
         &health_score,
         &comet,
@@ -343,7 +343,7 @@ pub fn execute(
                             .amm_usdi_token_account
                             .to_account_info()
                             .clone(),
-                        authority: ctx.accounts.manager.to_account_info().clone(),
+                        authority: ctx.accounts.incept.to_account_info().clone(),
                     },
                     seeds,
                 ),
@@ -365,7 +365,7 @@ pub fn execute(
                             .amm_usdi_token_account
                             .to_account_info()
                             .clone(),
-                        authority: ctx.accounts.manager.to_account_info().clone(),
+                        authority: ctx.accounts.incept.to_account_info().clone(),
                     },
                     seeds,
                 ),
@@ -395,7 +395,7 @@ pub fn execute(
                         .to_account_info()
                         .clone(),
                     from: ctx.accounts.usdi_vault.to_account_info().clone(),
-                    authority: ctx.accounts.manager.to_account_info().clone(),
+                    authority: ctx.accounts.incept.to_account_info().clone(),
                 },
                 seeds,
             ),
@@ -426,7 +426,7 @@ pub fn execute(
                             .amm_usdi_token_account
                             .to_account_info()
                             .clone(),
-                        authority: ctx.accounts.manager.to_account_info().clone(),
+                        authority: ctx.accounts.incept.to_account_info().clone(),
                     },
                     seeds,
                 ),
@@ -444,7 +444,7 @@ pub fn execute(
                             .amm_usdi_token_account
                             .to_account_info()
                             .clone(),
-                        authority: ctx.accounts.manager.to_account_info().clone(),
+                        authority: ctx.accounts.incept.to_account_info().clone(),
                     },
                     seeds,
                 ),
@@ -466,7 +466,7 @@ pub fn execute(
                             .amm_iasset_token_account
                             .to_account_info()
                             .clone(),
-                        authority: ctx.accounts.manager.to_account_info().clone(),
+                        authority: ctx.accounts.incept.to_account_info().clone(),
                     },
                     seeds,
                 ),
@@ -484,7 +484,7 @@ pub fn execute(
                             .amm_iasset_token_account
                             .to_account_info()
                             .clone(),
-                        authority: ctx.accounts.manager.to_account_info().clone(),
+                        authority: ctx.accounts.incept.to_account_info().clone(),
                     },
                     seeds,
                 ),
@@ -509,7 +509,7 @@ pub fn execute(
                         .comet_liquidity_token_account
                         .to_account_info()
                         .clone(),
-                    authority: ctx.accounts.manager.to_account_info().clone(),
+                    authority: ctx.accounts.incept.to_account_info().clone(),
                 },
                 seeds,
             ),

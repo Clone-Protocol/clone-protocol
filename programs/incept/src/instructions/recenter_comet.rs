@@ -20,19 +20,19 @@ pub struct RecenterComet<'info> {
     )]
     pub user_account: Account<'info, User>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data,
     )]
-    pub manager: Box<Account<'info, Manager>>,
+    pub incept: Box<Account<'info, Incept>>,
     #[account(
         mut,
-        has_one = manager
+        has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        address = manager.usdi_mint
+        address = incept.usdi_mint
     )]
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -179,7 +179,7 @@ pub fn execute(
     comet_position_index: u8,
     comet_collateral_index: u8,
 ) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
+    let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
     let comet_position = comet.positions[comet_position_index as usize];
@@ -223,7 +223,7 @@ pub fn execute(
                             .amm_usdi_token_account
                             .to_account_info()
                             .clone(),
-                        authority: ctx.accounts.manager.to_account_info().clone(),
+                        authority: ctx.accounts.incept.to_account_info().clone(),
                     },
                     seeds,
                 ),
@@ -241,7 +241,7 @@ pub fn execute(
                             .amm_usdi_token_account
                             .to_account_info()
                             .clone(),
-                        authority: ctx.accounts.manager.to_account_info().clone(),
+                        authority: ctx.accounts.incept.to_account_info().clone(),
                     },
                     seeds,
                 ),
@@ -268,7 +268,7 @@ pub fn execute(
                             .amm_iasset_token_account
                             .to_account_info()
                             .clone(),
-                        authority: ctx.accounts.manager.to_account_info().clone(),
+                        authority: ctx.accounts.incept.to_account_info().clone(),
                     },
                     seeds,
                 ),
@@ -290,7 +290,7 @@ pub fn execute(
                             .amm_iasset_token_account
                             .to_account_info()
                             .clone(),
-                        authority: ctx.accounts.manager.to_account_info().clone(),
+                        authority: ctx.accounts.incept.to_account_info().clone(),
                     },
                     seeds,
                 ),
@@ -332,7 +332,7 @@ pub fn execute(
                                 .amm_usdi_token_account
                                 .to_account_info()
                                 .clone(),
-                            authority: ctx.accounts.manager.to_account_info().clone(),
+                            authority: ctx.accounts.incept.to_account_info().clone(),
                         },
                         seeds,
                     ),
@@ -353,7 +353,7 @@ pub fn execute(
                                 .amm_usdi_token_account
                                 .to_account_info()
                                 .clone(),
-                            authority: ctx.accounts.manager.to_account_info().clone(),
+                            authority: ctx.accounts.incept.to_account_info().clone(),
                         },
                         seeds,
                     ),
@@ -379,7 +379,7 @@ pub fn execute(
                                 .amm_usdi_token_account
                                 .to_account_info()
                                 .clone(),
-                            authority: ctx.accounts.manager.to_account_info().clone(),
+                            authority: ctx.accounts.incept.to_account_info().clone(),
                         },
                         seeds,
                     ),
@@ -401,7 +401,7 @@ pub fn execute(
                                 .amm_usdi_token_account
                                 .to_account_info()
                                 .clone(),
-                            authority: ctx.accounts.manager.to_account_info().clone(),
+                            authority: ctx.accounts.incept.to_account_info().clone(),
                         },
                         seeds,
                     ),

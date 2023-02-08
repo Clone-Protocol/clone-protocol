@@ -5,12 +5,10 @@ use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
-//use crate::instructions::PayBackiAssetToMint;
-
 #[derive(Accounts)]
-#[instruction( mint_index: u8, amount: u64)]
-pub struct PayBackiAssetToMint<'info> {
-    #[account(address = mint_positions.load()?.owner)]
+#[instruction( borrow_index: u8, amount: u64)]
+pub struct SubtractiAssetFromBorrow<'info> {
+    #[account(address = borrow_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
         mut,
@@ -19,14 +17,14 @@ pub struct PayBackiAssetToMint<'info> {
     )]
     pub user_account: Account<'info, User>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data,
     )]
-    pub manager: Account<'info, Manager>,
+    pub incept: Account<'info, Incept>,
     #[account(
         mut,
-        has_one = manager
+        has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -38,21 +36,23 @@ pub struct PayBackiAssetToMint<'info> {
     pub user_iasset_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
-        address = user_account.mint_positions,
-        constraint = (mint_index as u64) < mint_positions.load()?.num_positions @ InceptError::InvalidInputPositionIndex,
+        address = user_account.borrow_positions,
+        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ InceptError::InvalidInputPositionIndex,
     )]
-    pub mint_positions: AccountLoader<'info, MintPositions>,
+    pub borrow_positions: AccountLoader<'info, BorrowPositions>,
     #[account(
         mut,
-        address = token_data.load()?.pools[mint_positions.load()?.mint_positions[mint_index as usize].pool_index as usize].asset_info.iasset_mint,
+        address = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].asset_info.iasset_mint,
     )]
     pub iasset_mint: Box<Account<'info, Mint>>,
     pub token_program: Program<'info, Token>,
 }
-impl<'a, 'b, 'c, 'info> From<&PayBackiAssetToMint<'info>>
+impl<'a, 'b, 'c, 'info> From<&SubtractiAssetFromBorrow<'info>>
     for CpiContext<'a, 'b, 'c, 'info, Burn<'info>>
 {
-    fn from(accounts: &PayBackiAssetToMint<'info>) -> CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
+    fn from(
+        accounts: &SubtractiAssetFromBorrow<'info>,
+    ) -> CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
         let cpi_accounts = Burn {
             mint: accounts.iasset_mint.to_account_info().clone(),
             from: accounts.user_iasset_token_account.to_account_info().clone(),
@@ -63,13 +63,17 @@ impl<'a, 'b, 'c, 'info> From<&PayBackiAssetToMint<'info>>
     }
 }
 
-pub fn execute(ctx: Context<PayBackiAssetToMint>, mint_index: u8, amount: u64) -> Result<()> {
+pub fn execute(
+    ctx: Context<SubtractiAssetFromBorrow>,
+    borrow_index: u8,
+    amount: u64,
+) -> Result<()> {
     let mut amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
 
-    let mint_positions = &mut ctx.accounts.mint_positions.load_mut()?;
-    let mint_position = mint_positions.mint_positions[mint_index as usize];
+    let borrow_positions = &mut ctx.accounts.borrow_positions.load_mut()?;
+    let mint_position = borrow_positions.borrow_positions[borrow_index as usize];
 
     amount_value = amount_value.min(mint_position.borrowed_iasset.to_decimal());
 
@@ -91,7 +95,7 @@ pub fn execute(ctx: Context<PayBackiAssetToMint>, mint_index: u8, amount: u64) -
 
     // update total amount of borrowed iasset
     let updated_borrowed_iasset = mint_position.borrowed_iasset.to_decimal() - amount_value;
-    mint_positions.mint_positions[mint_index as usize].borrowed_iasset =
+    borrow_positions.borrow_positions[borrow_index as usize].borrowed_iasset =
         RawDecimal::from(updated_borrowed_iasset);
 
     let mut new_minted_amount = token_data.pools[mint_position.pool_index as usize]

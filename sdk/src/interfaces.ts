@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import { RawDecimal } from "./decimal";
 import { BN } from "@project-serum/anchor";
 
-export interface Manager {
+export interface Incept {
   usdiMint: PublicKey;
   tokenData: PublicKey;
   admin: PublicKey;
@@ -20,13 +20,13 @@ export interface LiquidationConfig {
 export interface User {
   authority: PublicKey;
   singlePoolComets: PublicKey;
-  mintPositions: PublicKey;
+  borrowPositions: PublicKey;
   comet: PublicKey;
   bump: number;
 }
 
 export interface TokenData {
-  manager: PublicKey;
+  incept: PublicKey;
   numPools: BN;
   numCollaterals: BN;
   pools: Array<Pool>;
@@ -35,25 +35,13 @@ export interface TokenData {
   ilHealthScoreCoefficient: RawDecimal;
 }
 
-export interface LiquidityPositions {
+export interface BorrowPositions {
   owner: PublicKey;
   numPositions: BN;
-  liquidityPositions: Array<LiquidityPosition>;
+  borrowPositions: Array<BorrowPosition>;
 }
 
-export interface LiquidityPosition {
-  authority: PublicKey;
-  liquidityTokenValue: RawDecimal;
-  poolIndex: number;
-}
-
-export interface MintPositions {
-  owner: PublicKey;
-  numPositions: BN;
-  mintPositions: Array<MintPosition>;
-}
-
-export interface MintPosition {
+export interface BorrowPosition {
   authority: PublicKey;
   collateralAmount: RawDecimal;
   poolIndex: number;

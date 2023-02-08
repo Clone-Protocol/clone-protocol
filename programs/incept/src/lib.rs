@@ -17,8 +17,8 @@ pub mod incept {
     use super::*;
 
     #[allow(clippy::too_many_arguments)]
-    pub fn initialize_manager(
-        ctx: Context<InitializeManager>,
+    pub fn initialize_incept(
+        ctx: Context<InitializeIncept>,
         il_health_score_coefficient: u64,
         il_health_score_cutoff: u64,
         il_liquidation_reward_pct: u64,
@@ -27,7 +27,7 @@ pub mod incept {
         collateral_full_liquidation_threshold: u64,
         treasury_address: Pubkey,
     ) -> Result<()> {
-        instructions::initialize_manager::execute(
+        instructions::initialize_incept::execute(
             ctx,
             il_health_score_coefficient,
             il_health_score_cutoff,
@@ -50,8 +50,8 @@ pub mod incept {
         instructions::initialize_user::execute(ctx, authority)
     }
 
-    pub fn initialize_mint_positions(ctx: Context<InitializeMintPositions>) -> Result<()> {
-        instructions::initialize_mint_positions::execute(ctx)
+    pub fn initialize_borrow_positions(ctx: Context<InitializeBorrowPositions>) -> Result<()> {
+        instructions::initialize_borrow_positions::execute(ctx)
     }
 
     pub fn initialize_comet(ctx: Context<InitializeComet>, is_single_pool: bool) -> Result<()> {
@@ -112,14 +112,14 @@ pub mod incept {
         instructions::mint_usdi::execute(ctx, amount)
     }
 
-    pub fn initialize_mint_position(
-        ctx: Context<InitializeMintPosition>,
+    pub fn initialize_borrow_position(
+        ctx: Context<InitializeBorrowPosition>,
         pool_index: u8,
         collateral_index: u8,
         iasset_amount: u64,
         collateral_amount: u64,
     ) -> Result<()> {
-        instructions::initialize_mint_position::execute(
+        instructions::initialize_borrow_position::execute(
             ctx,
             pool_index,
             collateral_index,
@@ -128,74 +128,78 @@ pub mod incept {
         )
     }
 
-    pub fn add_collateral_to_mint(
-        ctx: Context<AddCollateralToMint>,
-        mint_index: u8,
+    pub fn add_collateral_to_borrow(
+        ctx: Context<AddCollateralToBorrow>,
+        borrow_index: u8,
         amount: u64,
     ) -> Result<()> {
-        instructions::add_collateral_to_mint::execute(ctx, mint_index, amount)
+        instructions::add_collateral_to_borrow::execute(ctx, borrow_index, amount)
     }
 
-    pub fn withdraw_collateral_from_mint(
-        ctx: Context<WithdrawCollateralFromMint>,
-        mint_index: u8,
+    pub fn withdraw_collateral_from_borrow(
+        ctx: Context<WithdrawCollateralFromBorrow>,
+        borrow_index: u8,
         amount: u64,
     ) -> Result<()> {
-        instructions::withdraw_collateral_from_mint::execute(ctx, mint_index, amount)
+        instructions::withdraw_collateral_from_borrow::execute(ctx, borrow_index, amount)
     }
 
-    pub fn pay_back_mint(
-        ctx: Context<PayBackiAssetToMint>,
-        mint_index: u8,
+    pub fn subtract_iasset_from_borrow(
+        ctx: Context<SubtractiAssetFromBorrow>,
+        borrow_index: u8,
         amount: u64,
     ) -> Result<()> {
-        instructions::pay_back_mint::execute(ctx, mint_index, amount)
+        instructions::subtract_iasset_from_borrow::execute(ctx, borrow_index, amount)
     }
 
-    pub fn add_iasset_to_mint(
-        ctx: Context<AddiAssetToMint>,
-        mint_index: u8,
+    pub fn add_iasset_to_borrow(
+        ctx: Context<AddiAssetToBorrow>,
+        borrow_index: u8,
         amount: u64,
     ) -> Result<()> {
-        instructions::add_iasset_to_mint::execute(ctx, mint_index, amount)
+        instructions::add_iasset_to_borrow::execute(ctx, borrow_index, amount)
     }
 
-    pub fn provide_liquidity(
-        ctx: Context<ProvideLiquidity>,
+    pub fn provide_unconcentrated_liquidity(
+        ctx: Context<ProvideUnconcentratedLiquidity>,
         liquidity_position_index: u8,
         iasset_amount: u64,
     ) -> Result<()> {
-        instructions::provide_liquidity::execute(ctx, liquidity_position_index, iasset_amount)
+        instructions::provide_unconcentrated_liquidity::execute(
+            ctx,
+            liquidity_position_index,
+            iasset_amount,
+        )
     }
 
-    pub fn withdraw_liquidity(
-        ctx: Context<WithdrawLiquidity>,
+    pub fn withdraw_unconcentrated_liquidity(
+        ctx: Context<WithdrawUnconcentratedLiquidity>,
         liquidity_position_index: u8,
         liquidity_token_amount: u64,
     ) -> Result<()> {
-        instructions::withdraw_liquidity::execute(
+        instructions::withdraw_unconcentrated_liquidity::execute(
             ctx,
             liquidity_position_index,
             liquidity_token_amount,
         )
     }
 
-    pub fn buy_synth(
-        ctx: Context<BuySynth>,
+    pub fn buy_iasset(
+        ctx: Context<BuyIasset>,
         pool_index: u8,
         amount: u64,
         usdi_spend_threshold: u64,
     ) -> Result<()> {
-        instructions::buy_synth::execute(ctx, pool_index, amount, usdi_spend_threshold)
+        instructions::buy_iasset::execute(ctx, pool_index, amount, usdi_spend_threshold)
     }
 
-    pub fn sell_synth(
-        ctx: Context<SellSynth>,
+    pub fn sell_iasset(
+        ctx: Context<SellIasset>,
         pool_index: u8,
         amount: u64,
         usdi_received_threshold: u64,
     ) -> Result<()> {
-        instructions::sell_synth::execute(ctx, pool_index, amount, usdi_received_threshold)
+        instructions::sell_iasset::execute(ctx, pool_index, amount, usdi_received_threshold)
     }
 
     pub fn initialize_single_pool_comet(
@@ -311,11 +315,11 @@ pub mod incept {
         instructions::mint_usdi_hackathon::execute(ctx, amount)
     }
 
-    pub fn liquidate_mint_position(
-        ctx: Context<LiquidateMintPosition>,
-        mint_index: u8,
+    pub fn liquidate_borrow_position(
+        ctx: Context<LiquidateBorrowPosition>,
+        borrow_index: u8,
     ) -> Result<()> {
-        instructions::liquidate_mint_position::execute(ctx, mint_index)
+        instructions::liquidate_borrow_position::execute(ctx, borrow_index)
     }
 
     pub fn pay_impermanent_loss_debt(
@@ -382,8 +386,8 @@ pub mod incept {
         instructions::close_single_pool_comet_account::execute(ctx)
     }
 
-    pub fn close_mint_positions_account(ctx: Context<CloseMintPositionsAccount>) -> Result<()> {
-        instructions::close_mint_positions_account::execute(ctx)
+    pub fn close_borrow_positions_account(ctx: Context<CloseBorrowPositionsAccount>) -> Result<()> {
+        instructions::close_borrow_positions_account::execute(ctx)
     }
 
     pub fn close_user_account(ctx: Context<CloseUserAccount>) -> Result<()> {

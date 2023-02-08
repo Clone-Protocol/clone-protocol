@@ -8,25 +8,25 @@ use std::convert::TryInto;
 #[derive(Accounts)]
 #[instruction( scale: u8, stable: u8, collateralization_ratio: u64)]
 pub struct AddCollateral<'info> {
-    #[account(mut, address = manager.admin)]
+    #[account(mut, address = incept.admin)]
     pub admin: Signer<'info>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data,
         has_one = admin
     )]
-    pub manager: Account<'info, Manager>,
+    pub incept: Account<'info, Incept>,
     #[account(
         mut,
-        has_one = manager
+        has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     pub collateral_mint: Account<'info, Mint>,
     #[account(
         init,
         token::mint = collateral_mint,
-        token::authority = manager,
+        token::authority = incept,
         payer = admin
     )]
     pub vault: Account<'info, TokenAccount>,

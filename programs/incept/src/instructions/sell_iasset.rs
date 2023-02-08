@@ -9,23 +9,23 @@ use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction( pool_index: u8, iasset_amount: u64, usdi_amount_threshold: u64)]
-pub struct SellSynth<'info> {
+pub struct SellIasset<'info> {
     pub user: Signer<'info>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data
     )]
-    pub manager: Box<Account<'info, Manager>>,
+    pub incept: Box<Account<'info, Incept>>,
     #[account(
         mut,
-        has_one = manager,
+        has_one = incept,
         constraint = (pool_index as u64) < token_data.load()?.num_pools @ InceptError::InvalidInputPositionIndex
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        associated_token::mint = manager.usdi_mint,
+        associated_token::mint = incept.usdi_mint,
         associated_token::authority = user
     )]
     pub user_usdi_token_account: Box<Account<'info, TokenAccount>>,
@@ -49,21 +49,21 @@ pub struct SellSynth<'info> {
     pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        associated_token::mint = manager.usdi_mint,
-        associated_token::authority = manager.treasury_address
+        associated_token::mint = incept.usdi_mint,
+        associated_token::authority = incept.treasury_address
     )]
     pub treasury_usdi_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 
 pub fn execute(
-    ctx: Context<SellSynth>,
+    ctx: Context<SellIasset>,
 
     pool_index: u8,
     amount: u64,
     usdi_received_threshold: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
+    let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let pool = token_data.pools[pool_index as usize];
 
@@ -120,7 +120,7 @@ pub fn execute(
             .user_usdi_token_account
             .to_account_info()
             .clone(),
-        authority: ctx.accounts.manager.to_account_info().clone(),
+        authority: ctx.accounts.incept.to_account_info().clone(),
     };
     let send_usdi_to_user_context = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info().clone(),
@@ -147,7 +147,7 @@ pub fn execute(
             .treasury_usdi_token_account
             .to_account_info()
             .clone(),
-        authority: ctx.accounts.manager.to_account_info().clone(),
+        authority: ctx.accounts.incept.to_account_info().clone(),
     };
     let send_usdi_to_treasury_context = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info().clone(),

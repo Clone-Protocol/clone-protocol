@@ -12,13 +12,13 @@ use std::convert::TryInto;
 pub struct SwapStableCollateralIntoUsdi<'info> {
     pub liquidator: Signer<'info>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data
     )]
-    pub manager: Box<Account<'info, Manager>>,
+    pub incept: Box<Account<'info, Incept>>,
     #[account(
-        has_one = manager
+        has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     /// CHECK: Only used for address validation.
@@ -42,7 +42,7 @@ pub struct SwapStableCollateralIntoUsdi<'info> {
     pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
-        address = manager.usdi_mint
+        address = incept.usdi_mint
     )]
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -62,7 +62,7 @@ pub fn execute(
     ctx: Context<SwapStableCollateralIntoUsdi>,
     comet_collateral_index: u8,
 ) -> Result<()> {
-    let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
+    let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
@@ -120,7 +120,7 @@ pub fn execute(
             MintTo {
                 mint: ctx.accounts.usdi_mint.to_account_info().clone(),
                 to: ctx.accounts.usdi_vault.to_account_info().clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
+                authority: ctx.accounts.incept.to_account_info().clone(),
             },
             seeds,
         ),

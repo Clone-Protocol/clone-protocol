@@ -12,14 +12,14 @@ use std::convert::TryInto;
 pub struct SwapCometNonStableCollateral<'info> {
     pub liquidator: Signer<'info>,
     #[account(
-        seeds = [b"manager".as_ref()],
-        bump = manager.bump,
+        seeds = [b"incept".as_ref()],
+        bump = incept.bump,
         has_one = token_data
     )]
-    pub manager: Box<Account<'info, Manager>>,
+    pub incept: Box<Account<'info, Incept>>,
     #[account(
         mut,
-        has_one = manager
+        has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     /// CHECK: Only used for address validation.
@@ -85,7 +85,7 @@ pub fn execute(
     comet_nonstable_collateral_index: u8,
     comet_stable_collateral_index: u8,
 ) -> Result<()> {
-    let manager_seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
+    let manager_seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
     let user_seeds = &[&[
         b"user",
         ctx.accounts.user.key.as_ref(),
@@ -168,7 +168,7 @@ pub fn execute(
                     .nonstable_collateral_vault
                     .to_account_info()
                     .clone(),
-                authority: ctx.accounts.manager.to_account_info().clone(),
+                authority: ctx.accounts.incept.to_account_info().clone(),
             },
             manager_seeds,
         ),
@@ -206,7 +206,7 @@ pub fn execute(
         health_score.score
             <= ctx
                 .accounts
-                .manager
+                .incept
                 .liquidation_config
                 .max_health_liquidation
                 .to_decimal(),
