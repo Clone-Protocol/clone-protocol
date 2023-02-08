@@ -2361,6 +2361,36 @@ export type Incept = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "removePool",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "incept",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "forceRemoval",
+          "type": "bool"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -5586,6 +5616,36 @@ export const IDL: Incept = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "removePool",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "incept",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "forceRemoval",
+          "type": "bool"
+        }
+      ]
     }
   ],
   "accounts": [
