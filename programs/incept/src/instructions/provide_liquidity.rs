@@ -6,11 +6,9 @@ use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
-//use crate::instructions::ProvideLiquidity;
 #[derive(Accounts)]
-#[instruction( liquidity_position_index: u8, iasset_amount: u64)]
+#[instruction(pool_index: u8, iasset_amount: u64)]
 pub struct ProvideLiquidity<'info> {
-    #[account(address = liquidity_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
@@ -30,12 +28,6 @@ pub struct ProvideLiquidity<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        address = user_account.liquidity_positions,
-        constraint = &liquidity_positions.load()?.owner == user.to_account_info().key @ InceptError::InvalidAccountLoaderOwner
-    )]
-    pub liquidity_positions: AccountLoader<'info, LiquidityPositions>,
-    #[account(
-        mut,
         associated_token::mint = manager.usdi_mint,
         associated_token::authority = user
     )]
@@ -43,7 +35,7 @@ pub struct ProvideLiquidity<'info> {
     #[account(
         mut,
         constraint = user_iasset_token_account.amount >= iasset_amount @ InceptError::InvalidTokenAccountBalance,
-        associated_token::mint = token_data.load()?.pools[liquidity_positions.load()?.liquidity_positions[liquidity_position_index as usize].pool_index as usize].asset_info.iasset_mint,
+        associated_token::mint = token_data.load()?.pools[pool_index as usize].asset_info.iasset_mint,
         associated_token::authority = user
     )]
     pub user_iasset_token_account: Box<Account<'info, TokenAccount>>,
@@ -55,30 +47,26 @@ pub struct ProvideLiquidity<'info> {
     pub user_liquidity_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[liquidity_positions.load()?.liquidity_positions[liquidity_position_index as usize].pool_index as usize].usdi_token_account
+        address = token_data.load()?.pools[pool_index as usize].usdi_token_account
     )]
     pub amm_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[liquidity_positions.load()?.liquidity_positions[liquidity_position_index as usize].pool_index as usize].iasset_token_account
+        address = token_data.load()?.pools[pool_index as usize].iasset_token_account
     )]
     pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[liquidity_positions.load()?.liquidity_positions[liquidity_position_index as usize].pool_index as usize].liquidity_token_mint
+        address = token_data.load()?.pools[pool_index as usize].liquidity_token_mint
     )]
     pub liquidity_token_mint: Box<Account<'info, Mint>>,
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(
-    ctx: Context<ProvideLiquidity>,
-
-    liquidity_position_index: u8,
-    iasset_amount: u64,
-) -> Result<()> {
+pub fn execute(ctx: Context<ProvideLiquidity>, pool_index: u8, iasset_amount: u64) -> Result<()> {
     let seeds = &[&[b"manager", bytemuck::bytes_of(&ctx.accounts.manager.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
+    let pool = token_data.pools[pool_index as usize];
 
     let iasset_liquidity_value =
         Decimal::new(iasset_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
@@ -105,14 +93,21 @@ pub fn execute(
     );
 
     // calculate amount of usdi required as well as amount of liquidity tokens to be received
-    let (mut usdi_liquidity_value, mut liquidity_token_value) =
-        calculate_liquidity_provider_values_from_iasset(
-            iasset_liquidity_value,
-            iasset_amm_value,
-            usdi_amm_value,
-            liquidity_token_supply,
-        )?;
-
+    let (mut usdi_liquidity_value, mut liquidity_token_value) = if pool.is_empty() {
+        // ensure price data is up to date
+        check_feed_update(pool.asset_info, Clock::get()?.slot)?;
+        let usdi_value = iasset_liquidity_value * pool.asset_info.price.to_decimal();
+        // Arbitrarily set the starting LP tokens as the usdi value.
+        (usdi_value, Decimal::new(10, 0) * usdi_value)
+    } else {
+        let usdi_value =
+            calculate_amm_price(iasset_amm_value, usdi_amm_value) * iasset_liquidity_value;
+        (
+            usdi_value,
+            liquidity_token_supply
+                * calculate_liquidity_proportion_from_usdi(usdi_value, usdi_amm_value)?,
+        )
+    };
     usdi_liquidity_value.rescale(DEVNET_TOKEN_SCALE);
     liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
 
@@ -177,21 +172,12 @@ pub fn execute(
         liquidity_token_value.mantissa().try_into().unwrap(),
     )?;
 
-    // update liquidity position data
-    let mut liquidity_positions = ctx.accounts.liquidity_positions.load_mut()?;
-    let liquidity_position =
-        liquidity_positions.liquidity_positions[liquidity_position_index as usize];
-    liquidity_positions.liquidity_positions[liquidity_position_index as usize]
-        .liquidity_token_value = RawDecimal::from(
-        liquidity_position.liquidity_token_value.to_decimal() + liquidity_token_value,
-    );
-
     // update pool data
     ctx.accounts.amm_iasset_token_account.reload()?;
     ctx.accounts.amm_usdi_token_account.reload()?;
     ctx.accounts.liquidity_token_mint.reload()?;
 
-    token_data.pools[liquidity_position.pool_index as usize].iasset_amount = RawDecimal::new(
+    token_data.pools[pool_index as usize].iasset_amount = RawDecimal::new(
         ctx.accounts
             .amm_iasset_token_account
             .amount
@@ -199,7 +185,7 @@ pub fn execute(
             .unwrap(),
         DEVNET_TOKEN_SCALE,
     );
-    token_data.pools[liquidity_position.pool_index as usize].usdi_amount = RawDecimal::new(
+    token_data.pools[pool_index as usize].usdi_amount = RawDecimal::new(
         ctx.accounts
             .amm_usdi_token_account
             .amount
@@ -207,11 +193,10 @@ pub fn execute(
             .unwrap(),
         DEVNET_TOKEN_SCALE,
     );
-    token_data.pools[liquidity_position.pool_index as usize].liquidity_token_supply =
-        RawDecimal::new(
-            ctx.accounts.liquidity_token_mint.supply.try_into().unwrap(),
-            DEVNET_TOKEN_SCALE,
-        );
+    token_data.pools[pool_index as usize].liquidity_token_supply = RawDecimal::new(
+        ctx.accounts.liquidity_token_mint.supply.try_into().unwrap(),
+        DEVNET_TOKEN_SCALE,
+    );
 
     Ok(())
 }
