@@ -181,42 +181,6 @@ export type Incept = {
       "args": []
     },
     {
-      "name": "initializeLiquidityPositions",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "initializeComet",
       "accounts": [
         {
@@ -824,81 +788,6 @@ export type Incept = {
       ]
     },
     {
-      "name": "initializeLiquidityPosition",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "manager",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u8"
-        },
-        {
-          "name": "iassetAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
       "name": "provideLiquidity",
       "accounts": [
         {
@@ -918,11 +807,6 @@ export type Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -993,11 +877,6 @@ export type Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -2458,37 +2337,6 @@ export type Incept = {
       "args": []
     },
     {
-      "name": "closeLiquidityPositionsAccount",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "destination",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "closeUserAccount",
       "accounts": [
         {
@@ -2632,10 +2480,6 @@ export type Incept = {
             "type": "publicKey"
           },
           {
-            "name": "liquidityPositions",
-            "type": "publicKey"
-          },
-          {
             "name": "comet",
             "type": "publicKey"
           },
@@ -2684,33 +2528,6 @@ export type Incept = {
               "array": [
                 {
                   "defined": "CometCollateral"
-                },
-                255
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "liquidityPositions",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "owner",
-            "type": "publicKey"
-          },
-          {
-            "name": "numPositions",
-            "type": "u64"
-          },
-          {
-            "name": "liquidityPositions",
-            "type": {
-              "array": [
-                {
-                  "defined": "LiquidityPosition"
                 },
                 255
               ]
@@ -3110,28 +2927,6 @@ export type Incept = {
       }
     },
     {
-      "name": "LiquidityPosition",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "authority",
-            "type": "publicKey"
-          },
-          {
-            "name": "liquidityTokenValue",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "poolIndex",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
       "name": "MintPosition",
       "type": {
         "kind": "struct",
@@ -3419,6 +3214,11 @@ export type Incept = {
       "code": 6050,
       "name": "RequireAllPositionsClosed",
       "msg": "Positions must be all closed"
+    },
+    {
+      "code": 6051,
+      "name": "MaxPoolOwnershipExceeded",
+      "msg": "Pool ownership exceeding max limit"
     }
   ]
 };
@@ -3606,42 +3406,6 @@ export const IDL: Incept = {
       "args": []
     },
     {
-      "name": "initializeLiquidityPositions",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "initializeComet",
       "accounts": [
         {
@@ -4249,81 +4013,6 @@ export const IDL: Incept = {
       ]
     },
     {
-      "name": "initializeLiquidityPosition",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "manager",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u8"
-        },
-        {
-          "name": "iassetAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
       "name": "provideLiquidity",
       "accounts": [
         {
@@ -4343,11 +4032,6 @@ export const IDL: Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -4418,11 +4102,6 @@ export const IDL: Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -5883,37 +5562,6 @@ export const IDL: Incept = {
       "args": []
     },
     {
-      "name": "closeLiquidityPositionsAccount",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "destination",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "closeUserAccount",
       "accounts": [
         {
@@ -6057,10 +5705,6 @@ export const IDL: Incept = {
             "type": "publicKey"
           },
           {
-            "name": "liquidityPositions",
-            "type": "publicKey"
-          },
-          {
             "name": "comet",
             "type": "publicKey"
           },
@@ -6109,33 +5753,6 @@ export const IDL: Incept = {
               "array": [
                 {
                   "defined": "CometCollateral"
-                },
-                255
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "liquidityPositions",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "owner",
-            "type": "publicKey"
-          },
-          {
-            "name": "numPositions",
-            "type": "u64"
-          },
-          {
-            "name": "liquidityPositions",
-            "type": {
-              "array": [
-                {
-                  "defined": "LiquidityPosition"
                 },
                 255
               ]
@@ -6535,28 +6152,6 @@ export const IDL: Incept = {
       }
     },
     {
-      "name": "LiquidityPosition",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "authority",
-            "type": "publicKey"
-          },
-          {
-            "name": "liquidityTokenValue",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "poolIndex",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
       "name": "MintPosition",
       "type": {
         "kind": "struct",
@@ -6844,6 +6439,11 @@ export const IDL: Incept = {
       "code": 6050,
       "name": "RequireAllPositionsClosed",
       "msg": "Positions must be all closed"
+    },
+    {
+      "code": 6051,
+      "name": "MaxPoolOwnershipExceeded",
+      "msg": "Pool ownership exceeding max limit"
     }
   ]
 };

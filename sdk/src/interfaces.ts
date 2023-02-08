@@ -8,6 +8,7 @@ export interface Manager {
   admin: PublicKey;
   bump: number;
   liquidationConfig: LiquidationConfig;
+  treasuryAddress: PublicKey;
 }
 
 export interface LiquidationConfig {
@@ -20,8 +21,8 @@ export interface User {
   authority: PublicKey;
   singlePoolComets: PublicKey;
   mintPositions: PublicKey;
-  liquidityPositions: PublicKey;
   comet: PublicKey;
+  bump: number;
 }
 
 export interface TokenData {

@@ -141,10 +141,6 @@ describe("incept", async () => {
       "check mint position address"
     );
     assert(
-      userAccountData.liquidityPositions.equals(anchor.web3.PublicKey.default),
-      "check liquidity position address"
-    );
-    assert(
       userAccountData.comet.equals(anchor.web3.PublicKey.default),
       "check comet address"
     );
@@ -768,15 +764,15 @@ describe("incept", async () => {
       pool.liquidityTokenMint
     );
 
-    await inceptClient.initializeLiquidityPosition(
-      new BN(10000000000000),
+    await inceptClient.provideLiquidity(
+      toDevnetScale(100000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       liquidityTokenAccountInfo.address,
       0
     );
 
-    await sleep(200);
+    await sleep(400);
 
     usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       inceptClient.provider,
@@ -849,7 +845,7 @@ describe("incept", async () => {
     );
 
     await inceptClient.provideLiquidity(
-      new BN(100000000),
+      toDevnetScale(1),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       liquidityTokenAccountInfo.address,
@@ -2648,8 +2644,8 @@ describe("incept", async () => {
 
     await sleep(200);
 
-    await inceptClient.initializeLiquidityPosition(
-      new BN(2000000000000),
+    await inceptClient.provideLiquidity(
+      toDevnetScale(20000),
       usdiTokenAccountInfo.address,
       iassetTokenAccountInfo.address,
       liquidityTokenAccountInfo.address,
