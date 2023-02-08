@@ -205,6 +205,10 @@ pub enum InceptError {
     /// 46. Require largest ILD position first
     #[msg("Positions must be all closed")]
     RequireAllPositionsClosed,
+
+    /// 47. Pool ownership exceeding max limit
+    #[msg("Pool ownership exceeding max limit")]
+    MaxPoolOwnershipExceeded,
 }
 
 impl From<InceptError> for ProgramError {

@@ -78,6 +78,7 @@ pub fn execute(
     let mut comet = ctx.accounts.single_pool_comet.load_mut()?;
 
     let pool_index = comet.positions[position_index as usize].pool_index as usize;
+    let empty_pool = token_data.pools[pool_index as usize].is_empty();
 
     let usdi_liquidity_value = Decimal::new(usdi_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
     let iasset_amm_value = Decimal::new(
@@ -218,6 +219,16 @@ pub fn execute(
         ctx.accounts.liquidity_token_mint.supply.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,
     );
+
+    let pool = token_data.pools[pool_index as usize];
+
+    if !empty_pool {
+        return_error_if_false!(
+            liquidity_token_value / liquidity_token_supply
+                <= pool.asset_info.max_ownership_pct.to_decimal(),
+            InceptError::MaxPoolOwnershipExceeded
+        );
+    }
 
     // Require a healthy score after transactions
     let health_score = calculate_health_score(&comet, token_data, Some(position_index as usize))?;
