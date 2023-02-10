@@ -5,7 +5,7 @@ mod states;
 
 use crate::instructions::*;
 
-declare_id!("9UUKudw6whsFzWRxvyxQ1Ztet8cTqpHJJ5WpUfSbATYt");
+declare_id!("HVsSygV6WvmPAqBFPBM8XYHhiYGhDFPMKmRixWdDpwtw");
 
 #[program]
 pub mod incept_comet_manager {

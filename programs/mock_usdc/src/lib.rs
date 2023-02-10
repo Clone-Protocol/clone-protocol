@@ -5,7 +5,7 @@ use instructions::*;
 mod instructions;
 mod states;
 
-declare_id!("ED1yj7uXEZRFXwFU8QMtD2CCnpkLiTq46W1cNKFqo9qV");
+declare_id!("BtaD4H1JxGqrq9iZN7Z2if7cquTaMmCZ5Ra3JURjPGj5");
 
 #[program]
 pub mod mock_usdc {

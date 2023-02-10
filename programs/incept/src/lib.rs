@@ -9,7 +9,7 @@ pub mod states;
 
 use instructions::*;
 
-declare_id!("FbFjJC5XVPszxumC5jGVkDkV19TgJP7LWmsX21cRSXKL");
+declare_id!("2YSThxfPwJWYPAeBczUqbu2cyefjq9vAdDsPJU7PUVak");
 
 #[program]
 pub mod incept {

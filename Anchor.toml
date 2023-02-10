@@ -1,11 +1,11 @@
 [programs.localnet]
-incept = "FbFjJC5XVPszxumC5jGVkDkV19TgJP7LWmsX21cRSXKL"
-pyth = "7741WpkbdmZPGmqzPpsP3LdbzCwtMgxWH9tjdERnAzg8"
-mock_usdc = "ED1yj7uXEZRFXwFU8QMtD2CCnpkLiTq46W1cNKFqo9qV"
-store = "Haz47L8yvvthM99yy7hGi9jcPjVJSL1anMS238Ta6RFp"
+incept = "2YSThxfPwJWYPAeBczUqbu2cyefjq9vAdDsPJU7PUVak"
+pyth = "HJ37v65UZ97z6mbUrGXVZCqmQoYahDtK9i8ZNk2JLZut"
+mock_usdc = "BtaD4H1JxGqrq9iZN7Z2if7cquTaMmCZ5Ra3JURjPGj5"
+store = "6xGND4J7j36RyA5sYx8k5GTojF2U9awnXoiWrkYarD3c"
 access_controller = "FvSzDSyxvu72HhTgAVnBkwVAwR9NvTqjR4tFBXia4bkv"
-jupiter_agg_mock = "CBM3RJyXMmu2cCSmBc1Vb5BB4Xy8hks3QQD4TcFYHoVg"
-incept_comet_manager = "9UUKudw6whsFzWRxvyxQ1Ztet8cTqpHJJ5WpUfSbATYt"
+jupiter_agg_mock = "7BhcWQNaNiEBd9SW7xMGSJYDP7NQ9VRMLYaRZD1QjZh5"
+incept_comet_manager = "HVsSygV6WvmPAqBFPBM8XYHhiYGhDFPMKmRixWdDpwtw"
 
 [registry]
 url = "https://anchor.projectserum.com"
