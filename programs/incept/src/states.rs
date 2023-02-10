@@ -10,6 +10,7 @@ pub const USDI_COLLATERAL_INDEX: usize = 0;
 #[allow(dead_code)]
 pub const USDC_COLLATERAL_INDEX: usize = 1;
 pub const PERCENT_SCALE: u8 = 2;
+pub const BPS_SCALE: u32 = 4;
 
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
@@ -44,6 +45,9 @@ impl RawDecimal {
     }
     pub fn from_percent(percent: u16) -> Self {
         Self::new(percent.into(), PERCENT_SCALE.into())
+    }
+    pub fn from_bps(bps: i64) -> Self {
+        Self::new(bps, BPS_SCALE)
     }
 }
 

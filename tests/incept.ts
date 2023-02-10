@@ -61,8 +61,8 @@ describe("incept", async () => {
   const ilLiquidationRewardPct = 5;
   const maxHealthLiquidation = 20;
   const liquidatorFee = 500; // in bps
-  const poolTradingFee = 2;
-  const treasuryTradingFee = 1;
+  const poolTradingFee = 200;
+  const treasuryTradingFee = 100;
   const collateralFullLiquidationThreshold = 25;
 
   let priceFeed;
