@@ -79,7 +79,7 @@ export const calculateExecutionThreshold = (
     expectedUsdiAmount = calculateInputFromOutput(pool, iassetAmount, false);
     usdiThresholdAmount = expectedUsdiAmount / (1 - slippage);
   } else {
-    const expectedUsdiAmount = calculateOutputFromInput(
+    expectedUsdiAmount = calculateOutputFromInput(
       pool,
       iassetAmount,
       false
