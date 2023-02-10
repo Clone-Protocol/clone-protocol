@@ -208,6 +208,32 @@ describe("incept", async () => {
       500,
       10
     );
+
+    await inceptProgram.methods
+      .removePool(0, false)
+      .accounts({
+        admin: inceptClient.provider.publicKey!,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
+
+    await inceptClient.initializePool(
+      walletPubkey,
+      150,
+      200,
+      poolTradingFee,
+      treasuryTradingFee,
+      priceFeed,
+      chainlink.priceFeedPubkey(),
+      healthScoreCoefficient,
+      500,
+      10
+    );
+
+    await sleep(400);
+    let tokenData = await inceptClient.getTokenData();
+    assert.equal(tokenData.numPools.toNumber(), 1);
   });
 
   it("non-stable mock asset added as a collateral!", async () => {

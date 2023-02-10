@@ -9,11 +9,12 @@ crate-type = ["cdylib", "lib"]
 name = "incept"
 
 [features]
+pyth-local = []
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
-default = []
+default = ["pyth-local"]
 
 [dependencies]
 anchor-lang = "0.25.0"
@@ -27,3 +28,4 @@ jupiter-agg-mock = { path = "../jupiter-agg-mock", version = "0.1.0", features =
 chainlink_solana = { path = "../../crates/chainlink-solana", version = "1.0.0"}
 rust_decimal = "1.25.0"
 rust_decimal_macros = "1.25.0"
+pyth-sdk-solana = "0.7.0"
