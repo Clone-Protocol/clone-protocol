@@ -7,7 +7,15 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(il_health_score_coefficient: u64, il_health_score_cutoff: u64, il_liquidation_reward_pct: u64)]
+#[instruction(
+    il_health_score_coefficient: u64,
+    il_health_score_cutoff: u64,
+    il_liquidation_reward_pct: u64,
+    max_health_liquidation: u64,
+    liquidator_fee: u64,
+    collateral_full_liquidation_threshold: u64,
+    treasury_address: Pubkey
+)]
 pub struct InitializeIncept<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
