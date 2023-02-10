@@ -2,7 +2,6 @@ import * as anchor from "@project-serum/anchor";
 import { BN, Program, Provider } from "@project-serum/anchor";
 import {
   getAssociatedTokenAddress,
-  getOrCreateAssociatedTokenAccount,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { Incept as InceptProgram, IDL } from "./idl/incept";
@@ -101,7 +100,7 @@ export class InceptClient {
 
   public async loadManager() {
     this.inceptAddress = await this.getInceptAddress();
-    this.incept = (await this.getManagerAccount()) as Incept;
+    this.incept = (await this.getInceptAccount()) as Incept;
   }
 
   public async initializeUser(user?: PublicKey) {
@@ -341,7 +340,7 @@ export class InceptClient {
     );
   }
 
-  public async getManagerAccount() {
+  public async getInceptAccount() {
     return (await this.program.account.incept.fetch(
       this.inceptAddress[0]
     )) as Incept;
