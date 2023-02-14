@@ -3065,7 +3065,8 @@ describe("incept", async () => {
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: anchor.web3.SystemProgram.programId,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      }).instruction();
+      })
+      .instruction();
 
     await inceptClient.provider.sendAndConfirm!(
       new Transaction().add(createIx).add(createManagerIx),
@@ -3463,23 +3464,27 @@ describe("incept", async () => {
             managerInfo: cometManagerInfoAddress,
           })
           .instruction()
-      ).add(
-        await cometManagerProgram.methods.fulfillRedemptionRequest(0).accounts({
-          managerOwner: inceptClient.provider.publicKey!,
-          managerInfo: cometManagerInfoAddress,
-          incept: inceptClient.inceptAddress[0],
-          managerInceptUser: cometManagerInfo.userAccount,
-          subscriberAccount: subscribeAccountAddress,
-          usdiMint: inceptClient.incept!.usdiMint,
-          subscriberUsdiTokenAccount: subscriberUsdiTokenAccount.address,
-          managerUsdiTokenAccount: cometManagerUsdiTokenAccount.address,
-          inceptProgram: inceptClient.programId,
-          comet: cometManagerUser.comet,
-          tokenData: inceptClient.incept!.tokenData,
-          inceptUsdiVault: tokenData.collaterals[0].vault,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: anchor.web3.SystemProgram.programId
-        }).instruction()
+      )
+      .add(
+        await cometManagerProgram.methods
+          .fulfillRedemptionRequest(0)
+          .accounts({
+            managerOwner: inceptClient.provider.publicKey!,
+            managerInfo: cometManagerInfoAddress,
+            incept: inceptClient.inceptAddress[0],
+            managerInceptUser: cometManagerInfo.userAccount,
+            subscriberAccount: subscribeAccountAddress,
+            usdiMint: inceptClient.incept!.usdiMint,
+            subscriberUsdiTokenAccount: subscriberUsdiTokenAccount.address,
+            managerUsdiTokenAccount: cometManagerUsdiTokenAccount.address,
+            inceptProgram: inceptClient.programId,
+            comet: cometManagerUser.comet,
+            tokenData: inceptClient.incept!.tokenData,
+            inceptUsdiVault: tokenData.collaterals[0].vault,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: anchor.web3.SystemProgram.programId,
+          })
+          .instruction()
       );
 
     await inceptClient.provider.sendAndConfirm!(tx);

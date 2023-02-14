@@ -1,9 +1,6 @@
 import * as anchor from "@project-serum/anchor";
 import { BN, Program, Provider } from "@project-serum/anchor";
-import {
-  getAssociatedTokenAddress,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
+import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Incept as InceptProgram, IDL } from "./idl/incept";
 import {
   PublicKey,
@@ -18,7 +15,13 @@ import {
   SinglePoolCometUninitialized,
 } from "./error";
 import { getMantissa } from "./decimal";
-import { Incept as InceptInfo, TokenData, Comet, User, BorrowPositions } from "./interfaces";
+import {
+  Incept as InceptInfo,
+  TokenData,
+  Comet,
+  User,
+  BorrowPositions,
+} from "./interfaces";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
