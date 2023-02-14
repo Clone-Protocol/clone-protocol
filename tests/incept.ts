@@ -33,19 +33,19 @@ import {
   calculateCometRecenterMultiPool,
   getILD,
 } from "../sdk/src/healthscore";
-import { Incept as InceptInfo } from "../sdk/src/interfaces";
+// import { Incept as InceptInfo } from "../sdk/src/interfaces";
 import { ManagerInfo, Subscriber } from "../sdk/src/comet_manager";
 
 describe("incept", async () => {
   const provider = anchor.AnchorProvider.local();
   anchor.setProvider(provider);
-
   let inceptProgram = anchor.workspace.Incept as Program<Incept>;
   let pythProgram = anchor.workspace.Pyth as Program<Pyth>;
   let walletPubkey = inceptProgram.provider.publicKey!;
   let storeProgram = anchor.workspace.Store as Program<Store>;
   let jupiterProgram = anchor.workspace
     .JupiterAggMock as Program<JupiterAggMock>;
+
   let cometManagerProgram = anchor.workspace
     .InceptCometManager as Program<InceptCometManager>;
   let chainlink;
@@ -248,7 +248,7 @@ describe("incept", async () => {
     );
 
     let tokenData = await inceptClient.getTokenData();
-    assert.equal(tokenData.collaterals[2].stable, 0);
+    assert.equal(tokenData.collaterals[2].stable.toNumber(), 0);
   });
 
   it("token data initialization check", async () => {
@@ -716,7 +716,7 @@ describe("incept", async () => {
     let assetInfo = tokenData.pools[0].assetInfo;
 
     await inceptProgram.methods
-      .subtractIassetFromBorrow(new BN(0), new BN(5000000))
+      .subtractIassetFromBorrow(0, new BN(5000000))
       .accounts({
         user: walletPubkey,
         userAccount: userAddress.userPubkey,
@@ -3054,7 +3054,7 @@ describe("incept", async () => {
     );
 
     let createManagerIx = await cometManagerProgram.methods
-      .initialize(userAccountBump, 20, 2000, 16)
+      .initialize(userAccountBump, 2000, 16)
       .accounts({
         admin: inceptClient.provider.publicKey!,
         managerInfo: managerInfoAddress,
@@ -3066,7 +3066,6 @@ describe("incept", async () => {
         systemProgram: anchor.web3.SystemProgram.programId,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
-      .signers([])
       .instruction();
 
     await inceptClient.provider.sendAndConfirm!(
@@ -3210,7 +3209,7 @@ describe("incept", async () => {
 
     assert.equal(
       Number(subscriberAccount.membershipTokens) / 100000000,
-      1,
+      100,
       "membership token"
     );
     assert.equal(
@@ -3221,7 +3220,7 @@ describe("incept", async () => {
 
     assert.equal(
       Number(cometManagerInfo.membershipTokenSupply) / 100000000,
-      1,
+      100,
       "membership token supply"
     );
 
@@ -3393,7 +3392,7 @@ describe("incept", async () => {
         toDevnetScale(toNumber(comet.positions[0].liquidityTokenValue))
       )
       .accounts({
-        managerOwner: inceptClient.provider.publicKey!,
+        signer: inceptClient.provider.publicKey!,
         managerInfo: cometManagerInfoAddress,
         incept: inceptClient.inceptAddress[0],
         managerInceptUser: cometManagerInfo.userAccount,
@@ -3458,13 +3457,23 @@ describe("incept", async () => {
       .add(await inceptClient.updatePricesInstruction())
       .add(
         await cometManagerProgram.methods
-          .redeem(subscriberAccount.membershipTokens)
+          .requestRedemption(subscriberAccount.membershipTokens)
           .accounts({
             subscriber: cometManagerProgram.provider.publicKey!,
             subscriberAccount: subscribeAccountAddress,
             managerInfo: cometManagerInfoAddress,
+          })
+          .instruction()
+      )
+      .add(
+        await cometManagerProgram.methods
+          .fulfillRedemptionRequest(0)
+          .accounts({
+            managerOwner: inceptClient.provider.publicKey!,
+            managerInfo: cometManagerInfoAddress,
             incept: inceptClient.inceptAddress[0],
             managerInceptUser: cometManagerInfo.userAccount,
+            subscriberAccount: subscribeAccountAddress,
             usdiMint: inceptClient.incept!.usdiMint,
             subscriberUsdiTokenAccount: subscriberUsdiTokenAccount.address,
             managerUsdiTokenAccount: cometManagerUsdiTokenAccount.address,
@@ -3521,7 +3530,7 @@ describe("incept", async () => {
         toDevnetScale(toNumber(comet.collaterals[0].collateralAmount))
       )
       .accounts({
-        managerOwner: inceptClient.provider.publicKey!,
+        signer: inceptClient.provider.publicKey!,
         managerInfo: cometManagerInfoAddress,
         incept: inceptClient.inceptAddress[0],
         managerInceptUser: cometManagerInfo.userAccount,
@@ -3563,7 +3572,7 @@ describe("incept", async () => {
       true
     );
 
-    let managerUsdiBalance = cometManagerUsdiTokenAccount.amount;
+    let managerUsdiBalance = Number(cometManagerUsdiTokenAccount.amount);
 
     await cometManagerProgram.methods
       .ownerWithdrawal(new BN(managerUsdiBalance))
@@ -3593,7 +3602,7 @@ describe("incept", async () => {
 
     assert.equal(
       Number(ownerUsdiTokenAccount.amount),
-      Number(currentUsdiBalance + managerUsdiBalance),
+      Number(currentUsdiBalance) + managerUsdiBalance,
       "owner usdi account"
     );
     assert.equal(
@@ -3608,9 +3617,9 @@ describe("incept", async () => {
       cometManagerInfo.userAccount
     );
     await cometManagerProgram.methods
-      .initiateCometManagerTermination()
+      .initiateCometManagerClosing()
       .accounts({
-        managerOwner: cometManagerProgram.provider.publicKey!,
+        signer: cometManagerProgram.provider.publicKey!,
         managerInfo: cometManagerInfoAddress,
         managerInceptUser: cometManagerInfo.userAccount,
         comet: cometManagerUser.comet,
@@ -3621,8 +3630,8 @@ describe("incept", async () => {
       cometManagerInfoAddress
     )) as ManagerInfo;
 
-    assert.isTrue(
-      cometManagerInfo.inClosingSequence,
+    assert.isFalse(
+      cometManagerInfo.status.closing.forcefullyClosed,
       "Should be in closing sequence"
     );
   });
@@ -3645,7 +3654,7 @@ describe("incept", async () => {
     );
 
     await cometManagerProgram.methods
-      .terminateCometManager()
+      .closeCometManager()
       .accounts({
         managerOwner: cometManagerProgram.provider.publicKey!,
         managerInfo: cometManagerInfoAddress,

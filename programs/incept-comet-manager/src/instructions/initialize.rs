@@ -1,22 +1,18 @@
-use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use incept::cpi::accounts::{InitializeComet, InitializeUser};
 use incept::program::Incept as InceptProgram;
-use incept::return_error_if_false;
 use incept::states::{Comet, Incept};
 
-pub const PROTOCOL_HEALTH_SCORE_THRESHOLD: u8 = 5;
-
 #[derive(Accounts)]
-#[instruction(user_bump: u8, health_score_threshold: u8)]
+#[instruction(user_bump: u8, withdrawal_fee_bps: u16, management_fee_bps: u16)]
 pub struct Initialize<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
     #[account(
         init,
-        space = 8 + 163,
+        space = 8 + ManagerInfo::MAX_SIZE,
         seeds = [b"manager-info", admin.key.as_ref()],
         bump,
         payer = admin
@@ -40,15 +36,10 @@ pub struct Initialize<'info> {
 pub fn execute(
     ctx: Context<Initialize>,
     user_bump: u8,
-    health_score_threshold: u8,
     withdrawal_fee_bps: u16,
     management_fee_bps: u16,
 ) -> Result<()> {
     // Set Manager info data.
-    return_error_if_false!(
-        PROTOCOL_HEALTH_SCORE_THRESHOLD <= health_score_threshold,
-        InceptCometManagerError::ThresholdTooLow
-    );
     let manager_info = &mut ctx.accounts.manager_info;
     let manager_bump = *ctx.bumps.get("manager_info").unwrap();
 
@@ -59,8 +50,7 @@ pub fn execute(
     manager_info.user_bump = user_bump;
     manager_info.bump = manager_bump;
     manager_info.incept = ctx.accounts.incept.to_account_info().key();
-    manager_info.health_score_threshold = health_score_threshold;
-    manager_info.in_closing_sequence = false;
+    manager_info.status = CometManagerStatus::Open;
     manager_info.withdrawal_fee_bps = withdrawal_fee_bps;
     manager_info.management_fee_bps = management_fee_bps;
     manager_info.fee_claim_slot = Clock::get()?.slot;

@@ -26,7 +26,7 @@ pub fn execute(ctx: Context<RemovePool>, pool_index: u8, force_removal: bool) ->
     let num_pools = token_data.num_pools as usize;
     let num_collaterals = token_data.num_collaterals as usize;
     let pool_index = pool_index as usize;
-    let pool = token_data.pools[pool_index as usize];
+    let pool = token_data.pools[pool_index];
 
     if !force_removal {
         return_error_if_false!(
@@ -37,7 +37,7 @@ pub fn execute(ctx: Context<RemovePool>, pool_index: u8, force_removal: bool) ->
         );
     }
     // Update pool data
-    token_data.pools[pool_index as usize] = token_data.pools[num_pools - 1];
+    token_data.pools[pool_index] = token_data.pools[num_pools - 1];
     token_data.pools[num_pools - 1] = Pool::default();
     token_data.num_pools = (num_pools - 1) as u64;
 

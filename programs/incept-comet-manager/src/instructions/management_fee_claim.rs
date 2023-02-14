@@ -1,3 +1,4 @@
+use crate::config::{FEE_CLAIM_INTERVAL_SLOTS, MAX_STRIKES, REPLENISH_STRIKE_INTERVAL};
 use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -5,11 +6,6 @@ use incept::return_error_if_false;
 use incept::states::DEVNET_TOKEN_SCALE;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-
-#[cfg(feature = "local-testing")]
-const FEE_CLAIM_INTERVAL_SLOTS: u64 = 0;
-#[cfg(not(feature = "local-testing"))]
-const FEE_CLAIM_INTERVAL_SLOTS: u64 = 2592000;
 
 #[derive(Accounts)]
 pub struct ManagementFeeClaim<'info> {
@@ -32,14 +28,19 @@ pub struct ManagementFeeClaim<'info> {
 pub fn execute(ctx: Context<ManagementFeeClaim>) -> Result<()> {
     // Calculate membership amount to mint
     return_error_if_false!(
-        !ctx.accounts.manager_info.in_closing_sequence,
-        InceptCometManagerError::InvalidActionWhenInTerminationSequence
+        matches!(ctx.accounts.manager_info.status, CometManagerStatus::Open),
+        InceptCometManagerError::OpenStatusRequired
     );
     let current_slot = Clock::get()?.slot;
     return_error_if_false!(
         current_slot >= ctx.accounts.manager_info.fee_claim_slot + FEE_CLAIM_INTERVAL_SLOTS,
         InceptCometManagerError::TooEarlyToClaimReward
     );
+    return_error_if_false!(
+        (ctx.accounts.manager_info.redemption_strikes as u64) < MAX_STRIKES,
+        InceptCometManagerError::ManagerAtStrikeLimit
+    );
+
     let management_fee_rate = Decimal::new(
         ctx.accounts
             .manager_info
@@ -68,6 +69,19 @@ pub fn execute(ctx: Context<ManagementFeeClaim>) -> Result<()> {
     ctx.accounts.manager_info.membership_token_supply += tokens_to_add;
     // Update slot
     ctx.accounts.manager_info.fee_claim_slot = current_slot;
+
+    if current_slot
+        >= ctx
+            .accounts
+            .manager_info
+            .last_strike_timestamp
+            .to_u64()
+            .unwrap()
+            + REPLENISH_STRIKE_INTERVAL
+        && ctx.accounts.manager_info.redemption_strikes > 0
+    {
+        ctx.accounts.manager_info.redemption_strikes -= 1;
+    }
 
     Ok(())
 }

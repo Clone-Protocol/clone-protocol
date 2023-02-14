@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+mod config;
 mod error;
 mod instructions;
 mod states;
@@ -14,17 +15,10 @@ pub mod incept_comet_manager {
     pub fn initialize(
         ctx: Context<Initialize>,
         user_bump: u8,
-        health_score_threshold: u8,
         withdrawal_fee_bps: u16,
         management_fee_bps: u16,
     ) -> Result<()> {
-        initialize::execute(
-            ctx,
-            user_bump,
-            health_score_threshold,
-            withdrawal_fee_bps,
-            management_fee_bps,
-        )
+        initialize::execute(ctx, user_bump, withdrawal_fee_bps, management_fee_bps)
     }
 
     pub fn management_fee_claim(ctx: Context<ManagementFeeClaim>) -> Result<()> {
@@ -39,8 +33,26 @@ pub mod incept_comet_manager {
         subscribe::execute(ctx, usdi_collateral_to_provide)
     }
 
-    pub fn redeem(ctx: Context<Redeem>, membership_tokens_to_redeem: u64) -> Result<()> {
-        redeem::execute(ctx, membership_tokens_to_redeem)
+    pub fn redeem_from_closed_manager(ctx: Context<RedeemFromClosingManager>) -> Result<()> {
+        redeem_from_closing_manager::execute(ctx)
+    }
+
+    pub fn request_redemption(
+        ctx: Context<RequestRedemption>,
+        membership_tokens_to_redeem: u64,
+    ) -> Result<()> {
+        request_redemption::execute(ctx, membership_tokens_to_redeem)
+    }
+
+    pub fn fulfill_redemption_request(
+        ctx: Context<FulfillRedemptionRequest>,
+        index: u8,
+    ) -> Result<()> {
+        fulfill_redemption_request::execute(ctx, index)
+    }
+
+    pub fn assign_redemption_strike(ctx: Context<AssignRedemptionStrike>, index: u8) -> Result<()> {
+        assign_redemption_strike::execute(ctx, index)
     }
 
     pub fn add_liquidity(
@@ -75,13 +87,11 @@ pub mod incept_comet_manager {
         owner_withdrawal::execute(ctx, usdi_amount)
     }
 
-    pub fn initiate_comet_manager_termination(
-        ctx: Context<InitiateCometManagerTermination>,
-    ) -> Result<()> {
-        initiate_comet_manager_termination::execute(ctx)
+    pub fn initiate_comet_manager_closing(ctx: Context<InitiateCometManagerClosing>) -> Result<()> {
+        initiate_comet_manager_closing::execute(ctx)
     }
 
-    pub fn terminate_comet_manager(ctx: Context<TerminateCometManager>) -> Result<()> {
-        terminate_comet_manager::execute(ctx)
+    pub fn close_comet_manager(ctx: Context<CloseCometManager>) -> Result<()> {
+        close_comet_manager::execute(ctx)
     }
 }

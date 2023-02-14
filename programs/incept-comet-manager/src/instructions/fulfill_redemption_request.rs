@@ -3,29 +3,22 @@ use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use incept::cpi::accounts::WithdrawCollateralFromComet;
-use incept::error::InceptError;
-use incept::math::calculate_health_score;
 use incept::program::Incept as InceptProgram;
 use incept::return_error_if_false;
-use incept::states::{Comet, Incept, TokenData, User, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX};
+use incept::states::{
+    Comet, Incept, TokenData, User, BPS_SCALE, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX,
+};
 use rust_decimal::prelude::*;
 
 #[derive(Accounts)]
-#[instruction(membership_tokens_to_redeem: u64)]
-pub struct Redeem<'info> {
-    #[account(address = subscriber_account.owner)]
-    pub subscriber: Signer<'info>,
+#[instruction(index: u8)]
+pub struct FulfillRedemptionRequest<'info> {
+    #[account(address = manager_info.owner)]
+    pub manager_owner: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"subscriber", subscriber.to_account_info().key.as_ref(), manager_info.to_account_info().key.as_ref()],
+        seeds = [b"manager-info", manager_owner.key().as_ref()],
         bump,
-    )]
-    pub subscriber_account: Box<Account<'info, Subscriber>>,
-    #[account(
-        mut,
-        seeds = [b"manager-info", manager_info.owner.as_ref()],
-        bump,
-        address = subscriber_account.manager,
     )]
     pub manager_info: Box<Account<'info, ManagerInfo>>,
     #[account(
@@ -39,13 +32,19 @@ pub struct Redeem<'info> {
     pub manager_incept_user: Box<Account<'info, User>>,
     #[account(
         mut,
+        seeds = [b"subscriber", manager_info.user_redemptions[index as usize].as_ref(), manager_info.to_account_info().key.as_ref()],
+        bump,
+    )]
+    pub subscriber_account: Box<Account<'info, Subscriber>>,
+    #[account(
+        mut,
         address = incept.usdi_mint
     )]
     pub usdi_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
         associated_token::mint = usdi_mint,
-        associated_token::authority = subscriber
+        associated_token::authority = manager_info.user_redemptions[index as usize]
     )]
     pub subscriber_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -77,28 +76,25 @@ pub struct Redeem<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<Redeem>, membership_tokens_to_redeem: u64) -> Result<()> {
+pub fn execute(ctx: Context<FulfillRedemptionRequest>, index: u8) -> Result<()> {
     // Calculate usdi value to withdraw according to tokens redeemed.
     let token_data = ctx.accounts.token_data.load()?;
     let comet = ctx.accounts.comet.load()?;
-
-    let current_health_score = calculate_health_score(&comet, &token_data, None)?;
-    let health_score_threshold =
-        Decimal::new(ctx.accounts.manager_info.health_score_threshold.into(), 0);
+    return_error_if_false!(
+        matches!(ctx.accounts.manager_info.status, CometManagerStatus::Open),
+        InceptCometManagerError::OpenStatusRequired
+    );
 
     return_error_if_false!(
-        current_health_score.score > health_score_threshold,
-        InceptError::HealthScoreTooLow
+        ctx.accounts.subscriber_account.redemption_request.is_some(),
+        InceptCometManagerError::InvalidIndex
     );
-    return_error_if_false!(
-        membership_tokens_to_redeem > 0
-            && membership_tokens_to_redeem <= ctx.accounts.subscriber_account.membership_tokens,
-        InceptCometManagerError::InvalidMembershipTokenBalance
-    );
+
+    let redemption_request = ctx.accounts.subscriber_account.redemption_request.unwrap();
 
     let estimated_usdi_comet_value = comet.estimate_usdi_value(&token_data);
     let tokens_redeemed = Decimal::new(
-        membership_tokens_to_redeem.try_into().unwrap(),
+        redemption_request.membership_tokens.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,
     );
     let membership_token_supply = Decimal::new(
@@ -113,21 +109,6 @@ pub fn execute(ctx: Context<Redeem>, membership_tokens_to_redeem: u64) -> Result
     let mut usdi_collateral_to_withdraw =
         estimated_usdi_comet_value * tokens_redeemed / membership_token_supply;
     usdi_collateral_to_withdraw.rescale(DEVNET_TOKEN_SCALE);
-
-    let estimated_health_score_after_redemption = if current_health_score.total_il_term.is_zero()
-        && current_health_score.total_position_term.is_zero()
-    {
-        Decimal::new(100, 0)
-    } else {
-        Decimal::new(100, 0)
-            - (current_health_score.total_il_term + current_health_score.total_position_term)
-                / (current_health_score.effective_collateral - usdi_collateral_to_withdraw)
-    };
-
-    return_error_if_false!(
-        estimated_health_score_after_redemption >= health_score_threshold,
-        InceptError::HealthScoreTooLow
-    );
 
     // Withdraw collateral from comet
     let manager_info = ctx.accounts.manager_info.clone();
@@ -179,23 +160,25 @@ pub fn execute(ctx: Context<Redeem>, membership_tokens_to_redeem: u64) -> Result
         DEVNET_TOKEN_SCALE,
     );
 
-    // Calculate the profit to send to subscriber, fees for management and principal deficit.
     let withdrawal_fee_rate = Decimal::new(
         ctx.accounts
             .manager_info
             .withdrawal_fee_bps
             .try_into()
             .unwrap(),
-        4,
+        BPS_SCALE,
     );
+
     let management_fee_rate = Decimal::new(
         ctx.accounts
             .manager_info
             .management_fee_bps
             .try_into()
             .unwrap(),
-        4,
+        BPS_SCALE,
     );
+
+    // Calculate the profit to send to subscriber, fees for management and principal deficit.
     let total_claimable_value =
         estimated_usdi_comet_value * subscriber_membership_tokens / membership_token_supply;
 
@@ -234,14 +217,19 @@ pub fn execute(ctx: Context<Redeem>, membership_tokens_to_redeem: u64) -> Result
         usdi_to_subscriber.mantissa().try_into().unwrap(),
     )?;
 
-    // Burn membership tokens from total supply.
-    ctx.accounts.manager_info.membership_token_supply -= membership_tokens_to_redeem;
-
-    // Adjust subscriber tokens, if fully redeemed, set principal to zero.
-    if ctx.accounts.subscriber_account.membership_tokens == membership_tokens_to_redeem {
+    // Burn membership tokens from total supply and user supply
+    ctx.accounts.manager_info.membership_token_supply -= redemption_request.membership_tokens;
+    ctx.accounts.subscriber_account.membership_tokens -= redemption_request.membership_tokens;
+    if ctx.accounts.subscriber_account.membership_tokens == 0 {
         ctx.accounts.subscriber_account.principal = 0;
     }
-    ctx.accounts.subscriber_account.membership_tokens -= membership_tokens_to_redeem;
+
+    ctx.accounts.subscriber_account.redemption_request = None;
+    // Remove from user_redemptions
+    ctx.accounts
+        .manager_info
+        .user_redemptions
+        .remove(index as usize);
 
     Ok(())
 }

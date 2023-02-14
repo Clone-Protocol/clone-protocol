@@ -1,3 +1,4 @@
+use crate::config::MIN_COLLATERAL_DEPOSIT;
 use crate::error::InceptCometManagerError;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -77,22 +78,28 @@ pub struct Subscribe<'info> {
 pub fn execute(ctx: Context<Subscribe>, collateral_to_provide: u64) -> Result<()> {
     // Calculate membership amount to mint
     return_error_if_false!(
-        !ctx.accounts.manager_info.in_closing_sequence,
-        InceptCometManagerError::InvalidActionWhenInTerminationSequence
+        matches!(ctx.accounts.manager_info.status, CometManagerStatus::Open),
+        InceptCometManagerError::OpenStatusRequired
     );
-
-    let token_data = ctx.accounts.token_data.load()?;
-    let comet = ctx.accounts.comet.load()?;
-
-    let estimated_usdi_comet_value = comet.estimate_usdi_value(&token_data);
-
     let usdi_collateral_contribution = Decimal::new(
         collateral_to_provide.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,
     );
 
-    let mut membership_token_to_mint =
-        usdi_collateral_contribution / (usdi_collateral_contribution + estimated_usdi_comet_value);
+    return_error_if_false!(
+        usdi_collateral_contribution >= MIN_COLLATERAL_DEPOSIT,
+        InceptCometManagerError::DepositAmountTooLow
+    );
+
+    let token_data = ctx.accounts.token_data.load()?;
+    let comet = ctx.accounts.comet.load()?;
+
+    let mut membership_token_to_mint = if ctx.accounts.manager_info.membership_token_supply == 0 {
+        usdi_collateral_contribution
+    } else {
+        let estimated_usdi_comet_value = comet.estimate_usdi_value(&token_data);
+        usdi_collateral_contribution / (usdi_collateral_contribution + estimated_usdi_comet_value)
+    };
     membership_token_to_mint.rescale(DEVNET_TOKEN_SCALE);
 
     // Mint membership
