@@ -75,7 +75,7 @@ pub fn execute<'info>(
         );
 
         let price = load_price_from_pyth(pyth_oracle)?;
-        let expo = (price.expo * -1).try_into().unwrap();
+        let expo = (-price.expo).try_into().unwrap();
 
         // update price data
         token_data.pools[pool_index].asset_info.price = RawDecimal::new(price.price, expo);
