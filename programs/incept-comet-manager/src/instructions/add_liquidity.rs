@@ -76,8 +76,8 @@ pub fn execute(ctx: Context<AddLiquidity>, pool_index: u8, usdi_amount: u64) -> 
     // Calculate usdi value to withdraw according to tokens redeemed.
     // Withdraw collateral from comet
     return_error_if_false!(
-        !ctx.accounts.manager_info.in_closing_sequence,
-        InceptCometManagerError::InvalidActionWhenInTerminationSequence
+        matches!(ctx.accounts.manager_info.status, CometManagerStatus::Open),
+        InceptCometManagerError::OpenStatusRequired
     );
 
     let manager_info = ctx.accounts.manager_info.clone();

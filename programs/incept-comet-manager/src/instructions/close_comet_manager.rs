@@ -9,7 +9,7 @@ use incept::states::{Comet, Incept, TokenData, User, USDI_COLLATERAL_INDEX};
 use rust_decimal::prelude::*;
 
 #[derive(Accounts)]
-pub struct TerminateCometManager<'info> {
+pub struct CloseCometManager<'info> {
     #[account(address = manager_info.owner)]
     pub manager_owner: Signer<'info>,
     #[account(
@@ -68,19 +68,24 @@ pub struct TerminateCometManager<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<TerminateCometManager>) -> Result<()> {
+pub fn execute(ctx: Context<CloseCometManager>) -> Result<()> {
     // Calculate usdi value to withdraw according to tokens redeemed.
     // Withdraw collateral from comet
     let manager_info = &ctx.accounts.manager_info;
+
     return_error_if_false!(
-        manager_info.in_closing_sequence,
-        InceptCometManagerError::MustBeInTerminationSequence
+        matches!(manager_info.status, CometManagerStatus::Closing { .. }),
+        InceptCometManagerError::ClosingStatusRequired
     );
-    let current_slot = Clock::get()?.slot;
-    return_error_if_false!(
-        current_slot >= manager_info.termination_slot,
-        InceptCometManagerError::TooEarlyToPerformTermination
-    );
+
+    let allow_leftover_withdrawal = if let CometManagerStatus::Closing {
+        forcefully_closed, ..
+    } = manager_info.status
+    {
+        !forcefully_closed
+    } else {
+        unreachable!("Should be CometManagerStatus::Closing enum variant!");
+    };
 
     let comet = ctx.accounts.comet.load()?;
     let collateral_amount_left = comet.collaterals[0].collateral_amount.to_decimal();
@@ -94,6 +99,11 @@ pub fn execute(ctx: Context<TerminateCometManager>) -> Result<()> {
     drop(comet);
     // Withdraw any leftover collateral to manager.
     if collateral_amount_left > Decimal::ZERO {
+        return_error_if_false!(
+            allow_leftover_withdrawal,
+            InceptCometManagerError::InvalidForForcefullyClosedManagers
+        );
+
         incept::cpi::withdraw_collateral_from_comet(
             CpiContext::new_with_signer(
                 ctx.accounts.incept_program.to_account_info(),

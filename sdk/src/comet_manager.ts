@@ -11,17 +11,24 @@ import {
     userAccount: PublicKey;
     userBump: number;
     bump: number;
-    healthScoreThreshold: number;
-    inClosingSequence: boolean;
-    terminationSlot: BN,
+    status: Object;
     withdrawalFeeBps: number;
     managementFeeBps: number;
     feeClaimSlot: BN;
+    userRedemptions: PublicKey[],
+    redemptionStrikes: number;
+    lastStrikeTimestamp: BN;
+}
+
+export interface RedemptionRequest {
+  membershipTokens: BN;
+  timestamp: BN;
 }
 
 export interface Subscriber {
     owner: PublicKey;
     manager: PublicKey;
     principal: BN;
-    membershipTokens: BN
+    membershipTokens: BN;
+    redemptionRequest?: RedemptionRequest;
 }

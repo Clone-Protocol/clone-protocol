@@ -11,7 +11,7 @@ pub struct InitializeSubscription<'info> {
     pub subscription_owner: Signer<'info>,
     #[account(
         init,
-        space = 8 + 80,
+        space = 8 + Subscriber::MAX_SIZE,
         seeds = [b"subscriber", subscription_owner.key.as_ref(), manager_info.to_account_info().key.as_ref()],
         bump,
         payer = subscription_owner
@@ -30,8 +30,8 @@ pub struct InitializeSubscription<'info> {
 pub fn execute(ctx: Context<InitializeSubscription>) -> Result<()> {
     // Set Manager info data.
     return_error_if_false!(
-        !ctx.accounts.manager_info.in_closing_sequence,
-        InceptCometManagerError::InvalidActionWhenInTerminationSequence
+        matches!(ctx.accounts.manager_info.status, CometManagerStatus::Open),
+        InceptCometManagerError::OpenStatusRequired
     );
 
     let subscriber = &mut ctx.accounts.subscriber;

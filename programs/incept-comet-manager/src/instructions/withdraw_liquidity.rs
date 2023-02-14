@@ -1,16 +1,18 @@
+use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use incept::cpi::accounts::WithdrawLiquidityFromComet;
 use incept::program::Incept as InceptProgram;
+use incept::return_error_if_false;
 use incept::states::{Comet, Incept, TokenData, User, USDI_COLLATERAL_INDEX};
 
 #[derive(Accounts)]
 #[instruction(comet_position_index: u8, liquidity_token_amount: u64)]
 pub struct WithdrawLiquidity<'info> {
-    pub manager_owner: Signer<'info>,
+    pub signer: Signer<'info>,
     #[account(
-        seeds = [b"manager-info", manager_owner.key.as_ref()],
+        seeds = [b"manager-info", manager_info.owner.as_ref()],
         bump,
     )]
     pub manager_info: Box<Account<'info, ManagerInfo>>,
@@ -80,6 +82,24 @@ pub fn execute(
     comet_position_index: u8,
     liquidity_token_amount: u64,
 ) -> Result<()> {
+    // In normal operation, only the manager can access this instruction.
+    // When forcefully closed, anyone can access this operation. When not-forcefully closed
+    // this operation shouldn't be needed or used.
+    match ctx.accounts.manager_info.status {
+        CometManagerStatus::Open => return_error_if_false!(
+            ctx.accounts.signer.key() == ctx.accounts.manager_info.owner,
+            InceptCometManagerError::OpenStatusRequired
+        ),
+        CometManagerStatus::Closing {
+            forcefully_closed, ..
+        } => {
+            return_error_if_false!(
+                forcefully_closed,
+                InceptCometManagerError::MustBeForcefullyClosedManagers
+            )
+        }
+    };
+
     // Calculate usdi value to withdraw according to tokens redeemed.
     // Withdraw collateral from comet
     let manager_info = ctx.accounts.manager_info.clone();

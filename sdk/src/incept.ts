@@ -18,7 +18,7 @@ import {
   SinglePoolCometUninitialized,
 } from "./error";
 import { getMantissa } from "./decimal";
-import { Incept, TokenData, Comet, User, BorrowPositions } from "./interfaces";
+import { Incept as InceptInfo, TokenData, Comet, User, BorrowPositions } from "./interfaces";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -33,7 +33,7 @@ export class InceptClient {
   connection: Connection;
   programId: PublicKey;
   program: Program<InceptProgram>;
-  incept?: Incept;
+  incept?: InceptInfo;
   opts?: ConfirmOptions;
   inceptAddress: [PublicKey, number];
   provider: Provider;
@@ -95,12 +95,12 @@ export class InceptClient {
     this.inceptAddress = managerPubkeyAndBump;
     this.incept = (await this.program.account.incept.fetch(
       this.inceptAddress[0]
-    )) as Incept;
+    )) as InceptInfo;
   }
 
   public async loadManager() {
     this.inceptAddress = await this.getInceptAddress();
-    this.incept = (await this.getInceptAccount()) as Incept;
+    this.incept = (await this.getInceptAccount()) as InceptInfo;
   }
 
   public async initializeUser(user?: PublicKey) {
@@ -343,7 +343,7 @@ export class InceptClient {
   public async getInceptAccount() {
     return (await this.program.account.incept.fetch(
       this.inceptAddress[0]
-    )) as Incept;
+    )) as InceptInfo;
   }
 
   public async getUserAddress(address?: PublicKey) {

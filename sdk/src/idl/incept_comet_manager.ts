@@ -57,10 +57,6 @@ export type InceptCometManager = {
           "type": "u8"
         },
         {
-          "name": "healthScoreThreshold",
-          "type": "u8"
-        },
-        {
           "name": "withdrawalFeeBps",
           "type": "u16"
         },
@@ -209,7 +205,7 @@ export type InceptCometManager = {
       ]
     },
     {
-      "name": "redeem",
+      "name": "redeemFromClosedManager",
       "accounts": [
         {
           "name": "subscriber",
@@ -282,10 +278,138 @@ export type InceptCometManager = {
           "isSigner": false
         }
       ],
+      "args": []
+    },
+    {
+      "name": "requestRedemption",
+      "accounts": [
+        {
+          "name": "subscriber",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "subscriberAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "managerInfo",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
       "args": [
         {
           "name": "membershipTokensToRedeem",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "fulfillRedemptionRequest",
+      "accounts": [
+        {
+          "name": "managerOwner",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "managerInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "incept",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "managerInceptUser",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "subscriberAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "subscriberUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "managerUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "inceptProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "inceptUsdiVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "assignRedemptionStrike",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "managerInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "subscriberAccount",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
         }
       ]
     },
@@ -378,7 +502,7 @@ export type InceptCometManager = {
       "name": "withdrawLiquidity",
       "accounts": [
         {
-          "name": "managerOwner",
+          "name": "signer",
           "isMut": false,
           "isSigner": true
         },
@@ -549,7 +673,7 @@ export type InceptCometManager = {
       "name": "payIld",
       "accounts": [
         {
-          "name": "managerOwner",
+          "name": "signer",
           "isMut": false,
           "isSigner": true
         },
@@ -672,10 +796,10 @@ export type InceptCometManager = {
       ]
     },
     {
-      "name": "initiateCometManagerTermination",
+      "name": "initiateCometManagerClosing",
       "accounts": [
         {
-          "name": "managerOwner",
+          "name": "signer",
           "isMut": false,
           "isSigner": true
         },
@@ -698,7 +822,7 @@ export type InceptCometManager = {
       "args": []
     },
     {
-      "name": "terminateCometManager",
+      "name": "closeCometManager",
       "accounts": [
         {
           "name": "managerOwner",
@@ -804,16 +928,10 @@ export type InceptCometManager = {
             "type": "u8"
           },
           {
-            "name": "healthScoreThreshold",
-            "type": "u8"
-          },
-          {
-            "name": "inClosingSequence",
-            "type": "bool"
-          },
-          {
-            "name": "terminationSlot",
-            "type": "u64"
+            "name": "status",
+            "type": {
+              "defined": "CometManagerStatus"
+            }
           },
           {
             "name": "withdrawalFeeBps",
@@ -826,6 +944,20 @@ export type InceptCometManager = {
           {
             "name": "feeClaimSlot",
             "type": "u64"
+          },
+          {
+            "name": "redemptionStrikes",
+            "type": "u8"
+          },
+          {
+            "name": "lastStrikeTimestamp",
+            "type": "u64"
+          },
+          {
+            "name": "userRedemptions",
+            "type": {
+              "vec": "publicKey"
+            }
           }
         ]
       }
@@ -850,6 +982,56 @@ export type InceptCometManager = {
           {
             "name": "membershipTokens",
             "type": "u64"
+          },
+          {
+            "name": "redemptionRequest",
+            "type": {
+              "option": {
+                "defined": "RedemptionRequest"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "RedemptionRequest",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "membershipTokens",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CometManagerStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Open"
+          },
+          {
+            "name": "Closing",
+            "fields": [
+              {
+                "name": "forcefully_closed",
+                "type": "bool"
+              },
+              {
+                "name": "termination_slot",
+                "type": "u64"
+              }
+            ]
           }
         ]
       }
@@ -858,43 +1040,88 @@ export type InceptCometManager = {
   "errors": [
     {
       "code": 6000,
-      "name": "InvalidActionWhenInTerminationSequence",
-      "msg": "Can't perform this action when in termination sequence"
-    },
-    {
-      "code": 6001,
-      "name": "MustBeInTerminationSequence",
-      "msg": "Must perform this action when in termination sequence"
-    },
-    {
-      "code": 6002,
-      "name": "ThresholdTooLow",
-      "msg": "Threshold must be greater than protocol threshold"
-    },
-    {
-      "code": 6003,
       "name": "CometMustHaveNoPositions",
       "msg": "Comet must have no liquidity positions"
     },
     {
-      "code": 6004,
+      "code": 6001,
+      "name": "ManagerAtStrikeLimit",
+      "msg": "Manager at/beyond strike limit"
+    },
+    {
+      "code": 6002,
+      "name": "RequireManagerAtStrikeLimit",
+      "msg": "Require manager to be at/beyond strike limit"
+    },
+    {
+      "code": 6003,
       "name": "TooEarlyToClaimReward",
       "msg": "Too early to claim reward"
     },
     {
-      "code": 6005,
+      "code": 6004,
       "name": "InvalidMembershipTokenBalance",
       "msg": "Invalid membership token balance"
     },
     {
-      "code": 6006,
+      "code": 6005,
       "name": "TooEarlyToPerformTermination",
       "msg": "Too early to perform final termination"
     },
     {
+      "code": 6006,
+      "name": "OpenStatusRequired",
+      "msg": "Required that the manager is in open status"
+    },
+    {
       "code": 6007,
-      "name": "HealthScoreBelowThreshold",
-      "msg": "Health score below threshold"
+      "name": "ClosingStatusRequired",
+      "msg": "Required that the manager is in closing status"
+    },
+    {
+      "code": 6008,
+      "name": "RequestAlreadySent",
+      "msg": "Request already sent"
+    },
+    {
+      "code": 6009,
+      "name": "OutstandingRedemptionsQueueFull",
+      "msg": "Outstanding request queue is full, try again soon"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidIndex",
+      "msg": "Invalid index"
+    },
+    {
+      "code": 6011,
+      "name": "RequestNotValidForStrike",
+      "msg": "Request not valid for strike"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidForForcefullyClosedManagers",
+      "msg": "Invalid for forcefully closed manager"
+    },
+    {
+      "code": 6013,
+      "name": "MustBeForcefullyClosedManagers",
+      "msg": "Valid for forcefully closed manager"
+    },
+    {
+      "code": 6014,
+      "name": "DepositAmountTooLow",
+      "msg": "Deposit amount too low"
+    },
+    {
+      "code": 6015,
+      "name": "WithdrawalAmountInvalid",
+      "msg": "Invalid withdrawal amount!"
+    },
+    {
+      "code": 6016,
+      "name": "RedemptionsMustBeFulfilled",
+      "msg": "All redemptions must be fulfilled!"
     }
   ]
 };
@@ -958,10 +1185,6 @@ export const IDL: InceptCometManager = {
           "type": "u8"
         },
         {
-          "name": "healthScoreThreshold",
-          "type": "u8"
-        },
-        {
           "name": "withdrawalFeeBps",
           "type": "u16"
         },
@@ -1110,7 +1333,7 @@ export const IDL: InceptCometManager = {
       ]
     },
     {
-      "name": "redeem",
+      "name": "redeemFromClosedManager",
       "accounts": [
         {
           "name": "subscriber",
@@ -1183,10 +1406,138 @@ export const IDL: InceptCometManager = {
           "isSigner": false
         }
       ],
+      "args": []
+    },
+    {
+      "name": "requestRedemption",
+      "accounts": [
+        {
+          "name": "subscriber",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "subscriberAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "managerInfo",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
       "args": [
         {
           "name": "membershipTokensToRedeem",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "fulfillRedemptionRequest",
+      "accounts": [
+        {
+          "name": "managerOwner",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "managerInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "incept",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "managerInceptUser",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "subscriberAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "usdiMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "subscriberUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "managerUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "inceptProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "inceptUsdiVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "assignRedemptionStrike",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "managerInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "subscriberAccount",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
         }
       ]
     },
@@ -1279,7 +1630,7 @@ export const IDL: InceptCometManager = {
       "name": "withdrawLiquidity",
       "accounts": [
         {
-          "name": "managerOwner",
+          "name": "signer",
           "isMut": false,
           "isSigner": true
         },
@@ -1450,7 +1801,7 @@ export const IDL: InceptCometManager = {
       "name": "payIld",
       "accounts": [
         {
-          "name": "managerOwner",
+          "name": "signer",
           "isMut": false,
           "isSigner": true
         },
@@ -1573,10 +1924,10 @@ export const IDL: InceptCometManager = {
       ]
     },
     {
-      "name": "initiateCometManagerTermination",
+      "name": "initiateCometManagerClosing",
       "accounts": [
         {
-          "name": "managerOwner",
+          "name": "signer",
           "isMut": false,
           "isSigner": true
         },
@@ -1599,7 +1950,7 @@ export const IDL: InceptCometManager = {
       "args": []
     },
     {
-      "name": "terminateCometManager",
+      "name": "closeCometManager",
       "accounts": [
         {
           "name": "managerOwner",
@@ -1705,16 +2056,10 @@ export const IDL: InceptCometManager = {
             "type": "u8"
           },
           {
-            "name": "healthScoreThreshold",
-            "type": "u8"
-          },
-          {
-            "name": "inClosingSequence",
-            "type": "bool"
-          },
-          {
-            "name": "terminationSlot",
-            "type": "u64"
+            "name": "status",
+            "type": {
+              "defined": "CometManagerStatus"
+            }
           },
           {
             "name": "withdrawalFeeBps",
@@ -1727,6 +2072,20 @@ export const IDL: InceptCometManager = {
           {
             "name": "feeClaimSlot",
             "type": "u64"
+          },
+          {
+            "name": "redemptionStrikes",
+            "type": "u8"
+          },
+          {
+            "name": "lastStrikeTimestamp",
+            "type": "u64"
+          },
+          {
+            "name": "userRedemptions",
+            "type": {
+              "vec": "publicKey"
+            }
           }
         ]
       }
@@ -1751,6 +2110,56 @@ export const IDL: InceptCometManager = {
           {
             "name": "membershipTokens",
             "type": "u64"
+          },
+          {
+            "name": "redemptionRequest",
+            "type": {
+              "option": {
+                "defined": "RedemptionRequest"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "RedemptionRequest",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "membershipTokens",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CometManagerStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Open"
+          },
+          {
+            "name": "Closing",
+            "fields": [
+              {
+                "name": "forcefully_closed",
+                "type": "bool"
+              },
+              {
+                "name": "termination_slot",
+                "type": "u64"
+              }
+            ]
           }
         ]
       }
@@ -1759,43 +2168,88 @@ export const IDL: InceptCometManager = {
   "errors": [
     {
       "code": 6000,
-      "name": "InvalidActionWhenInTerminationSequence",
-      "msg": "Can't perform this action when in termination sequence"
-    },
-    {
-      "code": 6001,
-      "name": "MustBeInTerminationSequence",
-      "msg": "Must perform this action when in termination sequence"
-    },
-    {
-      "code": 6002,
-      "name": "ThresholdTooLow",
-      "msg": "Threshold must be greater than protocol threshold"
-    },
-    {
-      "code": 6003,
       "name": "CometMustHaveNoPositions",
       "msg": "Comet must have no liquidity positions"
     },
     {
-      "code": 6004,
+      "code": 6001,
+      "name": "ManagerAtStrikeLimit",
+      "msg": "Manager at/beyond strike limit"
+    },
+    {
+      "code": 6002,
+      "name": "RequireManagerAtStrikeLimit",
+      "msg": "Require manager to be at/beyond strike limit"
+    },
+    {
+      "code": 6003,
       "name": "TooEarlyToClaimReward",
       "msg": "Too early to claim reward"
     },
     {
-      "code": 6005,
+      "code": 6004,
       "name": "InvalidMembershipTokenBalance",
       "msg": "Invalid membership token balance"
     },
     {
-      "code": 6006,
+      "code": 6005,
       "name": "TooEarlyToPerformTermination",
       "msg": "Too early to perform final termination"
     },
     {
+      "code": 6006,
+      "name": "OpenStatusRequired",
+      "msg": "Required that the manager is in open status"
+    },
+    {
       "code": 6007,
-      "name": "HealthScoreBelowThreshold",
-      "msg": "Health score below threshold"
+      "name": "ClosingStatusRequired",
+      "msg": "Required that the manager is in closing status"
+    },
+    {
+      "code": 6008,
+      "name": "RequestAlreadySent",
+      "msg": "Request already sent"
+    },
+    {
+      "code": 6009,
+      "name": "OutstandingRedemptionsQueueFull",
+      "msg": "Outstanding request queue is full, try again soon"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidIndex",
+      "msg": "Invalid index"
+    },
+    {
+      "code": 6011,
+      "name": "RequestNotValidForStrike",
+      "msg": "Request not valid for strike"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidForForcefullyClosedManagers",
+      "msg": "Invalid for forcefully closed manager"
+    },
+    {
+      "code": 6013,
+      "name": "MustBeForcefullyClosedManagers",
+      "msg": "Valid for forcefully closed manager"
+    },
+    {
+      "code": 6014,
+      "name": "DepositAmountTooLow",
+      "msg": "Deposit amount too low"
+    },
+    {
+      "code": 6015,
+      "name": "WithdrawalAmountInvalid",
+      "msg": "Invalid withdrawal amount!"
+    },
+    {
+      "code": 6016,
+      "name": "RedemptionsMustBeFulfilled",
+      "msg": "All redemptions must be fulfilled!"
     }
   ]
 };
