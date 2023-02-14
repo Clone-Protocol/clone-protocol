@@ -72,7 +72,8 @@ pub fn execute(ctx: Context<RequestRedemption>, membership_tokens_to_redeem: u64
         !ctx.accounts
             .manager_info
             .user_redemptions
-            .contains(ctx.accounts.subscriber.key),
+            .contains(ctx.accounts.subscriber.key)
+            && ctx.accounts.subscriber_account.redemption_request.is_none(),
         InceptCometManagerError::RequestAlreadySent
     );
 
