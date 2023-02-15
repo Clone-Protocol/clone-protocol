@@ -855,6 +855,11 @@ export type InceptCometManager = {
           "isSigner": false
         },
         {
+          "name": "treasuryUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "inceptProgram",
           "isMut": false,
           "isSigner": false
@@ -1979,6 +1984,11 @@ export const IDL: InceptCometManager = {
         },
         {
           "name": "managerUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "treasuryUsdiTokenAccount",
           "isMut": true,
           "isSigner": false
         },

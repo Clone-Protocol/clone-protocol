@@ -3793,6 +3793,7 @@ describe("incept", async () => {
         managerInceptUser: cometManagerInfo.userAccount,
         usdiMint: inceptClient.incept!.usdiMint,
         managerUsdiTokenAccount: cometManagerUsdiTokenAccount.address,
+        treasuryUsdiTokenAccount: treasuryUsdiTokenAccount.address,
         inceptProgram: inceptClient.programId,
         comet: cometManagerInceptUser.comet,
         tokenData: inceptClient.incept!.tokenData,

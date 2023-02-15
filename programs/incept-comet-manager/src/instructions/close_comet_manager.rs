@@ -32,13 +32,18 @@ pub struct CloseCometManager<'info> {
         address = incept.usdi_mint
     )]
     pub usdi_mint: Box<Account<'info, Mint>>,
-
     #[account(
         mut,
         associated_token::mint = usdi_mint,
         associated_token::authority = manager_info
     )]
     pub manager_usdi_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        associated_token::mint = usdi_mint,
+        associated_token::authority = incept.treasury_address
+    )]
+    pub treasury_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         address = manager_info.incept_program
     )]
@@ -78,11 +83,15 @@ pub fn execute(ctx: Context<CloseCometManager>) -> Result<()> {
         InceptCometManagerError::ClosingStatusRequired
     );
 
-    let allow_leftover_withdrawal = if let CometManagerStatus::Closing {
-        forcefully_closed, ..
+    if let CometManagerStatus::Closing {
+        termination_slot, ..
     } = manager_info.status
     {
-        !forcefully_closed
+        let current_slot = Clock::get()?.slot;
+        return_error_if_false!(
+            termination_slot <= current_slot,
+            InceptCometManagerError::TooEarlyToPerformTermination
+        );
     } else {
         unreachable!("Should be CometManagerStatus::Closing enum variant!");
     };
@@ -97,12 +106,9 @@ pub fn execute(ctx: Context<CloseCometManager>) -> Result<()> {
     ][..]];
 
     drop(comet);
-    // Withdraw any leftover collateral to manager.
+    // Withdraw any leftover collateral to treasury.
     if collateral_amount_left > Decimal::ZERO {
-        return_error_if_false!(
-            allow_leftover_withdrawal,
-            InceptCometManagerError::InvalidForForcefullyClosedManagers
-        );
+        let collateral_mantissa = collateral_amount_left.mantissa().try_into().unwrap();
 
         incept::cpi::withdraw_collateral_from_comet(
             CpiContext::new_with_signer(
@@ -123,10 +129,33 @@ pub fn execute(ctx: Context<CloseCometManager>) -> Result<()> {
                 manager_seeds,
             ),
             0,
-            collateral_amount_left.mantissa().try_into().unwrap(),
+            collateral_mantissa,
+        )?;
+
+        // Transfer over to treasury
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                Transfer {
+                    from: ctx
+                        .accounts
+                        .manager_usdi_token_account
+                        .to_account_info()
+                        .clone(),
+                    to: ctx
+                        .accounts
+                        .treasury_usdi_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.manager_info.to_account_info().clone(),
+                },
+                manager_seeds,
+            ),
+            collateral_mantissa,
         )?;
     }
-    // Transfer USDi to owner.
+
+    // Transfer any leftover USDi to owner.
     ctx.accounts.manager_usdi_token_account.reload()?;
     if ctx.accounts.manager_usdi_token_account.amount > 0 {
         token::transfer(
