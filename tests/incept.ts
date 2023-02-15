@@ -14,7 +14,11 @@ import {
 } from "@solana/spl-token";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import { assert } from "chai";
-import { InceptClient, toDevnetScale } from "../sdk/src/incept";
+import {
+  DEVNET_TOKEN_SCALE,
+  InceptClient,
+  toDevnetScale,
+} from "../sdk/src/incept";
 import {
   createPriceFeed,
   setPrice,
@@ -22,8 +26,11 @@ import {
   ChainLinkOracle,
 } from "../sdk/src/oracle";
 import { calculateExecutionThreshold, sleep } from "../sdk/src/utils";
-import { getMantissa, toNumber } from "../sdk/src/decimal";
-import { getOrCreateAssociatedTokenAccount } from "./utils";
+import { Decimal, getMantissa, toNumber } from "../sdk/src/decimal";
+import {
+  convertToRawDecimal,
+  getOrCreateAssociatedTokenAccount,
+} from "./utils";
 import {
   calculateEditCometSinglePoolWithUsdiBorrowed,
   getSinglePoolHealthScore,
@@ -115,7 +122,6 @@ describe("incept", async () => {
       ilLiquidationRewardPct,
       maxHealthLiquidation,
       liquidatorFee,
-      collateralFullLiquidationThreshold,
       treasuryAddress.publicKey
     );
   });
@@ -2027,15 +2033,36 @@ describe("incept", async () => {
       "check health score."
     );
 
-    await inceptClient.updatePoolHealthScoreCoefficient(
-      healthScoreCoefficient * 2,
-      0
-    );
-    await inceptClient.updateILHealthScoreCoefficient(
-      ilHealthScoreCoefficient * 2
-    );
+    await inceptClient.program.methods
+      .updatePoolParameters(0, {
+        healthScoreCoefficient: {
+          value: convertToRawDecimal(healthScoreCoefficient * 2),
+        },
+      })
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
+
+    await inceptClient.program.methods
+      .updateInceptParameters({
+        ilHealthScoreCoefficient: {
+          value: convertToRawDecimal(ilHealthScoreCoefficient * 2),
+        },
+      })
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
+
+    await sleep(400);
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
+
     healthScore = getHealthScore(tokenData, comet);
     assert.closeTo(
       healthScore.healthScore,
@@ -2499,8 +2526,26 @@ describe("incept", async () => {
       inceptClient.incept!.usdiMint
     );
 
-    await inceptClient.updatePoolHealthScoreCoefficient(3000000, poolIndex);
-    await inceptClient.updateILHealthScoreCoefficient(0.00001);
+    await inceptClient.program.methods
+      .updatePoolParameters(poolIndex, {
+        healthScoreCoefficient: { value: convertToRawDecimal(3000000) },
+      })
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
+    await inceptClient.program.methods
+      .updateInceptParameters({
+        ilHealthScoreCoefficient: { value: convertToRawDecimal(0.00001) },
+      })
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
     // Check that the score is zero.
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
@@ -2550,7 +2595,17 @@ describe("incept", async () => {
       "check liquidation for swapping collateral!"
     );
 
-    await inceptClient.updateILHealthScoreCoefficient(100000);
+    await inceptClient.program.methods
+      .updateInceptParameters({
+        ilHealthScoreCoefficient: { value: convertToRawDecimal(100000) },
+      })
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
+
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
     let position = comet.positions[0];
@@ -2747,9 +2802,38 @@ describe("incept", async () => {
     );
 
     // Change coefficients to create negative health score
-    await inceptClient.updatePoolHealthScoreCoefficient(6000000, 0);
-    await inceptClient.updatePoolHealthScoreCoefficient(3000000, poolIndex);
-    await inceptClient.updateILHealthScoreCoefficient(100000);
+    await inceptClient.program.methods
+      .updatePoolParameters(0, {
+        healthScoreCoefficient: { value: convertToRawDecimal(6000000) },
+      })
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
+
+    await inceptClient.program.methods
+      .updatePoolParameters(poolIndex, {
+        healthScoreCoefficient: { value: convertToRawDecimal(3000000) },
+      })
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
+
+    await inceptClient.program.methods
+      .updateInceptParameters({
+        ilHealthScoreCoefficient: { value: convertToRawDecimal(100000) },
+      })
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
     // Check that the score is zero.
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
@@ -2832,7 +2916,16 @@ describe("incept", async () => {
   it("single pool comet liquidation", async () => {
     // Create another comet position.
     const poolIndex = 1;
-    await inceptClient.updatePoolHealthScoreCoefficient(1.059, poolIndex);
+    await inceptClient.program.methods
+      .updatePoolParameters(poolIndex, {
+        healthScoreCoefficient: { value: convertToRawDecimal(1.059) },
+      })
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
     await sleep(200);
     await inceptClient.provider.sendAndConfirm!(
       new Transaction()
@@ -2910,8 +3003,26 @@ describe("incept", async () => {
       treasuryIassetTokenAccount.address
     );
     // Change coefficients to create negative health score
-    await inceptClient.updatePoolHealthScoreCoefficient(3000000, poolIndex);
-    await inceptClient.updateILHealthScoreCoefficient(100000);
+    await inceptClient.program.methods
+      .updatePoolParameters(poolIndex, {
+        healthScoreCoefficient: { value: convertToRawDecimal(3000000) },
+      })
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
+    await inceptClient.program.methods
+      .updateInceptParameters({
+        ilHealthScoreCoefficient: { value: convertToRawDecimal(100000) },
+      })
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
     // Check that the score is zero.
     comet = await inceptClient.getSinglePoolComets();
     tokenData = await inceptClient.getTokenData();
@@ -3020,11 +3131,31 @@ describe("incept", async () => {
     );
 
     // Reset params
-    await inceptClient.updatePoolHealthScoreCoefficient(
-      healthScoreCoefficient,
-      0
-    );
-    await inceptClient.updateILHealthScoreCoefficient(ilHealthScoreCoefficient);
+    await inceptClient.program.methods
+      .updatePoolParameters(0, {
+        healthScoreCoefficient: {
+          value: convertToRawDecimal(healthScoreCoefficient),
+        },
+      })
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
+
+    await inceptClient.program.methods
+      .updateInceptParameters({
+        ilHealthScoreCoefficient: {
+          value: convertToRawDecimal(ilHealthScoreCoefficient),
+        },
+      })
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
   });
 
   let cometManagerInfo;

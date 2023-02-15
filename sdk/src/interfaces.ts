@@ -13,7 +13,6 @@ export interface Incept {
 
 export interface LiquidationConfig {
   liquidatorFee: RawDecimal;
-  collateralFullLiquidationThreshold: RawDecimal;
   maxHealthLiquidation: RawDecimal;
 }
 

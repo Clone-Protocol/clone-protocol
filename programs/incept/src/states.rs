@@ -72,10 +72,9 @@ pub struct Incept {
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct LiquidationConfig {
-    // 48
-    pub liquidator_fee: RawDecimal,                        // 16,
-    pub collateral_full_liquidation_threshold: RawDecimal, // 16
-    pub max_health_liquidation: RawDecimal,                // 16
+    // 32
+    pub liquidator_fee: RawDecimal,         // 16,
+    pub max_health_liquidation: RawDecimal, // 16
 }
 
 #[account(zero_copy)]
