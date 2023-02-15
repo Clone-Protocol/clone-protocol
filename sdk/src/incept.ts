@@ -60,7 +60,6 @@ export class InceptClient {
     ilLiquidationRewardPct: number,
     maxHealthLiquidation: number,
     liquidatorFee: number,
-    collateralFullLiquidationThreshold: number,
     treasuryAddress: PublicKey
   ) {
     const managerPubkeyAndBump = await this.getInceptAddress();
@@ -75,7 +74,6 @@ export class InceptClient {
         toDevnetScale(ilLiquidationRewardPct),
         new BN(maxHealthLiquidation),
         new BN(liquidatorFee),
-        new BN(collateralFullLiquidationThreshold),
         treasuryAddress
       )
       .accounts({
@@ -1823,34 +1821,6 @@ export class InceptClient {
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
-  }
-
-  public async updateILHealthScoreCoefficient(coefficient: number) {
-    const [pubKey, bump] = await this.getInceptAddress();
-
-    await this.program.methods
-      .updateIlHealthScoreCoefficient(toDevnetScale(coefficient))
-      .accounts({
-        admin: this.provider.publicKey!,
-        incept: pubKey,
-        tokenData: this.incept!.tokenData,
-      })
-      .rpc();
-  }
-
-  public async updatePoolHealthScoreCoefficient(
-    coefficient: number,
-    poolIndex: number
-  ) {
-    const [pubKey, bump] = await this.getInceptAddress();
-    await this.program.methods
-      .updatePoolHealthScoreCoefficient(poolIndex, toDevnetScale(coefficient))
-      .accounts({
-        admin: this.provider.publicKey!,
-        incept: pubKey,
-        tokenData: this.incept!.tokenData,
-      })
-      .rpc();
   }
 
   public async liquidateSinglePoolComet(

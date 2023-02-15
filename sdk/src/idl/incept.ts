@@ -73,17 +73,13 @@ export type Incept = {
           "type": "u64"
         },
         {
-          "name": "collateralFullLiquidationThreshold",
-          "type": "u64"
-        },
-        {
           "name": "treasuryAddress",
           "type": "publicKey"
         }
       ]
     },
     {
-      "name": "updateIlHealthScoreCoefficient",
+      "name": "updateInceptParameters",
       "accounts": [
         {
           "name": "admin",
@@ -92,7 +88,7 @@ export type Incept = {
         },
         {
           "name": "incept",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -103,8 +99,74 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "ilHealthScoreCoefficient",
-          "type": "u64"
+          "name": "params",
+          "type": {
+            "defined": "InceptParameters"
+          }
+        }
+      ]
+    },
+    {
+      "name": "updatePoolParameters",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "incept",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "params",
+          "type": {
+            "defined": "PoolParameters"
+          }
+        }
+      ]
+    },
+    {
+      "name": "updateCollateralParameters",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "incept",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "params",
+          "type": {
+            "defined": "CollateralParameters"
+          }
         }
       ]
     },
@@ -386,36 +448,6 @@ export type Incept = {
         },
         {
           "name": "maxOwnershipPct",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "updatePoolHealthScoreCoefficient",
-      "accounts": [
-        {
-          "name": "admin",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "incept",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u8"
-        },
-        {
-          "name": "healthScoreCoefficient",
           "type": "u64"
         }
       ]
@@ -2657,12 +2689,6 @@ export type Incept = {
             }
           },
           {
-            "name": "collateralFullLiquidationThreshold",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
             "name": "maxHealthLiquidation",
             "type": {
               "defined": "RawDecimal"
@@ -2984,6 +3010,214 @@ export type Incept = {
             "type": {
               "defined": "RawDecimal"
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CollateralParameters",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "PoolIndex",
+            "fields": [
+              {
+                "name": "index",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "CollateralizationRatio",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "InceptParameters",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "LiquidationFee",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "MaxHealthLiquidation",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "TreasuryAddress",
+            "fields": [
+              {
+                "name": "address",
+                "type": "publicKey"
+              }
+            ]
+          },
+          {
+            "name": "ChainlinkProgram",
+            "fields": [
+              {
+                "name": "address",
+                "type": "publicKey"
+              }
+            ]
+          },
+          {
+            "name": "IlHealthScoreCoefficient",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "IlHealthScoreCutoff",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "IlLiquidationRewardPct",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolParameters",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "TreasuryTradingFee",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "LiquidityTradingFee",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "PriceFeedAddresses",
+            "fields": [
+              {
+                "name": "addresses",
+                "type": {
+                  "array": [
+                    "publicKey",
+                    2
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "name": "StableCollateralRatio",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "CryptoCollateralRatio",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "HealthScoreCoefficient",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "LiquidationDiscountRate",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "MaxOwnershipPct",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
           }
         ]
       }
@@ -3333,17 +3567,13 @@ export const IDL: Incept = {
           "type": "u64"
         },
         {
-          "name": "collateralFullLiquidationThreshold",
-          "type": "u64"
-        },
-        {
           "name": "treasuryAddress",
           "type": "publicKey"
         }
       ]
     },
     {
-      "name": "updateIlHealthScoreCoefficient",
+      "name": "updateInceptParameters",
       "accounts": [
         {
           "name": "admin",
@@ -3352,7 +3582,7 @@ export const IDL: Incept = {
         },
         {
           "name": "incept",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -3363,8 +3593,74 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "ilHealthScoreCoefficient",
-          "type": "u64"
+          "name": "params",
+          "type": {
+            "defined": "InceptParameters"
+          }
+        }
+      ]
+    },
+    {
+      "name": "updatePoolParameters",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "incept",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "params",
+          "type": {
+            "defined": "PoolParameters"
+          }
+        }
+      ]
+    },
+    {
+      "name": "updateCollateralParameters",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "incept",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "params",
+          "type": {
+            "defined": "CollateralParameters"
+          }
         }
       ]
     },
@@ -3646,36 +3942,6 @@ export const IDL: Incept = {
         },
         {
           "name": "maxOwnershipPct",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "updatePoolHealthScoreCoefficient",
-      "accounts": [
-        {
-          "name": "admin",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "incept",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u8"
-        },
-        {
-          "name": "healthScoreCoefficient",
           "type": "u64"
         }
       ]
@@ -5917,12 +6183,6 @@ export const IDL: Incept = {
             }
           },
           {
-            "name": "collateralFullLiquidationThreshold",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
             "name": "maxHealthLiquidation",
             "type": {
               "defined": "RawDecimal"
@@ -6244,6 +6504,214 @@ export const IDL: Incept = {
             "type": {
               "defined": "RawDecimal"
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CollateralParameters",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "PoolIndex",
+            "fields": [
+              {
+                "name": "index",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "CollateralizationRatio",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "InceptParameters",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "LiquidationFee",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "MaxHealthLiquidation",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "TreasuryAddress",
+            "fields": [
+              {
+                "name": "address",
+                "type": "publicKey"
+              }
+            ]
+          },
+          {
+            "name": "ChainlinkProgram",
+            "fields": [
+              {
+                "name": "address",
+                "type": "publicKey"
+              }
+            ]
+          },
+          {
+            "name": "IlHealthScoreCoefficient",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "IlHealthScoreCutoff",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "IlLiquidationRewardPct",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolParameters",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "TreasuryTradingFee",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "LiquidityTradingFee",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "PriceFeedAddresses",
+            "fields": [
+              {
+                "name": "addresses",
+                "type": {
+                  "array": [
+                    "publicKey",
+                    2
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "name": "StableCollateralRatio",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "CryptoCollateralRatio",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "HealthScoreCoefficient",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "LiquidationDiscountRate",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "MaxOwnershipPct",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
           }
         ]
       }

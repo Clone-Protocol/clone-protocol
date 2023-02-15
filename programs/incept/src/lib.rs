@@ -24,7 +24,6 @@ pub mod incept {
         il_liquidation_reward_pct: u64,
         max_health_liquidation: u64,
         liquidator_fee: u64,
-        collateral_full_liquidation_threshold: u64,
         treasury_address: Pubkey,
     ) -> Result<()> {
         instructions::initialize_incept::execute(
@@ -34,16 +33,31 @@ pub mod incept {
             il_liquidation_reward_pct,
             max_health_liquidation,
             liquidator_fee,
-            collateral_full_liquidation_threshold,
             treasury_address,
         )
     }
 
-    pub fn update_il_health_score_coefficient(
-        ctx: Context<UpdateILHealthScoreCoefficient>,
-        il_health_score_coefficient: u64,
+    pub fn update_incept_parameters(
+        ctx: Context<UpdateInceptParameters>,
+        params: InceptParameters,
     ) -> Result<()> {
-        instructions::update_il_health_score_coefficient::execute(ctx, il_health_score_coefficient)
+        instructions::update_incept_parameters::execute(ctx, params)
+    }
+
+    pub fn update_pool_parameters(
+        ctx: Context<UpdatePoolParameters>,
+        index: u8,
+        params: PoolParameters,
+    ) -> Result<()> {
+        instructions::update_pool_parameters::execute(ctx, index, params)
+    }
+
+    pub fn update_collateral_parameters(
+        ctx: Context<UpdateCollateralParameters>,
+        index: u8,
+        params: CollateralParameters,
+    ) -> Result<()> {
+        instructions::update_collateral_parameters::execute(ctx, index, params)
     }
 
     pub fn initialize_user(ctx: Context<InitializeUser>, authority: Pubkey) -> Result<()> {
@@ -86,18 +100,6 @@ pub mod incept {
             health_score_coefficient,
             liquidation_discount_rate,
             max_ownership_pct,
-        )
-    }
-
-    pub fn update_pool_health_score_coefficient(
-        ctx: Context<UpdatePoolHealthScore>,
-        pool_index: u8,
-        health_score_coefficient: u64,
-    ) -> Result<()> {
-        instructions::update_pool_health_score_coefficient::execute(
-            ctx,
-            pool_index,
-            health_score_coefficient,
         )
     }
 
