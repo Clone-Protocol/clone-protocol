@@ -10,6 +10,8 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { sleep } from "../sdk/src/utils";
+import { Decimal } from "../sdk/src/decimal";
+import { DEVNET_TOKEN_SCALE, toDevnetScale } from "../sdk/src/incept";
 
 export const INCEPT_EXCHANGE_SEED = Buffer.from("Incept");
 export const EXCHANGE_ADMIN = new Keypair();
@@ -68,3 +70,8 @@ export const getOrCreateAssociatedTokenAccount = async (
   }
   return account;
 };
+
+export const convertToRawDecimal = (num: number) => {
+  let temp = new Decimal(BigInt(toDevnetScale(num).toNumber()), BigInt(DEVNET_TOKEN_SCALE));
+  return temp.toRawDecimal();
+}
