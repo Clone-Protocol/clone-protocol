@@ -13,7 +13,6 @@ use std::convert::TryInto;
     il_liquidation_reward_pct: u64,
     max_health_liquidation: u64,
     liquidator_fee: u64,
-    collateral_full_liquidation_threshold: u64,
     treasury_address: Pubkey
 )]
 pub struct InitializeIncept<'info> {
@@ -58,7 +57,6 @@ pub fn execute(
     il_liquidation_reward_pct: u64,
     max_health_liquidation: u64,
     liquidator_fee: u64,
-    collateral_full_liquidation_threshold: u64,
     treasury_address: Pubkey,
 ) -> Result<()> {
     return_error_if_false!(max_health_liquidation < 100, InceptError::InvalidValueRange);
@@ -75,10 +73,6 @@ pub fn execute(
     ctx.accounts.incept.liquidation_config = LiquidationConfig {
         max_health_liquidation: RawDecimal::new(max_health_liquidation.try_into().unwrap(), 0),
         liquidator_fee: RawDecimal::new(liquidator_fee.try_into().unwrap(), 4),
-        collateral_full_liquidation_threshold: RawDecimal::new(
-            collateral_full_liquidation_threshold.try_into().unwrap(),
-            0,
-        ),
     };
 
     // add usdi as first collateral type
