@@ -84,12 +84,13 @@ pub fn execute(ctx: Context<CloseCometManager>) -> Result<()> {
     );
 
     if let CometManagerStatus::Closing {
-        termination_slot, ..
+        termination_timestamp,
+        ..
     } = manager_info.status
     {
-        let current_slot = Clock::get()?.slot;
+        let current_timestamp = Clock::get()?.unix_timestamp as u64;
         return_error_if_false!(
-            termination_slot <= current_slot,
+            termination_timestamp <= current_timestamp,
             InceptCometManagerError::TooEarlyToPerformTermination
         );
     } else {

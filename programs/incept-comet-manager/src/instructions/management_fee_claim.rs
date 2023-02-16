@@ -1,4 +1,4 @@
-use crate::config::{FEE_CLAIM_INTERVAL_SLOTS, MAX_STRIKES, REPLENISH_STRIKE_INTERVAL};
+use crate::config::{FEE_CLAIM_INTERVAL_SECONDS, MAX_STRIKES, REPLENISH_STRIKE_INTERVAL_SECONDS};
 use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -31,9 +31,9 @@ pub fn execute(ctx: Context<ManagementFeeClaim>) -> Result<()> {
         matches!(ctx.accounts.manager_info.status, CometManagerStatus::Open),
         InceptCometManagerError::OpenStatusRequired
     );
-    let current_slot = Clock::get()?.slot;
+    let current_timestamp = Clock::get()?.unix_timestamp as u64;
     return_error_if_false!(
-        current_slot >= ctx.accounts.manager_info.fee_claim_slot + FEE_CLAIM_INTERVAL_SLOTS,
+        current_timestamp >= ctx.accounts.manager_info.fee_claim_timestamp,
         InceptCometManagerError::TooEarlyToClaimReward
     );
     return_error_if_false!(
@@ -68,16 +68,16 @@ pub fn execute(ctx: Context<ManagementFeeClaim>) -> Result<()> {
     // Adjust supply
     ctx.accounts.manager_info.membership_token_supply += tokens_to_add;
     // Update slot
-    ctx.accounts.manager_info.fee_claim_slot = current_slot;
+    ctx.accounts.manager_info.fee_claim_timestamp = current_timestamp + FEE_CLAIM_INTERVAL_SECONDS;
 
-    if current_slot
+    if current_timestamp
         >= ctx
             .accounts
             .manager_info
             .last_strike_timestamp
             .to_u64()
             .unwrap()
-            + REPLENISH_STRIKE_INTERVAL
+            + REPLENISH_STRIKE_INTERVAL_SECONDS
         && ctx.accounts.manager_info.redemption_strikes > 0
     {
         ctx.accounts.manager_info.redemption_strikes -= 1;

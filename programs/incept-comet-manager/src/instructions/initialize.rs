@@ -1,3 +1,4 @@
+use crate::config::FEE_CLAIM_INTERVAL_SECONDS;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
@@ -53,7 +54,7 @@ pub fn execute(
     manager_info.status = CometManagerStatus::Open;
     manager_info.withdrawal_fee_bps = withdrawal_fee_bps;
     manager_info.management_fee_bps = management_fee_bps;
-    manager_info.fee_claim_slot = Clock::get()?.slot;
+    manager_info.fee_claim_timestamp = Clock::get()?.slot + FEE_CLAIM_INTERVAL_SECONDS;
 
     // PDA for incept
     let manager_seeds = &[&[

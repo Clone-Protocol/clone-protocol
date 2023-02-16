@@ -1,5 +1,5 @@
 use crate::config::MAX_STRIKES;
-use crate::config::TERMINATION_SLOT_TIMEOUT;
+use crate::config::TERMINATION_TIMEOUT_SECONDS;
 use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -51,11 +51,12 @@ pub fn execute(ctx: Context<InitiateCometManagerClosing>) -> Result<()> {
         );
     }
 
-    let termination_slot = Clock::get()?.slot + TERMINATION_SLOT_TIMEOUT;
+    let termination_timestamp: u64 =
+        (Clock::get()?.unix_timestamp as u64) + TERMINATION_TIMEOUT_SECONDS;
 
     ctx.accounts.manager_info.status = CometManagerStatus::Closing {
         forcefully_closed,
-        termination_slot,
+        termination_timestamp,
     };
 
     Ok(())

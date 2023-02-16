@@ -12,7 +12,7 @@ pub enum CometManagerStatus {
     Open,
     Closing {
         forcefully_closed: bool,
-        termination_slot: u64,
+        termination_timestamp: u64,
     },
 }
 
@@ -36,7 +36,7 @@ pub struct ManagerInfo {
     pub status: CometManagerStatus,    // 16
     pub withdrawal_fee_bps: u16,       // 2
     pub management_fee_bps: u16,       // 2
-    pub fee_claim_slot: u64,           // 8
+    pub fee_claim_timestamp: u64,      // 8
     pub redemption_strikes: u8,        // 1
     pub last_strike_timestamp: u64,    // 8
     pub user_redemptions: Vec<Pubkey>, // 4 + 32 * MAX_USER_REDEMPTIONS
