@@ -281,13 +281,15 @@ export class InceptClient {
     )) as TokenData;
   }
 
-  public async getLiquidityPositions() {
+  public async getLiquidityPositions(): Promise<
+    { liquidityTokens: number; poolIndex: number }[]
+  > {
     const tokenData = await this.getTokenData();
 
     let balancesQueries = await Promise.allSettled(
       tokenData.pools.map(async (pool) => {
         let ata = await getAssociatedTokenAddress(
-          pool.assetInfo.iassetMint,
+          pool.liquidityTokenMint,
           this.provider.publicKey!
         );
         let balance = await this.provider.connection.getTokenAccountBalance(
@@ -297,9 +299,20 @@ export class InceptClient {
       })
     );
 
-    return balancesQueries.map((result) =>
-      result.status === "rejected" ? 0 : result.value
-    );
+    let positions = [];
+
+    for (let [poolIndex, result] of balancesQueries.entries()) {
+      if (result.status === "fulfilled") {
+        if (result.value > 0) {
+          positions.push({
+            poolIndex,
+            liquidityTokens: result.value,
+          });
+        }
+      }
+    }
+
+    return positions;
   }
 
   public async getBorrowPositions() {
@@ -434,39 +447,41 @@ export class InceptClient {
     );
   }
 
+  public async initializeBorrowPositionsAccountInstruction(
+    borrowPositionsAccount: Keypair
+  ) {
+    let { userPubkey, bump } = await this.getUserAddress();
+    return await this.program.methods
+      .initializeBorrowPositions()
+      .accounts({
+        user: this.provider.publicKey!,
+        userAccount: userPubkey,
+        borrowPositions: borrowPositionsAccount.publicKey,
+        rent: RENT_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SYSTEM_PROGRAM_ID,
+      })
+      .preInstructions([
+        await this.program.account.borrowPositions.createInstruction(
+          borrowPositionsAccount
+        ),
+      ])
+      .signers([borrowPositionsAccount])
+      .instruction();
+  }
+
   public async initializeBorrowPositionInstruction(
     userCollateralTokenAccount: PublicKey,
     userIassetTokenAccount: PublicKey,
     iassetAmount: BN,
     collateralAmount: BN,
     poolIndex: number,
-    collateralIndex: number
+    collateralIndex: number,
+    borrowPositionsAddress?: PublicKey
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
     let { userPubkey, bump } = await this.getUserAddress();
-
-    if (userAccount.borrowPositions.equals(PublicKey.default)) {
-      const borrowPositionsAccount = anchor.web3.Keypair.generate();
-      await this.program.methods
-        .initializeBorrowPositions()
-        .accounts({
-          user: this.provider.publicKey!,
-          userAccount: userPubkey,
-          borrowPositions: borrowPositionsAccount.publicKey,
-          rent: RENT_PUBKEY,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SYSTEM_PROGRAM_ID,
-        })
-        .preInstructions([
-          await this.program.account.borrowPositions.createInstruction(
-            borrowPositionsAccount
-          ),
-        ])
-        .signers([borrowPositionsAccount])
-        .rpc();
-    }
-    userAccount = await this.getUserAccount();
 
     return await this.program.methods
       .initializeBorrowPosition(
@@ -480,7 +495,9 @@ export class InceptClient {
         userAccount: userPubkey,
         incept: this.inceptAddress[0],
         tokenData: this.incept!.tokenData,
-        borrowPositions: userAccount.borrowPositions,
+        borrowPositions: borrowPositionsAddress
+          ? borrowPositionsAddress
+          : userAccount.borrowPositions,
         vault: tokenData.collaterals[collateralIndex].vault,
         userCollateralTokenAccount: userCollateralTokenAccount,
         iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
