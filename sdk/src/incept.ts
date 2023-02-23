@@ -287,7 +287,7 @@ export class InceptClient {
     const tokenData = await this.getTokenData();
 
     let balancesQueries = await Promise.allSettled(
-      tokenData.pools.map(async (pool) => {
+      tokenData.pools.slice(0, tokenData.numPools.toNumber()).map(async (pool) => {
         let ata = await getAssociatedTokenAddress(
           pool.liquidityTokenMint,
           this.provider.publicKey!
@@ -301,12 +301,13 @@ export class InceptClient {
 
     let positions = [];
 
-    for (let [poolIndex, result] of balancesQueries.entries()) {
+    for (let poolIndex = 0; poolIndex < balancesQueries.length; poolIndex++) {
+      let result = balancesQueries[poolIndex];
       if (result.status === "fulfilled") {
-        if (result.value > 0) {
+        if (result.value! > 0) {
           positions.push({
             poolIndex,
-            liquidityTokens: result.value,
+            liquidityTokens: result.value!,
           });
         }
       }
