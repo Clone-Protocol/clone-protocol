@@ -947,7 +947,7 @@ export type InceptCometManager = {
             "type": "u16"
           },
           {
-            "name": "feeClaimSlot",
+            "name": "feeClaimTimestamp",
             "type": "u64"
           },
           {
@@ -1033,7 +1033,7 @@ export type InceptCometManager = {
                 "type": "bool"
               },
               {
-                "name": "termination_slot",
+                "name": "termination_timestamp",
                 "type": "u64"
               }
             ]
@@ -2080,7 +2080,7 @@ export const IDL: InceptCometManager = {
             "type": "u16"
           },
           {
-            "name": "feeClaimSlot",
+            "name": "feeClaimTimestamp",
             "type": "u64"
           },
           {
@@ -2166,7 +2166,7 @@ export const IDL: InceptCometManager = {
                 "type": "bool"
               },
               {
-                "name": "termination_slot",
+                "name": "termination_timestamp",
                 "type": "u64"
               }
             ]
