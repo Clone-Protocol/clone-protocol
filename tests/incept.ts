@@ -81,7 +81,7 @@ describe("incept", async () => {
 
   const mockAssetMint = anchor.web3.Keypair.generate();
   let [jupiterAddress, jupiterNonce] = await PublicKey.findProgramAddress(
-    [anchor.utils.bytes.utf8.encode("jupiter")], //, jupiterProgram.provider.wallet.publicKey.toBuffer()],
+    [anchor.utils.bytes.utf8.encode("jupiter")],
     jupiterProgram.programId
   );
 
@@ -461,6 +461,30 @@ describe("incept", async () => {
       inceptClient.provider,
       mockUSDCMint.publicKey
     );
+
+    const { userPubkey, bump } = await inceptClient.getUserAddress();
+
+    const borrowAccountKeypair = anchor.web3.Keypair.generate();
+
+    await inceptClient.program.methods
+      .initializeBorrowPositions()
+      .accounts({
+        user: inceptClient.provider.publicKey!,
+        userAccount: userPubkey,
+        borrowPositions: borrowAccountKeypair.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .preInstructions([
+        await inceptClient.program.account.borrowPositions.createInstruction(
+          borrowAccountKeypair
+        ),
+      ])
+      .signers([borrowAccountKeypair])
+      .rpc();
+
+    await sleep(400);
 
     // @ts-ignore
     let signers: Array<Signer> = [provider.wallet.payer];
