@@ -7,7 +7,7 @@ import {
   TokenAccountNotFoundError,
 } from "@solana/spl-token";
 import { PublicKey, Connection, Transaction } from "@solana/web3.js";
-import { Incept } from "../sdk/src/incept";
+import { InceptClient } from "../sdk/src/incept";
 import { toNumber } from "../sdk/src/decimal"
 
 export const getTokenAccount = async (
@@ -51,7 +51,7 @@ export const getTokenAccount = async (
 
 
 const main = async (provider: Provider, programId: PublicKey) => {
-  const program = new Incept(programId, provider);
+  const program = new InceptClient(programId, provider);
   await program.loadManager();
 
   // console.log(program.provider.wallet.publicKey.toString());
@@ -118,13 +118,13 @@ if (process.env.DEVNET === "1") {
   inceptProgramID = new PublicKey(
     "65ifrH76MWRp4JqePYDQrCDDd5LFnxHwonXhMw55jcCx"
   );
-  provider = anchor.Provider.env();//anchor.Provider.env();
+  provider = anchor.AnchorProvider.env();//anchor.Provider.env();
 } else {
   console.log("RUNNING LOCALNET");
   inceptProgramID = new PublicKey(
     "3j5wcCkkjns9wibgXVNAay3gzjZiVvYUbW66vqvjEaS7"
   );
-  provider = anchor.Provider.local();
+  provider = anchor.AnchorProvider.local();
 }
 
 main(provider, inceptProgramID);
