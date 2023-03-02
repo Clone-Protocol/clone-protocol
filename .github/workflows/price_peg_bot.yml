@@ -2,6 +2,11 @@ name: price-peg
 on:
   schedule:
     - cron: '0/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref (Optional)    
+        required: false
 jobs:
   run-pegging:
     runs-on: ubuntu-latest
