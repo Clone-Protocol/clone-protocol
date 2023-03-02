@@ -3,8 +3,8 @@ const bs58 = require("bs58");
 const fs = require("fs");
 
 const main = () => {
-  const privateKey = "";
-  const fileOut = "key.json";
+  const privateKey = process.env.SOLANA_PRIVATE_KEY;
+  const fileOut = process.env.KEY_OUTFILE;
   const b = bs58.decode(privateKey);
   const j = new Uint8Array(
     b.buffer,
