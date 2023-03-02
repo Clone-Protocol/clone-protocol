@@ -1,0 +1,20 @@
+name: price-peg
+on:
+  schedule:
+    - cron: '0/15 * * * *'
+jobs:
+  run-pegging:
+    runs-on: ubuntu-latest
+    env:
+      ANCHOR_PROVIDER_URL: ${{ secrets.ANCHOR_PROVIDER_URL }}
+      SOLANA_PRIVATE_KEY: ${{ secrets.SOLANA_BOT_PRIVATE_KEY }}
+      KEY_OUTFILE: key.json
+      ANCHOR_WALLET: key.json
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '17'
+      - run: npm install
+      - run: ts-node/register scripts/convert_phantom_to_fs.key
+      - run: node --dns-result-order=ipv4first -r ts-node/register scripts/price_pegging_bot.ts
