@@ -25,7 +25,7 @@ jobs:
       - run: ls -lh
       - run: pwd
       - name: Generate keypair file
-        run: node -r ts-node/register scripts/convert_phantom_to_fs.key
+        run: node -r ts-node/register scripts/convert_phantom_to_fs.ts
         working-directory: ${{ vars.WORKING_DIR }}
       - name: Run price pegging script
         run: node --dns-result-order=ipv4first -r ts-node/register scripts/price_pegging_bot.ts
