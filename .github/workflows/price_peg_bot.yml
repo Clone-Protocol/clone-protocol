@@ -15,6 +15,9 @@ jobs:
       SOLANA_PRIVATE_KEY: ${{ secrets.SOLANA_BOT_PRIVATE_KEY }}
       KEY_OUTFILE: key.json
       ANCHOR_WALLET: key.json
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
