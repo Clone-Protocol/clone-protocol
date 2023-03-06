@@ -200,15 +200,29 @@ const pegPrices = async (
   const userAccount = await incept.getUserAccount();
 
   if (userAccount.borrowPositions.equals(anchor.web3.PublicKey.default)) {
+    const { userPubkey, bump } = await incept.getUserAddress();
     const borrowPositionsKeypair = anchor.web3.Keypair.generate();
-    console.log("Generating borrow position account:", borrowPositionsKeypair.publicKey.toString())
-    let tx = new Transaction();
-    tx.add(
-      await incept.initializeBorrowPositionsAccountInstruction(
-        borrowPositionsKeypair
-      )
+    console.log(
+      "Generating borrow position account:",
+      borrowPositionsKeypair.publicKey.toString()
     );
-    await incept.provider.sendAndConfirm!(tx);
+    await incept.program.methods
+      .initializeBorrowPositions()
+      .accounts({
+        user: incept.provider.publicKey!,
+        userAccount: userPubkey,
+        borrowPositions: borrowPositionsKeypair.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .preInstructions([
+        await incept.program.account.borrowPositions.createInstruction(
+          borrowPositionsKeypair
+        ),
+      ])
+      .signers([borrowPositionsKeypair])
+      .rpc();
     await sleep(4000);
   }
 
