@@ -20,6 +20,6 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '17'
-      - run: npm install
+      - run: npm install --legacy-peer-deps
       - run: ts-node/register scripts/convert_phantom_to_fs.key
       - run: node --dns-result-order=ipv4first -r ts-node/register scripts/price_pegging_bot.ts
