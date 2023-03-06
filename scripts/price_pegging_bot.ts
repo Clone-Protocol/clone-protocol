@@ -201,13 +201,14 @@ const pegPrices = async (
 
   if (userAccount.borrowPositions.equals(anchor.web3.PublicKey.default)) {
     const borrowPositionsKeypair = anchor.web3.Keypair.generate();
+    console.log("Generating borrow position account:", borrowPositionsKeypair.publicKey.toString())
     let tx = new Transaction();
     tx.add(
       await incept.initializeBorrowPositionsAccountInstruction(
         borrowPositionsKeypair
       )
     );
-    await incept.provider.sendAndConfirm!(tx, [borrowPositionsKeypair]);
+    await incept.provider.sendAndConfirm!(tx);
     await sleep(4000);
   }
 
