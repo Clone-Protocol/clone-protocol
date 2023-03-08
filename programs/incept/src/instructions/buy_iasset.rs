@@ -129,11 +129,6 @@ pub fn execute(
         seeds,
     );
 
-    let mut iasset_amount_value =
-        iasset_amount_value - iasset_amount_value * pool.liquidity_trading_fee.to_decimal();
-
-    iasset_amount_value.rescale(DEVNET_TOKEN_SCALE);
-
     token::transfer(
         send_iasset_to_user_context,
         iasset_amount_value.mantissa().try_into().unwrap(),
