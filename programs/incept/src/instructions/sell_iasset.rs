@@ -1,5 +1,5 @@
 use crate::error::*;
-
+use crate::events::*;
 use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -179,6 +179,40 @@ pub fn execute(
             .unwrap(),
         DEVNET_TOKEN_SCALE,
     );
+
+    let mut trading_fees = swap_summary.liquidity_fees_paid;
+    trading_fees.rescale(DEVNET_TOKEN_SCALE);
+
+    emit!(SwapEvent {
+        event_id: ctx.accounts.incept.event_counter,
+        user: ctx.accounts.user.key(),
+        pool_index,
+        is_buy: false,
+        iasset: amount,
+        usdi: usdi_amount_value.mantissa().try_into().unwrap(),
+        trading_fee: trading_fees.mantissa().try_into().unwrap(),
+        treasury_fee: treasury_fee_to_pay.mantissa().try_into().unwrap()
+    });
+
+    let pool = token_data.pools[pool_index as usize];
+    let mut oracle_price = pool.asset_info.price.to_decimal();
+    oracle_price.rescale(DEVNET_TOKEN_SCALE);
+
+    emit!(PoolState {
+        event_id: ctx.accounts.incept.event_counter,
+        pool_index,
+        iasset: ctx.accounts.amm_iasset_token_account.amount,
+        usdi: ctx.accounts.amm_usdi_token_account.amount,
+        lp_tokens: pool
+            .liquidity_token_supply
+            .to_decimal()
+            .mantissa()
+            .try_into()
+            .unwrap(),
+        oracle_price: oracle_price.mantissa().try_into().unwrap()
+    });
+
+    ctx.accounts.incept.event_counter += 1;
 
     Ok(())
 }

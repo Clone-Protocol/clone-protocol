@@ -1,5 +1,5 @@
 use crate::error::*;
-//use crate::instructions::RecenterComet;
+use crate::events::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
@@ -185,7 +185,7 @@ pub fn execute(
     let comet_position = comet.positions[comet_position_index as usize];
     let comet_collateral = comet.collaterals[comet_collateral_index as usize];
     let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
-
+    let pool_index = comet_position.pool_index;
     // check to see if the collateral used to mint usdi is stable
     let is_stable: Result<bool> = match collateral.stable {
         0 => Ok(false),
@@ -442,6 +442,49 @@ pub fn execute(
             ctx.accounts.vault.amount.try_into().unwrap(),
             DEVNET_TOKEN_SCALE,
         );
+
+    let usdi_delta = (recenter_result.amm_usdi_burn.mantissa() as i64)
+        * if recenter_result.amm_usdi_burn > Decimal::ZERO {
+            -1
+        } else {
+            1
+        };
+    let iasset_delta = (recenter_result.amm_iasset_burn.mantissa() as i64)
+        * if recenter_result.amm_iasset_burn > Decimal::ZERO {
+            -1
+        } else {
+            1
+        };
+
+    emit!(LiquidityDelta {
+        event_id: ctx.accounts.incept.event_counter,
+        user: ctx.accounts.user.key(),
+        pool_index: pool_index.try_into().unwrap(),
+        is_concentrated: true,
+        lp_token_delta: 0,
+        usdi_delta,
+        iasset_delta,
+    });
+
+    let pool = token_data.pools[pool_index as usize];
+    let mut oracle_price = pool.asset_info.price.to_decimal();
+    oracle_price.rescale(DEVNET_TOKEN_SCALE);
+
+    emit!(PoolState {
+        event_id: ctx.accounts.incept.event_counter,
+        pool_index: pool_index.try_into().unwrap(),
+        iasset: ctx.accounts.amm_iasset_token_account.amount,
+        usdi: ctx.accounts.amm_usdi_token_account.amount,
+        lp_tokens: pool
+            .liquidity_token_supply
+            .to_decimal()
+            .mantissa()
+            .try_into()
+            .unwrap(),
+        oracle_price: oracle_price.mantissa().try_into().unwrap()
+    });
+
+    ctx.accounts.incept.event_counter += 1;
 
     Ok(())
 }

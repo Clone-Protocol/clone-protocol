@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::math::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -203,6 +204,36 @@ pub fn execute(
         ctx.accounts.liquidity_token_mint.supply.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,
     );
+
+    emit!(LiquidityDelta {
+        event_id: ctx.accounts.incept.event_counter,
+        user: ctx.accounts.user.key(),
+        pool_index: pool_index.try_into().unwrap(),
+        is_concentrated: false,
+        lp_token_delta: -(liquidity_token_value.mantissa() as i64),
+        usdi_delta: -(usdi_value.mantissa() as i64),
+        iasset_delta: -(iasset_value.mantissa() as i64),
+    });
+
+    let pool = token_data.pools[pool_index as usize];
+    let mut oracle_price = pool.asset_info.price.to_decimal();
+    oracle_price.rescale(DEVNET_TOKEN_SCALE);
+
+    emit!(PoolState {
+        event_id: ctx.accounts.incept.event_counter,
+        pool_index: pool_index.try_into().unwrap(),
+        iasset: ctx.accounts.amm_iasset_token_account.amount,
+        usdi: ctx.accounts.amm_usdi_token_account.amount,
+        lp_tokens: pool
+            .liquidity_token_supply
+            .to_decimal()
+            .mantissa()
+            .try_into()
+            .unwrap(),
+        oracle_price: oracle_price.mantissa().try_into().unwrap()
+    });
+
+    ctx.accounts.incept.event_counter += 1;
 
     Ok(())
 }

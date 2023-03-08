@@ -67,6 +67,7 @@ pub struct Incept {
     pub bump: u8,                              // 1
     pub liquidation_config: LiquidationConfig, // 48
     pub treasury_address: Pubkey,              // 32
+    pub event_counter: u64,                    // 8
 }
 
 #[zero_copy]
