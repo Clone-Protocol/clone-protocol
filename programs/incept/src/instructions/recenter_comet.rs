@@ -20,6 +20,7 @@ pub struct RecenterComet<'info> {
     )]
     pub user_account: Account<'info, User>,
     #[account(
+        mut,
         seeds = [b"incept".as_ref()],
         bump = incept.bump,
         has_one = token_data,

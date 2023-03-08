@@ -12,6 +12,7 @@ use std::convert::TryInto;
 pub struct BuyIasset<'info> {
     pub user: Signer<'info>,
     #[account(
+        mut,
         seeds = [b"incept".as_ref()],
         bump = incept.bump,
         has_one = token_data

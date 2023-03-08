@@ -15,6 +15,7 @@ use std::convert::TryInto;
 pub struct LiquidateComet<'info> {
     pub liquidator: Signer<'info>,
     #[account(
+        mut,
         seeds = [b"incept".as_ref()],
         bump = incept.bump,
         has_one = token_data

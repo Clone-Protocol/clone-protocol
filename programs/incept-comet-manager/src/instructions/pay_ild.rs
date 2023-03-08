@@ -17,6 +17,7 @@ pub struct PayIld<'info> {
     )]
     pub manager_info: Box<Account<'info, ManagerInfo>>,
     #[account(
+        mut,
         address = manager_info.incept
     )]
     pub incept: Box<Account<'info, Incept>>,
