@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -83,6 +84,7 @@ pub fn execute(
     let comet_position = single_pool_comet.positions[position_index as usize];
     let comet_collateral = single_pool_comet.collaterals[position_index as usize];
     let comet_liquidity_tokens = comet_position.liquidity_token_value.to_decimal();
+    let pool_index = comet_position.pool_index;
 
     return_error_if_false!(
         comet_collateral.collateral_index as usize == USDI_COLLATERAL_INDEX,
@@ -298,6 +300,36 @@ pub fn execute(
             ctx.accounts.vault.amount.try_into().unwrap(),
             DEVNET_TOKEN_SCALE,
         );
+
+    emit!(LiquidityDelta {
+        event_id: ctx.accounts.incept.event_counter,
+        user: ctx.accounts.user.key(),
+        pool_index: pool_index.try_into().unwrap(),
+        is_concentrated: true,
+        lp_token_delta: -(liquidity_token_value.mantissa() as i64),
+        usdi_delta: -(usdi_to_burn.mantissa() as i64),
+        iasset_delta: -(iasset_to_burn.mantissa() as i64),
+    });
+
+    let pool = token_data.pools[pool_index as usize];
+    let mut oracle_price = pool.asset_info.price.to_decimal();
+    oracle_price.rescale(DEVNET_TOKEN_SCALE);
+
+    emit!(PoolState {
+        event_id: ctx.accounts.incept.event_counter,
+        pool_index: pool_index.try_into().unwrap(),
+        iasset: ctx.accounts.amm_iasset_token_account.amount,
+        usdi: ctx.accounts.amm_usdi_token_account.amount,
+        lp_tokens: pool
+            .liquidity_token_supply
+            .to_decimal()
+            .mantissa()
+            .try_into()
+            .unwrap(),
+        oracle_price: oracle_price.mantissa().try_into().unwrap()
+    });
+
+    ctx.accounts.incept.event_counter += 1;
 
     Ok(())
 }

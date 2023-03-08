@@ -3,6 +3,7 @@ use error::*;
 use rust_decimal::prelude::*;
 
 pub mod error;
+pub mod events;
 pub mod instructions;
 pub mod math;
 pub mod states;

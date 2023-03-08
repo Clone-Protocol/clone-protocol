@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
@@ -234,6 +235,36 @@ pub fn execute(
     let health_score = calculate_health_score(&comet, token_data, Some(position_index as usize))?;
 
     return_error_if_false!(health_score.is_healthy(), InceptError::HealthScoreTooLow);
+
+    emit!(LiquidityDelta {
+        event_id: ctx.accounts.incept.event_counter,
+        user: ctx.accounts.user.key(),
+        pool_index: pool_index.try_into().unwrap(),
+        is_concentrated: true,
+        lp_token_delta: lp_tokens_to_mint.mantissa().try_into().unwrap(),
+        usdi_delta: usdi_amount as i64,
+        iasset_delta: iasset_liquidity_value.mantissa().try_into().unwrap(),
+    });
+
+    let pool = token_data.pools[pool_index as usize];
+    let mut oracle_price = pool.asset_info.price.to_decimal();
+    oracle_price.rescale(DEVNET_TOKEN_SCALE);
+
+    emit!(PoolState {
+        event_id: ctx.accounts.incept.event_counter,
+        pool_index: pool_index.try_into().unwrap(),
+        iasset: ctx.accounts.amm_iasset_token_account.amount,
+        usdi: ctx.accounts.amm_usdi_token_account.amount,
+        lp_tokens: pool
+            .liquidity_token_supply
+            .to_decimal()
+            .mantissa()
+            .try_into()
+            .unwrap(),
+        oracle_price: oracle_price.mantissa().try_into().unwrap()
+    });
+
+    ctx.accounts.incept.event_counter += 1;
 
     Ok(())
 }
