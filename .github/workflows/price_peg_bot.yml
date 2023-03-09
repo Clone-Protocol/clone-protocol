@@ -23,8 +23,6 @@ jobs:
           node-version: '17'
       - name: Installation
         run: npm install --legacy-peer-deps; npm install ts-node --save-dev --legacy-peer-deps
-      - run: ls -lh
-      - run: pwd
       - name: Generate keypair file
         run: node -r ts-node/register scripts/convert_phantom_to_fs_key.ts
       - name: Run price pegging script
