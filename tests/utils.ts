@@ -53,7 +53,7 @@ export const getOrCreateAssociatedTokenAccount = async (
       );
 
       await provider.sendAndConfirm!(transaction);
-      await sleep(200);
+      await sleep(6000);
       account = await getAccount(
         provider.connection,
         associatedToken,
