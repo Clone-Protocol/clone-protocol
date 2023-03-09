@@ -9,6 +9,7 @@ import {
 import { PublicKey, Connection, Transaction } from "@solana/web3.js";
 import { InceptClient } from "../sdk/src/incept";
 import { toNumber } from "../sdk/src/decimal"
+import { getOrCreateAssociatedTokenAccount } from "../tests/utils";
 
 export const getTokenAccount = async (
   mint: PublicKey,
@@ -83,6 +84,7 @@ const main = async (provider: Provider, programId: PublicKey) => {
     let poolPrice = usdiValue/iassetValue
     let lptokens = toNumber(pool.liquidityTokenSupply);
     console.log("pool:", i, oraclePrice, poolPrice, usdiValue, iassetValue, lptokens)
+    //await getOrCreateAssociatedTokenAccount(program.provider, pool.assetInfo.iassetMint);
   }
 
 
@@ -116,7 +118,7 @@ let inceptProgramID;
 if (process.env.DEVNET === "1") {
   console.log("RUNNING DEVNET");
   inceptProgramID = new PublicKey(
-    "65ifrH76MWRp4JqePYDQrCDDd5LFnxHwonXhMw55jcCx"
+    "GHwfUCuT3mtCrqVdsvAQ3VZy8dn6WiouijPfpQpQT61e"
   );
   provider = anchor.AnchorProvider.env();//anchor.Provider.env();
 } else {

@@ -13,6 +13,7 @@ pub struct WithdrawLiquidityFromSinglePoolComet<'info> {
     #[account(address = single_pool_comet.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
+        mut,
         seeds = [b"incept".as_ref()],
         bump = incept.bump,
         has_one = token_data,
