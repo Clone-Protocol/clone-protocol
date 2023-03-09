@@ -11,6 +11,7 @@ jobs:
   run-pegging:
     runs-on: ubuntu-latest
     env:
+      INCEPT_PROGRAM_ID: ${{ vars.INCEPT_PROGRAM_ID }}
       ANCHOR_PROVIDER_URL: ${{ secrets.ANCHOR_PROVIDER_URL }}
       SOLANA_PRIVATE_KEY: ${{ secrets.SOLANA_BOT_PRIVATE_KEY }}
       KEY_OUTFILE: key.json
@@ -26,7 +27,5 @@ jobs:
       - run: pwd
       - name: Generate keypair file
         run: node -r ts-node/register scripts/convert_phantom_to_fs_key.ts
-        working-directory: ${{ vars.WORKING_DIR }}
       - name: Run price pegging script
         run: node --dns-result-order=ipv4first -r ts-node/register scripts/price_pegging_bot.ts
-        working-directory: ${{ vars.WORKING_DIR }}

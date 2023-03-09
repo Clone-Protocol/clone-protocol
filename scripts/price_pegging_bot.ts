@@ -298,7 +298,7 @@ const fetchAccounts = async (incept: InceptClient): Promise<TokenAccounts> => {
 
 const main = async () => {
   let config = {
-    inceptProgramID: "2YSThxfPwJWYPAeBczUqbu2cyefjq9vAdDsPJU7PUVak",
+    inceptProgramID: process.env.INCEPT_PROGRAM_ID!,
     pctThreshold: 0.01,
   };
   let provider = anchor.AnchorProvider.env();
