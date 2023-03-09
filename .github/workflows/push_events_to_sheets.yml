@@ -14,8 +14,8 @@ jobs:
       DEVNET: "1"
       ANCHOR_PROVIDER_URL: ${{ secrets.ANCHOR_PROVIDER_URL }}
       SOLANA_PRIVATE_KEY: ${{ secrets.SOLANA_BOT_PRIVATE_KEY }}
-      DOCUMENT_ID: $${{ vars.DOCUMENT_ID }}
-      SERVICE_EMAIL: $${{ vars.SERVICE_EMAIL }}
+      DOCUMENT_ID: ${{ vars.DOCUMENT_ID }}
+      SERVICE_EMAIL: ${{ vars.SERVICE_EMAIL }}
       SERVICE_PRIVATE_KEY: ${{ secrets.SERVICE_PRIVATE_KEY }}
       INCEPT_PROGRAM_ID: ${{ vars.INCEPT_PROGRAM_ID }}
       KEY_OUTFILE: key.json
@@ -25,9 +25,13 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '17'
+      - name: Install ntpdate
+        run: sudo apt install ntpdate
+      - name: Sync time
+        run: sudo ntpdate ntp.ubuntu.com
       - name: Installation
         run: npm install --legacy-peer-deps; npm install ts-node --save-dev --legacy-peer-deps
       - name: Generate Keypair file
         run: node -r ts-node/register scripts/convert_phantom_to_fs_key.ts
       - name: Run push events script
-        run: node --dns-result-order=ipv4first -r ts-node/register scripts/push_events_to_sheets.ts
+        run: node -r ts-node/register scripts/push_events_to_sheets.ts
