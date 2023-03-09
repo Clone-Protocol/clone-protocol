@@ -1,0 +1,33 @@
+name: push-events-to-sheets
+on:
+  schedule:
+    - cron: '0/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref (Optional)    
+        required: false
+jobs:
+  push-events:
+    runs-on: ubuntu-latest
+    env:
+      DEVNET: "1"
+      ANCHOR_PROVIDER_URL: ${{ secrets.ANCHOR_PROVIDER_URL }}
+      SOLANA_PRIVATE_KEY: ${{ secrets.SOLANA_BOT_PRIVATE_KEY }}
+      DOCUMENT_ID: $${{ vars.DOCUMENT_ID }}
+      SERVICE_EMAIL: $${{ vars.SERVICE_EMAIL }}
+      SERVICE_PRIVATE_KEY: ${{ secrets.SERVICE_PRIVATE_KEY }}
+      INCEPT_PROGRAM_ID: ${{ vars.INCEPT_PROGRAM_ID }}
+      KEY_OUTFILE: key.json
+      ANCHOR_WALLET: key.json
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '17'
+      - name: Installation
+        run: npm install --legacy-peer-deps; npm install ts-node --save-dev --legacy-peer-deps
+      - name: Generate Keypair file
+        run: node -r ts-node/register scripts/convert_phantom_to_fs_key.ts
+      - name: Run push events script
+        run: node --dns-result-order=ipv4first -r ts-node/register scripts/push_events_to_sheets.ts
