@@ -28,7 +28,7 @@ const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 export const DEVNET_TOKEN_SCALE = 8;
 export const MAX_PRICE_SIZE = 128;
 
-export const toDevnetScale = (x: number) => {
+export const toDevnetScale = (x: number): BN => {
   return new BN(x * 10 ** DEVNET_TOKEN_SCALE);
 };
 
@@ -177,12 +177,13 @@ export class InceptClient {
     chainlinkOracle: PublicKey,
     healthScoreCoefficient: number,
     liquidationDiscountRate: number,
-    maxOwnershipPct: number
+    maxOwnershipPct: number,
+    underlyingAssetMint: PublicKey
   ) {
     const usdiTokenAccount = anchor.web3.Keypair.generate();
     const iassetMintAccount = anchor.web3.Keypair.generate();
     const iassetTokenAccount = anchor.web3.Keypair.generate();
-    const liquidationIassetTokenAccount = anchor.web3.Keypair.generate();
+    const underlyingAssetTokenAccount = anchor.web3.Keypair.generate();
     const liquidityTokenMintAccount = anchor.web3.Keypair.generate();
     const cometLiquidityTokenAccount = anchor.web3.Keypair.generate();
 
@@ -204,7 +205,8 @@ export class InceptClient {
         usdiTokenAccount: usdiTokenAccount.publicKey,
         iassetMint: iassetMintAccount.publicKey,
         iassetTokenAccount: iassetTokenAccount.publicKey,
-        liquidationIassetTokenAccount: liquidationIassetTokenAccount.publicKey,
+        underlyingAssetMint: underlyingAssetMint,
+        underlyingAssetTokenAccount: underlyingAssetTokenAccount.publicKey,
         liquidityTokenMint: liquidityTokenMintAccount.publicKey,
         cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
         pythOracle: pythOracle,
@@ -217,7 +219,7 @@ export class InceptClient {
         usdiTokenAccount,
         iassetMintAccount,
         iassetTokenAccount,
-        liquidationIassetTokenAccount,
+        underlyingAssetTokenAccount,
         liquidityTokenMintAccount,
         cometLiquidityTokenAccount,
       ])
@@ -287,16 +289,18 @@ export class InceptClient {
     const tokenData = await this.getTokenData();
 
     let balancesQueries = await Promise.allSettled(
-      tokenData.pools.slice(0, tokenData.numPools.toNumber()).map(async (pool) => {
-        let ata = await getAssociatedTokenAddress(
-          pool.liquidityTokenMint,
-          this.provider.publicKey!
-        );
-        let balance = await this.provider.connection.getTokenAccountBalance(
-          ata
-        );
-        return balance.value.uiAmount;
-      })
+      tokenData.pools
+        .slice(0, tokenData.numPools.toNumber())
+        .map(async (pool) => {
+          let ata = await getAssociatedTokenAddress(
+            pool.liquidityTokenMint,
+            this.provider.publicKey!
+          );
+          let balance = await this.provider.connection.getTokenAccountBalance(
+            ata
+          );
+          return balance.value.uiAmount;
+        })
     );
 
     let positions = [];

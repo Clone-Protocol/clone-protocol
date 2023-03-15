@@ -12,7 +12,6 @@ export interface ManagerInfo {
   status: Object;
   withdrawalFeeBps: number;
   managementFeeBps: number;
-  feeClaimSlot: BN;
   userRedemptions: PublicKey[];
   redemptionStrikes: number;
   lastStrikeTimestamp: BN;

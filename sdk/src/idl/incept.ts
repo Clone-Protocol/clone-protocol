@@ -381,7 +381,12 @@ export type Incept = {
           "isSigner": true
         },
         {
-          "name": "liquidationIassetTokenAccount",
+          "name": "underlyingAssetMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "underlyingAssetTokenAccount",
           "isMut": true,
           "isSigner": true
         },
@@ -2423,6 +2428,126 @@ export type Incept = {
           "type": "bool"
         }
       ]
+    },
+    {
+      "name": "wrapAsset",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "incept",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "underlyingAssetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "assetMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAssetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "unwrapIasset",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "incept",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "underlyingAssetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "assetMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAssetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -2796,7 +2921,7 @@ export type Incept = {
             "type": "publicKey"
           },
           {
-            "name": "liquidationIassetTokenAccount",
+            "name": "underlyingAssetTokenAccount",
             "type": "publicKey"
           },
           {
@@ -4001,7 +4126,12 @@ export const IDL: Incept = {
           "isSigner": true
         },
         {
-          "name": "liquidationIassetTokenAccount",
+          "name": "underlyingAssetMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "underlyingAssetTokenAccount",
           "isMut": true,
           "isSigner": true
         },
@@ -6043,6 +6173,126 @@ export const IDL: Incept = {
           "type": "bool"
         }
       ]
+    },
+    {
+      "name": "wrapAsset",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "incept",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "underlyingAssetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "assetMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAssetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "unwrapIasset",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "incept",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "underlyingAssetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "assetMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAssetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "iassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -6416,7 +6666,7 @@ export const IDL: Incept = {
             "type": "publicKey"
           },
           {
-            "name": "liquidationIassetTokenAccount",
+            "name": "underlyingAssetTokenAccount",
             "type": "publicKey"
           },
           {

@@ -47,13 +47,15 @@ pub struct InitializePool<'info> {
         payer = admin
     )]
     pub iasset_token_account: Box<Account<'info, TokenAccount>>,
+    /// CHECK: External mint address, can only be selected by admin.
+    pub underlying_asset_mint: Box<Account<'info, Mint>>,
     #[account(
         init,
-        token::mint = iasset_mint,
+        token::mint = underlying_asset_mint,
         token::authority = incept,
         payer = admin
     )]
-    pub liquidation_iasset_token_account: Box<Account<'info, TokenAccount>>,
+    pub underlying_asset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
         mint::decimals = 8,
@@ -99,9 +101,9 @@ pub fn execute(
         iasset_token_account: *ctx.accounts.iasset_token_account.to_account_info().key,
         usdi_token_account: *ctx.accounts.usdi_token_account.to_account_info().key,
         liquidity_token_mint: *ctx.accounts.liquidity_token_mint.to_account_info().key,
-        liquidation_iasset_token_account: *ctx
+        underlying_asset_token_account: *ctx
             .accounts
-            .liquidation_iasset_token_account
+            .underlying_asset_token_account
             .to_account_info()
             .key,
         comet_liquidity_token_account: *ctx
