@@ -176,7 +176,7 @@ pub struct Pool {
     pub iasset_token_account: Pubkey,                // 32
     pub usdi_token_account: Pubkey,                  // 32
     pub liquidity_token_mint: Pubkey,                // 32
-    pub liquidation_iasset_token_account: Pubkey,    // 32
+    pub underlying_asset_token_account: Pubkey,      // 32
     pub comet_liquidity_token_account: Pubkey,       // 32
     pub iasset_amount: RawDecimal,                   // 16
     pub usdi_amount: RawDecimal,                     // 16

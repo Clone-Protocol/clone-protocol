@@ -9,6 +9,7 @@ export interface Incept {
   bump: number;
   liquidationConfig: LiquidationConfig;
   treasuryAddress: PublicKey;
+  eventCounter: BN;
 }
 
 export interface LiquidationConfig {
@@ -106,7 +107,7 @@ export interface Pool {
   iassetTokenAccount: PublicKey;
   usdiTokenAccount: PublicKey;
   liquidityTokenMint: PublicKey;
-  liquidationIassetTokenAccount: PublicKey;
+  underlyingAssetTokenAccount: PublicKey;
   cometLiquidityTokenAccount: PublicKey;
   iassetAmount: RawDecimal;
   usdiAmount: RawDecimal;
