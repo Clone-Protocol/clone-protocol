@@ -404,4 +404,12 @@ pub mod incept {
     ) -> Result<()> {
         instructions::remove_pool::execute(ctx, pool_index, force_removal)
     }
+
+    pub fn wrap_asset(ctx: Context<WrapAsset>, amount: u64, pool_index: u8) -> Result<()> {
+        instructions::wrap_asset::execute(ctx, amount, pool_index)
+    }
+
+    pub fn unwrap_iasset(ctx: Context<UnwrapIasset>, amount: u64, pool_index: u8) -> Result<()> {
+        instructions::unwrap_iasset::execute(ctx, amount, pool_index)
+    }
 }

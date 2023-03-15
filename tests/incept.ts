@@ -202,6 +202,10 @@ describe("incept", async () => {
   });
 
   it("pools initialized!", async () => {
+    const jupiterData = await jupiterProgram.account.jupiter.fetch(
+      jupiterAddress
+    );
+
     await inceptClient.initializePool(
       walletPubkey,
       150,
@@ -212,7 +216,8 @@ describe("incept", async () => {
       chainlink.priceFeedPubkey(),
       healthScoreCoefficient,
       500,
-      10
+      10,
+      jupiterData.assetMints[0]
     );
 
     await inceptProgram.methods
@@ -234,7 +239,8 @@ describe("incept", async () => {
       chainlink.priceFeedPubkey(),
       healthScoreCoefficient,
       500,
-      10
+      10,
+      jupiterData.assetMints[0]
     );
 
     await sleep(400);
@@ -285,7 +291,7 @@ describe("incept", async () => {
       "check liquidityTokenMint"
     );
     assert(
-      !first_pool.liquidationIassetTokenAccount.equals(
+      !first_pool.underlyingAssetTokenAccount.equals(
         anchor.web3.PublicKey.default
       ),
       "check iassetTokenAccount"
@@ -2694,6 +2700,10 @@ describe("incept", async () => {
       .signers([mockAssetMint2])
       .rpc();
 
+    const jupiterData = await jupiterProgram.account.jupiter.fetch(
+      jupiterAddress
+    );
+
     await inceptClient.initializePool(
       walletPubkey,
       150,
@@ -2704,7 +2714,8 @@ describe("incept", async () => {
       chainlink.priceFeedPubkey(),
       healthScoreCoefficient,
       500,
-      10
+      10,
+      jupiterData.assetMints[1]
     );
 
     // Mint position
@@ -3181,7 +3192,7 @@ describe("incept", async () => {
       .rpc();
   });
 
-  let cometManagerInfo;
+  let cometManagerInfo: any;
   let cometManagerInfoAddress;
 
   it("comet manager initialized!", async () => {
@@ -3827,74 +3838,114 @@ describe("incept", async () => {
       })
       .rpc();
   });
+
+  it("wrap assets and unwrap iassets", async () => {
+    const poolIndex = 0;
+    const tokenData = await inceptClient.getTokenData();
+    const pool = tokenData.pools[poolIndex];
+    const jupiterData = await jupiterProgram.account.jupiter.fetch(
+      jupiterAddress
+    );
+
+    let mockAssetAssociatedTokenAccount =
+      await getOrCreateAssociatedTokenAccount(
+        inceptClient.provider,
+        jupiterData.assetMints[0]
+      );
+
+    let iassetAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      pool.assetInfo.iassetMint
+    );
+    // Get asset from jupiter
+    await jupiterProgram.methods
+      .mintAsset(jupiterNonce, 0, new BN(10 * 100000000))
+      .accounts({
+        assetMint: jupiterData.assetMints[0],
+        assetTokenAccount: mockAssetAssociatedTokenAccount.address,
+        jupiterAccount: jupiterAddress,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    mockAssetAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      jupiterData.assetMints[0]
+    );
+
+    let startingAssetBalance = Number(mockAssetAssociatedTokenAccount.amount);
+    let startingIassetBalance = Number(iassetAssociatedTokenAccount.amount);
+
+    let amount = toDevnetScale(5);
+    let [inceptAddress, bump] = await inceptClient.getInceptAddress();
+
+    // Wrap to iasset
+    await inceptProgram.methods
+      .wrapAsset(amount, poolIndex)
+      .accounts({
+        user: inceptClient.provider.publicKey!,
+        tokenData: inceptClient.incept!.tokenData,
+        underlyingAssetTokenAccount: pool.underlyingAssetTokenAccount!,
+        assetMint: jupiterData.assetMints[0],
+        userAssetTokenAccount: mockAssetAssociatedTokenAccount.address,
+        iassetMint: pool.assetInfo.iassetMint,
+        userIassetTokenAccount: iassetAssociatedTokenAccount.address,
+        incept: inceptClient.inceptAddress[0],
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    mockAssetAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      jupiterData.assetMints[0]
+    );
+    iassetAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      pool.assetInfo.iassetMint
+    );
+
+    assert.equal(
+      startingAssetBalance - Number(mockAssetAssociatedTokenAccount.amount),
+      Number(amount),
+      "check asset"
+    );
+    assert.equal(
+      Number(iassetAssociatedTokenAccount.amount) - startingIassetBalance,
+      Number(amount),
+      "check iasset"
+    );
+
+    // Unwrap to asset
+    await inceptProgram.methods
+      .unwrapIasset(amount, poolIndex)
+      .accounts({
+        user: inceptClient.provider.publicKey!,
+        tokenData: inceptClient.incept!.tokenData,
+        underlyingAssetTokenAccount: pool.underlyingAssetTokenAccount!,
+        assetMint: jupiterData.assetMints[0],
+        userAssetTokenAccount: mockAssetAssociatedTokenAccount.address,
+        iassetMint: pool.assetInfo.iassetMint,
+        userIassetTokenAccount: iassetAssociatedTokenAccount.address,
+        incept: inceptAddress,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    mockAssetAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      jupiterData.assetMints[0]
+    );
+    iassetAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
+      inceptClient.provider,
+      pool.assetInfo.iassetMint
+    );
+    assert.equal(
+      Number(mockAssetAssociatedTokenAccount.amount),
+      startingAssetBalance
+    );
+    assert.equal(
+      Number(iassetAssociatedTokenAccount.amount),
+      startingIassetBalance
+    );
+  });
 });
-
-//   it("comet closed! (liquidity withdrawn and ILD payed)", async () => {
-//     let poolIndex = 0;
-//     const tokenData = await inceptClient.getTokenData();
-//     const pool = tokenData.pools[poolIndex];
-
-//     usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(inceptClient.provider,
-//       inceptClient.incept!.usdiMint
-//     );
-//     iassetTokenAccountInfo =
-//       await getOrCreateAssociatedTokenAccount(inceptClient.provider,
-//         pool.assetInfo.iassetMint
-//       );
-
-//     await inceptClient.withdrawLiquidityAndPayCometILD(
-//       usdiTokenAccountInfo.address,
-//       iassetTokenAccountInfo.address,
-//       0,
-//       false
-//     );
-
-//     await sleep(200);
-
-//     usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(inceptClient.provider,
-//       inceptClient.incept!.usdiMint
-//     );
-//     iassetTokenAccountInfo =
-//       await getOrCreateAssociatedTokenAccount(inceptClient.provider,
-//         pool.assetInfo.iassetMint
-//       );
-
-//     assert.equal(
-//       Number(usdiTokenAccountInfo.amount) / 100000000,
-//       10123570.15392809,
-//       "check user usdi balance"
-//     );
-//     assert.equal(
-//       Number(iassetTokenAccountInfo.amount) / 100000000,
-//       189087.44860351,
-//       "check user iAsset balance"
-//     );
-//     assert.equal(
-//       Number(
-//         (
-//           await inceptClient.connection.getTokenAccountBalance(
-//             pool.usdiTokenAccount,
-//             "recent"
-//           )
-//         ).value!.uiAmount
-//       ),
-//       3786777.85075596,
-//       "check pool usdi"
-//     );
-//     assert.equal(
-//       Number(
-//         (
-//           await inceptClient.connection.getTokenAccountBalance(
-//             pool.iassetTokenAccount,
-//             "recent"
-//           )
-//         ).value!.uiAmount
-//       ),
-//       10912.55139649,
-//       "check pool iAsset"
-//     );
-
-//     const comet = await inceptClient.getComet();
-//     assert.equal(Number(comet.numPositions), 0, "check comet position");
-//   });
-// });
