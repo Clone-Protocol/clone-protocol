@@ -209,7 +209,7 @@ pub fn execute(
     emit!(LiquidityDelta {
         event_id: ctx.accounts.incept.event_counter,
         user: ctx.accounts.user.key(),
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index,
         is_concentrated: false,
         lp_token_delta: -(liquidity_token_value.mantissa() as i64),
         usdi_delta: -(usdi_value.mantissa() as i64),
@@ -222,7 +222,7 @@ pub fn execute(
 
     emit!(PoolState {
         event_id: ctx.accounts.incept.event_counter,
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index,
         iasset: ctx.accounts.amm_iasset_token_account.amount,
         usdi: ctx.accounts.amm_usdi_token_account.amount,
         lp_tokens: pool

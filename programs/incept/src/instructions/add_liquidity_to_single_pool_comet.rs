@@ -247,7 +247,7 @@ pub fn execute(
         iasset_delta: iasset_liquidity_value.mantissa().try_into().unwrap(),
     });
 
-    let pool = token_data.pools[pool_index as usize];
+    let pool = token_data.pools[pool_index];
     let mut oracle_price = pool.asset_info.price.to_decimal();
     oracle_price.rescale(DEVNET_TOKEN_SCALE);
 
