@@ -8,7 +8,8 @@ pub enum PoolParameters {
     PriceFeedAddresses { addresses: [Pubkey; 2] },
     StableCollateralRatio { value: RawDecimal },
     CryptoCollateralRatio { value: RawDecimal },
-    HealthScoreCoefficient { value: RawDecimal },
+    IlHealthScoreCoefficient { value: RawDecimal },
+    PositionHealthScoreCoefficient { value: RawDecimal },
     LiquidationDiscountRate { value: RawDecimal },
     MaxOwnershipPct { value: RawDecimal },
 }
@@ -61,8 +62,11 @@ pub fn execute(
         PoolParameters::CryptoCollateralRatio { value } => {
             pool.asset_info.crypto_collateral_ratio = value;
         }
-        PoolParameters::HealthScoreCoefficient { value } => {
-            pool.asset_info.health_score_coefficient = value;
+        PoolParameters::IlHealthScoreCoefficient { value } => {
+            pool.asset_info.il_health_score_coefficient = value;
+        }
+        PoolParameters::PositionHealthScoreCoefficient { value } => {
+            pool.asset_info.position_health_score_coefficient = value;
         }
         PoolParameters::LiquidationDiscountRate { value } => {
             pool.asset_info.liquidation_discount_rate = value;

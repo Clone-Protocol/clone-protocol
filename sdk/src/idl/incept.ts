@@ -53,10 +53,6 @@ export type Incept = {
       ],
       "args": [
         {
-          "name": "ilHealthScoreCoefficient",
-          "type": "u64"
-        },
-        {
           "name": "ilHealthScoreCutoff",
           "type": "u64"
         },
@@ -444,7 +440,11 @@ export type Incept = {
           "type": "u16"
         },
         {
-          "name": "healthScoreCoefficient",
+          "name": "ilHealthScoreCoefficient",
+          "type": "u64"
+        },
+        {
+          "name": "positionHealthScoreCoefficient",
           "type": "u64"
         },
         {
@@ -2633,12 +2633,6 @@ export type Incept = {
             "type": "publicKey"
           },
           {
-            "name": "ilHealthScoreCoefficient",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
             "name": "ilHealthScoreCutoff",
             "type": {
               "defined": "RawDecimal"
@@ -2883,7 +2877,13 @@ export type Incept = {
             }
           },
           {
-            "name": "healthScoreCoefficient",
+            "name": "ilHealthScoreCoefficient",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "positionHealthScoreCoefficient",
             "type": {
               "defined": "RawDecimal"
             }
@@ -3217,17 +3217,6 @@ export type Incept = {
             ]
           },
           {
-            "name": "IlHealthScoreCoefficient",
-            "fields": [
-              {
-                "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
-              }
-            ]
-          },
-          {
             "name": "IlHealthScoreCutoff",
             "fields": [
               {
@@ -3316,7 +3305,18 @@ export type Incept = {
             ]
           },
           {
-            "name": "HealthScoreCoefficient",
+            "name": "IlHealthScoreCoefficient",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "PositionHealthScoreCoefficient",
             "fields": [
               {
                 "name": "value",
@@ -3798,10 +3798,6 @@ export const IDL: Incept = {
       ],
       "args": [
         {
-          "name": "ilHealthScoreCoefficient",
-          "type": "u64"
-        },
-        {
           "name": "ilHealthScoreCutoff",
           "type": "u64"
         },
@@ -4189,7 +4185,11 @@ export const IDL: Incept = {
           "type": "u16"
         },
         {
-          "name": "healthScoreCoefficient",
+          "name": "ilHealthScoreCoefficient",
+          "type": "u64"
+        },
+        {
+          "name": "positionHealthScoreCoefficient",
           "type": "u64"
         },
         {
@@ -6378,12 +6378,6 @@ export const IDL: Incept = {
             "type": "publicKey"
           },
           {
-            "name": "ilHealthScoreCoefficient",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
             "name": "ilHealthScoreCutoff",
             "type": {
               "defined": "RawDecimal"
@@ -6628,7 +6622,13 @@ export const IDL: Incept = {
             }
           },
           {
-            "name": "healthScoreCoefficient",
+            "name": "ilHealthScoreCoefficient",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "positionHealthScoreCoefficient",
             "type": {
               "defined": "RawDecimal"
             }
@@ -6962,17 +6962,6 @@ export const IDL: Incept = {
             ]
           },
           {
-            "name": "IlHealthScoreCoefficient",
-            "fields": [
-              {
-                "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
-              }
-            ]
-          },
-          {
             "name": "IlHealthScoreCutoff",
             "fields": [
               {
@@ -7061,7 +7050,18 @@ export const IDL: Incept = {
             ]
           },
           {
-            "name": "HealthScoreCoefficient",
+            "name": "IlHealthScoreCoefficient",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "PositionHealthScoreCoefficient",
             "fields": [
               {
                 "name": "value",

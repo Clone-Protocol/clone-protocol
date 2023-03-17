@@ -6,7 +6,16 @@ use anchor_spl::token::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(stable_collateral_ratio: u16, crypto_collateral_ratio: u16, health_score_coefficient: u64, max_ownership_pct: u64)]
+#[instruction(
+    stable_collateral_ratio: u16,
+    crypto_collateral_ratio: u16,
+    liquidity_trading_fee: u16,
+    treasury_trading_fee: u16,
+    il_health_score_coefficient: u64,
+    position_health_score_coefficient: u64,
+    liquidation_discount_rate: u64,
+    max_ownership_pct: u64,
+)]
 pub struct InitializePool<'info> {
     #[account(mut, address = incept.admin)]
     pub admin: Signer<'info>,
@@ -85,7 +94,8 @@ pub fn execute(
     crypto_collateral_ratio: u16,
     liquidity_trading_fee: u16,
     treasury_trading_fee: u16,
-    health_score_coefficient: u64,
+    il_health_score_coefficient: u64,
+    position_health_score_coefficient: u64,
     liquidation_discount_rate: u64,
     max_ownership_pct: u64,
 ) -> Result<()> {
@@ -139,8 +149,14 @@ pub fn execute(
         .crypto_collateral_ratio = RawDecimal::from_percent(crypto_collateral_ratio);
     token_data.pools[index as usize]
         .asset_info
-        .health_score_coefficient = RawDecimal::new(
-        health_score_coefficient.try_into().unwrap(),
+        .il_health_score_coefficient = RawDecimal::new(
+        il_health_score_coefficient.try_into().unwrap(),
+        DEVNET_TOKEN_SCALE,
+    );
+    token_data.pools[index as usize]
+        .asset_info
+        .position_health_score_coefficient = RawDecimal::new(
+        position_health_score_coefficient.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,
     );
     token_data.pools[index as usize]

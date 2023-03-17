@@ -59,10 +59,10 @@ export const getHealthScore = (
         let claimableIasset = poolIassetAmount * claimableRatio;
 
         let ilHealthScoreCoefficient = toNumber(
-          tokenData.ilHealthScoreCoefficient
+          pool.assetInfo.ilHealthScoreCoefficient
         );
         let poolHealthScoreCoefficient = toNumber(
-          pool.assetInfo.healthScoreCoefficient
+          pool.assetInfo.positionHealthScoreCoefficient
         );
 
         let ild = 0;
@@ -134,9 +134,9 @@ export const getSinglePoolHealthScore = (
     isUsdi = false;
   }
 
-  const ilCoefficient = toNumber(tokenData.ilHealthScoreCoefficient);
+  const ilCoefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
   const assetCoefficient = toNumber(
-    tokenData.pools[position.poolIndex].assetInfo.healthScoreCoefficient
+    tokenData.pools[position.poolIndex].assetInfo.positionHealthScoreCoefficient
   );
   let totalLoss = ilCoefficient * ILD + assetCoefficient * borrowedUsdi;
   const healthScore =
@@ -250,13 +250,13 @@ export const calculateNewSinglePoolCometFromUsdiBorrowed = (
 
   const claimableRatio = usdiBorrowed / (usdiBorrowed + poolUsdi);
 
-  const poolCoefficient = toNumber(pool.assetInfo.healthScoreCoefficient);
+  const poolCoefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
 
   const loss = poolCoefficient * usdiBorrowed;
 
   const healthScore = 100 - loss / collateralProvided;
 
-  const ilHealthScoreCoefficient = toNumber(tokenData.ilHealthScoreCoefficient);
+  const ilHealthScoreCoefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
 
   const maxILD = (100 * collateralProvided - loss) / ilHealthScoreCoefficient;
 
@@ -302,8 +302,8 @@ export const calculateNewSinglePoolCometFromRange = (
   const poolIasset = toNumber(pool.iassetAmount);
   const poolPrice = poolUsdi / poolIasset;
 
-  const poolCoefficient = toNumber(pool.assetInfo.healthScoreCoefficient);
-  const ilHealthScoreCoefficient = toNumber(tokenData.ilHealthScoreCoefficient);
+  const poolCoefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
+  const ilHealthScoreCoefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
 
   let maxUsdiPosition = (100 * collateralProvided) / poolCoefficient;
 
@@ -440,9 +440,9 @@ export const calculateEditCometSinglePoolWithUsdiBorrowed = (
     isUsdi = true;
   }
 
-  const ilHealthScoreCoefficient = toNumber(tokenData.ilHealthScoreCoefficient);
+  const ilHealthScoreCoefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
 
-  const poolCoefficient = toNumber(pool.assetInfo.healthScoreCoefficient);
+  const poolCoefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
   const newPositionLoss = poolCoefficient * newPositionBorrowedUsdi;
   const ildLoss = ilHealthScoreCoefficient * ILD;
   const loss = ildLoss + newPositionLoss;
@@ -504,8 +504,8 @@ export const calculateEditCometSinglePoolWithRange = (
   const poolUsdi = toNumber(pool.usdiAmount);
   const poolIasset = toNumber(pool.iassetAmount);
   const poolPrice = poolUsdi / poolIasset;
-  const ilHealthScoreCoefficient = toNumber(tokenData.ilHealthScoreCoefficient);
-  const poolCoefficient = toNumber(pool.assetInfo.healthScoreCoefficient);
+  const ilHealthScoreCoefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
+  const poolCoefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
   const poolLpTokens = toNumber(pool.liquidityTokenSupply);
   const lpTokens = toNumber(position.liquidityTokenValue);
   const claimableRatio = lpTokens / poolLpTokens;
@@ -644,8 +644,8 @@ export const calculateCometRecenterSinglePool = (
   const position = comet.positions[cometIndex];
   const pool = tokenData.pools[position.poolIndex];
 
-  const ilCoefficient = toNumber(tokenData.ilHealthScoreCoefficient);
-  const assetCoefficient = toNumber(pool.assetInfo.healthScoreCoefficient);
+  const ilCoefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
+  const assetCoefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
 
   const borrowedUsdi = toNumber(position.borrowedUsdi);
   const borrowedIasset = toNumber(position.borrowedIasset);
@@ -747,8 +747,8 @@ export const calculateCometRecenterMultiPool = (
   const position = comet.positions[cometIndex];
   const pool = tokenData.pools[position.poolIndex];
 
-  const ilCoefficient = toNumber(tokenData.ilHealthScoreCoefficient);
-  const assetCoefficient = toNumber(pool.assetInfo.healthScoreCoefficient);
+  const ilCoefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
+  const assetCoefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
 
   const borrowedUsdi = toNumber(position.borrowedUsdi);
   const borrowedIasset = toNumber(position.borrowedIasset);

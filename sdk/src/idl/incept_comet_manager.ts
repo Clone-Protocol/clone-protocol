@@ -321,7 +321,7 @@ export type InceptCometManager = {
         },
         {
           "name": "incept",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -428,7 +428,7 @@ export type InceptCometManager = {
         },
         {
           "name": "incept",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -513,7 +513,7 @@ export type InceptCometManager = {
         },
         {
           "name": "incept",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -603,7 +603,7 @@ export type InceptCometManager = {
         },
         {
           "name": "incept",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -684,7 +684,7 @@ export type InceptCometManager = {
         },
         {
           "name": "incept",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1454,7 +1454,7 @@ export const IDL: InceptCometManager = {
         },
         {
           "name": "incept",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1561,7 +1561,7 @@ export const IDL: InceptCometManager = {
         },
         {
           "name": "incept",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1646,7 +1646,7 @@ export const IDL: InceptCometManager = {
         },
         {
           "name": "incept",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1736,7 +1736,7 @@ export const IDL: InceptCometManager = {
         },
         {
           "name": "incept",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1817,7 +1817,7 @@ export const IDL: InceptCometManager = {
         },
         {
           "name": "incept",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {

@@ -20,7 +20,6 @@ pub mod incept {
     #[allow(clippy::too_many_arguments)]
     pub fn initialize_incept(
         ctx: Context<InitializeIncept>,
-        il_health_score_coefficient: u64,
         il_health_score_cutoff: u64,
         il_liquidation_reward_pct: u64,
         max_health_liquidation: u64,
@@ -29,7 +28,6 @@ pub mod incept {
     ) -> Result<()> {
         instructions::initialize_incept::execute(
             ctx,
-            il_health_score_coefficient,
             il_health_score_cutoff,
             il_liquidation_reward_pct,
             max_health_liquidation,
@@ -88,7 +86,8 @@ pub mod incept {
         crypto_collateral_ratio: u16,
         liquidity_trading_fee: u16,
         treasury_trading_fee: u16,
-        health_score_coefficient: u64,
+        il_health_score_coefficient: u64,
+        position_health_score_coefficient: u64,
         liquidation_discount_rate: u64,
         max_ownership_pct: u64,
     ) -> Result<()> {
@@ -98,7 +97,8 @@ pub mod incept {
             crypto_collateral_ratio,
             liquidity_trading_fee,
             treasury_trading_fee,
-            health_score_coefficient,
+            il_health_score_coefficient,
+            position_health_score_coefficient,
             liquidation_discount_rate,
             max_ownership_pct,
         )
