@@ -32,7 +32,6 @@ export interface TokenData {
   pools: Array<Pool>;
   collaterals: Array<Collateral>;
   chainlinkProgram: PublicKey;
-  ilHealthScoreCoefficient: RawDecimal;
 }
 
 export interface BorrowPositions {
@@ -100,7 +99,8 @@ export interface AssetInfo {
   lastUpdate: number;
   stableCollateralRatio: RawDecimal;
   cryptoCollateralRatio: RawDecimal;
-  healthScoreCoefficient: RawDecimal;
+  ilHealthScoreCoefficient: RawDecimal;
+  positionHealthScoreCoefficient: RawDecimal;
 }
 
 export interface Pool {

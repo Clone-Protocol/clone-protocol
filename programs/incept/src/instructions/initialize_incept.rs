@@ -8,7 +8,6 @@ use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(
-    il_health_score_coefficient: u64,
     il_health_score_cutoff: u64,
     il_liquidation_reward_pct: u64,
     max_health_liquidation: u64,
@@ -52,7 +51,6 @@ pub struct InitializeIncept<'info> {
 #[allow(clippy::too_many_arguments)]
 pub fn execute(
     ctx: Context<InitializeIncept>,
-    il_health_score_coefficient: u64,
     il_health_score_cutoff: u64,
     il_liquidation_reward_pct: u64,
     max_health_liquidation: u64,
@@ -91,10 +89,6 @@ pub fn execute(
     // set token data
     token_data.incept = *ctx.accounts.incept.to_account_info().key;
     token_data.chainlink_program = *ctx.accounts.chainlink_program.to_account_info().key;
-    token_data.il_health_score_coefficient = RawDecimal::new(
-        il_health_score_coefficient.try_into().unwrap(),
-        DEVNET_TOKEN_SCALE,
-    );
     token_data.il_health_score_cutoff = RawDecimal::new(
         il_health_score_cutoff.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,

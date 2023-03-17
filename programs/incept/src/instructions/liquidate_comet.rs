@@ -160,11 +160,14 @@ fn calculate_liquidation_result(
         ild_after_recenter += oracle_marked_debt.max(pool_marked_debt);
     }
     let ild_term_after_recenter =
-        token_data.il_health_score_coefficient.to_decimal() * ild_after_recenter;
+        pool.asset_info.il_health_score_coefficient.to_decimal() * ild_after_recenter;
 
     // Calculate how much liquidity we can withdraw.
     let health_score_cutoff = token_data.il_health_score_cutoff.to_decimal();
-    let position_health_coefficient = pool.asset_info.health_score_coefficient.to_decimal();
+    let position_health_coefficient = pool
+        .asset_info
+        .position_health_score_coefficient
+        .to_decimal();
     let total_il_term_after_recenter =
         health_score.total_il_term - comet_position_il_term + ild_term_after_recenter;
     let total_position_term_after_recenter = health_score.total_position_term

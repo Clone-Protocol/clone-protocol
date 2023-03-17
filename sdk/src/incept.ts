@@ -55,7 +55,6 @@ export class InceptClient {
   }
   public async initializeIncept(
     chainlinkProgram: PublicKey,
-    ilHealthScoreCoefficient: number,
     ilHealthScoreCutoff: number,
     ilLiquidationRewardPct: number,
     maxHealthLiquidation: number,
@@ -69,7 +68,6 @@ export class InceptClient {
 
     await this.program.methods
       .initializeIncept(
-        toDevnetScale(ilHealthScoreCoefficient),
         toDevnetScale(ilHealthScoreCutoff),
         toDevnetScale(ilLiquidationRewardPct),
         new BN(maxHealthLiquidation),
@@ -175,7 +173,8 @@ export class InceptClient {
     treasuryTradingFee: number,
     pythOracle: PublicKey,
     chainlinkOracle: PublicKey,
-    healthScoreCoefficient: number,
+    ilHealthScoreCoefficient: number,
+    positionHealthScoreCoefficient: number,
     liquidationDiscountRate: number,
     maxOwnershipPct: number,
     underlyingAssetMint: PublicKey
@@ -193,7 +192,8 @@ export class InceptClient {
         cryptoCollateralRatio,
         liquidityTradingFee,
         treasuryTradingFee,
-        toDevnetScale(healthScoreCoefficient),
+        toDevnetScale(ilHealthScoreCoefficient),
+        toDevnetScale(positionHealthScoreCoefficient),
         new BN(liquidationDiscountRate),
         new BN(maxOwnershipPct)
       )

@@ -81,15 +81,14 @@ pub struct LiquidationConfig {
 #[account(zero_copy)]
 pub struct TokenData {
     // 163,328
-    pub incept: Pubkey,                          // 32
-    pub num_pools: u64,                          // 8
-    pub num_collaterals: u64,                    // 8
-    pub pools: [Pool; 255],                      // 255 * 496 = 126,480
-    pub collaterals: [Collateral; 255],          // 255 * 144 = 36,720
-    pub chainlink_program: Pubkey,               // 32
-    pub il_health_score_coefficient: RawDecimal, // 16
-    pub il_health_score_cutoff: RawDecimal,      // 16
-    pub il_liquidation_reward_pct: RawDecimal,   // 16
+    pub incept: Pubkey,                        // 32
+    pub num_pools: u64,                        // 8
+    pub num_collaterals: u64,                  // 8
+    pub pools: [Pool; 255],                    // 255 * 496 = 126,480
+    pub collaterals: [Collateral; 255],        // 255 * 144 = 36,720
+    pub chainlink_program: Pubkey,             // 32
+    pub il_health_score_cutoff: RawDecimal,    // 16
+    pub il_liquidation_reward_pct: RawDecimal, // 16
 }
 
 impl Default for TokenData {
@@ -101,7 +100,6 @@ impl Default for TokenData {
             pools: [Pool::default(); 255],
             collaterals: [Collateral::default(); 255],
             chainlink_program: Pubkey::default(),
-            il_health_score_coefficient: RawDecimal::default(),
             il_health_score_cutoff: RawDecimal::default(),
             il_liquidation_reward_pct: RawDecimal::default(),
         }
@@ -155,18 +153,19 @@ impl TokenData {
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct AssetInfo {
     // 208
-    pub iasset_mint: Pubkey,                   // 32
-    pub price_feed_addresses: [Pubkey; 2],     // 64
-    pub price: RawDecimal,                     // 16
-    pub twap: RawDecimal,                      // 16
-    pub confidence: RawDecimal,                // 16
-    pub status: u64,                           // 8
-    pub last_update: u64,                      // 8
-    pub stable_collateral_ratio: RawDecimal,   // 16
-    pub crypto_collateral_ratio: RawDecimal,   // 16
-    pub health_score_coefficient: RawDecimal,  // 16
-    pub liquidation_discount_rate: RawDecimal, // 16
-    pub max_ownership_pct: RawDecimal,         // 16
+    pub iasset_mint: Pubkey,                           // 32
+    pub price_feed_addresses: [Pubkey; 2],             // 64
+    pub price: RawDecimal,                             // 16
+    pub twap: RawDecimal,                              // 16
+    pub confidence: RawDecimal,                        // 16
+    pub status: u64,                                   // 8
+    pub last_update: u64,                              // 8
+    pub stable_collateral_ratio: RawDecimal,           // 16
+    pub crypto_collateral_ratio: RawDecimal,           // 16
+    pub il_health_score_coefficient: RawDecimal,       // 16
+    pub position_health_score_coefficient: RawDecimal, // 16
+    pub liquidation_discount_rate: RawDecimal,         // 16
+    pub max_ownership_pct: RawDecimal,                 // 16
 }
 
 #[zero_copy]

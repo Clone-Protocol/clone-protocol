@@ -170,8 +170,12 @@ pub fn calculate_comet_position_loss(
     }
 
     let impermanent_loss_term =
-        impermanent_loss * token_data.il_health_score_coefficient.to_decimal();
-    let position_term = borrowed_usdi * pool.asset_info.health_score_coefficient.to_decimal();
+        impermanent_loss * pool.asset_info.il_health_score_coefficient.to_decimal();
+    let position_term = borrowed_usdi
+        * pool
+            .asset_info
+            .position_health_score_coefficient
+            .to_decimal();
 
     Ok((impermanent_loss_term, position_term))
 }
