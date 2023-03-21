@@ -328,14 +328,14 @@ pub mod incept {
     pub fn pay_impermanent_loss_debt(
         ctx: Context<PayImpermanentLossDebt>,
         comet_position_index: u8,
-        comet_collateral_index: u8,
-        collateral_amount: u64,
+        amount: u64,
+        pay_usdi_debt: bool,
     ) -> Result<()> {
         instructions::pay_impermanent_loss_debt::execute(
             ctx,
             comet_position_index,
-            comet_collateral_index,
-            collateral_amount,
+            amount,
+            pay_usdi_debt,
         )
     }
 
@@ -411,5 +411,12 @@ pub mod incept {
 
     pub fn unwrap_iasset(ctx: Context<UnwrapIasset>, amount: u64, pool_index: u8) -> Result<()> {
         instructions::unwrap_iasset::execute(ctx, amount, pool_index)
+    }
+
+    pub fn remove_comet_position(
+        ctx: Context<RemoveCometPosition>,
+        comet_position_index: u8,
+    ) -> Result<()> {
+        instructions::remove_comet_position::execute(ctx, comet_position_index)
     }
 }
