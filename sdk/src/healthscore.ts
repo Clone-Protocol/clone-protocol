@@ -186,8 +186,8 @@ export const getILD = (
   tokenData: TokenData,
   comet: Comet,
   poolIndex?: number
-): { isUsdi: boolean; ILD: number; poolIndex: number }[] => {
-  let results: { isUsdi: boolean; ILD: number; poolIndex: number }[] = [];
+): { iAssetILD: number, usdiILD: number, poolIndex: number, oraclePrice: number }[] => {
+  let results = [];
 
   comet.positions.slice(0, Number(comet.numPositions)).forEach((position) => {
     if (poolIndex !== undefined && poolIndex !== Number(position.poolIndex)) {
@@ -207,23 +207,11 @@ export const getILD = (
 
     let claimableUsdi = poolUsdiAmount * claimableRatio;
     let claimableIasset = poolIassetAmount * claimableRatio;
-    let ILD = 0;
-    let isUsdi = true;
-    if (borrowedUsdi > claimableUsdi) {
-      ILD += borrowedUsdi - claimableUsdi;
-    }
-    if (borrowedIasset > claimableIasset) {
-      const iassetDebt = borrowedIasset - claimableIasset;
+    let usdiILD = Math.max(borrowedUsdi - claimableUsdi, 0);
+    let iAssetILD = Math.max(borrowedIasset - claimableIasset, 0);
+    let oraclePrice = toNumber(pool.assetInfo.price);
 
-      const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt;
-      const effectiveDebt = iassetDebt / (1 - claimableRatio);
-      const poolMarked = calculateInputFromOutput(pool, effectiveDebt, false);
-
-      ILD += Math.max(oracleMarked, poolMarked);
-      isUsdi = false;
-    }
-
-    results.push({ isUsdi: isUsdi, ILD: ILD, poolIndex: position.poolIndex });
+    results.push({ iAssetILD, usdiILD, oraclePrice, poolIndex: position.poolIndex });
   });
 
   return results;

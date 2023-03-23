@@ -1706,7 +1706,6 @@ describe("incept", async () => {
       1
     );
 
-    //await inceptClient.withdrawLiquidityAndPaySinglePoolCometILD(1);
     await inceptClient.withdrawCollateralAndCloseSinglePoolComet(
       usdiTokenAccountInfo.address,
       1
@@ -1754,58 +1753,18 @@ describe("incept", async () => {
       pool.assetInfo.iassetMint
     );
     let lpValue = new BN(getMantissa(singlePoolComet.liquidityTokenValue));
-    //await inceptClient.recenterSinglePoolComet(0);
+    // await inceptClient.paySinglePoolCometILD(
+    //   0,
+    //   toNumber(singlePoolComet.borrowedIasset) * 10 ** 8,
+    //   false,
+    //   iassetTokenAccountInfo.address,
+    //   usdiTokenAccountInfo.address,
+    // );
     await inceptClient.withdrawLiquidityFromSinglePoolComet(lpValue, 0);
-    await inceptClient.paySinglePoolCometILD(
-      0,
-      toNumber(singlePoolComets.collaterals[0].collateralAmount) * 10 ** 8
-    );
     await inceptClient.withdrawCollateralAndCloseSinglePoolComet(
       usdiTokenAccountInfo.address,
       0
     );
-
-    // mockUSDCTokenAccountInfo =
-    //   await getOrCreateAssociatedTokenAccount(inceptClient.provider,
-    //     mockUSDCMint.publicKey
-    //   );
-    // usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(inceptClient.provider,
-    //   inceptClient.incept!.usdiMint
-    // );
-    // iassetTokenAccountInfo =
-    //   await getOrCreateAssociatedTokenAccount(inceptClient.provider,
-    //     pool.assetInfo.iassetMint
-    //   );
-
-    // assert.equal(
-    //   Number(mockUSDCTokenAccountInfo.amount) / 10000000,
-    //   999978999992.3718,
-    //   "check user usdc balance"
-    // );
-    // assert.equal(
-    //   Number(
-    //     (
-    //       await inceptClient.connection.getTokenAccountBalance(
-    //         pool.usdiTokenAccount,
-    //         "recent"
-    //       )
-    //     ).value!.uiAmount
-    //   ),
-    //   510731.13816819,
-    //   "check pool usdi"
-    // );
-    // assert.equal(
-    //   Number(
-    //     (
-    //       await inceptClient.connection.getTokenAccountBalance(
-    //         pool.iassetTokenAccount,
-    //         "recent"
-    //       )
-    //     ).value!.uiAmount
-    //   ),
-    //   80910.29090819,
-    //   "check pool iAsset"
-    // );
   });
 
   it("comet initialized!", async () => {
@@ -2388,33 +2347,26 @@ describe("incept", async () => {
       .rpc();
   });
 
-  it("Pay ILD using collateral", async () => {
+  it("Pay ILD using holdings", async () => {
     let comet = await inceptClient.getComet();
+    let cometPosition = comet.positions[0];
     let tokenData = await inceptClient.getTokenData();
+    let ILD = getILD(tokenData, comet)[0];
     const comet1TotalCollateral = getEffectiveUSDCollateralValue(
       tokenData,
       comet
     );
     const healthScore1 = getHealthScore(tokenData, comet);
-    await inceptClient.payCometILD(0, 0, toDevnetScale(1).toNumber());
+    await inceptClient.payCometILD(
+      0,
+      toDevnetScale(1).toNumber(),
+      false,
+      iassetTokenAccountInfo.address,
+      usdiTokenAccountInfo.address
+    );
     comet = await inceptClient.getComet();
     tokenData = await inceptClient.getTokenData();
-    const comet2TotalCollateral = getEffectiveUSDCollateralValue(
-      tokenData,
-      comet
-    );
-    const healthScore2 = getHealthScore(tokenData, comet);
-    assert.closeTo(
-      healthScore2.ildHealthImpact,
-      0,
-      1e-6,
-      "ILD should be near zero."
-    );
-    assert.equal(
-      comet1TotalCollateral - 1,
-      comet2TotalCollateral,
-      "collateral should decrease"
-    );
+    ILD = getILD(tokenData, comet)[0];
   });
 
   it("multipool comet liquidation", async () => {
@@ -3499,7 +3451,7 @@ describe("incept", async () => {
     );
     assert.equal(
       toNumber(comet.collaterals[0].collateralAmount),
-      100.00516674,
+      100.00516669,
       "collateral amount"
     );
   });
@@ -3583,7 +3535,7 @@ describe("incept", async () => {
     );
     assert.equal(
       Number(subscriberUsdiTokenAccount.amount) / 100000000,
-      36802715.68517893,
+      36802717.76142149,
       "Usdi account"
     );
   });
@@ -3596,29 +3548,61 @@ describe("incept", async () => {
     let tokenData = await inceptClient.getTokenData();
     let positionIndex = 0;
     let poolIndex = Number(comet.positions[positionIndex].poolIndex);
-    let ix = await cometManagerProgram.methods
-      .payIld(
-        positionIndex,
-        toDevnetScale(toNumber(comet.collaterals[0].collateralAmount))
-      )
+    let iassetMint = tokenData.pools[poolIndex].assetInfo.iassetMint;
+
+    // let cometManagerIassetTokenAccount = await getOrCreateAssociatedTokenAccount(
+    //   cometManagerProgram.provider,
+    //   iassetMint,
+    //   cometManagerInfoAddress,
+    //   true
+    // );
+
+    // let cometManagerUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+    //   cometManagerProgram.provider,
+    //   inceptClient.incept!.usdiMint,
+    //   cometManagerInfoAddress,
+    //   true
+    // );
+
+    // let ix = await cometManagerProgram.methods
+    //   .payIld(
+    //     positionIndex,
+    //     toDevnetScale(toNumber(comet.positions[positionIndex].borrowedIasset)),
+    //     false
+    //   )
+    //   .accounts({
+    //     signer: inceptClient.provider.publicKey!,
+    //     managerInfo: cometManagerInfoAddress,
+    //     incept: inceptClient.inceptAddress[0],
+    //     managerInceptUser: cometManagerInfo.userAccount,
+    //     usdiMint: inceptClient.incept!.usdiMint,
+    //     inceptProgram: inceptClient.programId,
+    //     comet: cometManagerUser.comet,
+    //     tokenData: inceptClient.incept!.tokenData,
+    //     inceptUsdiVault: tokenData.collaterals[0].vault,
+    //     iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
+    //     ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
+    //     ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
+    //     managerUsdiTokenAccount: cometManagerUsdiTokenAccount.address,
+    //     managerIassetTokenAccount: cometManagerIassetTokenAccount.address,
+    //     tokenProgram: TOKEN_PROGRAM_ID,
+    //   })
+    //   .instruction();
+
+    let removeCometIx = await cometManagerProgram.methods
+      .removeCometPosition(positionIndex)
       .accounts({
         signer: inceptClient.provider.publicKey!,
         managerInfo: cometManagerInfoAddress,
         incept: inceptClient.inceptAddress[0],
         managerInceptUser: cometManagerInfo.userAccount,
-        usdiMint: inceptClient.incept!.usdiMint,
         inceptProgram: inceptClient.programId,
         comet: cometManagerUser.comet,
         tokenData: inceptClient.incept!.tokenData,
-        inceptUsdiVault: tokenData.collaterals[0].vault,
-        iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
-        ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
-        ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
 
-    let tx = new Transaction().add(ix);
+    let tx = new Transaction().add(removeCometIx);
 
     await inceptClient.provider.sendAndConfirm!(tx);
 

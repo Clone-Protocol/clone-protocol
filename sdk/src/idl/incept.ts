@@ -1909,7 +1909,7 @@ export type Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -1928,17 +1928,22 @@ export type Incept = {
           "isSigner": false
         },
         {
+          "name": "userUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "ammUsdiTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
           "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vault",
           "isMut": true,
           "isSigner": false
         },
@@ -1954,12 +1959,12 @@ export type Incept = {
           "type": "u8"
         },
         {
-          "name": "cometCollateralIndex",
-          "type": "u8"
+          "name": "amount",
+          "type": "u64"
         },
         {
-          "name": "collateralAmount",
-          "type": "u64"
+          "name": "payUsdiDebt",
+          "type": "bool"
         }
       ]
     },
@@ -2545,6 +2550,42 @@ export type Incept = {
         },
         {
           "name": "poolIndex",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "removeCometPosition",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "incept",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "cometPositionIndex",
           "type": "u8"
         }
       ]
@@ -5654,7 +5695,7 @@ export const IDL: Incept = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -5673,17 +5714,22 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
+          "name": "userUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "ammUsdiTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
           "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vault",
           "isMut": true,
           "isSigner": false
         },
@@ -5699,12 +5745,12 @@ export const IDL: Incept = {
           "type": "u8"
         },
         {
-          "name": "cometCollateralIndex",
-          "type": "u8"
+          "name": "amount",
+          "type": "u64"
         },
         {
-          "name": "collateralAmount",
-          "type": "u64"
+          "name": "payUsdiDebt",
+          "type": "bool"
         }
       ]
     },
@@ -6290,6 +6336,42 @@ export const IDL: Incept = {
         },
         {
           "name": "poolIndex",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "removeCometPosition",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "incept",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "cometPositionIndex",
           "type": "u8"
         }
       ]

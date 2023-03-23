@@ -1,5 +1,4 @@
 use crate::error::*;
-use crate::math::calculate_health_score;
 use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -25,7 +24,6 @@ pub struct PayImpermanentLossDebt<'info> {
     )]
     pub incept: Box<Account<'info, Incept>>,
     #[account(
-        mut,
         has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
@@ -76,15 +74,24 @@ pub fn execute(
     amount: u64,
     pay_usdi_debt: bool,
 ) -> Result<()> {
+    return_error_if_false!(amount > 0, InceptError::InvalidTokenAmount);
+
     let token_data = ctx.accounts.token_data.load()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
 
     let comet_position = comet.positions[comet_position_index as usize];
-    let payment_amount = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let authorized_amount = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let pool_index = comet_position.pool_index as usize;
+    let pool = token_data.pools[pool_index];
+    let claimable_ratio = comet_position.liquidity_token_value.to_decimal()
+        / pool.liquidity_token_supply.to_decimal();
 
-    let (from_context, mint_context) = if pay_usdi_debt {
+    let (from_context, mint_context, mut payment_amount) = if pay_usdi_debt {
+        let claimable_usdi = claimable_ratio * pool.usdi_amount.to_decimal();
+        let borrowed_usdi = comet_position.borrowed_usdi.to_decimal();
+        let payment_amount = (borrowed_usdi - claimable_usdi).min(authorized_amount);
         return_error_if_false!(
-            payment_amount <= comet_position.borrowed_usdi.to_decimal(),
+            claimable_usdi < borrowed_usdi,
             InceptError::InvalidTokenAmount
         );
         let mut new_borrowed_amount = comet_position.borrowed_usdi.to_decimal() - payment_amount;
@@ -98,10 +105,14 @@ pub fn execute(
                 .to_account_info()
                 .clone(),
             ctx.accounts.usdi_mint.to_account_info().clone(),
+            payment_amount,
         )
     } else {
+        let claimable_iasset = claimable_ratio * pool.iasset_amount.to_decimal();
+        let borrowed_iasset = comet_position.borrowed_iasset.to_decimal();
+        let payment_amount = (borrowed_iasset - claimable_iasset).min(authorized_amount);
         return_error_if_false!(
-            payment_amount <= comet_position.borrowed_iasset.to_decimal(),
+            claimable_iasset < borrowed_iasset,
             InceptError::InvalidTokenAmount
         );
         let mut new_borrowed_amount = comet_position.borrowed_iasset.to_decimal() - payment_amount;
@@ -115,8 +126,10 @@ pub fn execute(
                 .to_account_info()
                 .clone(),
             ctx.accounts.iasset_mint.to_account_info().clone(),
+            payment_amount,
         )
     };
+    payment_amount.rescale(DEVNET_TOKEN_SCALE);
 
     let cpi_accounts = Burn {
         from: from_context,
@@ -124,18 +137,10 @@ pub fn execute(
         authority: ctx.accounts.user.to_account_info().clone(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
-
-    token::burn(CpiContext::new(cpi_program, cpi_accounts), amount)?;
-
-    // TODO: Update token data.
-
-    let single_pool_position_index = if comet.is_single_pool == 1 {
-        Some(comet_position_index as usize)
-    } else {
-        None
-    };
-    let health_score = calculate_health_score(&comet, &token_data, single_pool_position_index)?;
-    return_error_if_false!(health_score.is_healthy(), InceptError::HealthScoreTooLow);
+    token::burn(
+        CpiContext::new(cpi_program, cpi_accounts),
+        payment_amount.mantissa().try_into().unwrap(),
+    )?;
 
     Ok(())
 }
