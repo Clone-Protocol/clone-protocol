@@ -1,6 +1,5 @@
 import { TokenData, Comet } from "./interfaces";
 import { toNumber } from "./decimal";
-import { calculateInputFromOutput } from "./utils";
 import { CalculationError } from "./error";
 
 export const getEffectiveUSDCollateralValue = (
@@ -71,16 +70,8 @@ export const getHealthScore = (
         }
         if (borrowedIasset > claimableIasset) {
           const iassetDebt = borrowedIasset - claimableIasset;
-
           const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt;
-          const effectiveDebt = iassetDebt / (1 - claimableRatio);
-          const poolMarked = calculateInputFromOutput(
-            pool,
-            effectiveDebt,
-            false
-          );
-
-          ild += Math.max(oracleMarked, poolMarked);
+          ild += oracleMarked;
         }
 
         let ilHealthImpact = ild * ilHealthScoreCoefficient;
@@ -127,10 +118,7 @@ export const getSinglePoolHealthScore = (
     const iassetDebt = borrowedIasset - claimableIasset;
 
     const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt;
-    const effectiveDebt = iassetDebt / (1 - claimableRatio);
-    const poolMarked = calculateInputFromOutput(pool, effectiveDebt, false);
-
-    ILD += Math.max(oracleMarked, poolMarked);
+    ILD += oracleMarked;
     isUsdi = false;
   }
 
@@ -172,10 +160,7 @@ export const getSinglePoolILD = (
     const iassetDebt = borrowedIasset - claimableIasset;
 
     const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt;
-    const effectiveDebt = iassetDebt / (1 - claimableRatio);
-    const poolMarked = calculateInputFromOutput(pool, effectiveDebt, false);
-
-    ILD += Math.max(oracleMarked, poolMarked);
+    ILD += oracleMarked;
     isUsdi = false;
   }
 
@@ -403,7 +388,7 @@ export const calculateEditCometSinglePoolWithUsdiBorrowed = (
   const newPoolUsdi = poolUsdi + usdiBorrowedChange;
   const newPooliAsset = poolIasset + iassetBorrowedChange;
 
-  let markPrice = Math.max(toNumber(pool.assetInfo.price), poolPrice);
+  let markPrice = toNumber(pool.assetInfo.price);
   let newClaimableRatio = claimableRatio;
   // Calculate total lp tokens
   const claimableUsdi = claimableRatio * poolUsdi;
@@ -790,7 +775,7 @@ export const calculateCometRecenterMultiPool = (
     usdiCost = usdiDebt - usdiBurned;
     poolIassetAmount = newPooliAssetAmount;
     poolUsdiAmount = newPoolUsdiAmount;
-    const markPrice = Math.max(toNumber(pool.assetInfo.price), poolPrice);
+    const markPrice = toNumber(pool.assetInfo.price)
     ildLoss = iAssetDiff * markPrice * ilCoefficient;
   }
 
