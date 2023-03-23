@@ -2,7 +2,6 @@ import * as anchor from "@project-serum/anchor";
 import { Program, BN } from "@project-serum/anchor";
 import { Incept } from "../sdk/src/idl/incept";
 import { Pyth } from "../sdk/src/idl/pyth";
-import { Store } from "../sdk/src/idl/store";
 import { JupiterAggMock } from "../sdk/src/idl/jupiter_agg_mock";
 import { InceptCometManager } from "../sdk/src/idl/incept_comet_manager";
 import {
@@ -19,14 +18,9 @@ import {
   InceptClient,
   toDevnetScale,
 } from "../sdk/src/incept";
-import {
-  createPriceFeed,
-  setPrice,
-  getFeedData,
-  ChainLinkOracle,
-} from "../sdk/src/oracle";
+import { createPriceFeed, setPrice, getFeedData } from "../sdk/src/oracle";
 import { calculateExecutionThreshold, sleep } from "../sdk/src/utils";
-import { Decimal, getMantissa, toNumber } from "../sdk/src/decimal";
+import { getMantissa, toNumber } from "../sdk/src/decimal";
 import {
   convertToRawDecimal,
   getOrCreateAssociatedTokenAccount,
@@ -49,13 +43,11 @@ describe("incept", async () => {
   let inceptProgram = anchor.workspace.Incept as Program<Incept>;
   let pythProgram = anchor.workspace.Pyth as Program<Pyth>;
   let walletPubkey = inceptProgram.provider.publicKey!;
-  let storeProgram = anchor.workspace.Store as Program<Store>;
   let jupiterProgram = anchor.workspace
     .JupiterAggMock as Program<JupiterAggMock>;
 
   let cometManagerProgram = anchor.workspace
     .InceptCometManager as Program<InceptCometManager>;
-  let chainlink;
 
   const mockUSDCMint = anchor.web3.Keypair.generate();
   const treasuryAddress = anchor.web3.Keypair.generate();
@@ -116,7 +108,6 @@ describe("incept", async () => {
 
   it("manager initialized!", async () => {
     await inceptClient.initializeIncept(
-      storeProgram.programId,
       ilHealthScoreCutoff,
       ilLiquidationRewardPct,
       maxHealthLiquidation,
@@ -164,12 +155,6 @@ describe("incept", async () => {
       .price;
     assert.equal(updatedPrice, price, "check updated price");
 
-    chainlink = new ChainLinkOracle(storeProgram);
-
-    await chainlink.createChainlinkFeed(1, 2);
-
-    await chainlink.submitAnswer(new BN(1649943158), new BN(500000000));
-
     await sleep(200);
 
     await jupiterProgram.methods
@@ -194,7 +179,7 @@ describe("incept", async () => {
     await inceptClient.addCollateral(
       walletPubkey,
       7,
-      1,
+      true,
       mockUSDCMint.publicKey
     );
     await sleep(200);
@@ -212,7 +197,6 @@ describe("incept", async () => {
       poolTradingFee,
       treasuryTradingFee,
       priceFeed,
-      chainlink.priceFeedPubkey(),
       ilHealthScoreCoefficient,
       healthScoreCoefficient,
       500,
@@ -236,7 +220,6 @@ describe("incept", async () => {
       poolTradingFee,
       treasuryTradingFee,
       priceFeed,
-      chainlink.priceFeedPubkey(),
       ilHealthScoreCoefficient,
       healthScoreCoefficient,
       500,
@@ -253,11 +236,10 @@ describe("incept", async () => {
     await inceptClient.addCollateral(
       walletPubkey,
       8,
-      0,
+      false,
       mockAssetMint.publicKey,
       200,
-      priceFeed,
-      chainlink.priceFeedPubkey()
+      0
     );
 
     let tokenData = await inceptClient.getTokenData();
@@ -306,10 +288,7 @@ describe("incept", async () => {
 
     const assetInfo = first_pool.assetInfo;
 
-    assert(
-      assetInfo.priceFeedAddresses[0].equals(priceFeed),
-      "check price feed"
-    );
+    assert(assetInfo.pythAddress.equals(priceFeed), "check price feed");
 
     assert.equal(
       toNumber(assetInfo.stableCollateralRatio),
@@ -1972,10 +1951,14 @@ describe("incept", async () => {
     const totalILD = getILD(tokenData, comet);
     const poolILD = getILD(tokenData, comet, 0);
 
-    assert.equal(totalILD[0].ILD, poolILD[0].ILD, "check ILD calculation");
     assert.equal(
-      totalILD[0].isUsdi,
-      poolILD[0].isUsdi,
+      totalILD[0].iAssetILD,
+      poolILD[0].iAssetILD,
+      "check ILD calculation"
+    );
+    assert.equal(
+      totalILD[0].usdiILD,
+      poolILD[0].usdiILD,
       "check ILD calculation"
     );
   });
@@ -2539,13 +2522,6 @@ describe("incept", async () => {
       .price;
     assert.equal(currentPrice, price, "check initial price");
 
-    let chainlink2 = new ChainLinkOracle(storeProgram);
-
-    await chainlink2.createChainlinkFeed(1, 2);
-    await chainlink2.submitAnswer(new BN(1649943158), new BN(100000000));
-
-    await sleep(200);
-
     await jupiterProgram.methods
       .createAsset(priceFeed2)
       .accounts({
@@ -2570,7 +2546,6 @@ describe("incept", async () => {
       poolTradingFee,
       treasuryTradingFee,
       priceFeed2,
-      chainlink.priceFeedPubkey(),
       ilHealthScoreCoefficient,
       healthScoreCoefficient,
       500,
@@ -3002,7 +2977,7 @@ describe("incept", async () => {
     await setPrice(
       pythProgram,
       priceThreshold * 1.1,
-      pool.assetInfo.priceFeedAddresses[0]
+      pool.assetInfo.pythAddress
     );
 
     await inceptClient.provider.sendAndConfirm!(

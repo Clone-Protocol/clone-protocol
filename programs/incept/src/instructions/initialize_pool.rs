@@ -81,8 +81,6 @@ pub struct InitializePool<'info> {
     pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
     /// CHECK: External pyth oracle, instruction can only be executed by admin
     pub pyth_oracle: AccountInfo<'info>,
-    /// CHECK: External chainlink oracle, instruction can only be executed by admin
-    pub chainlink_oracle: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -135,12 +133,8 @@ pub fn execute(
     let index = token_data.num_pools - 1;
     token_data.pools[index as usize].asset_info.iasset_mint =
         *ctx.accounts.iasset_mint.to_account_info().key;
-    token_data.pools[index as usize]
-        .asset_info
-        .price_feed_addresses = [
-        *ctx.accounts.pyth_oracle.to_account_info().key,
-        *ctx.accounts.chainlink_oracle.to_account_info().key,
-    ];
+    token_data.pools[index as usize].asset_info.pyth_address =
+        ctx.accounts.pyth_oracle.to_account_info().key();
     token_data.pools[index as usize]
         .asset_info
         .stable_collateral_ratio = RawDecimal::from_percent(stable_collateral_ratio);

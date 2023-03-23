@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 pub enum PoolParameters {
     TreasuryTradingFee { value: RawDecimal },
     LiquidityTradingFee { value: RawDecimal },
-    PriceFeedAddresses { addresses: [Pubkey; 2] },
+    PythAddress { address: Pubkey },
     StableCollateralRatio { value: RawDecimal },
     CryptoCollateralRatio { value: RawDecimal },
     IlHealthScoreCoefficient { value: RawDecimal },
@@ -53,8 +53,8 @@ pub fn execute(
         PoolParameters::LiquidityTradingFee { value } => {
             pool.liquidity_trading_fee = value;
         }
-        PoolParameters::PriceFeedAddresses { addresses } => {
-            pool.asset_info.price_feed_addresses = addresses;
+        PoolParameters::PythAddress { address } => {
+            pool.asset_info.pyth_address = address;
         }
         PoolParameters::StableCollateralRatio { value } => {
             pool.asset_info.stable_collateral_ratio = value;

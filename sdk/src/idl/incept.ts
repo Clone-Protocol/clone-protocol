@@ -41,11 +41,6 @@ export type Incept = {
           "isSigner": false
         },
         {
-          "name": "chainlinkProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -330,11 +325,15 @@ export type Incept = {
         },
         {
           "name": "stable",
-          "type": "u8"
+          "type": "bool"
         },
         {
           "name": "collateralizationRatio",
           "type": "u64"
+        },
+        {
+          "name": "poolIndex",
+          "type": "u8"
         }
       ]
     },
@@ -398,11 +397,6 @@ export type Incept = {
         },
         {
           "name": "pythOracle",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "chainlinkOracle",
           "isMut": false,
           "isSigner": false
         },
@@ -2670,10 +2664,6 @@ export type Incept = {
             }
           },
           {
-            "name": "chainlinkProgram",
-            "type": "publicKey"
-          },
-          {
             "name": "ilHealthScoreCutoff",
             "type": {
               "defined": "RawDecimal"
@@ -2871,13 +2861,8 @@ export type Incept = {
             "type": "publicKey"
           },
           {
-            "name": "priceFeedAddresses",
-            "type": {
-              "array": [
-                "publicKey",
-                2
-              ]
-            }
+            "name": "pythAddress",
+            "type": "publicKey"
           },
           {
             "name": "price",
@@ -3249,15 +3234,6 @@ export type Incept = {
             ]
           },
           {
-            "name": "ChainlinkProgram",
-            "fields": [
-              {
-                "name": "address",
-                "type": "publicKey"
-              }
-            ]
-          },
-          {
             "name": "IlHealthScoreCutoff",
             "fields": [
               {
@@ -3310,16 +3286,11 @@ export type Incept = {
             ]
           },
           {
-            "name": "PriceFeedAddresses",
+            "name": "PythAddress",
             "fields": [
               {
-                "name": "addresses",
-                "type": {
-                  "array": [
-                    "publicKey",
-                    2
-                  ]
-                }
+                "name": "address",
+                "type": "publicKey"
               }
             ]
           },
@@ -3827,11 +3798,6 @@ export const IDL: Incept = {
           "isSigner": false
         },
         {
-          "name": "chainlinkProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -4116,11 +4082,15 @@ export const IDL: Incept = {
         },
         {
           "name": "stable",
-          "type": "u8"
+          "type": "bool"
         },
         {
           "name": "collateralizationRatio",
           "type": "u64"
+        },
+        {
+          "name": "poolIndex",
+          "type": "u8"
         }
       ]
     },
@@ -4184,11 +4154,6 @@ export const IDL: Incept = {
         },
         {
           "name": "pythOracle",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "chainlinkOracle",
           "isMut": false,
           "isSigner": false
         },
@@ -6456,10 +6421,6 @@ export const IDL: Incept = {
             }
           },
           {
-            "name": "chainlinkProgram",
-            "type": "publicKey"
-          },
-          {
             "name": "ilHealthScoreCutoff",
             "type": {
               "defined": "RawDecimal"
@@ -6657,13 +6618,8 @@ export const IDL: Incept = {
             "type": "publicKey"
           },
           {
-            "name": "priceFeedAddresses",
-            "type": {
-              "array": [
-                "publicKey",
-                2
-              ]
-            }
+            "name": "pythAddress",
+            "type": "publicKey"
           },
           {
             "name": "price",
@@ -7035,15 +6991,6 @@ export const IDL: Incept = {
             ]
           },
           {
-            "name": "ChainlinkProgram",
-            "fields": [
-              {
-                "name": "address",
-                "type": "publicKey"
-              }
-            ]
-          },
-          {
             "name": "IlHealthScoreCutoff",
             "fields": [
               {
@@ -7096,16 +7043,11 @@ export const IDL: Incept = {
             ]
           },
           {
-            "name": "PriceFeedAddresses",
+            "name": "PythAddress",
             "fields": [
               {
-                "name": "addresses",
-                "type": {
-                  "array": [
-                    "publicKey",
-                    2
-                  ]
-                }
+                "name": "address",
+                "type": "publicKey"
               }
             ]
           },

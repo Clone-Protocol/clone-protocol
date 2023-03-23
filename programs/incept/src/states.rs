@@ -86,7 +86,6 @@ pub struct TokenData {
     pub num_collaterals: u64,                  // 8
     pub pools: [Pool; 255],                    // 255 * 496 = 126,480
     pub collaterals: [Collateral; 255],        // 255 * 144 = 36,720
-    pub chainlink_program: Pubkey,             // 32
     pub il_health_score_cutoff: RawDecimal,    // 16
     pub il_liquidation_reward_pct: RawDecimal, // 16
 }
@@ -99,7 +98,6 @@ impl Default for TokenData {
             num_collaterals: 0,
             pools: [Pool::default(); 255],
             collaterals: [Collateral::default(); 255],
-            chainlink_program: Pubkey::default(),
             il_health_score_cutoff: RawDecimal::default(),
             il_liquidation_reward_pct: RawDecimal::default(),
         }
@@ -133,15 +131,10 @@ impl TokenData {
         }
         Err(InceptError::PoolNotFound.into())
     }
-    pub fn get_pool_tuple_from_oracle(
-        &self,
-        price_feed_addresses: [&Pubkey; 2],
-    ) -> Result<(Pool, usize)> {
+    pub fn get_pool_tuple_from_oracle(&self, pyth_address: &Pubkey) -> Result<(Pool, usize)> {
         for i in 0..self.num_pools {
             let temp_pool = self.pools[i as usize];
-            if temp_pool.asset_info.price_feed_addresses[0] == *price_feed_addresses[0]
-                && temp_pool.asset_info.price_feed_addresses[1] == *price_feed_addresses[1]
-            {
+            if temp_pool.asset_info.pyth_address == *pyth_address {
                 return Ok((temp_pool, i as usize));
             }
         }
@@ -154,7 +147,7 @@ impl TokenData {
 pub struct AssetInfo {
     // 208
     pub iasset_mint: Pubkey,                           // 32
-    pub price_feed_addresses: [Pubkey; 2],             // 64
+    pub pyth_address: Pubkey,                          // 32
     pub price: RawDecimal,                             // 16
     pub twap: RawDecimal,                              // 16
     pub confidence: RawDecimal,                        // 16
