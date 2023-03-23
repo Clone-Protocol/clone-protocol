@@ -60,6 +60,18 @@ pub struct PayIld<'info> {
         address = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].iasset_token_account,
     )]
     pub amm_iasset_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        associated_token::mint = iasset_mint,
+        associated_token::authority = manager_info,
+    )]
+    pub manager_iasset_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        associated_token::mint = usdi_mint,
+        associated_token::authority = manager_info,
+    )]
+    pub manager_usdi_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
     #[account(
         mut,
@@ -72,6 +84,7 @@ pub fn execute(
     ctx: Context<PayIld>,
     comet_position_index: u8,
     collateral_amount: u64,
+    pay_usdi_debt: bool,
 ) -> Result<()> {
     // In normal operation, only the manager can access this instruction.
     // When forcefully closed, anyone can access this operation. When not-forcefully closed
@@ -112,12 +125,18 @@ pub fn execute(
                 iasset_mint: ctx.accounts.iasset_mint.to_account_info(),
                 amm_usdi_token_account: ctx.accounts.amm_usdi_token_account.to_account_info(),
                 amm_iasset_token_account: ctx.accounts.amm_iasset_token_account.to_account_info(),
-                vault: ctx.accounts.incept_usdi_vault.to_account_info(),
+                user_iasset_token_account: ctx
+                    .accounts
+                    .manager_iasset_token_account
+                    .to_account_info(),
+                user_usdi_token_account: ctx.accounts.manager_usdi_token_account.to_account_info(),
             },
             manager_seeds,
         ),
         comet_position_index,
-        0,
         collateral_amount,
-    )
+        pay_usdi_debt,
+    )?;
+
+    Ok(())
 }

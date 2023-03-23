@@ -79,8 +79,16 @@ pub mod incept_comet_manager {
         ctx: Context<PayIld>,
         comet_position_index: u8,
         collateral_amount: u64,
+        pay_usdi_debt: bool,
     ) -> Result<()> {
-        pay_ild::execute(ctx, comet_position_index, collateral_amount)
+        pay_ild::execute(ctx, comet_position_index, collateral_amount, pay_usdi_debt)
+    }
+
+    pub fn remove_comet_position(
+        ctx: Context<RemoveCometPosition>,
+        comet_position_index: u8,
+    ) -> Result<()> {
+        remove_comet_position::execute(ctx, comet_position_index)
     }
 
     pub fn owner_withdrawal(ctx: Context<OwnerWithdrawal>, usdi_amount: u64) -> Result<()> {

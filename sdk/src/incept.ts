@@ -1273,20 +1273,27 @@ export class InceptClient {
   public async paySinglePoolCometILD(
     cometIndex: number,
     collateralAmount: number,
-    signers?: Array<Keypair>
+    payUsdiDebt: boolean,
+    userIassetTokenAccount: PublicKey,
+    userUsdiTokenAccount: PublicKey
   ) {
     const paySinglePoolCometILDIx = await this.paySinglePoolCometILDInstruction(
       cometIndex,
-      collateralAmount
+      collateralAmount,
+      payUsdiDebt,
+      userIassetTokenAccount,
+      userUsdiTokenAccount
     );
     await this.provider.sendAndConfirm!(
-      new Transaction().add(paySinglePoolCometILDIx),
-      signers
+      new Transaction().add(paySinglePoolCometILDIx)
     );
   }
   public async paySinglePoolCometILDInstruction(
     cometIndex: number,
-    collateralAmount: number
+    collateralAmount: number,
+    payUsdiDebt: boolean,
+    userIassetTokenAccount: PublicKey,
+    userUsdiTokenAccount: PublicKey
   ) {
     let tokenData = await this.getTokenData();
     const userAccount = await this.getUserAccount();
@@ -1295,7 +1302,7 @@ export class InceptClient {
     let userAddress = await this.getUserAddress();
 
     return await this.program.methods
-      .payImpermanentLossDebt(0, 0, new BN(collateralAmount))
+      .payImpermanentLossDebt(0, new BN(collateralAmount), payUsdiDebt)
       .accounts({
         user: this.provider.publicKey!,
         userAccount: userAddress.userPubkey,
@@ -1308,57 +1315,11 @@ export class InceptClient {
           tokenData.pools[position.poolIndex].usdiTokenAccount,
         ammIassetTokenAccount:
           tokenData.pools[position.poolIndex].iassetTokenAccount,
-        vault:
-          tokenData.collaterals[comet.collaterals[cometIndex].collateralIndex]
-            .vault,
         tokenProgram: TOKEN_PROGRAM_ID,
+        userIassetTokenAccount: userIassetTokenAccount,
+        userUsdiTokenAccount: userUsdiTokenAccount,
       })
       .instruction();
-  }
-
-  public async withdrawLiquidityAndPaySinglePoolCometILD(
-    cometIndex: number,
-    signers?: Array<Keypair>
-  ) {
-    let singlePoolComet = await this.getSinglePoolComets();
-    if (Number(singlePoolComet.numPositions) == 0) {
-      return;
-    }
-    if (
-      getMantissa(singlePoolComet.positions[cometIndex].liquidityTokenValue) !==
-      0
-    ) {
-      const withdrawLiquidityFromSinglePoolCometIx =
-        await this.withdrawLiquidityFromSinglePoolCometInstruction(
-          new BN(
-            getMantissa(
-              singlePoolComet.positions[cometIndex].liquidityTokenValue
-            )
-          ),
-          cometIndex
-        );
-      const paySinglePoolCometILDIx =
-        await this.paySinglePoolCometILDInstruction(
-          cometIndex,
-          getMantissa(singlePoolComet.collaterals[cometIndex].collateralAmount)
-        );
-      await this.provider.sendAndConfirm!(
-        new Transaction()
-          .add(withdrawLiquidityFromSinglePoolCometIx)
-          .add(paySinglePoolCometILDIx),
-        signers
-      );
-    } else {
-      const paySinglePoolCometILDIx =
-        await this.paySinglePoolCometILDInstruction(
-          cometIndex,
-          getMantissa(singlePoolComet.collaterals[cometIndex].collateralAmount)
-        );
-      await this.provider.sendAndConfirm!(
-        new Transaction().add(paySinglePoolCometILDIx),
-        signers
-      );
-    }
   }
 
   public async closeSinglePoolComet(
@@ -1710,38 +1671,39 @@ export class InceptClient {
 
   public async payCometILD(
     cometPositionIndex: number,
-    cometCollateralIndex: number,
     collateralAmount: number,
-    signers?: Array<Keypair>
+    payUsdiDebt: boolean,
+    userIassetTokenAccount: PublicKey,
+    userUsdiTokenAccount: PublicKey
   ) {
     const payCometILDIx = await this.payCometILDInstruction(
       cometPositionIndex,
-      cometCollateralIndex,
-      collateralAmount
+      collateralAmount,
+      payUsdiDebt,
+      userIassetTokenAccount,
+      userUsdiTokenAccount
     );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(payCometILDIx),
-      signers
-    );
+    await this.provider.sendAndConfirm!(new Transaction().add(payCometILDIx));
   }
   public async payCometILDInstruction(
     cometPositionIndex: number,
-    cometCollateralIndex: number,
-    collateralAmount: number
+    collateralAmount: number,
+    payUsdiDebt: boolean,
+    userIassetTokenAccount: PublicKey,
+    userUsdiTokenAccount: PublicKey
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
     let cometAddress = userAccount.comet;
     let comet = await this.getComet();
     let cometPosition = comet.positions[cometPositionIndex];
-    let cometCollateral = comet.collaterals[cometCollateralIndex];
     let userAddress = await this.getUserAddress();
 
     return await this.program.methods
       .payImpermanentLossDebt(
         cometPositionIndex,
-        cometCollateralIndex,
-        new BN(collateralAmount)
+        new BN(collateralAmount),
+        payUsdiDebt
       )
       .accounts({
         user: this.provider.publicKey!,
@@ -1756,8 +1718,9 @@ export class InceptClient {
           tokenData.pools[cometPosition.poolIndex].usdiTokenAccount,
         ammIassetTokenAccount:
           tokenData.pools[cometPosition.poolIndex].iassetTokenAccount,
-        vault: tokenData.collaterals[cometCollateral.collateralIndex].vault,
         tokenProgram: TOKEN_PROGRAM_ID,
+        userIassetTokenAccount: userIassetTokenAccount,
+        userUsdiTokenAccount: userUsdiTokenAccount,
       })
       .instruction();
   }
