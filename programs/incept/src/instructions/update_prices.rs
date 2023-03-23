@@ -57,7 +57,6 @@ pub struct UpdatePrices<'info> {
 
 pub fn execute<'info>(
     ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
-
     pool_indices: PoolIndices,
 ) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
@@ -69,8 +68,7 @@ pub fn execute<'info>(
         let pool_index = pool_indices.indices[i] as usize;
         let pyth_oracle = &ctx.remaining_accounts[i];
         return_error_if_false!(
-            pyth_oracle.key()
-                == token_data.pools[pool_index].asset_info.price_feed_addresses[0].key(),
+            pyth_oracle.key() == token_data.pools[pool_index].asset_info.pyth_address,
             InceptError::IncorrectOracleAddress
         );
 

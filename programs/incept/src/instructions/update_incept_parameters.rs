@@ -6,7 +6,6 @@ pub enum InceptParameters {
     LiquidationFee { value: RawDecimal },
     MaxHealthLiquidation { value: RawDecimal },
     TreasuryAddress { address: Pubkey },
-    ChainlinkProgram { address: Pubkey },
     IlHealthScoreCutoff { value: RawDecimal },
     IlLiquidationRewardPct { value: RawDecimal },
 }
@@ -47,9 +46,6 @@ pub fn execute(ctx: Context<UpdateInceptParameters>, params: InceptParameters) -
         }
         InceptParameters::TreasuryAddress { address } => {
             ctx.accounts.incept.treasury_address = address;
-        }
-        InceptParameters::ChainlinkProgram { address } => {
-            token_data.chainlink_program = address;
         }
         InceptParameters::IlHealthScoreCutoff { value } => {
             token_data.il_health_score_cutoff = value;

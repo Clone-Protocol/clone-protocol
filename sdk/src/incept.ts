@@ -54,7 +54,6 @@ export class InceptClient {
     this.program = new Program<InceptProgram>(IDL, this.programId, provider);
   }
   public async initializeIncept(
-    chainlinkProgram: PublicKey,
     ilHealthScoreCutoff: number,
     ilLiquidationRewardPct: number,
     maxHealthLiquidation: number,
@@ -81,7 +80,6 @@ export class InceptClient {
         usdiVault: usdiVault.publicKey,
         tokenData: tokenData.publicKey,
         rent: RENT_PUBKEY,
-        chainlinkProgram: chainlinkProgram,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SYSTEM_PROGRAM_ID,
       })
@@ -124,32 +122,20 @@ export class InceptClient {
   public async addCollateral(
     admin: PublicKey,
     scale: number,
-    stable: number,
+    stable: boolean,
     collateral_mint: PublicKey,
     collateralization_ratio: number = 0,
-    pythOracle?: PublicKey,
-    chainlinkOracle?: PublicKey
+    poolIndex?: number
   ) {
     const vaultAccount = anchor.web3.Keypair.generate();
 
-    let remainingAccounts =
-      pythOracle && chainlinkOracle
-        ? [
-            {
-              pubkey: pythOracle,
-              isWritable: false,
-              isSigner: false,
-            },
-            {
-              pubkey: chainlinkOracle,
-              isWritable: false,
-              isSigner: false,
-            },
-          ]
-        : [];
-
     await this.program.methods
-      .addCollateral(scale, stable, toDevnetScale(collateralization_ratio))
+      .addCollateral(
+        scale,
+        stable,
+        toDevnetScale(collateralization_ratio),
+        poolIndex !== undefined ? poolIndex : 255
+      )
       .accounts({
         admin: admin,
         incept: this.inceptAddress[0],
@@ -160,7 +146,6 @@ export class InceptClient {
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SYSTEM_PROGRAM_ID,
       })
-      .remainingAccounts(remainingAccounts)
       .signers([vaultAccount])
       .rpc();
   }
@@ -172,7 +157,6 @@ export class InceptClient {
     liquidityTradingFee: number,
     treasuryTradingFee: number,
     pythOracle: PublicKey,
-    chainlinkOracle: PublicKey,
     ilHealthScoreCoefficient: number,
     positionHealthScoreCoefficient: number,
     liquidationDiscountRate: number,
@@ -210,7 +194,6 @@ export class InceptClient {
         liquidityTokenMint: liquidityTokenMintAccount.publicKey,
         cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
         pythOracle: pythOracle,
-        chainlinkOracle: chainlinkOracle,
         rent: RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SYSTEM_PROGRAM_ID,
@@ -256,7 +239,7 @@ export class InceptClient {
 
     indices.forEach((index) => {
       priceFeeds.push({
-        pubkey: tokenData.pools[index].assetInfo.priceFeedAddresses[0],
+        pubkey: tokenData.pools[index].assetInfo.pythAddress,
         isWritable: false,
         isSigner: false,
       });

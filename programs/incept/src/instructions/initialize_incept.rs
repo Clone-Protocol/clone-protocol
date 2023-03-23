@@ -43,8 +43,6 @@ pub struct InitializeIncept<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
-    /// CHECK: External Chainlink program, instruction can only be executed by admin
-    pub chainlink_program: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -88,7 +86,6 @@ pub fn execute(
 
     // set token data
     token_data.incept = *ctx.accounts.incept.to_account_info().key;
-    token_data.chainlink_program = *ctx.accounts.chainlink_program.to_account_info().key;
     token_data.il_health_score_cutoff = RawDecimal::new(
         il_health_score_cutoff.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,

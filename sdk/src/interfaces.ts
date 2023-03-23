@@ -31,7 +31,6 @@ export interface TokenData {
   numCollaterals: BN;
   pools: Array<Pool>;
   collaterals: Array<Collateral>;
-  chainlinkProgram: PublicKey;
 }
 
 export interface BorrowPositions {
@@ -91,7 +90,7 @@ export interface Value {
 
 export interface AssetInfo {
   iassetMint: PublicKey;
-  priceFeedAddresses: Array<PublicKey>;
+  pythAddress: PublicKey;
   price: RawDecimal;
   twap: RawDecimal;
   confidence: RawDecimal;

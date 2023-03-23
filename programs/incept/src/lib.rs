@@ -74,10 +74,17 @@ pub mod incept {
     pub fn add_collateral(
         ctx: Context<AddCollateral>,
         scale: u8,
-        stable: u8,
+        stable: bool,
         collateralization_ratio: u64,
+        pool_index: u8,
     ) -> Result<()> {
-        instructions::add_collateral::execute(ctx, scale, stable, collateralization_ratio)
+        instructions::add_collateral::execute(
+            ctx,
+            scale,
+            stable,
+            collateralization_ratio,
+            pool_index,
+        )
     }
 
     pub fn initialize_pool(

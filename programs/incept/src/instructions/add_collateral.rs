@@ -6,7 +6,7 @@ use anchor_spl::token::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction( scale: u8, stable: u8, collateralization_ratio: u64)]
+#[instruction(scale: u8, stable: bool, collateralization_ratio: u64, pool_index: u8)]
 pub struct AddCollateral<'info> {
     #[account(mut, address = incept.admin)]
     pub admin: Signer<'info>,
@@ -37,13 +37,13 @@ pub struct AddCollateral<'info> {
 
 pub fn execute(
     ctx: Context<AddCollateral>,
-
     scale: u8,
-    stable: u8,
+    stable: bool,
     collateralization_ratio: u64,
+    pool_index: u8,
 ) -> Result<()> {
     return_error_if_false!(
-        if stable == 0 {
+        if !stable {
             collateralization_ratio > 0
         } else {
             true
@@ -52,33 +52,14 @@ pub fn execute(
     );
 
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let mut pool_index: u8 = u8::MAX;
-
-    // check whether new collateral is stable (pegged to the US dollar)
-    let is_stable: Result<bool> = match stable {
-        0 => Ok(false),
-        1 => Ok(true),
-        _ => Err(error!(InceptError::InvalidBool)),
-    };
-
-    // if the collateral is not stable, store its pool index, which shall store its oracle data
-    if !(is_stable.unwrap()) {
-        pool_index = TokenData::get_pool_tuple_from_oracle(
-            token_data,
-            [
-                (ctx.remaining_accounts[0].to_account_info().key),
-                (ctx.remaining_accounts[1].to_account_info().key),
-            ],
-        )
-        .unwrap()
-        .1
-        .try_into()
-        .unwrap();
-    }
 
     // append collateral to list
     token_data.append_collateral(Collateral {
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index: if stable {
+            u8::MAX.try_into().unwrap()
+        } else {
+            pool_index.try_into().unwrap()
+        },
         mint: *ctx.accounts.collateral_mint.to_account_info().key,
         vault: *ctx.accounts.vault.to_account_info().key,
         vault_usdi_supply: RawDecimal::new(0, scale.into()),
