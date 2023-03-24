@@ -75,6 +75,18 @@ pub struct WithdrawLiquidity<'info> {
         address = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].comet_liquidity_token_account,
     )]
     pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        associated_token::mint = iasset_mint,
+        associated_token::authority = manager_info,
+    )]
+    pub manager_iasset_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        associated_token::mint = usdi_mint,
+        associated_token::authority = manager_info,
+    )]
+    pub manager_usdi_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 
@@ -128,12 +140,15 @@ pub fn execute(
                     .accounts
                     .comet_liquidity_token_account
                     .to_account_info(),
-                vault: ctx.accounts.incept_usdi_vault.to_account_info(),
+                user_iasset_token_account: ctx
+                    .accounts
+                    .manager_iasset_token_account
+                    .to_account_info(),
+                user_usdi_token_account: ctx.accounts.manager_usdi_token_account.to_account_info(),
             },
             manager_seeds,
         ),
         comet_position_index,
-        liquidity_token_amount,
-        0,
+        liquidity_token_amount
     )
 }

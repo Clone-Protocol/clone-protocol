@@ -10,8 +10,9 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { sleep } from "../sdk/src/utils";
-import { Decimal } from "../sdk/src/decimal";
-import { DEVNET_TOKEN_SCALE, toDevnetScale } from "../sdk/src/incept";
+import { Decimal, toNumber } from "../sdk/src/decimal";
+import { DEVNET_TOKEN_SCALE, InceptClient, toDevnetScale } from "../sdk/src/incept";
+import { JupiterAggMock } from "../sdk/src/idl/jupiter_agg_mock";
 
 export const INCEPT_EXCHANGE_SEED = Buffer.from("Incept");
 export const EXCHANGE_ADMIN = new Keypair();
@@ -74,4 +75,27 @@ export const getOrCreateAssociatedTokenAccount = async (
 export const convertToRawDecimal = (num: number) => {
   let temp = new Decimal(BigInt(toDevnetScale(num).toNumber()), BigInt(DEVNET_TOKEN_SCALE));
   return temp.toRawDecimal();
+}
+
+
+export const recenterProcedureInstructions = async (incept: InceptClient, positionIndex: number, isSinglePool: boolean, jupiter_agg_mock?: JupiterAggMock) => {
+
+  let ixs = []
+  const comet = await (isSinglePool ? incept.getSinglePoolComets() : incept.getComet())
+  const cometPosition = comet.positions[positionIndex]
+  const lpTokens = toNumber(cometPosition.liquidityTokenValue)
+  // Need to withdraw all liquidity from comet.
+  const withdrawIx = await (
+    isSinglePool ? incept.withdrawLiquidityFromSinglePoolCometInstruction(toDevnetScale(lpTokens), positionIndex) 
+    : incept.withdrawLiquidityFromCometInstruction()
+  )
+
+
+  // Either buy or sell iasset depending on additional reward.
+  // Should figure out the best combination route to take.
+
+  // Pay ILD,
+
+  // Deploy capital to the same amount of liquidity tokens.
+
 }

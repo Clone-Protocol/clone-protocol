@@ -40,7 +40,6 @@ pub mod withdraw_collateral_from_borrow;
 pub mod withdraw_collateral_from_comet;
 pub mod withdraw_collateral_from_single_pool_comet;
 pub mod withdraw_liquidity_from_comet;
-pub mod withdraw_liquidity_from_single_pool_comet;
 pub mod withdraw_unconcentrated_liquidity;
 pub mod wrap_asset;
 
@@ -86,6 +85,5 @@ pub use withdraw_collateral_from_borrow::*;
 pub use withdraw_collateral_from_comet::*;
 pub use withdraw_collateral_from_single_pool_comet::*;
 pub use withdraw_liquidity_from_comet::*;
-pub use withdraw_liquidity_from_single_pool_comet::*;
 pub use withdraw_unconcentrated_liquidity::*;
 pub use wrap_asset::*;

@@ -1168,7 +1168,7 @@ export class InceptClient {
     signers?: Array<Keypair>
   ) {
     const withdrawLiquidityFromSinglePoolCometIx =
-      await this.withdrawLiquidityFromSinglePoolCometInstruction(
+      await this.withdrawLiquidityFromCometInstruction(
         liquidityTokenAmount,
         cometIndex
       );
@@ -1176,39 +1176,6 @@ export class InceptClient {
       new Transaction().add(withdrawLiquidityFromSinglePoolCometIx),
       signers
     );
-  }
-  public async withdrawLiquidityFromSinglePoolCometInstruction(
-    liquidityTokenAmount: BN,
-    positionIndex: number
-  ) {
-    let tokenData = await this.getTokenData();
-    const { userPubkey, bump } = await this.getUserAddress();
-    const userAccount = await this.getUserAccount();
-    let singlePoolComet = await this.getSinglePoolComets();
-    let poolIndex = singlePoolComet.positions[positionIndex].poolIndex;
-
-    return await this.program.methods
-      .withdrawLiquidityFromSinglePoolComet(liquidityTokenAmount, positionIndex)
-      .accounts({
-        user: this.provider.publicKey!,
-        incept: this.inceptAddress[0],
-        userAccount: userPubkey,
-        tokenData: this.incept!.tokenData,
-        usdiMint: this.incept!.usdiMint,
-        iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
-        singlePoolComet: userAccount.singlePoolComets,
-        ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
-        ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
-        liquidityTokenMint: tokenData.pools[poolIndex].liquidityTokenMint,
-        cometLiquidityTokenAccount:
-          tokenData.pools[poolIndex].cometLiquidityTokenAccount,
-        vault:
-          tokenData.collaterals[
-            singlePoolComet.collaterals[positionIndex].collateralIndex
-          ].vault,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
   }
 
   public async recenterSinglePoolComet(
@@ -1578,7 +1545,6 @@ export class InceptClient {
       .withdrawLiquidityFromComet(
         cometPositionIndex,
         liquidityTokenAmount,
-        collateralIndex
       )
       .accounts({
         user: this.provider.publicKey!,

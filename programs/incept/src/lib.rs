@@ -291,25 +291,11 @@ pub mod incept {
         ctx: Context<WithdrawLiquidityFromComet>,
         comet_position_index: u8,
         liquidity_token_amount: u64,
-        comet_collateral_index: u8,
     ) -> Result<()> {
         instructions::withdraw_liquidity_from_comet::execute(
             ctx,
             comet_position_index,
             liquidity_token_amount,
-            comet_collateral_index,
-        )
-    }
-
-    pub fn withdraw_liquidity_from_single_pool_comet(
-        ctx: Context<WithdrawLiquidityFromSinglePoolComet>,
-        liquidity_token_amount: u64,
-        position_index: u8,
-    ) -> Result<()> {
-        instructions::withdraw_liquidity_from_single_pool_comet::execute(
-            ctx,
-            liquidity_token_amount,
-            position_index,
         )
     }
 
