@@ -122,6 +122,10 @@ pub mod incept {
         instructions::mint_usdi::execute(ctx, amount)
     }
 
+    pub fn burn_usdi(ctx: Context<BurnUSDI>, amount: u64) -> Result<()> {
+        instructions::burn_usdi::execute(ctx, amount)
+    }
+
     pub fn initialize_borrow_position(
         ctx: Context<InitializeBorrowPosition>,
         pool_index: u8,
@@ -299,14 +303,6 @@ pub mod incept {
         )
     }
 
-    pub fn recenter_comet(
-        ctx: Context<RecenterComet>,
-        comet_position_index: u8,
-        comet_collateral_index: u8,
-    ) -> Result<()> {
-        instructions::recenter_comet::execute(ctx, comet_position_index, comet_collateral_index)
-    }
-
     pub fn mint_usdi_hackathon(ctx: Context<MintUSDIHackathon>, amount: u64) -> Result<()> {
         instructions::mint_usdi_hackathon::execute(ctx, amount)
     }
@@ -332,17 +328,6 @@ pub mod incept {
         )
     }
 
-    pub fn liquidate_single_pool_comet(
-        ctx: Context<LiquidateComet>,
-        position_index: u8,
-    ) -> Result<()> {
-        return_error_if_false!(
-            ctx.accounts.comet.load()?.is_single_pool == 1,
-            InceptError::WrongCometType
-        );
-        instructions::liquidate_comet::execute(ctx, position_index, position_index)
-    }
-
     pub fn swap_nonstable_collateral(
         ctx: Context<SwapCometNonStableCollateral>,
         stable_swap_in_amount: u64,
@@ -362,14 +347,6 @@ pub mod incept {
         comet_collateral_index: u8,
     ) -> Result<()> {
         instructions::swap_stable_collateral_into_usdi::execute(ctx, comet_collateral_index)
-    }
-
-    pub fn liquidate_comet(ctx: Context<LiquidateComet>, position_index: u8) -> Result<()> {
-        return_error_if_false!(
-            ctx.accounts.comet.load()?.is_single_pool == 0,
-            InceptError::WrongCometType
-        );
-        instructions::liquidate_comet::execute(ctx, position_index, 0)
     }
 
     pub fn close_comet_account(ctx: Context<CloseCometAccount>) -> Result<()> {
