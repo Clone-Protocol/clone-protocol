@@ -129,3 +129,9 @@ export const toNumber = (raw: RawDecimal): number => {
 export const getMantissa = (raw: RawDecimal): number => {
   return Number(toDecimal(raw).mantissa());
 };
+
+export const convertToDecimal = (x: number, scale: number): Decimal => {
+  let num = BigInt(Math.floor(x * Math.pow(10, scale)));
+  const result = new Decimal(num, BigInt(scale))
+  return result
+}

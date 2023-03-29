@@ -1,4 +1,4 @@
-import { BN } from "@project-serum/anchor";
+import { BN } from "@coral-xyz/anchor";
 import { Incept } from "./incept";
 import { Network, DEV_NET, TEST_NET } from "./network";
 import { PublicKey, Transaction } from "@solana/web3.js";

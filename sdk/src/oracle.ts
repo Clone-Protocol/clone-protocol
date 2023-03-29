@@ -1,5 +1,5 @@
-import * as anchor from "@project-serum/anchor";
-import { Program, BN } from "@project-serum/anchor";
+import * as anchor from "@coral-xyz/anchor";
+import { Program, BN } from "@coral-xyz/anchor";
 import { parsePriceData } from "@pythnetwork/client";
 import { Pyth } from "./idl/pyth";
 import { Store } from "./idl/store";

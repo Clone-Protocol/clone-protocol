@@ -1,6 +1,6 @@
-import * as anchor from "@project-serum/anchor";
-import { Program, EventParser, AnchorProvider } from "@project-serum/anchor";
-import { IdlEvent } from "@project-serum/anchor/dist/cjs/idl";
+import * as anchor from "@coral-xyz/anchor";
+import { Program, EventParser, AnchorProvider } from "@coral-xyz/anchor";
+import { IdlEvent } from "@coral-xyz/anchor/dist/cjs/idl";
 import { Incept, IDL } from "../sdk/src/idl/incept";
 import {
   PublicKey,

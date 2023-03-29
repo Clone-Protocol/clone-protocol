@@ -1,5 +1,5 @@
-import * as anchor from "@project-serum/anchor";
-import { BN, Provider } from "@project-serum/anchor";
+import * as anchor from "@coral-xyz/anchor";
+import { BN, Provider } from "@coral-xyz/anchor";
 import {
   TOKEN_PROGRAM_ID,
   getAccount,
