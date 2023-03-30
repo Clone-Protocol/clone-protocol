@@ -1618,9 +1618,10 @@ describe("incept", async () => {
       pool.assetInfo.iassetMint
     );
 
-    assert.isBelow(
-      Number(usdiTokenAccountInfo.amount),
-      startingUSDi,
+    assert.closeTo(
+      fromDevnetNumber(startingUSDi) - fromDevnetNumber(usdiTokenAccountInfo.amount),
+      recenterInfo.usdiCost,
+      1e-7,
       "USDi balance should decrease"
     );
     assert.isBelow(
@@ -2206,9 +2207,10 @@ describe("incept", async () => {
       pool.assetInfo.iassetMint
     );
 
-    assert.isBelow(
-      fromDevnetNumber(usdiTokenAccountInfo.amount),
-      startingUSDi,
+    assert.closeTo(
+      startingUSDi - fromDevnetNumber(usdiTokenAccountInfo.amount),
+      recenterInfo.usdiCost,
+      1e-7,
       "USDi balance should decrease"
     );
     assert.isAbove(
