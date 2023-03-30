@@ -142,8 +142,10 @@ pub fn calculate_comet_position_loss(
         comet_position.liquidity_token_value.to_decimal(),
         pool.liquidity_token_supply.to_decimal(),
     );
-    let claimable_usdi = liquidity_proportion * pool_usdi;
-    let claimable_iasset = liquidity_proportion * pool_iasset;
+    let mut claimable_usdi = liquidity_proportion * pool_usdi;
+    claimable_usdi.rescale(DEVNET_TOKEN_SCALE);
+    let mut claimable_iasset = liquidity_proportion * pool_iasset;
+    claimable_iasset.rescale(DEVNET_TOKEN_SCALE);
 
     let borrowed_usdi = comet_position.borrowed_usdi.to_decimal();
     let borrowed_iasset = comet_position.borrowed_iasset.to_decimal();

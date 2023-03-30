@@ -128,12 +128,17 @@ pub fn execute(
     let (from_context, mint_context, mut payment_amount) = if pay_usdi_debt {
         let claimable_usdi = claimable_ratio * pool.usdi_amount.to_decimal();
         let borrowed_usdi = comet_position.borrowed_usdi.to_decimal();
-        let payment_amount = (borrowed_usdi - claimable_usdi).min(authorized_amount);
         return_error_if_false!(
             claimable_usdi < borrowed_usdi,
             InceptError::InvalidTokenAmount
         );
-        let mut new_borrowed_amount = comet_position.borrowed_usdi.to_decimal() - payment_amount;
+        let ild_amount = borrowed_usdi - claimable_usdi;
+
+        let (mut new_borrowed_amount, payment_amount) = if ild_amount < authorized_amount {
+            (claimable_usdi, ild_amount)
+        } else {
+            (borrowed_usdi - authorized_amount, authorized_amount)
+        };
         new_borrowed_amount.rescale(DEVNET_TOKEN_SCALE);
         comet.positions[comet_position_index as usize].borrowed_usdi =
             RawDecimal::from(new_borrowed_amount);
@@ -148,12 +153,18 @@ pub fn execute(
     } else {
         let claimable_iasset = claimable_ratio * pool.iasset_amount.to_decimal();
         let borrowed_iasset = comet_position.borrowed_iasset.to_decimal();
-        let payment_amount = (borrowed_iasset - claimable_iasset).min(authorized_amount);
         return_error_if_false!(
             claimable_iasset < borrowed_iasset,
             InceptError::InvalidTokenAmount
         );
-        let mut new_borrowed_amount = comet_position.borrowed_iasset.to_decimal() - payment_amount;
+        let ild_amount = borrowed_iasset - claimable_iasset;
+
+        let (mut new_borrowed_amount, payment_amount) = if ild_amount < authorized_amount {
+            (claimable_iasset, ild_amount)
+        } else {
+            (borrowed_iasset - authorized_amount, authorized_amount)
+        };
+
         new_borrowed_amount.rescale(DEVNET_TOKEN_SCALE);
         comet.positions[comet_position_index as usize].borrowed_iasset =
             RawDecimal::from(new_borrowed_amount);
