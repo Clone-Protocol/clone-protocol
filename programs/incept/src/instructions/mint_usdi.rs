@@ -22,8 +22,11 @@ pub struct MintUSDI<'info> {
         has_one = incept
     )]
     pub token_data: AccountLoader<'info, TokenData>,
-    #[account(mut)]
-    pub vault: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        address = token_data.load()?.collaterals[USDC_COLLATERAL_INDEX].vault
+    )]
+    pub usdc_vault: Account<'info, TokenAccount>,
     #[account(
         mut,
         address = incept.usdi_mint
@@ -37,7 +40,7 @@ pub struct MintUSDI<'info> {
     pub user_usdi_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
-        associated_token::mint = vault.mint,
+        associated_token::mint = usdc_vault.mint,
         associated_token::authority = user
     )]
     pub user_collateral_token_account: Account<'info, TokenAccount>,
@@ -48,21 +51,10 @@ pub fn execute(ctx: Context<MintUSDI>, amount: u64) -> Result<()> {
     let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
-    let (collateral, collateral_index) =
-        TokenData::get_collateral_tuple(token_data, *ctx.accounts.vault.to_account_info().key)
-            .unwrap();
+    let collateral = token_data.collaterals[USDC_COLLATERAL_INDEX];
     let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
 
     let mut usdi_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
-
-    let collateral_value = Decimal::from_str(
-        &ctx.accounts
-            .user_collateral_token_account
-            .amount
-            .to_string(),
-    )
-    .unwrap()
-        / Decimal::new(1, collateral_scale);
 
     // check to see if the collateral used to mint usdi is stable
     let is_stable: Result<bool> = match collateral.stable {
@@ -76,27 +68,22 @@ pub fn execute(ctx: Context<MintUSDI>, amount: u64) -> Result<()> {
         return Err(InceptError::InvalidCollateralType.into());
     }
 
-    // check if their is sufficient collateral to mint
-    if usdi_value > collateral_value {
-        return Err(InceptError::InsufficientCollateral.into());
-    }
-
     // add collateral amount to vault supply
     let current_vault_usdi_supply = collateral.vault_usdi_supply.to_decimal();
-    let mut new_vault_usdi_supply = current_vault_usdi_supply + collateral_value;
-    new_vault_usdi_supply.rescale(current_vault_usdi_supply.scale());
-    token_data.collaterals[collateral_index].vault_usdi_supply =
+    let mut new_vault_usdi_supply = current_vault_usdi_supply + usdi_value;
+    new_vault_usdi_supply.rescale(collateral_scale);
+    token_data.collaterals[USDC_COLLATERAL_INDEX].vault_usdi_supply =
         RawDecimal::from(new_vault_usdi_supply);
 
     // transfer user collateral to vault
-    usdi_value.rescale(current_vault_usdi_supply.scale());
+    usdi_value.rescale(collateral_scale);
     let cpi_accounts = Transfer {
         from: ctx
             .accounts
             .user_collateral_token_account
             .to_account_info()
             .clone(),
-        to: ctx.accounts.vault.to_account_info().clone(),
+        to: ctx.accounts.usdc_vault.to_account_info().clone(),
         authority: ctx.accounts.user.to_account_info().clone(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
