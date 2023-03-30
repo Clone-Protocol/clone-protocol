@@ -328,13 +328,13 @@ pub mod incept {
         )
     }
 
-    pub fn swap_nonstable_collateral(
-        ctx: Context<SwapCometNonStableCollateral>,
+    pub fn liquidate_comet_nonstable_collateral(
+        ctx: Context<LiquidateCometNonStableCollateral>,
         stable_swap_in_amount: u64,
         comet_nonstable_collateral_index: u8,
         comet_stable_collateral_index: u8,
     ) -> Result<()> {
-        instructions::swap_comet_nonstable_collateral::execute(
+        instructions::liquidate_comet_nonstable_collateral::execute(
             ctx,
             stable_swap_in_amount,
             comet_nonstable_collateral_index,
@@ -342,11 +342,32 @@ pub mod incept {
         )
     }
 
-    pub fn swap_stable_collateral_into_usdi(
-        ctx: Context<SwapStableCollateralIntoUsdi>,
+    pub fn liquidate_comet_stable_collateral(
+        ctx: Context<LiquidateCometStableCollateral>,
         comet_collateral_index: u8,
     ) -> Result<()> {
-        instructions::swap_stable_collateral_into_usdi::execute(ctx, comet_collateral_index)
+        instructions::liquidate_comet_stable_collateral::execute(ctx, comet_collateral_index)
+    }
+
+    pub fn liquidate_comet_ild(
+        ctx: Context<LiquidateCometILD>,
+        comet_position_index: u8,
+        amount: u64,
+        pay_usdi_debt: bool,
+    ) -> Result<()> {
+        instructions::liquidate_comet_ild::execute(ctx, comet_position_index, amount, pay_usdi_debt)
+    }
+
+    pub fn liquidate_comet_borrow(
+        ctx: Context<LiquidateCometBorrow>,
+        comet_position_index: u8,
+        liquidity_token_amount: u64,
+    ) -> Result<()> {
+        instructions::liquidate_comet_borrow::execute(
+            ctx,
+            comet_position_index,
+            liquidity_token_amount,
+        )
     }
 
     pub fn close_comet_account(ctx: Context<CloseCometAccount>) -> Result<()> {

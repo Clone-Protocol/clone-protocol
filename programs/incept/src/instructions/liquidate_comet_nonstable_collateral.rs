@@ -9,7 +9,7 @@ use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(amount: u64, comet_nonstable_collateral_index: u8, comet_stable_collateral_index: u8,)]
-pub struct SwapCometNonStableCollateral<'info> {
+pub struct LiquidateCometNonStableCollateral<'info> {
     pub liquidator: Signer<'info>,
     #[account(
         seeds = [b"incept".as_ref()],
@@ -80,7 +80,7 @@ pub struct SwapCometNonStableCollateral<'info> {
 }
 
 pub fn execute(
-    ctx: Context<SwapCometNonStableCollateral>,
+    ctx: Context<LiquidateCometNonStableCollateral>,
     amount: u64,
     comet_nonstable_collateral_index: u8,
     comet_stable_collateral_index: u8,
