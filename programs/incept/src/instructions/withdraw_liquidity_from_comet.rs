@@ -1,6 +1,5 @@
 use crate::error::*;
 use crate::events::*;
-use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -165,7 +164,11 @@ pub fn execute(
                 .amm_usdi_token_account
                 .to_account_info()
                 .clone(),
-            to: ctx.accounts.user_usdi_token_account.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .user_usdi_token_account
+                .to_account_info()
+                .clone(),
             authority: ctx.accounts.incept.to_account_info().clone(),
         };
         let transfer_usdi_context = CpiContext::new_with_signer(
@@ -211,7 +214,11 @@ pub fn execute(
                 .amm_iasset_token_account
                 .to_account_info()
                 .clone(),
-            to: ctx.accounts.user_iasset_token_account.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .user_iasset_token_account
+                .to_account_info()
+                .clone(),
             authority: ctx.accounts.incept.to_account_info().clone(),
         };
         let transfer_iasset_context = CpiContext::new_with_signer(
@@ -325,7 +332,6 @@ pub fn execute(
             .unwrap(),
         oracle_price: oracle_price.mantissa().try_into().unwrap()
     });
-
     ctx.accounts.incept.event_counter += 1;
 
     Ok(())

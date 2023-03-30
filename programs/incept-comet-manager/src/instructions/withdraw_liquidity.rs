@@ -149,6 +149,6 @@ pub fn execute(
             manager_seeds,
         ),
         comet_position_index,
-        liquidity_token_amount
+        liquidity_token_amount,
     )
 }

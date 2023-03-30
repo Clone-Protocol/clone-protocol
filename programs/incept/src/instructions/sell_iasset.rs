@@ -59,7 +59,6 @@ pub struct SellIasset<'info> {
 
 pub fn execute(
     ctx: Context<SellIasset>,
-
     pool_index: u8,
     amount: u64,
     usdi_received_threshold: u64,
@@ -74,15 +73,12 @@ pub fn execute(
     let swap_summary = pool.calculate_output_from_input(iasset_amount_value, false);
     let mut usdi_amount_value = swap_summary.result;
     usdi_amount_value.rescale(DEVNET_TOKEN_SCALE);
-
     // ensure it's within slippage tolerance
     let min_usdi_to_receive = Decimal::new(
         usdi_received_threshold.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,
     );
-    if usdi_amount_value < min_usdi_to_receive {
-        return Ok(());
-    }
+
     return_error_if_false!(
         usdi_amount_value >= min_usdi_to_receive,
         InceptError::SlippageToleranceExceeded
