@@ -1,5 +1,5 @@
-import { Keypair, PublicKey, Transaction } from "@solana/web3.js";
-import { Provider } from "@project-serum/anchor";
+import { Keypair, PublicKey, Transaction, TransactionInstruction } from "@solana/web3.js";
+import { Provider, BN } from "@coral-xyz/anchor";
 import {
   Account,
   getAccount,
@@ -10,8 +10,11 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { sleep } from "../sdk/src/utils";
-import { Decimal } from "../sdk/src/decimal";
-import { DEVNET_TOKEN_SCALE, toDevnetScale } from "../sdk/src/incept";
+import { Decimal, toNumber } from "../sdk/src/decimal";
+import { DEVNET_TOKEN_SCALE, InceptClient, toDevnetScale } from "../sdk/src/incept";
+import { JupiterAggMock } from "../sdk/src/idl/jupiter_agg_mock";
+import { AnchorProvider } from "@coral-xyz/anchor";
+import { Comet, TokenData } from "../sdk/src/interfaces";
 
 export const INCEPT_EXCHANGE_SEED = Buffer.from("Incept");
 export const EXCHANGE_ADMIN = new Keypair();
@@ -74,4 +77,8 @@ export const getOrCreateAssociatedTokenAccount = async (
 export const convertToRawDecimal = (num: number) => {
   let temp = new Decimal(BigInt(toDevnetScale(num).toNumber()), BigInt(DEVNET_TOKEN_SCALE));
   return temp.toRawDecimal();
+}
+
+export const fromDevnetNumber = (x: BN | bigint | number): number => {
+  return Number(x) * Math.pow(10, -DEVNET_TOKEN_SCALE);
 }

@@ -12,7 +12,7 @@ use std::convert::TryInto;
     il_liquidation_reward_pct: u64,
     max_health_liquidation: u64,
     liquidator_fee: u64,
-    treasury_address: Pubkey
+    treasury_address: Pubkey,
 )]
 pub struct InitializeIncept<'info> {
     #[account(mut)]
@@ -39,6 +39,15 @@ pub struct InitializeIncept<'info> {
         payer = admin
     )]
     pub usdi_vault: Account<'info, TokenAccount>,
+    /// CHECK:
+    pub usdc_mint: Account<'info, Mint>,
+    #[account(
+        init,
+        token::mint = usdc_mint,
+        token::authority = incept,
+        payer = admin
+    )]
+    pub usdc_vault: Account<'info, TokenAccount>,
     #[account(zero)]
     pub token_data: AccountLoader<'info, TokenData>,
     pub rent: Sysvar<'info, Rent>,
@@ -82,7 +91,18 @@ pub fn execute(
         collateralization_ratio: RawDecimal::from(Decimal::one()),
         stable: 1,
     });
-    token_data.num_collaterals = 1;
+    // add usdc as second collateral type
+    let usdc_scale = ctx.accounts.usdc_mint.decimals;
+    token_data.append_collateral(Collateral {
+        pool_index: u8::MAX.into(),
+        mint: *ctx.accounts.usdc_mint.to_account_info().key,
+        vault: *ctx.accounts.usdc_vault.to_account_info().key,
+        vault_usdi_supply: RawDecimal::new(0, usdc_scale.into()),
+        vault_mint_supply: RawDecimal::new(0, usdc_scale.into()),
+        vault_comet_supply: RawDecimal::new(0, usdc_scale.into()),
+        collateralization_ratio: RawDecimal::from(Decimal::one()),
+        stable: 1,
+    });
 
     // set token data
     token_data.incept = *ctx.accounts.incept.to_account_info().key;

@@ -1,5 +1,5 @@
-import * as anchor from "@project-serum/anchor";
-import { Program, BN } from "@project-serum/anchor";
+import * as anchor from "@coral-xyz/anchor";
+import { Program, BN } from "@coral-xyz/anchor";
 import { JupiterAggMock } from "../sdk/src/idl/jupiter_agg_mock";
 import {
   getAssociatedTokenAddress,

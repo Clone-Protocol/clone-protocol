@@ -8,7 +8,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(comet_collateral_index: u8, collateral_amount: u64)]
+#[instruction(position_index: u8, collateral_amount: u64)]
 pub struct WithdrawCollateralFromSinglePoolComet<'info> {
     #[account(address = comet.load()?.owner)]
     pub user: Signer<'info>,
@@ -32,12 +32,12 @@ pub struct WithdrawCollateralFromSinglePoolComet<'info> {
         mut,
         address = user_account.single_pool_comets,
         constraint = comet.load()?.is_single_pool == 1,
-        constraint = (comet_collateral_index as u64) < comet.load()?.num_collaterals @ InceptError::InvalidInputPositionIndex
+        constraint = (position_index as u64) < comet.load()?.num_collaterals @ InceptError::InvalidInputPositionIndex
     )]
     pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
-        address = token_data.load()?.collaterals[comet.load()?.collaterals[comet_collateral_index as usize].collateral_index as usize].vault,
+        address = token_data.load()?.collaterals[comet.load()?.collaterals[position_index as usize].collateral_index as usize].vault,
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -65,13 +65,8 @@ pub fn execute(
     let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
 
     let subtracted_collateral_value =
-        Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale);
-
-    // ensure the position holds sufficient collateral
-    return_error_if_false!(
-        subtracted_collateral_value <= comet_collateral.collateral_amount.to_decimal(),
-        InceptError::InsufficientCollateral
-    );
+        Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale)
+            .min(comet_collateral.collateral_amount.to_decimal());
 
     // subtract collateral amount from vault supply
     let mut new_vault_comet_supply =

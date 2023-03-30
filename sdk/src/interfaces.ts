@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import { RawDecimal } from "./decimal";
-import { BN } from "@project-serum/anchor";
+import { BN } from "@coral-xyz/anchor";
 
 export interface Incept {
   usdiMint: PublicKey;

@@ -40,7 +40,7 @@ pub struct PoolIndices {
 }
 
 #[derive(Accounts)]
-#[instruction( pool_indices: PoolIndices)]
+#[instruction(pool_indices: PoolIndices)]
 pub struct UpdatePrices<'info> {
     #[account(
         seeds = [b"incept".as_ref()],
@@ -63,7 +63,7 @@ pub fn execute<'info>(
     let n_accounts = ctx.remaining_accounts.iter().len();
     return_error_if_false!(n_accounts > 0, InceptError::NoRemainingAccountsSupplied);
 
-    // generate data from  pyth oracle
+    // generate data from pyth oracle
     for i in 0..n_accounts {
         let pool_index = pool_indices.indices[i] as usize;
         let pyth_oracle = &ctx.remaining_accounts[i];

@@ -1,5 +1,5 @@
-import * as anchor from "@project-serum/anchor";
-import { Program, BN } from "@project-serum/anchor";
+import * as anchor from "@coral-xyz/anchor";
+import { Program, BN } from "@coral-xyz/anchor";
 import { Incept } from "../sdk/src/idl/incept";
 import { Pyth } from "../sdk/src/idl/pyth";
 import { MockUsdc } from "../sdk/src/idl/mock_usdc";

@@ -71,10 +71,6 @@ pub mod incept_comet_manager {
         withdraw_liquidity::execute(ctx, comet_position_index, liquidity_token_amount)
     }
 
-    pub fn recenter(ctx: Context<Recenter>, comet_position_index: u8) -> Result<()> {
-        recenter::execute(ctx, comet_position_index)
-    }
-
     pub fn pay_ild(
         ctx: Context<PayIld>,
         comet_position_index: u8,
