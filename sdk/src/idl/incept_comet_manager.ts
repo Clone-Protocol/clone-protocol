@@ -572,6 +572,16 @@ export type InceptCometManager = {
           "isSigner": false
         },
         {
+          "name": "managerIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "managerUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -585,87 +595,6 @@ export type InceptCometManager = {
         {
           "name": "liquidityTokenAmount",
           "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "recenter",
-      "accounts": [
-        {
-          "name": "managerOwner",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "managerInfo",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "incept",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "managerInceptUser",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdiMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "inceptProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "iassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "inceptUsdiVault",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "cometPositionIndex",
-          "type": "u8"
         }
       ]
     },
@@ -1765,6 +1694,16 @@ export const IDL: InceptCometManager = {
           "isSigner": false
         },
         {
+          "name": "managerIassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "managerUsdiTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -1778,87 +1717,6 @@ export const IDL: InceptCometManager = {
         {
           "name": "liquidityTokenAmount",
           "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "recenter",
-      "accounts": [
-        {
-          "name": "managerOwner",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "managerInfo",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "incept",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "managerInceptUser",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "usdiMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "inceptProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "iassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammUsdiTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammIassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "inceptUsdiVault",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "cometPositionIndex",
-          "type": "u8"
         }
       ]
     },
