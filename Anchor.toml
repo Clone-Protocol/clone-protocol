@@ -1,7 +1,7 @@
 [programs.localnet]
-incept = "GHwfUCuT3mtCrqVdsvAQ3VZy8dn6WiouijPfpQpQT61e"
+incept = "5k28XzdwaWVXaWBwfm4ZFXQAnBaTfzu25k1sHatsnsL1"
 pyth = "EERmAuBdXCAZitXKg1E2GaxFtwWDjZSctXKCvuWT19ki"
-jupiter_agg_mock = "97w9ahzStYbcNJZasNaGj6UQ6ruQou4n1nGozdQi6poJ"
+jupiter_agg_mock = "4tChJFNsWLMyk81ezv8N8gKVb2q7H1akSQENn4NToSuS"
 incept_comet_manager = "6HAQXsz7ScT5SueXukgDB8ExE9FKeqj5q1z925SujZsu"
 
 [registry]
