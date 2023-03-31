@@ -1613,7 +1613,7 @@ export class InceptClient {
       .instruction();
   }
 
-  public async swapCometNonstableCollateralInstruction(
+  public async liquidateCometNonstableCollateralInstruction(
     user: PublicKey,
     userAccountAddress: { userPubKey: PublicKey; bump: number },
     userAccount: User,
@@ -1635,7 +1635,7 @@ export class InceptClient {
       ];
 
     return await this.program.methods
-      .swapNonstableCollateral(
+      .liquidateCometNonstableCollateral(
         amount,
         cometNonStableCollateralIndex,
         cometStableCollateralIndex
@@ -1660,7 +1660,7 @@ export class InceptClient {
       .instruction();
   }
 
-  public async swapStableCollateralIntoUsdiInstruction(
+  public async liquidateStableCollateralInstruction(
     user: PublicKey,
     userAccountAddress: { userPubKey: PublicKey; bump: number },
     userAccount: User,
@@ -1674,7 +1674,7 @@ export class InceptClient {
       ];
 
     return await this.program.methods
-      .swapStableCollateralIntoUsdi(cometCollateralIndex)
+      .liquidateCometStableCollateral(cometCollateralIndex)
       .accounts({
         liquidator: this.provider.publicKey!,
         incept: this.inceptAddress[0],

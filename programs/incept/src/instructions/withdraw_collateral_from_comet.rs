@@ -3,7 +3,6 @@ use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
-use anchor_lang::AccountsClose;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
@@ -58,74 +57,54 @@ pub fn execute(
 
     let comet_collateral_index = comet_collateral_index as usize;
 
-    let mut close = false;
-    {
-        let mut comet = ctx.accounts.comet.load_mut()?;
-        let comet_collateral = comet.collaterals[comet_collateral_index];
-        let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
+    let mut comet = ctx.accounts.comet.load_mut()?;
+    let comet_collateral = comet.collaterals[comet_collateral_index];
+    let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
 
-        let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
+    let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
 
-        let subtracted_collateral_value =
-            Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale)
-                .min(comet_collateral.collateral_amount.to_decimal());
+    let subtracted_collateral_value =
+        Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale)
+            .min(comet_collateral.collateral_amount.to_decimal());
 
-        // subtract collateral amount from vault supply
-        let mut vault_comet_supply =
-            collateral.vault_comet_supply.to_decimal() - subtracted_collateral_value;
-        vault_comet_supply.rescale(collateral_scale);
-        token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
-            RawDecimal::from(vault_comet_supply);
+    // subtract collateral amount from vault supply
+    let mut vault_comet_supply =
+        collateral.vault_comet_supply.to_decimal() - subtracted_collateral_value;
+    vault_comet_supply.rescale(collateral_scale);
+    token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
+        RawDecimal::from(vault_comet_supply);
 
-        // update the collateral amount
-        let mut new_collateral_amount =
-            comet_collateral.collateral_amount.to_decimal() - subtracted_collateral_value;
-        new_collateral_amount.rescale(collateral_scale);
-        comet.collaterals[comet_collateral_index].collateral_amount =
-            RawDecimal::from(new_collateral_amount);
+    // update the collateral amount
+    let mut new_collateral_amount =
+        comet_collateral.collateral_amount.to_decimal() - subtracted_collateral_value;
+    new_collateral_amount.rescale(collateral_scale);
+    comet.collaterals[comet_collateral_index].collateral_amount =
+        RawDecimal::from(new_collateral_amount);
 
-        // remove collateral if empty
-        if new_collateral_amount.is_zero() && comet_collateral_index != USDI_COLLATERAL_INDEX {
-            comet.remove_collateral(comet_collateral_index);
-        }
-
-        // send collateral from vault to user
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.vault.to_account_info().clone(),
-            to: ctx
-                .accounts
-                .user_collateral_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.incept.to_account_info().clone(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        token::transfer(
-            CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
-            collateral_amount,
-        )?;
-
-        // check to see if the comet is empty and should be closed
-        if comet.num_collaterals == 0 {
-            close = true;
-        } else {
-            // Require a healthy score after transactions
-
-            let health_score = calculate_health_score(&comet, token_data, None)?;
-
-            return_error_if_false!(health_score.is_healthy(), InceptError::HealthScoreTooLow);
-        }
+    // remove collateral if empty and not the last USDI collateral.
+    if new_collateral_amount.is_zero() && comet_collateral_index != USDI_COLLATERAL_INDEX {
+        comet.remove_collateral(comet_collateral_index);
     }
-    if close {
-        // close comet account if no collateral remains
-        let comet_pubkey = *ctx.accounts.comet.to_account_info().key;
-        ctx.accounts
-            .comet
-            .close(ctx.accounts.user.to_account_info())?;
-        if comet_pubkey.eq(&ctx.accounts.user_account.comet) {
-            ctx.accounts.user_account.comet = Pubkey::default();
-        }
-    }
+
+    // send collateral from vault to user
+    let cpi_accounts = Transfer {
+        from: ctx.accounts.vault.to_account_info().clone(),
+        to: ctx
+            .accounts
+            .user_collateral_token_account
+            .to_account_info()
+            .clone(),
+        authority: ctx.accounts.incept.to_account_info().clone(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+    token::transfer(
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
+        collateral_amount,
+    )?;
+
+    let health_score = calculate_health_score(&comet, token_data, None)?;
+
+    return_error_if_false!(health_score.is_healthy(), InceptError::HealthScoreTooLow);
 
     Ok(())
 }

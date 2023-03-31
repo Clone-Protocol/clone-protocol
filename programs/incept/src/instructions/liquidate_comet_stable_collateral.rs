@@ -9,7 +9,7 @@ use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(comet_collateral_index: u8)]
-pub struct SwapStableCollateralIntoUsdi<'info> {
+pub struct LiquidateCometStableCollateral<'info> {
     pub liquidator: Signer<'info>,
     #[account(
         seeds = [b"incept".as_ref()],
@@ -59,7 +59,7 @@ pub struct SwapStableCollateralIntoUsdi<'info> {
 }
 
 pub fn execute(
-    ctx: Context<SwapStableCollateralIntoUsdi>,
+    ctx: Context<LiquidateCometStableCollateral>,
     comet_collateral_index: u8,
 ) -> Result<()> {
     let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
