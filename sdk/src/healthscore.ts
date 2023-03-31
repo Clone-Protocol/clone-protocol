@@ -172,7 +172,7 @@ export const getILD = (
   comet: Comet,
   poolIndex?: number
 ): { iAssetILD: number, usdiILD: number, poolIndex: number, oraclePrice: number }[] => {
-  let results = [];
+  let results: { iAssetILD: number, usdiILD: number, poolIndex: number, oraclePrice: number }[] = [];
 
   comet.positions.slice(0, Number(comet.numPositions)).forEach((position) => {
     if (poolIndex !== undefined && poolIndex !== Number(position.poolIndex)) {
