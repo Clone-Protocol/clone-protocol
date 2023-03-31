@@ -1,15 +1,34 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use anchor_spl::token::{self, MintTo};
-use pyth::pc::Price;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
+use pyth_sdk_solana::Price;
 
 declare_id!("97w9ahzStYbcNJZasNaGj6UQ6ruQou4n1nGozdQi6poJ");
 
 const DEVNET_TOKEN_SCALE: u32 = 8;
 const USDC_TOKEN_SCALE: u8 = 7;
 const NUM_ASSETS: usize = 10;
+
+#[cfg(feature = "pyth-local")]
+pub fn load_price_from_pyth(pyth_oracle: &AccountInfo) -> Result<Price> {
+    use pyth::pc::Price as LocalPrice;
+    let price_feed = LocalPrice::load(pyth_oracle).unwrap();
+    Ok(Price {
+        price: price_feed.agg.price,
+        expo: price_feed.expo,
+        conf: price_feed.agg.conf,
+        publish_time: price_feed.valid_slot.try_into().unwrap(),
+    })
+}
+
+#[cfg(not(feature = "pyth-local"))]
+pub fn load_price_from_pyth(pyth_oracle: &AccountInfo) -> Result<Price> {
+    use pyth_sdk_solana::load_price_feed_from_account_info;
+    let price_feed = load_price_feed_from_account_info(pyth_oracle).unwrap();
+    Ok(price_feed.get_price_unchecked())
+}
 
 /// Lib
 #[program]
@@ -87,10 +106,10 @@ pub mod jupiter_agg_mock {
         let seeds = &[&[b"jupiter", bytemuck::bytes_of(&nonce)][..]];
 
         // Get oracle price
-        let price_feed = Price::load(&ctx.accounts.pyth_oracle)?;
+        let price_feed = load_price_from_pyth(&ctx.accounts.pyth_oracle)?;
         let price = rust_decimal::Decimal::new(
-            price_feed.agg.price,
-            price_feed.expo.abs().try_into().unwrap(),
+            price_feed.price,
+            (-price_feed.expo).try_into().unwrap(),
         );
 
         if is_amount_asset {
