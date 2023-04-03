@@ -95,7 +95,7 @@ const generatePeggingInstructions = async (
       pool,
       iassetRequiredToBuy,
       false
-    );
+    ).input;
     if (usdiRequired > usdiBalance) {
       ixCalls.push(
         incept.hackathonMintUsdiInstruction(
@@ -132,7 +132,7 @@ const generatePeggingInstructions = async (
       pool,
       iassetRequiredToSell,
       false
-    );
+    ).output;
 
     // Check if we have a borrow position already
     let borrowPositionIndex = -1;
