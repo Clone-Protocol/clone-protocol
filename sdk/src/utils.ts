@@ -328,11 +328,11 @@ export const recenterProcedureInstructions = (
 ): {
   healthScore: number;
   usdiCost: number;
-  ixs: Promise<TransactionInstruction | Transaction>[];
+  ixs: Promise<TransactionInstruction>[];
   upperPrice?: number;
   lowerPrice?: number;
 } => {
-  let ixs: Promise<TransactionInstruction | Transaction>[] = [
+  let ixs: Promise<TransactionInstruction>[] = [
     incept.updatePricesInstruction(),
   ];
   const isSinglePool = comet.isSinglePool.toNumber() === 1;
