@@ -1487,7 +1487,7 @@ export class InceptClient {
   }
   public async payCometILDInstruction(
     cometPositionIndex: number,
-    collateralAmount: number,
+    authorizedAmount: number,
     payUsdiDebt: boolean,
     userIassetTokenAccount: PublicKey,
     userUsdiTokenAccount: PublicKey,
@@ -1507,7 +1507,7 @@ export class InceptClient {
     return await this.program.methods
       .payImpermanentLossDebt(
         cometPositionIndex,
-        new BN(collateralAmount),
+        new BN(authorizedAmount),
         payUsdiDebt
       )
       .accounts({
