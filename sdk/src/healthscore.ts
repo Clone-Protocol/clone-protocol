@@ -1,6 +1,7 @@
 import { TokenData, Comet } from "./interfaces";
 import { toNumber } from "./decimal";
 import { CalculationError } from "./error";
+import { floorToDevnetScale } from "./utils"
 
 export const getEffectiveUSDCollateralValue = (
   tokenData: TokenData,
@@ -137,7 +138,7 @@ export const getSinglePoolILD = (
   cometIndex: number,
   tokenData: TokenData,
   comet: Comet
-): { ILD: number; ildInUsdi: boolean } => {
+): { iAssetILD: number, usdiILD: number, poolIndex: number, oraclePrice: number } => {
   let position = comet.positions[cometIndex];
   let pool = tokenData.pools[position.poolIndex];
   let poolUsdiAmount = toNumber(pool.usdiAmount);
@@ -149,22 +150,13 @@ export const getSinglePoolILD = (
     toNumber(position.liquidityTokenValue) /
     toNumber(pool.liquidityTokenSupply);
 
-  let claimableUsdi = poolUsdiAmount * claimableRatio;
-  let claimableIasset = poolIassetAmount * claimableRatio;
-  let ILD = 0;
-  let isUsdi = true;
-  if (borrowedUsdi > claimableUsdi) {
-    ILD += borrowedUsdi - claimableUsdi;
-  }
-  if (borrowedIasset > claimableIasset) {
-    const iassetDebt = borrowedIasset - claimableIasset;
+  let claimableUsdi = floorToDevnetScale(poolUsdiAmount * claimableRatio);
+  let claimableIasset = floorToDevnetScale(poolIassetAmount * claimableRatio);
+  let usdiILD = Math.max(floorToDevnetScale(borrowedUsdi - claimableUsdi), 0);
+  let iAssetILD = Math.max(floorToDevnetScale(borrowedIasset - claimableIasset), 0);
+  let oraclePrice = toNumber(pool.assetInfo.price);
 
-    const oracleMarked = toNumber(pool.assetInfo.price) * iassetDebt;
-    ILD += oracleMarked;
-    isUsdi = false;
-  }
-
-  return { ILD: ILD, ildInUsdi: isUsdi };
+  return { iAssetILD, usdiILD, oraclePrice, poolIndex: position.poolIndex }
 };
 
 export const getILD = (
@@ -190,10 +182,10 @@ export const getILD = (
       toNumber(position.liquidityTokenValue) /
       toNumber(pool.liquidityTokenSupply);
 
-    let claimableUsdi = poolUsdiAmount * claimableRatio;
-    let claimableIasset = poolIassetAmount * claimableRatio;
-    let usdiILD = Math.max(borrowedUsdi - claimableUsdi, 0);
-    let iAssetILD = Math.max(borrowedIasset - claimableIasset, 0);
+    let claimableUsdi = floorToDevnetScale(poolUsdiAmount * claimableRatio);
+    let claimableIasset = floorToDevnetScale(poolIassetAmount * claimableRatio);
+    let usdiILD = Math.max(floorToDevnetScale(borrowedUsdi - claimableUsdi), 0);
+    let iAssetILD = Math.max(floorToDevnetScale(borrowedIasset - claimableIasset), 0);
     let oraclePrice = toNumber(pool.assetInfo.price);
 
     results.push({ iAssetILD, usdiILD, oraclePrice, poolIndex: position.poolIndex });
