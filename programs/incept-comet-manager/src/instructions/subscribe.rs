@@ -3,7 +3,6 @@ use crate::error::InceptCometManagerError;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
-use incept::cpi::accounts::AddCollateralToComet;
 use incept::program::Incept as InceptProgram;
 use incept::return_error_if_false;
 use incept::states::{Comet, Incept, TokenData, User, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX};
@@ -109,15 +108,6 @@ pub fn execute(ctx: Context<Subscribe>, collateral_to_provide: u64) -> Result<()
     // Adjust principal
     ctx.accounts.subscriber_account.principal += collateral_to_provide;
 
-    let manager_bump = ctx.accounts.manager_info.bump;
-    let owner = ctx.accounts.manager_info.owner;
-
-    let manager_seeds = &[&[
-        b"manager-info",
-        owner.as_ref(),
-        bytemuck::bytes_of(&manager_bump),
-    ][..]];
-
     token::transfer(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info().clone(),
@@ -138,30 +128,32 @@ pub fn execute(ctx: Context<Subscribe>, collateral_to_provide: u64) -> Result<()
         collateral_to_provide,
     )?;
 
-    drop(token_data);
-    drop(comet);
-    // Add collateral to comet
-    incept::cpi::add_collateral_to_comet(
-        CpiContext::new_with_signer(
-            ctx.accounts.incept_program.to_account_info(),
-            AddCollateralToComet {
-                user: ctx.accounts.manager_info.to_account_info(),
-                user_account: ctx.accounts.manager_incept_user.to_account_info(),
-                incept: ctx.accounts.incept.to_account_info(),
-                token_data: ctx.accounts.token_data.to_account_info(),
-                token_program: ctx.accounts.token_program.to_account_info(),
-                comet: ctx.accounts.comet.to_account_info(),
-                vault: ctx.accounts.incept_usdi_vault.to_account_info(),
-                user_collateral_token_account: ctx
-                    .accounts
-                    .manager_usdi_token_account
-                    .to_account_info(),
-            },
-            manager_seeds,
-        ),
-        USDI_COLLATERAL_INDEX.try_into().unwrap(),
-        collateral_to_provide,
-    )?;
+    // TODO: Create add collateral to comet ix.
+
+    // drop(token_data);
+    // drop(comet);
+    // // Add collateral to comet
+    // incept::cpi::add_collateral_to_comet(
+    //     CpiContext::new_with_signer(
+    //         ctx.accounts.incept_program.to_account_info(),
+    //         AddCollateralToComet {
+    //             user: ctx.accounts.manager_info.to_account_info(),
+    //             user_account: ctx.accounts.manager_incept_user.to_account_info(),
+    //             incept: ctx.accounts.incept.to_account_info(),
+    //             token_data: ctx.accounts.token_data.to_account_info(),
+    //             token_program: ctx.accounts.token_program.to_account_info(),
+    //             comet: ctx.accounts.comet.to_account_info(),
+    //             vault: ctx.accounts.incept_usdi_vault.to_account_info(),
+    //             user_collateral_token_account: ctx
+    //                 .accounts
+    //                 .manager_usdi_token_account
+    //                 .to_account_info(),
+    //         },
+    //         manager_seeds,
+    //     ),
+    //     USDI_COLLATERAL_INDEX.try_into().unwrap(),
+    //     collateral_to_provide,
+    // )?;
 
     Ok(())
 }

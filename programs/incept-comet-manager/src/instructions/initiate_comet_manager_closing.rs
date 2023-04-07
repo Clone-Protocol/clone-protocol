@@ -35,6 +35,7 @@ pub fn execute(ctx: Context<InitiateCometManagerClosing>) -> Result<()> {
         InceptCometManagerError::OpenStatusRequired
     );
     let forcefully_closed = (ctx.accounts.manager_info.redemption_strikes as u64) >= MAX_STRIKES;
+    let comet = ctx.accounts.comet.load()?;
 
     if !forcefully_closed {
         return_error_if_false!(
@@ -42,12 +43,19 @@ pub fn execute(ctx: Context<InitiateCometManagerClosing>) -> Result<()> {
             InceptCometManagerError::RequireManagerAtStrikeLimit
         );
         return_error_if_false!(
-            ctx.accounts.comet.load()?.num_positions == 0,
+            comet.num_positions == 0,
             InceptCometManagerError::CometMustHaveNoPositions
         );
         return_error_if_false!(
             ctx.accounts.manager_info.user_redemptions.is_empty(),
             InceptCometManagerError::RedemptionsMustBeFulfilled
+        );
+        return_error_if_false!(
+            comet.collaterals[0usize]
+                .collateral_amount
+                .to_decimal()
+                .is_zero(),
+            InceptCometManagerError::CometMustHaveNoPositions
         );
     }
 
