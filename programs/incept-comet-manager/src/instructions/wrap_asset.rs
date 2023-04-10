@@ -1,7 +1,7 @@
 use crate::error::InceptCometManagerError;
 use crate::states::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token::{*};
+use anchor_spl::token::*;
 use incept::cpi::accounts::WrapAsset as WrapAssetIncept;
 use incept::program::Incept as InceptProgram;
 use incept::return_error_if_false;

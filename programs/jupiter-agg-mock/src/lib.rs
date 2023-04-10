@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use anchor_spl::token::{self, MintTo};
+use pyth_sdk_solana::Price;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-use pyth_sdk_solana::Price;
 
 declare_id!("4tChJFNsWLMyk81ezv8N8gKVb2q7H1akSQENn4NToSuS");
 
@@ -107,10 +107,8 @@ pub mod jupiter_agg_mock {
 
         // Get oracle price
         let price_feed = load_price_from_pyth(&ctx.accounts.pyth_oracle)?;
-        let price = rust_decimal::Decimal::new(
-            price_feed.price,
-            (-price_feed.expo).try_into().unwrap(),
-        );
+        let price =
+            rust_decimal::Decimal::new(price_feed.price, (-price_feed.expo).try_into().unwrap());
 
         if is_amount_asset {
             let iasset_decimal =
