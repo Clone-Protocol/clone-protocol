@@ -58,7 +58,6 @@ pub struct MintUSDI<'info> {
     )]
     pub incept_usdc_vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
 }
 
 pub fn execute(ctx: Context<MintUSDI>, amount: u64) -> Result<()> {

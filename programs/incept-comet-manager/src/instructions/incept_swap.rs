@@ -76,7 +76,6 @@ pub struct InceptSwap<'info> {
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
 }
 
 pub fn execute(

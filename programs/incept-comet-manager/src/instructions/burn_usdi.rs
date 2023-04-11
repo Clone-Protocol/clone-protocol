@@ -59,7 +59,6 @@ pub struct BurnUSDI<'info> {
     )]
     pub incept_usdc_vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
 }
 
 pub fn execute(ctx: Context<BurnUSDI>, amount: u64) -> Result<()> {

@@ -58,7 +58,6 @@ pub struct UnwrapIasset<'info> {
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
 }
 
 pub fn execute(ctx: Context<UnwrapIasset>, amount: u64, pool_index: u8) -> Result<()> {

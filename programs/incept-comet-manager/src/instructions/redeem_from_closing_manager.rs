@@ -73,7 +73,6 @@ pub struct RedeemFromClosingManager<'info> {
     )]
     pub incept_usdi_vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
 }
 
 pub fn execute(ctx: Context<RedeemFromClosingManager>) -> Result<()> {
@@ -99,7 +98,7 @@ pub fn execute(ctx: Context<RedeemFromClosingManager>) -> Result<()> {
     );
 
     let token_data = ctx.accounts.token_data.load()?;
-    let estimated_usdi_comet_value = comet.estimate_usdi_value(&token_data);
+    let estimated_usdi_comet_value = ctx.accounts.manager_info.current_usdi_value()?;
     let tokens_redeemed = Decimal::new(
         membership_tokens_to_redeem.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,

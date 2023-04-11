@@ -5,7 +5,7 @@ use anchor_spl::token::{self, *};
 use incept::program::Incept as InceptProgram;
 use incept::return_error_if_false;
 use incept::states::{
-    Comet, Incept, TokenData, User, BPS_SCALE, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX,
+    Incept, TokenData, User, BPS_SCALE, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX,
 };
 use rust_decimal::prelude::*;
 
@@ -59,11 +59,6 @@ pub struct FulfillRedemptionRequest<'info> {
     pub incept_program: Program<'info, InceptProgram>,
     #[account(
         mut,
-        address = manager_incept_user.comet
-    )]
-    pub comet: AccountLoader<'info, Comet>,
-    #[account(
-        mut,
         address = incept.token_data
     )]
     pub token_data: AccountLoader<'info, TokenData>,
@@ -73,13 +68,10 @@ pub struct FulfillRedemptionRequest<'info> {
     )]
     pub incept_usdi_vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
 }
 
 pub fn execute(ctx: Context<FulfillRedemptionRequest>, index: u8) -> Result<()> {
     // Calculate usdi value to withdraw according to tokens redeemed.
-    let token_data = ctx.accounts.token_data.load()?;
-    let comet = ctx.accounts.comet.load()?;
     return_error_if_false!(
         matches!(ctx.accounts.manager_info.status, CometManagerStatus::Open),
         InceptCometManagerError::OpenStatusRequired
@@ -92,7 +84,7 @@ pub fn execute(ctx: Context<FulfillRedemptionRequest>, index: u8) -> Result<()> 
 
     let redemption_request = ctx.accounts.subscriber_account.redemption_request.unwrap();
 
-    let estimated_usdi_comet_value = comet.estimate_usdi_value(&token_data);
+    let estimated_usdi_comet_value = ctx.accounts.manager_info.current_usdi_value()?;
     let tokens_redeemed = Decimal::new(
         redemption_request.membership_tokens.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,
