@@ -146,4 +146,8 @@ pub mod incept_comet_manager {
     ) -> Result<()> {
         jupiter_mock_swap::execute(ctx, jupiter_nonce, is_buy, asset_index, amount)
     }
+
+    pub fn update_net_value(ctx: Context<UpdateNetValue>) -> Result<()> {
+        update_net_value::execute(ctx)
+    }
 }
