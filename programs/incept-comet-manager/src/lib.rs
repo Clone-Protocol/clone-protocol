@@ -10,6 +10,7 @@ declare_id!("6HAQXsz7ScT5SueXukgDB8ExE9FKeqj5q1z925SujZsu");
 
 #[program]
 pub mod incept_comet_manager {
+
     use super::*;
 
     pub fn initialize(
@@ -63,6 +64,17 @@ pub mod incept_comet_manager {
         add_liquidity::execute(ctx, pool_index, usdi_amount)
     }
 
+    pub fn add_collateral_to_comet(ctx: Context<AddCollateralToComet>, amount: u64) -> Result<()> {
+        add_collateral_to_comet::execute(ctx, amount)
+    }
+
+    pub fn withdraw_collateral_from_comet(
+        ctx: Context<WithdrawCollateralFromComet>,
+        amount: u64,
+    ) -> Result<()> {
+        withdraw_collateral_from_comet::execute(ctx, amount)
+    }
+
     pub fn withdraw_liquidity(
         ctx: Context<WithdrawLiquidity>,
         comet_position_index: u8,
@@ -97,5 +109,41 @@ pub mod incept_comet_manager {
 
     pub fn close_comet_manager(ctx: Context<CloseCometManager>) -> Result<()> {
         close_comet_manager::execute(ctx)
+    }
+
+    pub fn burn_usdi(ctx: Context<BurnUSDI>, amount: u64) -> Result<()> {
+        burn_usdi::execute(ctx, amount)
+    }
+
+    pub fn mint_usdi(ctx: Context<MintUSDI>, amount: u64) -> Result<()> {
+        mint_usdi::execute(ctx, amount)
+    }
+
+    pub fn wrap_asset(ctx: Context<WrapAsset>, amount: u64, pool_index: u8) -> Result<()> {
+        wrap_asset::execute(ctx, amount, pool_index)
+    }
+
+    pub fn unwrap_iasset(ctx: Context<UnwrapIasset>, amount: u64, pool_index: u8) -> Result<()> {
+        unwrap_iasset::execute(ctx, amount, pool_index)
+    }
+
+    pub fn incept_swap(
+        ctx: Context<InceptSwap>,
+        is_buy: bool,
+        pool_index: u8,
+        amount: u64,
+        usdi_threshold: u64,
+    ) -> Result<()> {
+        incept_swap::execute(ctx, is_buy, pool_index, amount, usdi_threshold)
+    }
+
+    pub fn jupiter_mock_swap(
+        ctx: Context<JupiterMockSwap>,
+        jupiter_nonce: u8,
+        is_buy: bool,
+        asset_index: u8,
+        amount: u64,
+    ) -> Result<()> {
+        jupiter_mock_swap::execute(ctx, jupiter_nonce, is_buy, asset_index, amount)
     }
 }
