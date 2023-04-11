@@ -87,13 +87,15 @@ pub fn execute(
         / pool.liquidity_token_supply.to_decimal();
 
     let (from_context, mint_context, mut payment_amount) = if pay_usdi_debt {
-        let claimable_usdi = claimable_ratio * pool.usdi_amount.to_decimal();
+        let mut claimable_usdi = claimable_ratio * pool.usdi_amount.to_decimal();
+        claimable_usdi.rescale(DEVNET_TOKEN_SCALE);
         let borrowed_usdi = comet_position.borrowed_usdi.to_decimal();
         let payment_amount = (borrowed_usdi - claimable_usdi).min(authorized_amount);
-        return_error_if_false!(
-            claimable_usdi < borrowed_usdi,
-            InceptError::InvalidTokenAmount
-        );
+
+        if borrowed_usdi <= claimable_usdi {
+            return Ok(());
+        }
+
         let mut new_borrowed_amount = comet_position.borrowed_usdi.to_decimal() - payment_amount;
         new_borrowed_amount.rescale(DEVNET_TOKEN_SCALE);
         comet.positions[comet_position_index as usize].borrowed_usdi =
@@ -108,13 +110,15 @@ pub fn execute(
             payment_amount,
         )
     } else {
-        let claimable_iasset = claimable_ratio * pool.iasset_amount.to_decimal();
+        let mut claimable_iasset = claimable_ratio * pool.iasset_amount.to_decimal();
+        claimable_iasset.rescale(DEVNET_TOKEN_SCALE);
         let borrowed_iasset = comet_position.borrowed_iasset.to_decimal();
         let payment_amount = (borrowed_iasset - claimable_iasset).min(authorized_amount);
-        return_error_if_false!(
-            claimable_iasset < borrowed_iasset,
-            InceptError::InvalidTokenAmount
-        );
+
+        if borrowed_iasset <= claimable_iasset {
+            return Ok(());
+        }
+
         let mut new_borrowed_amount = comet_position.borrowed_iasset.to_decimal() - payment_amount;
         new_borrowed_amount.rescale(DEVNET_TOKEN_SCALE);
         comet.positions[comet_position_index as usize].borrowed_iasset =

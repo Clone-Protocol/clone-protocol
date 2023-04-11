@@ -3,10 +3,9 @@ use crate::error::InceptCometManagerError;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
-use incept::cpi::accounts::AddCollateralToComet;
 use incept::program::Incept as InceptProgram;
 use incept::return_error_if_false;
-use incept::states::{Comet, Incept, TokenData, User, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX};
+use incept::states::{Incept, TokenData, User, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
@@ -58,11 +57,6 @@ pub struct Subscribe<'info> {
     pub incept_program: Program<'info, InceptProgram>,
     #[account(
         mut,
-        address = manager_incept_user.comet
-    )]
-    pub comet: AccountLoader<'info, Comet>,
-    #[account(
-        mut,
         address = incept.token_data
     )]
     pub token_data: AccountLoader<'info, TokenData>,
@@ -72,7 +66,6 @@ pub struct Subscribe<'info> {
     )]
     pub incept_usdi_vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
 }
 
 pub fn execute(ctx: Context<Subscribe>, collateral_to_provide: u64) -> Result<()> {
@@ -91,13 +84,10 @@ pub fn execute(ctx: Context<Subscribe>, collateral_to_provide: u64) -> Result<()
         InceptCometManagerError::DepositAmountTooLow
     );
 
-    let token_data = ctx.accounts.token_data.load()?;
-    let comet = ctx.accounts.comet.load()?;
-
     let mut membership_token_to_mint = if ctx.accounts.manager_info.membership_token_supply == 0 {
         usdi_collateral_contribution
     } else {
-        let estimated_usdi_comet_value = comet.estimate_usdi_value(&token_data);
+        let estimated_usdi_comet_value = ctx.accounts.manager_info.current_usdi_value()?;
         usdi_collateral_contribution / (usdi_collateral_contribution + estimated_usdi_comet_value)
     };
     membership_token_to_mint.rescale(DEVNET_TOKEN_SCALE);
@@ -108,15 +98,6 @@ pub fn execute(ctx: Context<Subscribe>, collateral_to_provide: u64) -> Result<()
     ctx.accounts.manager_info.membership_token_supply += tokens_to_add;
     // Adjust principal
     ctx.accounts.subscriber_account.principal += collateral_to_provide;
-
-    let manager_bump = ctx.accounts.manager_info.bump;
-    let owner = ctx.accounts.manager_info.owner;
-
-    let manager_seeds = &[&[
-        b"manager-info",
-        owner.as_ref(),
-        bytemuck::bytes_of(&manager_bump),
-    ][..]];
 
     token::transfer(
         CpiContext::new(
@@ -135,31 +116,6 @@ pub fn execute(ctx: Context<Subscribe>, collateral_to_provide: u64) -> Result<()
                 authority: ctx.accounts.subscriber.to_account_info().clone(),
             },
         ),
-        collateral_to_provide,
-    )?;
-
-    drop(token_data);
-    drop(comet);
-    // Add collateral to comet
-    incept::cpi::add_collateral_to_comet(
-        CpiContext::new_with_signer(
-            ctx.accounts.incept_program.to_account_info(),
-            AddCollateralToComet {
-                user: ctx.accounts.manager_info.to_account_info(),
-                user_account: ctx.accounts.manager_incept_user.to_account_info(),
-                incept: ctx.accounts.incept.to_account_info(),
-                token_data: ctx.accounts.token_data.to_account_info(),
-                token_program: ctx.accounts.token_program.to_account_info(),
-                comet: ctx.accounts.comet.to_account_info(),
-                vault: ctx.accounts.incept_usdi_vault.to_account_info(),
-                user_collateral_token_account: ctx
-                    .accounts
-                    .manager_usdi_token_account
-                    .to_account_info(),
-            },
-            manager_seeds,
-        ),
-        USDI_COLLATERAL_INDEX.try_into().unwrap(),
         collateral_to_provide,
     )?;
 

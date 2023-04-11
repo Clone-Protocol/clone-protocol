@@ -1,4 +1,8 @@
 use anchor_lang::prelude::*;
+use incept::{return_error_if_false, states::DEVNET_TOKEN_SCALE};
+use rust_decimal::prelude::*;
+
+use crate::error::InceptCometManagerError;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy)]
 pub struct RedemptionRequest {
@@ -39,12 +43,34 @@ pub struct ManagerInfo {
     pub fee_claim_timestamp: u64,      // 8
     pub redemption_strikes: u8,        // 1
     pub last_strike_timestamp: u64,    // 8
+    net_value_usdi: u64,               // 8
+    pub last_update_slot: u64,         // 8
     pub user_redemptions: Vec<Pubkey>, // 4 + 32 * MAX_USER_REDEMPTIONS
 }
 
 impl ManagerInfo {
     pub const MAX_SIZE: usize =
         32 * 3 + 8 + 32 + 1 + 1 + 16 + 2 + 2 + 8 + 1 + 8 + 4 + 32 * MAX_USER_REDEMPTIONS;
+
+    pub fn current_usdi_value(&self) -> Result<Decimal> {
+        let slot = Clock::get()?.slot;
+        return_error_if_false!(
+            slot <= self.last_update_slot,
+            InceptCometManagerError::OutdatedUpdateSlot
+        );
+        Ok(Decimal::new(
+            self.net_value_usdi.try_into().unwrap(),
+            DEVNET_TOKEN_SCALE,
+        ))
+    }
+
+    pub fn update_current_usdi_value(&mut self, value: Decimal) -> Result<()> {
+        let mut value = value.clone();
+        value.rescale(DEVNET_TOKEN_SCALE);
+        self.net_value_usdi = value.mantissa().try_into().unwrap();
+        self.last_update_slot = Clock::get()?.slot;
+        Ok(())
+    }
 }
 #[account]
 #[derive(Default)]

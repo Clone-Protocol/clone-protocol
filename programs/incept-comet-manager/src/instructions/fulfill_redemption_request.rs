@@ -2,11 +2,10 @@ use crate::error::InceptCometManagerError;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
-use incept::cpi::accounts::WithdrawCollateralFromComet;
 use incept::program::Incept as InceptProgram;
 use incept::return_error_if_false;
 use incept::states::{
-    Comet, Incept, TokenData, User, BPS_SCALE, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX,
+    Incept, TokenData, User, BPS_SCALE, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX,
 };
 use rust_decimal::prelude::*;
 
@@ -60,11 +59,6 @@ pub struct FulfillRedemptionRequest<'info> {
     pub incept_program: Program<'info, InceptProgram>,
     #[account(
         mut,
-        address = manager_incept_user.comet
-    )]
-    pub comet: AccountLoader<'info, Comet>,
-    #[account(
-        mut,
         address = incept.token_data
     )]
     pub token_data: AccountLoader<'info, TokenData>,
@@ -74,13 +68,10 @@ pub struct FulfillRedemptionRequest<'info> {
     )]
     pub incept_usdi_vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
 }
 
 pub fn execute(ctx: Context<FulfillRedemptionRequest>, index: u8) -> Result<()> {
     // Calculate usdi value to withdraw according to tokens redeemed.
-    let token_data = ctx.accounts.token_data.load()?;
-    let comet = ctx.accounts.comet.load()?;
     return_error_if_false!(
         matches!(ctx.accounts.manager_info.status, CometManagerStatus::Open),
         InceptCometManagerError::OpenStatusRequired
@@ -93,7 +84,7 @@ pub fn execute(ctx: Context<FulfillRedemptionRequest>, index: u8) -> Result<()> 
 
     let redemption_request = ctx.accounts.subscriber_account.redemption_request.unwrap();
 
-    let estimated_usdi_comet_value = comet.estimate_usdi_value(&token_data);
+    let estimated_usdi_comet_value = ctx.accounts.manager_info.current_usdi_value()?;
     let tokens_redeemed = Decimal::new(
         redemption_request.membership_tokens.try_into().unwrap(),
         DEVNET_TOKEN_SCALE,
@@ -118,30 +109,6 @@ pub fn execute(ctx: Context<FulfillRedemptionRequest>, index: u8) -> Result<()> 
         manager_info.owner.as_ref(),
         bytemuck::bytes_of(&manager_info.bump),
     ][..]];
-
-    drop(comet);
-    drop(token_data);
-    incept::cpi::withdraw_collateral_from_comet(
-        CpiContext::new_with_signer(
-            ctx.accounts.incept_program.to_account_info(),
-            WithdrawCollateralFromComet {
-                user: ctx.accounts.manager_info.to_account_info(),
-                user_account: ctx.accounts.manager_incept_user.to_account_info(),
-                incept: ctx.accounts.incept.to_account_info(),
-                token_data: ctx.accounts.token_data.to_account_info(),
-                token_program: ctx.accounts.token_program.to_account_info(),
-                comet: ctx.accounts.comet.to_account_info(),
-                vault: ctx.accounts.incept_usdi_vault.to_account_info(),
-                user_collateral_token_account: ctx
-                    .accounts
-                    .manager_usdi_token_account
-                    .to_account_info(),
-            },
-            manager_seeds,
-        ),
-        0,
-        usdi_collateral_to_withdraw.mantissa().try_into().unwrap(),
-    )?;
 
     // Calculate how much to reduce on the subscribers principal as well as reward to the manager.
     let principal_value = Decimal::new(

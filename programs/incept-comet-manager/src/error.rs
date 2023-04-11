@@ -36,4 +36,6 @@ pub enum InceptCometManagerError {
     WithdrawalAmountInvalid,
     #[msg("All redemptions must be fulfilled!")]
     RedemptionsMustBeFulfilled,
+    #[msg("Outdated update slot")]
+    OutdatedUpdateSlot,
 }
