@@ -100,6 +100,43 @@ export const calculateOutputFromInput = (
   return { output, resultPool };
 };
 
+export const calculateOutputFromInputFromParams = (
+  poolUsdi: number,
+  poolIasset: number, 
+  treasuryFeeRate: number,
+  liquidityTradingFeeRate: number,
+  input: number,
+  isInputUsdi: boolean
+) => {
+  const totalFeeRate = liquidityTradingFeeRate + treasuryFeeRate;
+  const feeAdjustment = 1 - totalFeeRate;
+  const invariant = poolIasset * poolUsdi;
+
+  const outputBeforeFees = isInputUsdi
+    ? poolIasset - invariant / (poolUsdi + input)
+    : poolUsdi - invariant / (poolIasset + input);
+  const output = floorToDevnetScale(feeAdjustment * outputBeforeFees);
+  const totalFees = outputBeforeFees - output;
+  const treasuryFee = floorToDevnetScale(
+    (totalFees * treasuryFeeRate) / totalFeeRate
+  );
+  const [resultPoolUsdi, resultPoolIasset] = (() => {
+    if (isInputUsdi) {
+      return [
+        poolUsdi + input,
+        poolIasset - output - treasuryFee
+      ]
+    } else {
+      return [
+        poolUsdi - output - treasuryFee,
+        poolIasset + input
+      ]
+    }
+  })()
+
+  return { output, resultPoolUsdi, resultPoolIasset };
+};
+
 export const calculateInputFromOutput = (
   pool: Pool,
   output: number,
@@ -147,6 +184,44 @@ export const calculateInputFromOutput = (
   return { input, resultPool };
 };
 
+export const calculateInputFromOutputFromParams = (
+  poolUsdi: number,
+  poolIasset: number, 
+  treasuryFeeRate: number,
+  liquidityTradingFeeRate: number,
+  output: number,
+  isOutputUsdi: boolean
+) => {
+  const totalFeeRate = liquidityTradingFeeRate + treasuryFeeRate;
+  const feeAdjustment = 1 - totalFeeRate;
+  const invariant = poolIasset * poolUsdi;
+
+  const outputBeforeFees = output / feeAdjustment;
+  const totalFees = outputBeforeFees - output;
+  const treasuryFee = floorToDevnetScale(
+    (totalFees * treasuryFeeRate) / totalFeeRate
+  );
+  const input = floorToDevnetScale(
+    isOutputUsdi
+      ? invariant / (poolUsdi - outputBeforeFees) - poolIasset
+      : invariant / (poolIasset - outputBeforeFees) - poolUsdi
+  );
+  const [resultPoolUsdi, resultPoolIasset] = (() => {
+    if (isOutputUsdi) {
+      return [
+        poolUsdi - outputBeforeFees - treasuryFee,
+        poolIasset + input
+      ]
+    } else {
+      return [
+        poolUsdi + input,
+        poolIasset - outputBeforeFees - treasuryFee,
+      ]
+    }
+  })()
+  return { input, resultPoolUsdi, resultPoolIasset };
+};
+
 export const calculateExecutionThreshold = (
   iassetAmount: number,
   isBuy: boolean,
@@ -171,6 +246,53 @@ export const calculateExecutionThreshold = (
     expectedUsdiAmount = calculateOutputFromInput(
       pool,
       iassetAmount,
+      false
+    ).output;
+    usdiThresholdAmount = expectedUsdiAmount * (1 - slippage);
+  }
+
+  return {
+    expectedUsdiAmount: floorToDevnetScale(expectedUsdiAmount),
+    usdiThresholdAmount: floorToDevnetScale(usdiThresholdAmount),
+    expectedPrice: floorToDevnetScale(expectedUsdiAmount / iassetAmount),
+    thresholdPrice: floorToDevnetScale(usdiThresholdAmount / iassetAmount),
+  };
+};
+
+
+export const calculateExecutionThresholdFromParams = (
+  iassetAmount: number,
+  isBuy: boolean,
+  poolUsdi: number,
+  poolIasset: number,
+  treasuryTradingFee: number,
+  liquidityTradingFee: number,
+  slippage: number
+): {
+  expectedUsdiAmount: number;
+  usdiThresholdAmount: number;
+  expectedPrice: number;
+  thresholdPrice: number;
+} => {
+  let expectedUsdiAmount;
+  let usdiThresholdAmount;
+  if (isBuy) {
+    expectedUsdiAmount = calculateInputFromOutputFromParams(
+      poolUsdi,
+      poolIasset,
+      iassetAmount,
+      treasuryTradingFee,
+      liquidityTradingFee,
+      false
+    ).input;
+    usdiThresholdAmount = expectedUsdiAmount / (1 - slippage);
+  } else {
+    expectedUsdiAmount = calculateOutputFromInputFromParams(
+      poolUsdi,
+      poolIasset,
+      iassetAmount,
+      treasuryTradingFee,
+      liquidityTradingFee,
       false
     ).output;
     usdiThresholdAmount = expectedUsdiAmount * (1 - slippage);

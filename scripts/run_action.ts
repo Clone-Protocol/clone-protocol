@@ -85,7 +85,12 @@ const main = async (provider: Provider, programId: PublicKey) => {
     let lptokens = toNumber(pool.liquidityTokenSupply);
     console.log("pool:", i, oraclePrice, poolPrice, usdiValue, iassetValue, lptokens)
     //await getOrCreateAssociatedTokenAccount(program.provider, pool.assetInfo.iassetMint);
+
   }
+  // const lookupTableAccount = await program.provider.connection
+  // .getAddressLookupTable(new PublicKey("9kg7Za4f8C4aFZWqxrRqbZ3q2KKqdwA3PvRyy9fBpTpW"))
+  // .then((res) => res.value);
+  // lookupTableAccount?.state.addresses.forEach(x => console.log(x.toString()))
 
 
   //const usdiCollateralTokenAccount = await getUSDiAccount(program);
@@ -118,13 +123,13 @@ let inceptProgramID;
 if (process.env.DEVNET === "1") {
   console.log("RUNNING DEVNET");
   inceptProgramID = new PublicKey(
-    "GHwfUCuT3mtCrqVdsvAQ3VZy8dn6WiouijPfpQpQT61e"
+    "5k28XzdwaWVXaWBwfm4ZFXQAnBaTfzu25k1sHatsnsL1"
   );
   provider = anchor.AnchorProvider.env();//anchor.Provider.env();
 } else {
   console.log("RUNNING LOCALNET");
   inceptProgramID = new PublicKey(
-    "3j5wcCkkjns9wibgXVNAay3gzjZiVvYUbW66vqvjEaS7"
+    "GHwfUCuT3mtCrqVdsvAQ3VZy8dn6WiouijPfpQpQT61e"
   );
   provider = anchor.AnchorProvider.local();
 }
