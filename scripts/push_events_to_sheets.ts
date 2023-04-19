@@ -8,6 +8,7 @@ import {
   TransactionSignature,
 } from "@solana/web3.js";
 import { GoogleSpreadsheet } from "google-spreadsheet";
+import { sleep } from "../sdk/src/utils";
 
 type SwapEvent = {
   blockTime: number;
@@ -63,7 +64,6 @@ const parseEvent = (
   signature: string,
   blockTime: number
 ): EventData => {
-
   const data = log.data;
   const eventId = data.eventId.toNumber();
   const type = log.name as EventType;
@@ -114,41 +114,110 @@ const parseEvent = (
     default:
       throw new Error(`Event type: ${type} not recognized!`);
   }
-
   return { type, event };
 };
 
-const getEvents = async (
+const fetchParsedTransactions = async (
   inceptProgramID: PublicKey,
   provider: AnchorProvider,
-  until?: TransactionSignature
-): Promise<EventData[]> => {
-  const signatures = await provider.connection.getSignaturesForAddress(
-    inceptProgramID,
-    { until },
-    "finalized"
-  );
+  options?: anchor.web3.SignaturesForAddressOptions
+): Promise<{
+  signatures: string[];
+  txns: anchor.web3.ParsedTransactionWithMeta[];
+}> => {
+  const signatures = (
+    await provider.connection.getSignaturesForAddress(
+      inceptProgramID,
+      options,
+      "finalized"
+    )
+  ).map((s) => s.signature);
+
   const config: GetVersionedTransactionConfig = {
     maxSupportedTransactionVersion: 1,
     commitment: "finalized",
   };
 
-  const txns = await Promise.all(
-    signatures.map((s) =>
-      provider.connection.getTransaction(s.signature, config)
-    )
-  );
+  const batchSize = 60;
+  let txns: anchor.web3.ParsedTransactionWithMeta[] = [];
 
+  for (let i = 0; i < Math.ceil(signatures.length / batchSize); i++) {
+    const parsedTxns = await provider.connection.getParsedTransactions(
+      signatures.slice(i * batchSize, (i + 1) * batchSize),
+      config
+    );
+    parsedTxns.forEach((tx) => {
+      if (tx) {
+        txns.push(tx);
+      }
+    });
+    await sleep(1100);
+  }
+  return { signatures, txns };
+};
+
+type InstructionLog = {
+  slot: number;
+  signature: string;
+  blockTime: number;
+  name: string;
+};
+
+const parseLogForInceptIx = (
+  inceptProgramID: PublicKey,
+  txns: anchor.web3.ParsedTransactionWithMeta[],
+  signatures: string[]
+): InstructionLog[] => {
+  const programToken = `Program ${inceptProgramID.toString()}`;
+  const instructionToken = "Program log: Instruction: ";
+
+  let captureInstruction = false;
+  let instructionNames: InstructionLog[] = [];
+
+  for (let [i, tx] of txns.entries()) {
+    if (tx === null || tx === undefined) continue;
+    let signature = signatures[i];
+    let slot = tx.slot;
+    let blockTime = tx.blockTime!;
+    let meta = tx.meta;
+    meta?.logMessages!.forEach((str) => {
+      if (str.startsWith(programToken)) {
+        captureInstruction = true;
+      } else if (str.startsWith(instructionToken) && captureInstruction) {
+        const name = str.replace(instructionToken, "");
+        instructionNames.push({
+          slot,
+          signature,
+          blockTime,
+          name,
+        });
+      } else {
+        captureInstruction = false;
+      }
+    });
+  }
+  return instructionNames.reverse();
+};
+
+const getEvents = (
+  inceptProgramID: PublicKey,
+  provider: AnchorProvider,
+  txns: anchor.web3.ParsedTransactionWithMeta[],
+  signatures: string[]
+): EventData[] => {
   let inceptProgram = new Program<Incept>(IDL, inceptProgramID, provider);
   let parser = new EventParser(inceptProgramID, inceptProgram.coder);
   let events: { type: EventType; event: Event }[] = [];
 
   for (let [i, tx] of txns.entries()) {
     if (tx === null || tx === undefined) continue;
-    let signature = signatures[i].signature;
+    let signature = signatures[i];
     let slot = tx.slot;
     let blockTime = tx.blockTime!;
-    for (let log of parser.parseLogs(tx.meta!.logMessages!)) {
+    let meta = tx.meta;
+    console.log(meta?.logMessages!);
+
+    for (let log of parser.parseLogs(meta!.logMessages!)) {
       events.push(parseEvent(log, slot, signature, blockTime));
     }
   }
@@ -183,9 +252,18 @@ const getMostRecentSignature = async (
   return lastTxStr as TransactionSignature;
 };
 
-const postToSheets = async (eventData: EventData[], doc: GoogleSpreadsheet) => {
+const postToSheets = async (
+  eventData: EventData[],
+  ixLogs: InstructionLog[],
+  doc: GoogleSpreadsheet
+) => {
   // Save last transaction
-  const lastSignature = eventData[eventData.length - 1].event.signature;
+  const lastSignature = (() => {
+    if (ixLogs.length > 0) return ixLogs[eventData.length - 1].signature;
+    if (eventData.length > 0)
+      return eventData[eventData.length - 1].event.signature;
+    throw new Error("Couldn't get last signature!");
+  })();
   const lastTransactionSheet = await doc.sheetsByTitle["Last Transaction"];
   const cellA1 = lastTransactionSheet.getCell(0, 0);
   cellA1.value = lastSignature;
@@ -215,6 +293,11 @@ const postToSheets = async (eventData: EventData[], doc: GoogleSpreadsheet) => {
     const liquidityDeltaSheet = await doc.sheetsByTitle["LiquidityDelta"];
     await liquidityDeltaSheet.addRows(liquidityDeltas);
   }
+
+  if (ixLogs.length > 0) {
+    const ixLogsSheet = await doc.sheetsByTitle["Instruction Logs"];
+    await ixLogsSheet.addRows(ixLogs);
+  }
 };
 
 const main = async () => {
@@ -222,7 +305,7 @@ const main = async () => {
     inceptProgramID: new PublicKey(process.env.INCEPT_PROGRAM_ID!),
     documentId: process.env.DOCUMENT_ID!,
     serviceEmail: process.env.SERVICE_EMAIL!,
-    servicePrivateKey: process.env.SERVICE_PRIVATE_KEY!.replace(/\\n/gm, '\n'),
+    servicePrivateKey: process.env.SERVICE_PRIVATE_KEY!.replace(/\\n/gm, "\n"),
   };
 
   let provider =
@@ -238,10 +321,22 @@ const main = async () => {
 
   let until = await getMostRecentSignature(doc);
 
-  let events = await getEvents(config.inceptProgramID, provider, until);
+  let { signatures, txns } = await fetchParsedTransactions(
+    config.inceptProgramID,
+    provider,
+    { until }
+  );
 
-  if (events.length > 0) {
-    await postToSheets(events, doc);
+  let ixnLogs = parseLogForInceptIx(config.inceptProgramID, txns, signatures);
+  let events: EventData[] = getEvents(
+    config.inceptProgramID,
+    provider,
+    txns,
+    signatures
+  );
+
+  if (events.length > 0 || ixnLogs.length > 0) {
+    await postToSheets(events, ixnLogs, doc);
   }
 };
 
