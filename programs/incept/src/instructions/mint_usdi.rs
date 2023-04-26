@@ -53,8 +53,18 @@ pub fn execute(ctx: Context<MintUSDI>, amount: u64) -> Result<()> {
 
     let collateral = token_data.collaterals[USDC_COLLATERAL_INDEX];
     let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
+    let user_usdc_amount = Decimal::new(
+        ctx.accounts
+            .user_collateral_token_account
+            .amount
+            .try_into()
+            .unwrap(),
+        collateral_scale,
+    );
 
-    let mut usdi_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let mut usdi_value =
+        Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE).min(user_usdc_amount);
+    usdi_value.rescale(DEVNET_TOKEN_SCALE);
 
     // check to see if the collateral used to mint usdi is stable
     let is_stable: Result<bool> = match collateral.stable {
@@ -93,6 +103,7 @@ pub fn execute(ctx: Context<MintUSDI>, amount: u64) -> Result<()> {
     )?;
 
     // mint usdi to user
+    usdi_value.rescale(DEVNET_TOKEN_SCALE);
     let cpi_accounts = MintTo {
         mint: ctx.accounts.usdi_mint.to_account_info().clone(),
         to: ctx
@@ -105,7 +116,7 @@ pub fn execute(ctx: Context<MintUSDI>, amount: u64) -> Result<()> {
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::mint_to(
         CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
-        amount,
+        usdi_value.mantissa().try_into().unwrap(),
     )?;
 
     Ok(())

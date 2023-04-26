@@ -52,7 +52,16 @@ pub fn execute(ctx: Context<BurnUSDI>, amount: u64) -> Result<()> {
 
     let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
 
-    let usdi_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let user_usdi_amount = Decimal::new(
+        ctx.accounts
+            .user_usdi_token_account
+            .amount
+            .try_into()
+            .unwrap(),
+        DEVNET_TOKEN_SCALE,
+    );
+    let usdi_value =
+        Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE).min(user_usdi_amount);
     let mut collateral_value = usdi_value;
     collateral_value.rescale(collateral_scale);
 
@@ -71,7 +80,7 @@ pub fn execute(ctx: Context<BurnUSDI>, amount: u64) -> Result<()> {
             .user_collateral_token_account
             .to_account_info()
             .clone(),
-        authority: ctx.accounts.user.to_account_info().clone(),
+        authority: ctx.accounts.incept.to_account_info().clone(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::transfer(
