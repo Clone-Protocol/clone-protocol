@@ -137,11 +137,17 @@ pub fn calculate_comet_position_loss(
     let pool = token_data.pools[comet_position.pool_index as usize];
     let pool_usdi = pool.usdi_amount.to_decimal();
     let pool_iasset = pool.iasset_amount.to_decimal();
+    let pool_lp_supply = pool.liquidity_token_supply.to_decimal();
 
-    let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
+    let liquidity_proportion = if pool_lp_supply > Decimal::ZERO {
+        calculate_liquidity_proportion_from_liquidity_tokens(
         comet_position.liquidity_token_value.to_decimal(),
-        pool.liquidity_token_supply.to_decimal(),
-    );
+        pool.liquidity_token_supply.to_decimal()
+        )
+    } else {
+        Decimal::ZERO
+    };
+
     let mut claimable_usdi = liquidity_proportion * pool_usdi;
     claimable_usdi.rescale(DEVNET_TOKEN_SCALE);
     let mut claimable_iasset = liquidity_proportion * pool_iasset;
@@ -206,7 +212,6 @@ pub fn calculate_health_score(
         if check_feed_update(pool.asset_info, slot).is_err() {
             return Err(error!(InceptError::OutdatedOracle));
         }
-
         let (impermanent_loss_term, position_term) =
             calculate_comet_position_loss(token_data, &comet_position)?;
 
