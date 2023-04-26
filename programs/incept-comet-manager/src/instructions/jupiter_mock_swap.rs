@@ -38,9 +38,7 @@ pub struct JupiterMockSwap<'info> {
         associated_token::authority = manager_info
     )]
     pub manager_usdc_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        address = manager_info.incept_program
-    )]
+    /// CHECK: Mock program
     pub jupiter_program: Program<'info, JupiterAggMock>,
     #[account(
         seeds = [b"jupiter".as_ref()],
