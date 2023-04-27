@@ -1,5 +1,6 @@
 use crate::error::*;
 use crate::events::*;
+use crate::math::calculate_liquidity_proportion_from_liquidity_tokens;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -121,7 +122,10 @@ pub fn execute(
         DEVNET_TOKEN_SCALE,
     );
 
-    let lp_position_claimable_ratio = liquidity_token_value / liquidity_token_supply;
+    let lp_position_claimable_ratio = calculate_liquidity_proportion_from_liquidity_tokens(
+        liquidity_token_value,
+        liquidity_token_supply,
+    );
 
     let borrowed_usdi = comet_position.borrowed_usdi.to_decimal();
     let borrowed_iasset = comet_position.borrowed_iasset.to_decimal();

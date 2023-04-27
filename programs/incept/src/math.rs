@@ -88,7 +88,11 @@ pub fn calculate_liquidity_proportion_from_liquidity_tokens(
     liquidity_token_value: Decimal,
     liquidity_token_supply: Decimal,
 ) -> Decimal {
-    liquidity_token_value / liquidity_token_supply
+    if liquidity_token_supply > Decimal::ZERO {
+        liquidity_token_value / liquidity_token_supply
+    } else {
+        Decimal::ZERO
+    }
 }
 
 pub fn calculate_liquidity_proportion_from_usdi(
@@ -138,15 +142,10 @@ pub fn calculate_comet_position_loss(
     let pool_usdi = pool.usdi_amount.to_decimal();
     let pool_iasset = pool.iasset_amount.to_decimal();
     let pool_lp_supply = pool.liquidity_token_supply.to_decimal();
-
-    let liquidity_proportion = if pool_lp_supply > Decimal::ZERO {
-        calculate_liquidity_proportion_from_liquidity_tokens(
+    let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
         comet_position.liquidity_token_value.to_decimal(),
-        pool.liquidity_token_supply.to_decimal()
-        )
-    } else {
-        Decimal::ZERO
-    };
+        pool_lp_supply,
+    );
 
     let mut claimable_usdi = liquidity_proportion * pool_usdi;
     claimable_usdi.rescale(DEVNET_TOKEN_SCALE);
