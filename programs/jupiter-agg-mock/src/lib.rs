@@ -186,7 +186,10 @@ pub mod jupiter_agg_mock {
                     cpi_accounts,
                     seeds,
                 );
-                token::burn(burn_usdi_context, amount)?;
+                token::burn(
+                    burn_usdi_context,
+                    usdc_amount.mantissa().try_into().unwrap(),
+                )?;
             }
         } else {
             let usdi_decimal =

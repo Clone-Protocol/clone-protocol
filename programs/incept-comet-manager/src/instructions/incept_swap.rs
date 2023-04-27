@@ -35,7 +35,7 @@ pub struct InceptSwap<'info> {
     pub manager_usdi_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        associated_token::mint = iasset_mint,
+        associated_token::mint = usdi_mint,
         associated_token::authority = incept.treasury_address
     )]
     pub treasury_usdi_token_account: Box<Account<'info, TokenAccount>>,
