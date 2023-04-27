@@ -40,10 +40,7 @@ pub struct JupiterMockSwap<'info> {
     pub manager_usdc_token_account: Box<Account<'info, TokenAccount>>,
     /// CHECK: Mock program
     pub jupiter_program: Program<'info, JupiterAggMock>,
-    #[account(
-        seeds = [b"jupiter".as_ref()],
-        bump = jupiter_nonce,
-    )]
+    /// CHECK: Mock program account
     pub jupiter_account: AccountLoader<'info, Jupiter>,
     pub token_program: Program<'info, Token>,
     /// CHECK: Mock program
