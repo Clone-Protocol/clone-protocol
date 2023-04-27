@@ -280,9 +280,9 @@ export const calculateExecutionThresholdFromParams = (
     expectedUsdiAmount = calculateInputFromOutputFromParams(
       poolUsdi,
       poolIasset,
-      iassetAmount,
       treasuryTradingFee,
       liquidityTradingFee,
+      iassetAmount,
       false
     ).input;
     usdiThresholdAmount = expectedUsdiAmount / (1 - slippage);
@@ -290,9 +290,9 @@ export const calculateExecutionThresholdFromParams = (
     expectedUsdiAmount = calculateOutputFromInputFromParams(
       poolUsdi,
       poolIasset,
-      iassetAmount,
       treasuryTradingFee,
       liquidityTradingFee,
+      iassetAmount,
       false
     ).output;
     usdiThresholdAmount = expectedUsdiAmount * (1 - slippage);
