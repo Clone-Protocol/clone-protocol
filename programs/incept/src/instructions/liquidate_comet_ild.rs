@@ -122,8 +122,10 @@ pub fn execute(
     let authorized_amount = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
     let pool_index = comet_position.pool_index as usize;
     let pool = token_data.pools[pool_index];
-    let claimable_ratio = comet_position.liquidity_token_value.to_decimal()
-        / pool.liquidity_token_supply.to_decimal();
+    let claimable_ratio = calculate_liquidity_proportion_from_liquidity_tokens(
+        comet_position.liquidity_token_value.to_decimal(),
+        pool.liquidity_token_supply.to_decimal(),
+    );
 
     let (from_context, mint_context, mut payment_amount) = if pay_usdi_debt {
         let claimable_usdi = claimable_ratio * pool.usdi_amount.to_decimal();

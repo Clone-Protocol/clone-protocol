@@ -78,11 +78,20 @@ pub fn execute(
     let mut comet = ctx.accounts.comet.load_mut()?;
 
     let collateral = token_data.collaterals[collateral_index as usize];
+    let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
 
-    let added_collateral_value = Decimal::new(
-        collateral_amount.try_into().unwrap(),
-        collateral.vault_comet_supply.to_decimal().scale(),
+    let user_collateral_in_account = Decimal::new(
+        ctx.accounts
+            .user_collateral_token_account
+            .amount
+            .try_into()
+            .unwrap(),
+        collateral_scale,
     );
+
+    let added_collateral_value =
+        Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale)
+            .min(user_collateral_in_account);
 
     let current_vault_comet_supply = collateral.vault_comet_supply.to_decimal();
     let mut new_vault_comet_supply = current_vault_comet_supply + added_collateral_value;

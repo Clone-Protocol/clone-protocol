@@ -241,15 +241,15 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, usdi_amount: u
         DEVNET_TOKEN_SCALE,
     );
 
-    let pool = token_data.pools[pool_index as usize];
-
-    if !empty_pool {
-        return_error_if_false!(
-            liquidity_token_value / pool.liquidity_token_supply.to_decimal()
-                <= pool.asset_info.max_ownership_pct.to_decimal(),
-            InceptError::MaxPoolOwnershipExceeded
-        );
-    }
+    // TODO: Might not be needed anymore...
+    // let pool = token_data.pools[pool_index as usize];
+    // if !empty_pool {
+    //     return_error_if_false!(
+    //         liquidity_token_value / pool.liquidity_token_supply.to_decimal()
+    //             <= pool.asset_info.max_ownership_pct.to_decimal(),
+    //         InceptError::MaxPoolOwnershipExceeded
+    //     );
+    // }
     // Require a healthy score after transactions
     let health_score = calculate_health_score(&comet, token_data, None)?;
 

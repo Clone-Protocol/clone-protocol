@@ -63,10 +63,11 @@ pub fn execute(
 
     let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
 
-    let subtracted_collateral_value =
+    let mut subtracted_collateral_value =
         Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale)
             .min(comet_collateral.collateral_amount.to_decimal());
 
+    subtracted_collateral_value.rescale(collateral_scale);
     // subtract collateral amount from vault supply
     let mut vault_comet_supply =
         collateral.vault_comet_supply.to_decimal() - subtracted_collateral_value;
@@ -99,9 +100,8 @@ pub fn execute(
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::transfer(
         CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
-        collateral_amount,
+        subtracted_collateral_value.mantissa().try_into().unwrap(),
     )?;
-
     let health_score = calculate_health_score(&comet, token_data, None)?;
 
     return_error_if_false!(health_score.is_healthy(), InceptError::HealthScoreTooLow);

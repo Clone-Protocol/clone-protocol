@@ -78,7 +78,7 @@ pub fn execute(ctx: Context<WrapAsset>, amount: u64, pool_index: u8) -> Result<(
         amount,
     )?;
 
-    // mint usdi to user
+    // mint iasset to user
     let cpi_accounts = MintTo {
         mint: ctx.accounts.iasset_mint.to_account_info().clone(),
         to: ctx

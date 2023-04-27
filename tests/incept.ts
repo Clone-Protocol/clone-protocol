@@ -272,6 +272,30 @@ describe("incept", async () => {
     assert.equal(tokenData.collaterals[2].stable.toNumber(), 0);
   });
 
+  // it("temp step: initialize liquidity:", async () => {
+  //   await inceptClient.initializeSinglePoolComet(0, 0);
+
+  //   mockUSDCTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+  //     inceptClient.provider,
+  //     mockUSDCMint.publicKey
+  //   );
+  //   usdiTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+  //     inceptClient.provider,
+  //     inceptClient.incept!.usdiMint,
+  //   );
+  //   await inceptClient.hackathonMintUsdi(
+  //     usdiTokenAccountInfo.address,
+  //     toDevnetScale(2000),
+  //   );
+  //   await inceptClient.addCollateralToSinglePoolComet(
+  //     usdiTokenAccountInfo.address,
+  //     toDevnetScale(2000),
+  //     0
+  //   );
+
+  //   await inceptClient.addLiquidityToSinglePoolComet(toDevnetScale(10000), 0);
+  // })
+
   it("create address lookup table", async () => {
     const slot = await inceptClient.provider.connection.getSlot("finalized");
     const thisPubKey = inceptClient.provider.publicKey!;
