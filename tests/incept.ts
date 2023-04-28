@@ -454,7 +454,7 @@ describe("incept", async () => {
   });
 
   it("mock usdc minted!", async () => {
-    const usdcMintAmount = new BN("10000000000000000000");
+    const usdcMintAmount = new BN("10000000000000000");
     mockUSDCTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       inceptClient.provider,
       mockUSDCMint.publicKey
@@ -475,7 +475,7 @@ describe("incept", async () => {
     );
     assert.equal(
       Number(mockUSDCTokenAccountInfo.amount) / 10000000,
-      1000000000000,
+      1000000000,
       "check USDC amount"
     );
   });
@@ -491,13 +491,12 @@ describe("incept", async () => {
     );
 
     const mintAmount = 1000000;
-
+    const USDC_SCALE = 7;
     await inceptClient.mintUsdi(
-      1000000,
+      mintAmount,
       usdiTokenAccountInfo.address,
       mockUSDCTokenAccountInfo.address
     );
-    const USDC_SCALE = 7;
     const startingAmount =
       Number(mockUSDCTokenAccountInfo.amount) * Math.pow(10, -USDC_SCALE);
 
@@ -607,7 +606,7 @@ describe("incept", async () => {
     );
     assert.equal(
       Number(mockUSDCTokenAccountInfo.amount) / 10000000,
-      999979000000,
+      979000000,
       "check USDC amount"
     );
 
@@ -674,7 +673,7 @@ describe("incept", async () => {
     );
     assert.equal(
       Number(mockUSDCTokenAccountInfo.amount) / 10000000,
-      999999000000,
+      999000000,
       "check USDC amount"
     );
 
@@ -743,7 +742,7 @@ describe("incept", async () => {
     );
     assert.equal(
       Number(mockUSDCTokenAccountInfo.amount) / 10000000,
-      999978999900,
+      978999900,
       "check USDC amount"
     );
 
@@ -795,7 +794,7 @@ describe("incept", async () => {
     );
     assert.equal(
       Number(mockUSDCTokenAccountInfo.amount) / 10000000,
-      999979000000,
+      979000000,
       "check USDC amount"
     );
 
