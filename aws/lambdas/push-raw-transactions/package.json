@@ -1,0 +1,17 @@
+{
+  "name": "push-raw-transactions",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --timeout 10000"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.27.0",
+    "mocha": "^10.2.0",
+    "pg": "^8.10.0",
+    "pg-promise": "^11.4.3"
+  }
+}
