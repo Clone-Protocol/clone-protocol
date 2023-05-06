@@ -72,7 +72,7 @@ exports.extract = (raw) => {
 
     if (logMessages) {
         for (let log of parser.parseLogs(meta.logMessages))  {
-          parsedEvents.push(parseEvent(log, slot, indexWithinBlock, blockTime));
+          parsedEvents.push(parseEvent(log, slot, blockTime));
         }
     }
 
