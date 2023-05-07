@@ -26,3 +26,15 @@ exports.insertEvent = async (db, event) => {
   );
   return
 }
+
+exports.insertEvents = async (pgp, db, events) => {
+  // Generate a multi-row INSERT query using the pg-promise helpers
+  const columns = [
+    'block_time', 'slot', 'event_id', 'user_id', 'pool_index',
+    'is_buy', 'iasset', 'usdi', 'trading_fee', 'treasury_fee'
+  ];
+  const query = pgp.helpers.insert(events, columns, 'swap_event');
+
+  // Execute the query to insert all events in a single transaction
+  await db.none(query);
+}
