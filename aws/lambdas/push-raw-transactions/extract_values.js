@@ -41,7 +41,7 @@ const parseEvent = (
         blockTime,
         slot,
         eventId,
-        user: data.user.toString(),
+        userId: data.user.toString(),
         poolIndex: data.poolIndex,
         isBuy: data.isBuy,
         iasset: data.iasset.toString(),
