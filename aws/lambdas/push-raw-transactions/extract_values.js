@@ -41,7 +41,7 @@ const parseEvent = (
         blockTime,
         slot,
         eventId,
-        user: data.user.toString(),
+        userId: data.user.toString(),
         poolIndex: data.poolIndex,
         isBuy: data.isBuy,
         iasset: data.iasset.toString(),
@@ -72,7 +72,7 @@ exports.extract = (raw) => {
 
     if (logMessages) {
         for (let log of parser.parseLogs(meta.logMessages))  {
-          parsedEvents.push(parseEvent(log, slot, indexWithinBlock, blockTime));
+          parsedEvents.push(parseEvent(log, slot, blockTime));
         }
     }
 
