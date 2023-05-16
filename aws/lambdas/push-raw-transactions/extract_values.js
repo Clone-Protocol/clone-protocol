@@ -50,6 +50,21 @@ const parseEvent = (
         treasuryFee: data.treasuryFee.toString(),
       };
       break;
+    case "BorrowUpdate":  
+      event = {
+        blockTime,
+        slot,
+        eventId,
+        poolIndex: data.poolIndex,
+        userId: data.user.toString(),
+        isLiquidation: data.isLiquidation,
+        collateralSupplied: data.collateralSupplied.toString(),
+        collateralDelta: data.collateralDelta.toString(),
+        collateralIndex: data.collateralIndex,
+        borrowedAmount: data.borrowedAmount.toString(),
+        borrowedDelta: data.borrowedDelta.toString(),
+      }
+      break;
     default:
       throw new Error(`Event type: ${type} not recognized!`);
   }
