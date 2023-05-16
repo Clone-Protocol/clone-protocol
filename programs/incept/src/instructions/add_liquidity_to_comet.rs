@@ -118,8 +118,8 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, usdi_amount: u
             return Err(InceptError::AttemptedToAddNewPoolToSingleComet.into());
         }
 
-        iasset_liquidity_value.rescale(DEVNET_TOKEN_SCALE);
-        liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
+        iasset_liquidity_value = rescale_toward_zero(iasset_liquidity_value, DEVNET_TOKEN_SCALE);
+        liquidity_token_value = rescale_toward_zero(liquidity_token_value, DEVNET_TOKEN_SCALE);
 
         comet.add_position(CometPosition {
             authority: *ctx.accounts.user.to_account_info().key,
@@ -135,14 +135,18 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, usdi_amount: u
     } else {
         let position = comet.positions[comet_position_index];
         // update comet position data
-        let mut borrowed_usdi = position.borrowed_usdi.to_decimal() + usdi_liquidity_value;
-        borrowed_usdi.rescale(DEVNET_TOKEN_SCALE);
+        let borrowed_usdi = rescale_toward_zero(
+            position.borrowed_usdi.to_decimal() + usdi_liquidity_value,
+            DEVNET_TOKEN_SCALE,
+        );
 
-        let mut borrowed_iasset = position.borrowed_iasset.to_decimal() + iasset_liquidity_value;
-        borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
+        let borrowed_iasset = rescale_toward_zero(
+            position.borrowed_iasset.to_decimal() + iasset_liquidity_value,
+            DEVNET_TOKEN_SCALE,
+        );
 
         liquidity_token_value += position.liquidity_token_value.to_decimal();
-        liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
+        liquidity_token_value = rescale_toward_zero(liquidity_token_value, DEVNET_TOKEN_SCALE);
 
         lp_tokens_to_mint = liquidity_token_value
             - comet.positions[comet_position_index]
@@ -155,9 +159,8 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, usdi_amount: u
             RawDecimal::from(liquidity_token_value);
     }
 
-    iasset_liquidity_value.rescale(DEVNET_TOKEN_SCALE);
-    liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
-    lp_tokens_to_mint.rescale(DEVNET_TOKEN_SCALE);
+    iasset_liquidity_value = rescale_toward_zero(iasset_liquidity_value, DEVNET_TOKEN_SCALE);
+    lp_tokens_to_mint = rescale_toward_zero(lp_tokens_to_mint, DEVNET_TOKEN_SCALE);
 
     // mint liquidity into amm
     let cpi_accounts = MintTo {
@@ -266,8 +269,7 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, usdi_amount: u
     });
 
     let pool = token_data.pools[pool_index as usize];
-    let mut oracle_price = pool.asset_info.price.to_decimal();
-    oracle_price.rescale(DEVNET_TOKEN_SCALE);
+    let oracle_price = rescale_toward_zero(pool.asset_info.price.to_decimal(), DEVNET_TOKEN_SCALE);
 
     emit!(PoolState {
         event_id: ctx.accounts.incept.event_counter,

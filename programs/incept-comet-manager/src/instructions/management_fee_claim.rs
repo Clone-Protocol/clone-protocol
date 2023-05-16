@@ -2,6 +2,7 @@ use crate::config::{FEE_CLAIM_INTERVAL_SECONDS, MAX_STRIKES, REPLENISH_STRIKE_IN
 use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
+use incept::math::rescale_toward_zero;
 use incept::return_error_if_false;
 use incept::states::DEVNET_TOKEN_SCALE;
 use rust_decimal::prelude::*;
@@ -58,9 +59,10 @@ pub fn execute(ctx: Context<ManagementFeeClaim>) -> Result<()> {
         DEVNET_TOKEN_SCALE,
     );
 
-    let mut membership_token_to_mint =
-        total_membership_token_supply * management_fee_rate / (Decimal::ONE - management_fee_rate);
-    membership_token_to_mint.rescale(DEVNET_TOKEN_SCALE);
+    let membership_token_to_mint = rescale_toward_zero(
+        total_membership_token_supply * management_fee_rate / (Decimal::ONE - management_fee_rate),
+        DEVNET_TOKEN_SCALE,
+    );
 
     // Mint membership
     let tokens_to_add: u64 = membership_token_to_mint.mantissa().try_into().unwrap();

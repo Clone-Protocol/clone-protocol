@@ -72,22 +72,27 @@ pub fn execute(
 
     // subtract collateral amount from vault supply
     let current_vault_mint_supply = collateral.vault_mint_supply.to_decimal();
-    let mut new_vault_mint_supply = current_vault_mint_supply - amount_value;
-    new_vault_mint_supply.rescale(current_vault_mint_supply.scale());
+    let new_vault_mint_supply = rescale_toward_zero(
+        current_vault_mint_supply - amount_value,
+        current_vault_mint_supply.scale(),
+    );
     token_data.collaterals
         [borrow_positions.borrow_positions[borrow_index as usize].collateral_index as usize]
         .vault_mint_supply = RawDecimal::from(new_vault_mint_supply);
 
     // subtract collateral amount from mint data
-    let mut new_collateral_amount = mint_position.collateral_amount.to_decimal() - amount_value;
-    new_collateral_amount.rescale(DEVNET_TOKEN_SCALE);
+    let new_collateral_amount = rescale_toward_zero(
+        mint_position.collateral_amount.to_decimal() - amount_value,
+        DEVNET_TOKEN_SCALE,
+    );
     borrow_positions.borrow_positions[borrow_index as usize].collateral_amount =
         RawDecimal::from(new_collateral_amount);
     let slot = Clock::get()?.slot;
 
-    let mut new_supplied_collateral =
-        pool.supplied_mint_collateral_amount.to_decimal() - amount_value;
-    new_supplied_collateral.rescale(DEVNET_TOKEN_SCALE);
+    let new_supplied_collateral = rescale_toward_zero(
+        pool.supplied_mint_collateral_amount.to_decimal() - amount_value,
+        DEVNET_TOKEN_SCALE,
+    );
     token_data.pools[mint_position.pool_index as usize].supplied_mint_collateral_amount =
         RawDecimal::from(new_supplied_collateral);
 

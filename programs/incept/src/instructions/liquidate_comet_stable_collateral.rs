@@ -102,7 +102,7 @@ pub fn execute(
                 + collateral_to_convert,
         );
 
-    collateral_to_convert.rescale(DEVNET_TOKEN_SCALE);
+    collateral_to_convert = rescale_toward_zero(collateral_to_convert, DEVNET_TOKEN_SCALE);
     // USDi is at 0 index
     comet.collaterals[0usize].collateral_amount = RawDecimal::from(
         comet.collaterals[0usize].collateral_amount.to_decimal() + collateral_to_convert,

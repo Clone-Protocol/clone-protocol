@@ -159,14 +159,18 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Resul
     )?;
 
     // Update data
-    let mut new_minted_amount = pool.total_minted_amount.to_decimal() - borrowed_iasset;
-    new_minted_amount.rescale(DEVNET_TOKEN_SCALE);
+    let new_minted_amount = rescale_toward_zero(
+        pool.total_minted_amount.to_decimal() - borrowed_iasset,
+        DEVNET_TOKEN_SCALE,
+    );
     token_data.pools[mint_position.pool_index as usize].total_minted_amount =
         RawDecimal::from(new_minted_amount);
 
-    let mut new_supplied_collateral = pool.supplied_mint_collateral_amount.to_decimal()
-        - mint_position.collateral_amount.to_decimal();
-    new_supplied_collateral.rescale(DEVNET_TOKEN_SCALE);
+    let new_supplied_collateral = rescale_toward_zero(
+        pool.supplied_mint_collateral_amount.to_decimal()
+            - mint_position.collateral_amount.to_decimal(),
+        DEVNET_TOKEN_SCALE,
+    );
     token_data.pools[mint_position.pool_index as usize].supplied_mint_collateral_amount =
         RawDecimal::from(new_supplied_collateral);
 

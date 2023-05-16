@@ -113,7 +113,8 @@ pub mod jupiter_agg_mock {
         if is_amount_asset {
             let iasset_decimal =
                 rust_decimal::Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
-            let mut usdc_amount = iasset_decimal * price;
+            let mut usdc_amount = (iasset_decimal * price)
+                .round_dp_with_strategy(USDC_TOKEN_SCALE.into(), RoundingStrategy::ToZero);
             usdc_amount.rescale(USDC_TOKEN_SCALE.into());
 
             if is_amount_input {
@@ -194,7 +195,8 @@ pub mod jupiter_agg_mock {
         } else {
             let usdi_decimal =
                 rust_decimal::Decimal::new(amount.try_into().unwrap(), USDC_TOKEN_SCALE.into());
-            let mut asset_amount = usdi_decimal / price;
+            let mut asset_amount = (usdi_decimal / price)
+                .round_dp_with_strategy(DEVNET_TOKEN_SCALE, RoundingStrategy::ToZero);
             asset_amount.rescale(DEVNET_TOKEN_SCALE);
 
             if is_amount_input {

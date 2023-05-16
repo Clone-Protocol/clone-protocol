@@ -1,5 +1,6 @@
 use crate::error::*;
 //use crate::instructions::MintUSDI;
+use crate::math::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
@@ -62,9 +63,10 @@ pub fn execute(ctx: Context<MintUSDI>, amount: u64) -> Result<()> {
         collateral_scale,
     );
 
-    let mut usdi_value =
-        Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE).min(user_usdc_amount);
-    usdi_value.rescale(DEVNET_TOKEN_SCALE);
+    let usdi_value = rescale_toward_zero(
+        Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE).min(user_usdc_amount),
+        DEVNET_TOKEN_SCALE,
+    );
 
     // check to see if the collateral used to mint usdi is stable
     let is_stable: Result<bool> = match collateral.stable {
@@ -80,13 +82,12 @@ pub fn execute(ctx: Context<MintUSDI>, amount: u64) -> Result<()> {
 
     // add collateral amount to vault supply
     let current_vault_usdi_supply = collateral.vault_usdi_supply.to_decimal();
-    let mut new_vault_usdi_supply = current_vault_usdi_supply + usdi_value;
-    new_vault_usdi_supply.rescale(collateral_scale);
+    let new_vault_usdi_supply =
+        rescale_toward_zero(current_vault_usdi_supply + usdi_value, collateral_scale);
     token_data.collaterals[USDC_COLLATERAL_INDEX].vault_usdi_supply =
         RawDecimal::from(new_vault_usdi_supply);
 
     // transfer user collateral to vault
-    usdi_value.rescale(collateral_scale);
     let cpi_accounts = Transfer {
         from: ctx
             .accounts
@@ -99,11 +100,13 @@ pub fn execute(ctx: Context<MintUSDI>, amount: u64) -> Result<()> {
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::transfer(
         CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
-        usdi_value.mantissa().try_into().unwrap(),
+        rescale_toward_zero(usdi_value, collateral_scale)
+            .mantissa()
+            .try_into()
+            .unwrap(),
     )?;
 
     // mint usdi to user
-    usdi_value.rescale(DEVNET_TOKEN_SCALE);
     let cpi_accounts = MintTo {
         mint: ctx.accounts.usdi_mint.to_account_info().clone(),
         to: ctx

@@ -99,23 +99,27 @@ pub fn execute(
     );
 
     // calculate amount of usdi required as well as amount of liquidity tokens to be received
-    let (mut usdi_liquidity_value, mut liquidity_token_value) = if pool.is_empty() {
+    let (usdi_liquidity_value, liquidity_token_value) = if pool.is_empty() {
         // ensure price data is up to date
         check_feed_update(pool.asset_info, Clock::get()?.slot)?;
         let usdi_value = iasset_liquidity_value * pool.asset_info.price.to_decimal();
         // Arbitrarily set the starting LP tokens as the usdi value.
-        (usdi_value, Decimal::new(10, 0) * usdi_value)
+        (
+            rescale_toward_zero(usdi_value, DEVNET_TOKEN_SCALE),
+            rescale_toward_zero(Decimal::new(10, 0) * usdi_value, DEVNET_TOKEN_SCALE),
+        )
     } else {
         let usdi_value =
             calculate_amm_price(iasset_amm_value, usdi_amm_value) * iasset_liquidity_value;
         (
-            usdi_value,
-            liquidity_token_supply
-                * calculate_liquidity_proportion_from_usdi(usdi_value, usdi_amm_value)?,
+            rescale_toward_zero(usdi_value, DEVNET_TOKEN_SCALE),
+            rescale_toward_zero(
+                liquidity_token_supply
+                    * calculate_liquidity_proportion_from_usdi(usdi_value, usdi_amm_value)?,
+                DEVNET_TOKEN_SCALE,
+            ),
         )
     };
-    usdi_liquidity_value.rescale(DEVNET_TOKEN_SCALE);
-    liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
 
     // transfer iasset from user to amm
     let cpi_accounts = Transfer {
@@ -215,8 +219,7 @@ pub fn execute(
     });
 
     let pool = token_data.pools[pool_index as usize];
-    let mut oracle_price = pool.asset_info.price.to_decimal();
-    oracle_price.rescale(DEVNET_TOKEN_SCALE);
+    let oracle_price = rescale_toward_zero(pool.asset_info.price.to_decimal(), DEVNET_TOKEN_SCALE);
 
     emit!(PoolState {
         event_id: ctx.accounts.incept.event_counter,

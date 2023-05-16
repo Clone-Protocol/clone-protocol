@@ -3,6 +3,7 @@ use crate::error::InceptCometManagerError;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
+use incept::math::rescale_toward_zero;
 use incept::program::Incept as InceptProgram;
 use incept::return_error_if_false;
 use incept::states::{Incept, TokenData, User, DEVNET_TOKEN_SCALE, USDI_COLLATERAL_INDEX};
@@ -90,7 +91,7 @@ pub fn execute(ctx: Context<Subscribe>, collateral_to_provide: u64) -> Result<()
         let estimated_usdi_comet_value = ctx.accounts.manager_info.current_usdi_value()?;
         usdi_collateral_contribution / (usdi_collateral_contribution + estimated_usdi_comet_value)
     };
-    membership_token_to_mint.rescale(DEVNET_TOKEN_SCALE);
+    membership_token_to_mint = rescale_toward_zero(membership_token_to_mint, DEVNET_TOKEN_SCALE);
 
     // Mint membership
     let tokens_to_add: u64 = membership_token_to_mint.mantissa().try_into().unwrap();

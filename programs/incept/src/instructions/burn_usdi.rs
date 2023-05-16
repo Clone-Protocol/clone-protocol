@@ -1,3 +1,4 @@
+use crate::math::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
@@ -62,13 +63,13 @@ pub fn execute(ctx: Context<BurnUSDI>, amount: u64) -> Result<()> {
     );
     let usdi_value =
         Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE).min(user_usdi_amount);
-    let mut collateral_value = usdi_value;
-    collateral_value.rescale(collateral_scale);
-
+    let collateral_value = rescale_toward_zero(usdi_value, collateral_scale);
     // subtract collateral amount to vault supply
     let current_vault_usdi_supply = collateral.vault_usdi_supply.to_decimal();
-    let mut new_vault_usdi_supply = current_vault_usdi_supply - usdi_value;
-    new_vault_usdi_supply.rescale(current_vault_usdi_supply.scale());
+    let new_vault_usdi_supply = rescale_toward_zero(
+        current_vault_usdi_supply - usdi_value,
+        current_vault_usdi_supply.scale(),
+    );
     token_data.collaterals[USDC_COLLATERAL_INDEX].vault_usdi_supply =
         RawDecimal::from(new_vault_usdi_supply);
 

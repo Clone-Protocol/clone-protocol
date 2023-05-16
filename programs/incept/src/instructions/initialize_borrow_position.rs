@@ -142,26 +142,32 @@ pub fn execute(
     };
 
     let current_vault_mint_supply = collateral.vault_mint_supply.to_decimal();
-    let mut new_vault_mint_supply = current_vault_mint_supply + collateral_amount_value;
-    new_vault_mint_supply.rescale(collateral_scale);
+    let new_vault_mint_supply = rescale_toward_zero(
+        current_vault_mint_supply + collateral_amount_value,
+        collateral_scale,
+    );
     // add collateral amount to vault supply
     token_data.collaterals[collateral_index].vault_mint_supply =
         RawDecimal::from(new_vault_mint_supply);
 
     // Update token data
-    let mut total_minted_amount = token_data.pools[pool_index as usize]
-        .total_minted_amount
-        .to_decimal()
-        + iasset_amount_value;
-    total_minted_amount.rescale(DEVNET_TOKEN_SCALE);
+    let total_minted_amount = rescale_toward_zero(
+        token_data.pools[pool_index as usize]
+            .total_minted_amount
+            .to_decimal()
+            + iasset_amount_value,
+        DEVNET_TOKEN_SCALE,
+    );
     token_data.pools[pool_index as usize].total_minted_amount =
         RawDecimal::from(total_minted_amount);
 
-    let mut supplied_collateral = token_data.pools[pool_index as usize]
-        .supplied_mint_collateral_amount
-        .to_decimal()
-        + collateral_amount_value;
-    supplied_collateral.rescale(DEVNET_TOKEN_SCALE);
+    let supplied_collateral = rescale_toward_zero(
+        token_data.pools[pool_index as usize]
+            .supplied_mint_collateral_amount
+            .to_decimal()
+            + collateral_amount_value,
+        DEVNET_TOKEN_SCALE,
+    );
     token_data.pools[pool_index as usize].supplied_mint_collateral_amount =
         RawDecimal::from(supplied_collateral);
 
