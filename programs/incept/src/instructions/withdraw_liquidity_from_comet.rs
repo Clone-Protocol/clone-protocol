@@ -1,6 +1,6 @@
 use crate::error::*;
 use crate::events::*;
-use crate::math::calculate_liquidity_proportion_from_liquidity_tokens;
+use crate::math::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -130,18 +130,22 @@ pub fn execute(
     let borrowed_usdi = comet_position.borrowed_usdi.to_decimal();
     let borrowed_iasset = comet_position.borrowed_iasset.to_decimal();
 
-    let mut claimable_usdi = lp_position_claimable_ratio * usdi_amm_value;
-    claimable_usdi.rescale(DEVNET_TOKEN_SCALE);
-    let mut claimable_iasset = lp_position_claimable_ratio * iasset_amm_value;
-    claimable_iasset.rescale(DEVNET_TOKEN_SCALE);
+    let claimable_usdi = rescale_toward_zero(
+        lp_position_claimable_ratio * usdi_amm_value,
+        DEVNET_TOKEN_SCALE,
+    );
+    let claimable_iasset = rescale_toward_zero(
+        lp_position_claimable_ratio * iasset_amm_value,
+        DEVNET_TOKEN_SCALE,
+    );
 
     let (mut usdi_to_burn, mut usdi_reward) = if claimable_usdi > borrowed_usdi {
         comet.positions[comet_position_index as usize].borrowed_usdi =
             RawDecimal::new(0, DEVNET_TOKEN_SCALE);
         (borrowed_usdi, claimable_usdi - borrowed_usdi)
     } else {
-        let mut new_borrowed_usdi = borrowed_usdi - claimable_usdi;
-        new_borrowed_usdi.rescale(DEVNET_TOKEN_SCALE);
+        let new_borrowed_usdi =
+            rescale_toward_zero(borrowed_usdi - claimable_usdi, DEVNET_TOKEN_SCALE);
         comet.positions[comet_position_index as usize].borrowed_usdi =
             RawDecimal::from(new_borrowed_usdi);
         (claimable_usdi, Decimal::zero())
@@ -152,15 +156,15 @@ pub fn execute(
             RawDecimal::new(0, DEVNET_TOKEN_SCALE);
         (borrowed_iasset, claimable_iasset - borrowed_iasset)
     } else {
-        let mut new_borrowed_iasset = borrowed_iasset - claimable_iasset;
-        new_borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
+        let new_borrowed_iasset =
+            rescale_toward_zero(borrowed_iasset - claimable_iasset, DEVNET_TOKEN_SCALE);
         comet.positions[comet_position_index as usize].borrowed_iasset =
             RawDecimal::from(new_borrowed_iasset);
         (claimable_iasset, Decimal::zero())
     };
 
     // Send usdi reward from amm to user
-    usdi_reward.rescale(DEVNET_TOKEN_SCALE);
+    usdi_reward = rescale_toward_zero(usdi_reward, DEVNET_TOKEN_SCALE);
     if usdi_reward > Decimal::ZERO {
         let cpi_accounts = Transfer {
             from: ctx
@@ -187,7 +191,7 @@ pub fn execute(
     }
 
     // Burn Usdi from amm
-    usdi_to_burn.rescale(DEVNET_TOKEN_SCALE);
+    usdi_to_burn = rescale_toward_zero(usdi_to_burn, DEVNET_TOKEN_SCALE);
     if usdi_to_burn > Decimal::ZERO {
         let cpi_accounts = Burn {
             mint: ctx.accounts.usdi_mint.to_account_info().clone(),
@@ -210,7 +214,7 @@ pub fn execute(
     }
 
     // Send iasset reward from amm to user
-    iasset_reward.rescale(DEVNET_TOKEN_SCALE);
+    iasset_reward = rescale_toward_zero(iasset_reward, DEVNET_TOKEN_SCALE);
     if iasset_reward > Decimal::ZERO {
         let cpi_accounts = Transfer {
             from: ctx
@@ -237,7 +241,7 @@ pub fn execute(
     }
 
     // Burn iasset from amm
-    iasset_to_burn.rescale(DEVNET_TOKEN_SCALE);
+    iasset_to_burn = rescale_toward_zero(iasset_to_burn, DEVNET_TOKEN_SCALE);
     if iasset_to_burn > Decimal::ZERO {
         let burn_iasset_context = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info().clone(),
@@ -252,7 +256,6 @@ pub fn execute(
             },
             seeds,
         );
-        iasset_to_burn.rescale(DEVNET_TOKEN_SCALE);
         token::burn(
             burn_iasset_context,
             iasset_to_burn.mantissa().try_into().unwrap(),
@@ -278,8 +281,10 @@ pub fn execute(
     )?;
 
     // Remove lp tokens from user
-    let mut new_comet_liquidity_tokens = comet_liquidity_tokens - liquidity_token_value;
-    new_comet_liquidity_tokens.rescale(DEVNET_TOKEN_SCALE);
+    let new_comet_liquidity_tokens = rescale_toward_zero(
+        comet_liquidity_tokens - liquidity_token_value,
+        DEVNET_TOKEN_SCALE,
+    );
     comet.positions[comet_position_index as usize].liquidity_token_value =
         RawDecimal::from(new_comet_liquidity_tokens);
 
@@ -320,8 +325,7 @@ pub fn execute(
     });
 
     let pool = token_data.pools[pool_index as usize];
-    let mut oracle_price = pool.asset_info.price.to_decimal();
-    oracle_price.rescale(DEVNET_TOKEN_SCALE);
+    let oracle_price = rescale_toward_zero(pool.asset_info.price.to_decimal(), DEVNET_TOKEN_SCALE);
 
     emit!(PoolState {
         event_id: ctx.accounts.incept.event_counter,

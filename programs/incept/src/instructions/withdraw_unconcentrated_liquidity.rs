@@ -110,8 +110,8 @@ pub fn execute(
             liquidity_token_supply,
         )?;
 
-    iasset_value.rescale(DEVNET_TOKEN_SCALE);
-    usdi_value.rescale(DEVNET_TOKEN_SCALE);
+    iasset_value = rescale_toward_zero(iasset_value, DEVNET_TOKEN_SCALE);
+    usdi_value = rescale_toward_zero(usdi_value, DEVNET_TOKEN_SCALE);
 
     // burn user liquidity tokens
     let cpi_accounts = Burn {
@@ -217,8 +217,7 @@ pub fn execute(
     });
 
     let pool = token_data.pools[pool_index as usize];
-    let mut oracle_price = pool.asset_info.price.to_decimal();
-    oracle_price.rescale(DEVNET_TOKEN_SCALE);
+    let oracle_price = rescale_toward_zero(pool.asset_info.price.to_decimal(), DEVNET_TOKEN_SCALE);
 
     emit!(PoolState {
         event_id: ctx.accounts.incept.event_counter,

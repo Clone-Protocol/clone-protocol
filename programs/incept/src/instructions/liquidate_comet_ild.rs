@@ -141,7 +141,7 @@ pub fn execute(
         } else {
             (borrowed_usdi - authorized_amount, authorized_amount)
         };
-        new_borrowed_amount.rescale(DEVNET_TOKEN_SCALE);
+        new_borrowed_amount = rescale_toward_zero(new_borrowed_amount, DEVNET_TOKEN_SCALE);
         comet.positions[comet_position_index as usize].borrowed_usdi =
             RawDecimal::from(new_borrowed_amount);
         (
@@ -167,7 +167,7 @@ pub fn execute(
             (borrowed_iasset - authorized_amount, authorized_amount)
         };
 
-        new_borrowed_amount.rescale(DEVNET_TOKEN_SCALE);
+        new_borrowed_amount = rescale_toward_zero(new_borrowed_amount, DEVNET_TOKEN_SCALE);
         comet.positions[comet_position_index as usize].borrowed_iasset =
             RawDecimal::from(new_borrowed_amount);
 
@@ -180,7 +180,7 @@ pub fn execute(
             payment_amount,
         )
     };
-    payment_amount.rescale(DEVNET_TOKEN_SCALE);
+    payment_amount = rescale_toward_zero(payment_amount, DEVNET_TOKEN_SCALE);
 
     let cpi_accounts = Burn {
         from: from_context,
@@ -206,7 +206,7 @@ pub fn execute(
         } else {
             payment_amount * pool.asset_info.price.to_decimal()
         };
-    usdi_reward.rescale(DEVNET_TOKEN_SCALE);
+    usdi_reward = rescale_toward_zero(usdi_reward, DEVNET_TOKEN_SCALE);
 
     let cpi_accounts = Transfer {
         from: ctx.accounts.usdi_vault.to_account_info().clone(),
@@ -228,11 +228,13 @@ pub fn execute(
     } else {
         0
     };
-    let mut new_collateral_usdi = comet.collaterals[collateral_index]
-        .collateral_amount
-        .to_decimal()
-        - usdi_reward;
-    new_collateral_usdi.rescale(DEVNET_TOKEN_SCALE);
+    let new_collateral_usdi = rescale_toward_zero(
+        comet.collaterals[collateral_index]
+            .collateral_amount
+            .to_decimal()
+            - usdi_reward,
+        DEVNET_TOKEN_SCALE,
+    );
     comet.collaterals[collateral_index].collateral_amount = RawDecimal::from(new_collateral_usdi);
 
     // Check final health score.

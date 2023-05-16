@@ -2,6 +2,7 @@ use crate::error::InceptCometManagerError;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
+use incept::math::rescale_toward_zero;
 use incept::program::Incept as InceptProgram;
 use incept::return_error_if_false;
 use incept::states::{
@@ -98,9 +99,10 @@ pub fn execute(ctx: Context<FulfillRedemptionRequest>, index: u8) -> Result<()> 
         DEVNET_TOKEN_SCALE,
     );
 
-    let mut usdi_collateral_to_withdraw =
-        estimated_usdi_comet_value * tokens_redeemed / membership_token_supply;
-    usdi_collateral_to_withdraw.rescale(DEVNET_TOKEN_SCALE);
+    let usdi_collateral_to_withdraw = rescale_toward_zero(
+        estimated_usdi_comet_value * tokens_redeemed / membership_token_supply,
+        DEVNET_TOKEN_SCALE,
+    );
 
     // Withdraw collateral from comet
     let manager_info = ctx.accounts.manager_info.clone();
@@ -158,8 +160,10 @@ pub fn execute(ctx: Context<FulfillRedemptionRequest>, index: u8) -> Result<()> 
             .max(usdi_collateral_to_withdraw * management_fee_rate);
 
         // Adjust principal
-        let mut principal_value_deficit = usdi_collateral_to_withdraw - total_profit;
-        principal_value_deficit.rescale(DEVNET_TOKEN_SCALE);
+        let principal_value_deficit = rescale_toward_zero(
+            usdi_collateral_to_withdraw - total_profit,
+            DEVNET_TOKEN_SCALE,
+        );
         let principal_mantissa: u64 = principal_value_deficit.mantissa().try_into().unwrap();
         ctx.accounts.subscriber_account.principal -=
             principal_mantissa.min(ctx.accounts.subscriber_account.principal);
@@ -171,7 +175,7 @@ pub fn execute(ctx: Context<FulfillRedemptionRequest>, index: u8) -> Result<()> 
     };
 
     // Transfer USDi back to redeemer
-    usdi_to_subscriber.rescale(DEVNET_TOKEN_SCALE);
+    usdi_to_subscriber = rescale_toward_zero(usdi_to_subscriber, DEVNET_TOKEN_SCALE);
     token::transfer(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),

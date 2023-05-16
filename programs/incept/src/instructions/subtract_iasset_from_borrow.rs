@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::math::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -98,11 +99,13 @@ pub fn execute(
     borrow_positions.borrow_positions[borrow_index as usize].borrowed_iasset =
         RawDecimal::from(updated_borrowed_iasset);
 
-    let mut new_minted_amount = token_data.pools[mint_position.pool_index as usize]
-        .total_minted_amount
-        .to_decimal()
-        - amount_value;
-    new_minted_amount.rescale(DEVNET_TOKEN_SCALE);
+    let new_minted_amount = rescale_toward_zero(
+        token_data.pools[mint_position.pool_index as usize]
+            .total_minted_amount
+            .to_decimal()
+            - amount_value,
+        DEVNET_TOKEN_SCALE,
+    );
     token_data.pools[mint_position.pool_index as usize].total_minted_amount =
         RawDecimal::from(new_minted_amount);
 

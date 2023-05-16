@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use incept::{return_error_if_false, states::DEVNET_TOKEN_SCALE};
+use incept::{math::rescale_toward_zero, return_error_if_false, states::DEVNET_TOKEN_SCALE};
 use rust_decimal::prelude::*;
 
 use crate::error::InceptCometManagerError;
@@ -65,9 +65,8 @@ impl ManagerInfo {
     }
 
     pub fn update_current_usdi_value(&mut self, value: Decimal) -> Result<()> {
-        let mut value = value.clone();
-        value.rescale(DEVNET_TOKEN_SCALE);
-        self.net_value_usdi = value.mantissa().try_into().unwrap();
+        let new_value = rescale_toward_zero(value, DEVNET_TOKEN_SCALE);
+        self.net_value_usdi = new_value.mantissa().try_into().unwrap();
         self.last_update_slot = Clock::get()?.slot;
         Ok(())
     }

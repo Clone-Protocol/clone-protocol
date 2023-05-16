@@ -129,8 +129,10 @@ pub fn execute(
         liquidator_stable_swap_in = total_nonstable_available * discounted_price;
     }
 
-    liquidator_stable_swap_in.rescale(stable_collateral_scale);
-    vault_nonstable_swap_out.rescale(nonstable_collateral_scale);
+    liquidator_stable_swap_in =
+        rescale_toward_zero(liquidator_stable_swap_in, stable_collateral_scale);
+    vault_nonstable_swap_out =
+        rescale_toward_zero(vault_nonstable_swap_out, nonstable_collateral_scale);
 
     // Transfer stable to vault.
     token::transfer(

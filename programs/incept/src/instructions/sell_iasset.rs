@@ -1,5 +1,6 @@
 use crate::error::*;
 use crate::events::*;
+use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -71,8 +72,7 @@ pub fn execute(
 
     // calculate how much usdi will be recieved
     let swap_summary = pool.calculate_output_from_input(iasset_amount_value, false);
-    let mut usdi_amount_value = swap_summary.result;
-    usdi_amount_value.rescale(DEVNET_TOKEN_SCALE);
+    let usdi_amount_value = rescale_toward_zero(swap_summary.result, DEVNET_TOKEN_SCALE);
     // ensure it's within slippage tolerance
     let min_usdi_to_receive = Decimal::new(
         usdi_received_threshold.try_into().unwrap(),
@@ -131,8 +131,8 @@ pub fn execute(
     )?;
 
     // Transfer treasury fee to treasury token account
-    let mut treasury_fee_to_pay = swap_summary.treasury_fees_paid;
-    treasury_fee_to_pay.rescale(DEVNET_TOKEN_SCALE);
+    let treasury_fee_to_pay =
+        rescale_toward_zero(swap_summary.treasury_fees_paid, DEVNET_TOKEN_SCALE);
     let cpi_accounts = Transfer {
         from: ctx
             .accounts
@@ -177,8 +177,7 @@ pub fn execute(
         DEVNET_TOKEN_SCALE,
     );
 
-    let mut trading_fees = swap_summary.liquidity_fees_paid;
-    trading_fees.rescale(DEVNET_TOKEN_SCALE);
+    let trading_fees = rescale_toward_zero(swap_summary.liquidity_fees_paid, DEVNET_TOKEN_SCALE);
 
     emit!(SwapEvent {
         event_id: ctx.accounts.incept.event_counter,
@@ -192,8 +191,7 @@ pub fn execute(
     });
 
     let pool = token_data.pools[pool_index as usize];
-    let mut oracle_price = pool.asset_info.price.to_decimal();
-    oracle_price.rescale(DEVNET_TOKEN_SCALE);
+    let oracle_price = rescale_toward_zero(pool.asset_info.price.to_decimal(), DEVNET_TOKEN_SCALE);
 
     emit!(PoolState {
         event_id: ctx.accounts.incept.event_counter,

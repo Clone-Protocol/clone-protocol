@@ -1,5 +1,6 @@
 use crate::error::InceptError;
 //use crate::instructions::AddCollateralToComet;
+use crate::math::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -94,8 +95,10 @@ pub fn execute(
             .min(user_collateral_in_account);
 
     let current_vault_comet_supply = collateral.vault_comet_supply.to_decimal();
-    let mut new_vault_comet_supply = current_vault_comet_supply + added_collateral_value;
-    new_vault_comet_supply.rescale(current_vault_comet_supply.scale());
+    let new_vault_comet_supply = rescale_toward_zero(
+        current_vault_comet_supply + added_collateral_value,
+        current_vault_comet_supply.scale(),
+    );
     // add collateral amount to vault supply
     token_data.collaterals[collateral_index as usize].vault_comet_supply =
         RawDecimal::from(new_vault_comet_supply);

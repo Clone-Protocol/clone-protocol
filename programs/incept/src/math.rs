@@ -147,10 +147,9 @@ pub fn calculate_comet_position_loss(
         pool_lp_supply,
     );
 
-    let mut claimable_usdi = liquidity_proportion * pool_usdi;
-    claimable_usdi.rescale(DEVNET_TOKEN_SCALE);
-    let mut claimable_iasset = liquidity_proportion * pool_iasset;
-    claimable_iasset.rescale(DEVNET_TOKEN_SCALE);
+    let claimable_usdi = rescale_toward_zero(liquidity_proportion * pool_usdi, DEVNET_TOKEN_SCALE);
+    let claimable_iasset =
+        rescale_toward_zero(liquidity_proportion * pool_iasset, DEVNET_TOKEN_SCALE);
 
     let borrowed_usdi = comet_position.borrowed_usdi.to_decimal();
     let borrowed_iasset = comet_position.borrowed_iasset.to_decimal();
@@ -233,4 +232,10 @@ pub fn calculate_health_score(
         total_il_term,
         total_position_term,
     })
+}
+
+pub fn rescale_toward_zero(decimal: Decimal, scale: u32) -> Decimal {
+    let mut rounded_decimal = decimal.round_dp_with_strategy(scale, RoundingStrategy::ToZero);
+    rounded_decimal.rescale(scale);
+    return rounded_decimal;
 }

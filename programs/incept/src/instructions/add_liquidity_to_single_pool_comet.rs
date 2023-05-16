@@ -117,28 +117,32 @@ pub fn execute(
 
     let position = comet.positions[position_index as usize];
     // update comet position data
-    let mut borrowed_usdi = position.borrowed_usdi.to_decimal() + usdi_liquidity_value;
-    borrowed_usdi.rescale(DEVNET_TOKEN_SCALE);
-
-    let mut borrowed_iasset = position.borrowed_iasset.to_decimal() + iasset_liquidity_value;
-    borrowed_iasset.rescale(DEVNET_TOKEN_SCALE);
+    let borrowed_usdi = rescale_toward_zero(
+        position.borrowed_usdi.to_decimal() + usdi_liquidity_value,
+        DEVNET_TOKEN_SCALE,
+    );
+    let borrowed_iasset = rescale_toward_zero(
+        position.borrowed_iasset.to_decimal() + iasset_liquidity_value,
+        DEVNET_TOKEN_SCALE,
+    );
 
     liquidity_token_value += position.liquidity_token_value.to_decimal();
-    liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
+    liquidity_token_value = rescale_toward_zero(liquidity_token_value, DEVNET_TOKEN_SCALE);
 
-    let mut lp_tokens_to_mint = liquidity_token_value
-        - comet.positions[position_index as usize]
-            .liquidity_token_value
-            .to_decimal();
+    let lp_tokens_to_mint = rescale_toward_zero(
+        liquidity_token_value
+            - comet.positions[position_index as usize]
+                .liquidity_token_value
+                .to_decimal(),
+        DEVNET_TOKEN_SCALE,
+    );
 
     comet.positions[position_index as usize].borrowed_usdi = RawDecimal::from(borrowed_usdi);
     comet.positions[position_index as usize].borrowed_iasset = RawDecimal::from(borrowed_iasset);
     comet.positions[position_index as usize].liquidity_token_value =
         RawDecimal::from(liquidity_token_value);
 
-    iasset_liquidity_value.rescale(DEVNET_TOKEN_SCALE);
-    liquidity_token_value.rescale(DEVNET_TOKEN_SCALE);
-    lp_tokens_to_mint.rescale(DEVNET_TOKEN_SCALE);
+    iasset_liquidity_value = rescale_toward_zero(iasset_liquidity_value, DEVNET_TOKEN_SCALE);
 
     // mint liquidity into amm
     let cpi_accounts = MintTo {
@@ -248,8 +252,7 @@ pub fn execute(
     });
 
     let pool = token_data.pools[pool_index];
-    let mut oracle_price = pool.asset_info.price.to_decimal();
-    oracle_price.rescale(DEVNET_TOKEN_SCALE);
+    let oracle_price = rescale_toward_zero(pool.asset_info.price.to_decimal(), DEVNET_TOKEN_SCALE);
 
     emit!(PoolState {
         event_id: ctx.accounts.incept.event_counter,
