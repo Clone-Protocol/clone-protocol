@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::math::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -106,6 +107,30 @@ pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u6
     let cpi_program = ctx.accounts.token_program.to_account_info();
 
     token::transfer(CpiContext::new(cpi_program, cpi_accounts), amount)?;
+
+    emit!(BorrowUpdate {
+        event_id: ctx.accounts.incept.event_counter,
+        user: ctx.accounts.user.key(),
+        pool_index: borrow_positions.borrow_positions[borrow_index as usize]
+            .pool_index
+            .try_into()
+            .unwrap(),
+        is_liquidation: false,
+        collateral_supplied: new_collateral_amount.mantissa().try_into().unwrap(),
+        collateral_delta: amount_value.mantissa().try_into().unwrap(),
+        collateral_index: borrow_positions.borrow_positions[borrow_index as usize]
+            .collateral_index
+            .try_into()
+            .unwrap(),
+        borrowed_amount: borrow_positions.borrow_positions[borrow_index as usize]
+            .borrowed_iasset
+            .to_decimal()
+            .mantissa()
+            .try_into()
+            .unwrap(),
+        borrowed_delta: 0
+    });
+    ctx.accounts.incept.event_counter += 1;
 
     Ok(())
 }

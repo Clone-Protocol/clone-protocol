@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
@@ -173,6 +174,19 @@ pub fn execute(
 
     // increment number of mint positions
     borrow_positions.num_positions += 1;
+
+    emit!(BorrowUpdate {
+        event_id: ctx.accounts.incept.event_counter,
+        user: ctx.accounts.user.key(),
+        pool_index: pool_index.try_into().unwrap(),
+        is_liquidation: false,
+        collateral_supplied: collateral_amount_value.mantissa().try_into().unwrap(),
+        collateral_delta: collateral_amount_value.mantissa().try_into().unwrap(),
+        collateral_index: collateral_index.try_into().unwrap(),
+        borrowed_amount: iasset_amount_value.mantissa().try_into().unwrap(),
+        borrowed_delta: iasset_amount_value.mantissa().try_into().unwrap()
+    });
+    ctx.accounts.incept.event_counter += 1;
 
     Ok(())
 }

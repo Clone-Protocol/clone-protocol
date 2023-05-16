@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::math::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -50,7 +51,6 @@ pub struct WithdrawCollateralFromBorrow<'info> {
 
 pub fn execute(
     ctx: Context<WithdrawCollateralFromBorrow>,
-
     borrow_index: u8,
     amount: u64,
 ) -> Result<()> {
@@ -123,6 +123,30 @@ pub fn execute(
         CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
         amount,
     )?;
+
+    emit!(BorrowUpdate {
+        event_id: ctx.accounts.incept.event_counter,
+        user: ctx.accounts.user.key(),
+        pool_index: borrow_positions.borrow_positions[borrow_index as usize]
+            .pool_index
+            .try_into()
+            .unwrap(),
+        is_liquidation: false,
+        collateral_supplied: new_collateral_amount.mantissa().try_into().unwrap(),
+        collateral_delta: amount_value.mantissa().try_into().unwrap(),
+        collateral_index: borrow_positions.borrow_positions[borrow_index as usize]
+            .collateral_index
+            .try_into()
+            .unwrap(),
+        borrowed_amount: borrow_positions.borrow_positions[borrow_index as usize]
+            .borrowed_iasset
+            .to_decimal()
+            .mantissa()
+            .try_into()
+            .unwrap(),
+        borrowed_delta: 0
+    });
+    ctx.accounts.incept.event_counter += 1;
 
     // check to see if mint is empty, if so remove
     if borrow_positions.borrow_positions[borrow_index as usize]

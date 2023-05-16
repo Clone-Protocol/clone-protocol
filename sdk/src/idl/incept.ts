@@ -3403,6 +3403,56 @@ export type Incept = {
           "index": false
         }
       ]
+    },
+    {
+      "name": "BorrowUpdate",
+      "fields": [
+        {
+          "name": "eventId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "poolIndex",
+          "type": "u8",
+          "index": false
+        },
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "isLiquidation",
+          "type": "bool",
+          "index": false
+        },
+        {
+          "name": "collateralSupplied",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "collateralDelta",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "collateralIndex",
+          "type": "u8",
+          "index": false
+        },
+        {
+          "name": "borrowedAmount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "borrowedDelta",
+          "type": "i64",
+          "index": false
+        }
+      ]
     }
   ],
   "errors": [
@@ -7076,6 +7126,56 @@ export const IDL: Incept = {
         {
           "name": "oraclePrice",
           "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "BorrowUpdate",
+      "fields": [
+        {
+          "name": "eventId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "poolIndex",
+          "type": "u8",
+          "index": false
+        },
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "isLiquidation",
+          "type": "bool",
+          "index": false
+        },
+        {
+          "name": "collateralSupplied",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "collateralDelta",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "collateralIndex",
+          "type": "u8",
+          "index": false
+        },
+        {
+          "name": "borrowedAmount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "borrowedDelta",
+          "type": "i64",
           "index": false
         }
       ]
