@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::math::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -176,6 +177,25 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Resul
 
     // Remove position
     borrow_positions.remove(borrow_index as usize);
+
+    emit!(BorrowUpdate {
+        event_id: ctx.accounts.incept.event_counter,
+        user: ctx.accounts.user.key(),
+        pool_index: borrow_positions.borrow_positions[borrow_index as usize]
+            .pool_index
+            .try_into()
+            .unwrap(),
+        is_liquidation: true,
+        collateral_supplied: 0,
+        collateral_delta: -mint_position.collateral_amount.to_decimal().mantissa() as i64,
+        collateral_index: borrow_positions.borrow_positions[borrow_index as usize]
+            .collateral_index
+            .try_into()
+            .unwrap(),
+        borrowed_amount: 0,
+        borrowed_delta: -mint_position.borrowed_iasset.to_decimal().mantissa() as i64
+    });
+    ctx.accounts.incept.event_counter += 1;
 
     Ok(())
 }

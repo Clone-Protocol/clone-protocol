@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::math::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -95,7 +96,10 @@ pub fn execute(
     )?;
 
     // update total amount of borrowed iasset
-    let updated_borrowed_iasset = mint_position.borrowed_iasset.to_decimal() - amount_value;
+    let updated_borrowed_iasset = rescale_toward_zero(
+        mint_position.borrowed_iasset.to_decimal() - amount_value,
+        DEVNET_TOKEN_SCALE,
+    );
     borrow_positions.borrow_positions[borrow_index as usize].borrowed_iasset =
         RawDecimal::from(updated_borrowed_iasset);
 
@@ -108,6 +112,35 @@ pub fn execute(
     );
     token_data.pools[mint_position.pool_index as usize].total_minted_amount =
         RawDecimal::from(new_minted_amount);
+
+    emit!(BorrowUpdate {
+        event_id: ctx.accounts.incept.event_counter,
+        user: ctx.accounts.user.key(),
+        pool_index: borrow_positions.borrow_positions[borrow_index as usize]
+            .pool_index
+            .try_into()
+            .unwrap(),
+        is_liquidation: false,
+        collateral_supplied: borrow_positions.borrow_positions[borrow_index as usize]
+            .collateral_amount
+            .to_decimal()
+            .mantissa()
+            .try_into()
+            .unwrap(),
+        collateral_delta: 0,
+        collateral_index: borrow_positions.borrow_positions[borrow_index as usize]
+            .collateral_index
+            .try_into()
+            .unwrap(),
+        borrowed_amount: borrow_positions.borrow_positions[borrow_index as usize]
+            .borrowed_iasset
+            .to_decimal()
+            .mantissa()
+            .try_into()
+            .unwrap(),
+        borrowed_delta: -amount_value.mantissa() as i64
+    });
+    ctx.accounts.incept.event_counter += 1;
 
     Ok(())
 }

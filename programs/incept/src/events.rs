@@ -35,3 +35,17 @@ pub struct PoolState {
     pub lp_tokens: u64,
     pub oracle_price: u64,
 }
+
+// BORROW UPDATE
+#[event]
+pub struct BorrowUpdate {
+    pub event_id: u64,
+    pub pool_index: u8,
+    pub user: Pubkey,
+    pub is_liquidation: bool,
+    pub collateral_supplied: u64,
+    pub collateral_delta: i64,
+    pub collateral_index: u8,
+    pub borrowed_amount: u64,
+    pub borrowed_delta: i64,
+}
