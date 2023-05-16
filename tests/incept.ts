@@ -11,6 +11,7 @@ import {
   createAssociatedTokenAccountInstruction,
   getAccount,
   getMint,
+  createTransferInstruction,
 } from "@solana/spl-token";
 import {
   PublicKey,
@@ -1080,12 +1081,12 @@ describe("incept", async () => {
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      545448.54545905,
+      545448.54545904,
       "check user usdi balance"
     );
     assert.equal(
       Number(iassetTokenAccountInfo.amount) / 100000000,
-      109089.70909181,
+      109089.7090918,
       "check user iAsset balance"
     );
     assert.equal(
@@ -1102,7 +1103,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      454551.45454095,
+      454551.45454096,
       "check pool usdi balance."
     );
 
@@ -1115,7 +1116,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      90910.29090819,
+      90910.2909082,
       "check pool iAsset balance."
     );
   });
@@ -1216,7 +1217,7 @@ describe("incept", async () => {
     );
     assert.equal(
       Number(iassetTokenAccountInfo.amount) / 100000000,
-      119089.70909181,
+      119089.7090918,
       "check user iAsset balance"
     );
     assert.equal(
@@ -1240,7 +1241,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      80807.19812468,
+      80807.1981247,
       "check pool iAsset balance"
     );
 
@@ -1253,7 +1254,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      103.09278351,
+      103.0927835,
       "check treasury iAsset balance"
     );
   });
@@ -1294,12 +1295,12 @@ describe("incept", async () => {
 
     assert.equal(
       Number(usdiTokenAccountInfo.amount) / 100000000,
-      542074.60913552,
+      542074.6091355,
       "check user usdi balance"
     );
     assert.equal(
       Number(iassetTokenAccountInfo.amount) / 100000000,
-      109089.70909181,
+      109089.7090918,
       "check user iAsset balance"
     );
     assert.equal(
@@ -1311,7 +1312,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      457360.79807685,
+      457360.79807687,
       "check pool usdi balance"
     );
     assert.equal(
@@ -1323,7 +1324,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      90807.19812468,
+      90807.1981247,
       "check pool iAsset balance"
     );
   });
@@ -1413,7 +1414,7 @@ describe("incept", async () => {
 
     assert.equal(
       usdiAccountBalance.value!.uiAmount,
-      457870.79807685,
+      457870.79807687,
       "check usdi pool balance"
     );
 
@@ -1425,7 +1426,7 @@ describe("incept", async () => {
 
     assert.equal(
       iassetTokenBalance.value!.uiAmount,
-      90908.45663052,
+      90908.45663054,
       "check iasset pool balance"
     );
   });
@@ -1483,7 +1484,7 @@ describe("incept", async () => {
 
     assert.equal(
       usdiAccountBalance.value!.uiAmount,
-      457860.73627211,
+      457860.73627213,
       "check usdi pool balance"
     );
 
@@ -1495,7 +1496,7 @@ describe("incept", async () => {
 
     assert.equal(
       iassetTokenBalance.value!.uiAmount,
-      90906.45889853,
+      90906.45889856,
       "check iasset pool balance"
     );
   });
@@ -1540,7 +1541,7 @@ describe("incept", async () => {
     );
     assert.equal(
       Number(iassetTokenAccountInfo.amount) / 100000000,
-      119089.70909181,
+      119089.7090918,
       "check user iAsset balance."
     );
     assert.equal(
@@ -1564,7 +1565,7 @@ describe("incept", async () => {
           )
         ).value!.uiAmount
       ),
-      80803.36611502,
+      80803.36611506,
       "check pool iAsset"
     );
   });
@@ -3026,6 +3027,7 @@ describe("incept", async () => {
     );
     let tokenData = await inceptClient.getTokenData();
     let poolIndex = 0;
+    let positionIndex = 0;
     let comet = await inceptClient.getComet(cometManagerInfo.userAccount);
     let cometManagerUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
       cometManagerProgram.provider,
@@ -3040,6 +3042,21 @@ describe("incept", async () => {
         cometManagerInfoAddress,
         true
       );
+
+    // Add token transfer instructions to transaction
+    const transaction = new Transaction().add(
+      createTransferInstruction(
+        usdiTokenAccountInfo.address,
+        cometManagerUsdiTokenAccount.address,
+        provider.publicKey!,
+        toDevnetScale(100).toNumber(),
+        [],
+        TOKEN_PROGRAM_ID
+      )
+    );
+
+    // Sign transaction, broadcast, and confirm
+    await provider.sendAndConfirm!(transaction);
 
     // Withdraw all liquidity
     await cometManagerProgram.methods
@@ -3066,6 +3083,32 @@ describe("incept", async () => {
         tokenProgram: TOKEN_PROGRAM_ID,
         managerUsdiTokenAccount: cometManagerUsdiTokenAccount.address,
         managerIassetTokenAccount: cometManagerIassetTokenAccount.address,
+      })
+      .rpc();
+    comet = await inceptClient.getComet(cometManagerInfo.userAccount);
+
+    await cometManagerProgram.methods
+      .payIld(
+        positionIndex,
+        toDevnetScale(toNumber(comet.positions[positionIndex].borrowedUsdi)),
+        true
+      )
+      .accounts({
+        signer: inceptClient.provider.publicKey!,
+        managerInfo: cometManagerInfoAddress,
+        incept: inceptClient.inceptAddress[0],
+        managerInceptUser: cometManagerInfo.userAccount,
+        usdiMint: inceptClient.incept!.usdiMint,
+        inceptProgram: inceptClient.programId,
+        comet: cometManagerUser.comet,
+        tokenData: inceptClient.incept!.tokenData,
+        inceptUsdiVault: tokenData.collaterals[0].vault,
+        iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
+        ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
+        ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
+        managerUsdiTokenAccount: cometManagerUsdiTokenAccount.address,
+        managerIassetTokenAccount: cometManagerIassetTokenAccount.address,
+        tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
 
@@ -3268,50 +3311,7 @@ describe("incept", async () => {
       cometManagerInfo.userAccount
     );
     let comet = await inceptClient.getComet(cometManagerInfo.userAccount);
-    let tokenData = await inceptClient.getTokenData();
     let positionIndex = 0;
-    let poolIndex = Number(comet.positions[positionIndex].poolIndex);
-    let iassetMint = tokenData.pools[poolIndex].assetInfo.iassetMint;
-
-    let cometManagerIassetTokenAccount =
-      await getOrCreateAssociatedTokenAccount(
-        cometManagerProgram.provider,
-        iassetMint,
-        cometManagerInfoAddress,
-        true
-      );
-
-    let cometManagerUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
-      cometManagerProgram.provider,
-      inceptClient.incept!.usdiMint,
-      cometManagerInfoAddress,
-      true
-    );
-
-    let ix = await cometManagerProgram.methods
-      .payIld(
-        positionIndex,
-        toDevnetScale(toNumber(comet.positions[positionIndex].borrowedIasset)),
-        false
-      )
-      .accounts({
-        signer: inceptClient.provider.publicKey!,
-        managerInfo: cometManagerInfoAddress,
-        incept: inceptClient.inceptAddress[0],
-        managerInceptUser: cometManagerInfo.userAccount,
-        usdiMint: inceptClient.incept!.usdiMint,
-        inceptProgram: inceptClient.programId,
-        comet: cometManagerUser.comet,
-        tokenData: inceptClient.incept!.tokenData,
-        inceptUsdiVault: tokenData.collaterals[0].vault,
-        iassetMint: tokenData.pools[poolIndex].assetInfo.iassetMint,
-        ammUsdiTokenAccount: tokenData.pools[poolIndex].usdiTokenAccount,
-        ammIassetTokenAccount: tokenData.pools[poolIndex].iassetTokenAccount,
-        managerUsdiTokenAccount: cometManagerUsdiTokenAccount.address,
-        managerIassetTokenAccount: cometManagerIassetTokenAccount.address,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
 
     let removeCometIx = await cometManagerProgram.methods
       .removeCometPosition(positionIndex)
