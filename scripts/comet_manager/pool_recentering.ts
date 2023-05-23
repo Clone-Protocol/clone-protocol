@@ -433,7 +433,7 @@ const onPriceChangeUpdate = async (
 
   const [cometPositionIndex, cometPosition] = (() => {
     for (let i = 0; i < Number(comet.numPositions); i++) {
-      if (comet.positions[i].poolIndex.toNumber() === poolId)
+      if (Number(comet.positions[i].poolIndex) === poolId)
         return [i, comet.positions[i]];
     }
     return [undefined, undefined];
@@ -689,7 +689,7 @@ const main = async () => {
     inceptCometManager: new PublicKey(process.env.COMET_MANAGER_PROGRAM_ID!),
     jupiterProgramId: new PublicKey(process.env.JUPITER_PROGRAM_ID!),
     lookupTableAddress: new PublicKey(process.env.LOOKUP_TABLE_ADDRESS!),
-    pctThreshold: 0.01,
+    pctThreshold: Number(process.env.PCT_THRESHOLD!)// 0.01,
   };
   const provider = anchor.AnchorProvider.env();
 

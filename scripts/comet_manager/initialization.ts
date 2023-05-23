@@ -19,9 +19,7 @@ import { toDevnetScale } from "../../sdk/src/incept";
 import { getOrCreateAssociatedTokenAccount } from "../../tests/utils";
 import { toNumber } from "../../sdk/src/decimal";
 import {
-  calculateExecutionThreshold,
-  calculateExecutionThresholdFromParams,
-  calculateInputFromOutputFromParams,
+  createVersionedTx
 } from "../../sdk/src/utils";
 import {
   Incept as InceptProgram,
@@ -82,7 +80,10 @@ const main = async () => {
     ),
     jupiterProgramID: new PublicKey(process.env.JUPITER_PROGRAM_ID!),
     usdiToMint: 1_000_000,
-    usdiLiquidity: 2_000_000,
+    liquidityToAdd: [
+      {liquidity: 1_000_000, poolIndex: 0},
+      {liquidity: 1_000_000, poolIndex: 1},
+    ],
   };
 
   const provider = anchor.AnchorProvider.env();
@@ -192,6 +193,22 @@ const main = async () => {
     true
   );
 
+  const managerAddresses = await getManagerTokenAccountAddresses(
+    provider,
+    managerInfoAddress,
+    tokenData,
+    incept.usdiMint,
+    jupiter.usdcMint,
+    jupiter.assetMints.slice(0, jupiter.nAssets)
+  );
+  const treasuryAddresses = await getTreasuryTokenAccountAddresses(
+    provider,
+    incept.treasuryAddress,
+    tokenData,
+    incept.usdiMint,
+    jupiter.usdcMint
+  );
+
   // Mint USDC from jupiter,
   let mintUsdcIx = createMintUsdcInstruction(
     {
@@ -282,51 +299,32 @@ const main = async () => {
     userAccountAddress
   );
 
-  // Add collateral to comet.
-  let addCollateralToComet = createAddCollateralToCometInstruction(
-    {
-      managerOwner: managerInfo.owner,
-      managerInfo: managerInfoAddress,
-      incept: managerInfo.incept,
-      managerInceptUser: managerInfo.userAccount,
-      usdiMint: incept.usdiMint,
-      managerUsdiTokenAccount: managerUsdiTokenAccount.address,
-      inceptProgram: config.inceptProgramID,
-      comet: user.comet,
-      tokenData: incept.tokenData,
-      inceptUsdiVault: tokenData.collaterals[0].vault,
-      tokenProgram: TOKEN_PROGRAM_ID,
-    } as AddCollateralToCometInstructionAccounts,
-    {
-      amount: toDevnetScale(config.usdiToMint),
-    } as AddCollateralToCometInstructionArgs
-  );
+  const altAccount = await (async () => {
+    if(!process.env.ADDRESS_LOOKUP_TABLE) {
+      const account = (await provider.connection
+        .getAddressLookupTable(new PublicKey(process.env.ADDRESS_LOOKUP_TABLE!))
+        .then((res) => res.value))!;
+      return account
+    } else {
+      const [account, _altAddress] = await setupAddressLookupTable(
+        provider,
+        incept,
+        inceptAccountAddress,
+        managerInfo,
+        managerAddresses,
+        managerInfoAddress,
+        user,
+        tokenData,
+        treasuryAddresses,
+        jupiter,
+        jupiterAccountAddress,
+        config.jupiterProgramID
+      );
+      return account
+    }
+  })();
 
-  const poolIndex = 0;
-  const pool = tokenData.pools[poolIndex];
-  // Add liquidity to comet
-  let addLiquidityToComet = createAddLiquidityInstruction(
-    {
-      managerOwner: managerInfo.owner,
-      managerInfo: managerInfoAddress,
-      incept: managerInfo.incept,
-      managerInceptUser: managerInfo.userAccount,
-      usdiMint: incept.usdiMint,
-      inceptProgram: config.inceptProgramID,
-      comet: user.comet,
-      tokenData: incept.tokenData,
-      iassetMint: pool.assetInfo.iassetMint,
-      ammUsdiTokenAccount: pool.usdiTokenAccount,
-      ammIassetTokenAccount: pool.iassetTokenAccount,
-      liquidityTokenMint: pool.liquidityTokenMint,
-      cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
-      tokenProgram: TOKEN_PROGRAM_ID,
-    } as AddLiquidityInstructionAccounts,
-    {
-      poolIndex,
-      usdiAmount: toDevnetScale(config.usdiLiquidity),
-    } as AddLiquidityInstructionArgs
-  );
+  let tx = new Transaction()
 
   // Update prices instruction
   let indices: number[] = [];
@@ -336,7 +334,7 @@ const main = async () => {
     isSigner: boolean;
   }> = [];
 
-  tokenData.pools.slice(0, tokenData.numPools.toNumber()).forEach((_, i) => {
+  tokenData.pools.slice(0, Number(tokenData.numPools)).forEach((_, i) => {
     indices.push(i);
     priceFeeds.push({
       pubkey: tokenData.pools[i].assetInfo.pythAddress,
@@ -357,12 +355,71 @@ const main = async () => {
     } as UpdatePricesInstructionAccounts,
     { poolIndices: { indices } } as UpdatePricesInstructionArgs
   );
-  await provider.sendAndConfirm(
-    new Transaction()
-      .add(updatePrices)
-      .add(addCollateralToComet)
-      .add(addLiquidityToComet)
+
+  tx.add(updatePrices)
+
+  // Add collateral to comet.
+  let addCollateralToComet = createAddCollateralToCometInstruction(
+    {
+      managerOwner: managerInfo.owner,
+      managerInfo: managerInfoAddress,
+      incept: managerInfo.incept,
+      managerInceptUser: managerInfo.userAccount,
+      usdiMint: incept.usdiMint,
+      managerUsdiTokenAccount: managerUsdiTokenAccount.address,
+      inceptProgram: config.inceptProgramID,
+      comet: user.comet,
+      tokenData: incept.tokenData,
+      inceptUsdiVault: tokenData.collaterals[0].vault,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    } as AddCollateralToCometInstructionAccounts,
+    {
+      amount: toDevnetScale(config.usdiToMint),
+    } as AddCollateralToCometInstructionArgs
   );
+
+  tx.add(addCollateralToComet)
+
+  // Add liquidity to comet
+  for (let {liquidity, poolIndex} of config.liquidityToAdd) {
+    const pool = tokenData.pools[poolIndex];
+    let addLiquidityToComet = createAddLiquidityInstruction(
+      {
+        managerOwner: managerInfo.owner,
+        managerInfo: managerInfoAddress,
+        incept: managerInfo.incept,
+        managerInceptUser: managerInfo.userAccount,
+        usdiMint: incept.usdiMint,
+        inceptProgram: config.inceptProgramID,
+        comet: user.comet,
+        tokenData: incept.tokenData,
+        iassetMint: pool.assetInfo.iassetMint,
+        ammUsdiTokenAccount: pool.usdiTokenAccount,
+        ammIassetTokenAccount: pool.iassetTokenAccount,
+        liquidityTokenMint: pool.liquidityTokenMint,
+        cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      } as AddLiquidityInstructionAccounts,
+      {
+        poolIndex,
+        usdiAmount: toDevnetScale(liquidity),
+      } as AddLiquidityInstructionArgs
+    );
+    tx.add(addLiquidityToComet)
+  }
+
+// Should use a versioned transaction for this.
+const { blockhash } =
+  await provider.connection.getLatestBlockhash("finalized");
+let versionedTx = createVersionedTx(
+  provider.publicKey!,
+  blockhash,
+  tx,
+  [altAccount]
+);
+await provider.sendAndConfirm(
+  versionedTx
+);
 
   // Verify that we have a comet with collateral
   const managersComet = await Comet.fromAccountAddress(
@@ -371,44 +428,13 @@ const main = async () => {
   );
   console.log(
     `MANAGER COMET POSITION: 
-        Positions: ${managersComet.numPositions.toNumber()}
+        Positions: ${Number(managersComet.numPositions)}
         USDi ${toNumber(managersComet.positions[0].borrowedUsdi)}`
   );
   console.log(
     `MANAGER COMET COLLATERAL: 
-        Positions: ${managersComet.numCollaterals.toNumber()}
+        Positions: ${Number(managersComet.numCollaterals)}
         USDi ${toNumber(managersComet.collaterals[0].collateralAmount)}`
-  );
-
-  const managerAddresses = await getManagerTokenAccountAddresses(
-    provider,
-    managerInfoAddress,
-    tokenData,
-    incept.usdiMint,
-    jupiter.usdcMint,
-    jupiter.assetMints.slice(0, jupiter.nAssets)
-  );
-  const treasuryAddresses = await getTreasuryTokenAccountAddresses(
-    provider,
-    incept.treasuryAddress,
-    tokenData,
-    incept.usdiMint,
-    jupiter.usdcMint
-  );
-
-  const _account = await setupAddressLookupTable(
-    provider,
-    incept,
-    inceptAccountAddress,
-    managerInfo,
-    managerAddresses,
-    managerInfoAddress,
-    user,
-    tokenData,
-    treasuryAddresses,
-    jupiter,
-    jupiterAccountAddress,
-    config.jupiterProgramID
   );
 
   console.log("INITIALIZATION FINISHED");
