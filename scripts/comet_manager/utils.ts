@@ -14,7 +14,7 @@ export const updatePricesInstructionCreate = (
       isSigner: boolean;
     }> = [];
   
-    tokenData.pools.slice(0, tokenData.numPools.toNumber()).forEach((_, i) => {
+    tokenData.pools.slice(0, Number(tokenData.numPools)).forEach((_, i) => {
       indices.push(i);
       priceFeeds.push({
         pubkey: tokenData.pools[i].assetInfo.pythAddress,

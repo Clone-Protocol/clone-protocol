@@ -156,7 +156,7 @@ export const setupAddressLookupTable = async (
   jupiter: Jupiter,
   jupiterAddress: PublicKey,
   jupiterProgramId: PublicKey
-) => {
+): Promise<[anchor.web3.AddressLookupTableAccount, anchor.web3.PublicKey]> => {
   const userKey = provider.publicKey!;
 
   const slot = await provider.connection.getSlot("finalized");
@@ -197,7 +197,7 @@ export const setupAddressLookupTable = async (
     ...treasuryAddresses.iassetToken,
   ];
 
-  tokenData.pools.slice(0, tokenData.numPools.toNumber()).forEach((pool) => {
+  tokenData.pools.slice(0, Number(tokenData.numPools)).forEach((pool) => {
     addresses.push(pool.iassetTokenAccount);
     addresses.push(pool.usdiTokenAccount);
     addresses.push(pool.assetInfo.iassetMint);
@@ -229,5 +229,5 @@ export const setupAddressLookupTable = async (
     .getAddressLookupTable(altAddress)
     .then((res) => res.value))!;
 
-  return account;
+  return [account, altAddress];
 };
