@@ -1,8 +1,8 @@
 [programs.localnet]
-incept = "5k28XzdwaWVXaWBwfm4ZFXQAnBaTfzu25k1sHatsnsL1"
-pyth = "EERmAuBdXCAZitXKg1E2GaxFtwWDjZSctXKCvuWT19ki"
-jupiter_agg_mock = "4tChJFNsWLMyk81ezv8N8gKVb2q7H1akSQENn4NToSuS"
-incept_comet_manager = "6HAQXsz7ScT5SueXukgDB8ExE9FKeqj5q1z925SujZsu"
+incept = "7nDVRAFPTYDfcSZv9F7JxfbFxNDABfB1edG7gKHavwpt"
+pyth = "CGN35EiXnmofHy3RmjcVYeQ4Yn5PyGaQuGV8TfEZnLs7"
+jupiter_agg_mock = "B6jwZpUv7BC8Gzd5Ud5Y6FcjDFdfL4J7chmKXMig4mxY"
+incept_comet_manager = "CNEvgsmVcYBwUzWQj6iss9MJaFDAzpF8BHSEjejLTXDh"
 
 [registry]
 url = "https://anchor.projectserum.com"
