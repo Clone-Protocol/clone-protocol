@@ -73,7 +73,8 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, usdi_amount: u
     let seeds = &[&[b"incept", bytemuck::bytes_of(&ctx.accounts.incept.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
-    let _empty_pool = token_data.pools[pool_index as usize].is_empty();
+    let pool = token_data.pools[pool_index as usize];
+    let _empty_pool = pool.is_empty();
 
     let usdi_liquidity_value = Decimal::new(usdi_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
     let iasset_amm_value = Decimal::new(
@@ -106,6 +107,7 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, usdi_amount: u
             iasset_amm_value,
             usdi_amm_value,
             liquidity_token_supply,
+            pool.asset_info.price.to_decimal()
         )?;
 
     let mut lp_tokens_to_mint;

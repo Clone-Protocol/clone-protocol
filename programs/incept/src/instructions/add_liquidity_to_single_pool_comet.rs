@@ -80,7 +80,8 @@ pub fn execute(
     let mut comet = ctx.accounts.single_pool_comet.load_mut()?;
 
     let pool_index = comet.positions[position_index as usize].pool_index as usize;
-    let empty_pool = token_data.pools[pool_index].is_empty();
+    let pool = token_data.pools[pool_index];
+    let empty_pool = pool.is_empty();
 
     let usdi_liquidity_value = Decimal::new(usdi_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
     let iasset_amm_value = Decimal::new(
@@ -113,6 +114,7 @@ pub fn execute(
             iasset_amm_value,
             usdi_amm_value,
             liquidity_token_supply,
+            pool.asset_info.price.to_decimal(),
         )?;
 
     let position = comet.positions[position_index as usize];
