@@ -78,7 +78,7 @@ export const addCollateralToBorrowInstructionDiscriminator = [
 export function createAddCollateralToBorrowInstruction(
   accounts: AddCollateralToBorrowInstructionAccounts,
   args: AddCollateralToBorrowInstructionArgs,
-  programId = new web3.PublicKey('5k28XzdwaWVXaWBwfm4ZFXQAnBaTfzu25k1sHatsnsL1')
+  programId = new web3.PublicKey('7nDVRAFPTYDfcSZv9F7JxfbFxNDABfB1edG7gKHavwpt')
 ) {
   const [data] = addCollateralToBorrowStruct.serialize({
     instructionDiscriminator: addCollateralToBorrowInstructionDiscriminator,

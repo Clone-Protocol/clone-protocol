@@ -70,7 +70,7 @@ export const removeCometPositionInstructionDiscriminator = [
 export function createRemoveCometPositionInstruction(
   accounts: RemoveCometPositionInstructionAccounts,
   args: RemoveCometPositionInstructionArgs,
-  programId = new web3.PublicKey('5k28XzdwaWVXaWBwfm4ZFXQAnBaTfzu25k1sHatsnsL1')
+  programId = new web3.PublicKey('7nDVRAFPTYDfcSZv9F7JxfbFxNDABfB1edG7gKHavwpt')
 ) {
   const [data] = removeCometPositionStruct.serialize({
     instructionDiscriminator: removeCometPositionInstructionDiscriminator,

@@ -50,7 +50,7 @@ export const managementFeeClaimInstructionDiscriminator = [
  */
 export function createManagementFeeClaimInstruction(
   accounts: ManagementFeeClaimInstructionAccounts,
-  programId = new web3.PublicKey('6HAQXsz7ScT5SueXukgDB8ExE9FKeqj5q1z925SujZsu')
+  programId = new web3.PublicKey('CNEvgsmVcYBwUzWQj6iss9MJaFDAzpF8BHSEjejLTXDh')
 ) {
   const [data] = managementFeeClaimStruct.serialize({
     instructionDiscriminator: managementFeeClaimInstructionDiscriminator,

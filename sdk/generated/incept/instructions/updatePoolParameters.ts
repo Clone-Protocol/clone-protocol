@@ -69,7 +69,7 @@ export const updatePoolParametersInstructionDiscriminator = [
 export function createUpdatePoolParametersInstruction(
   accounts: UpdatePoolParametersInstructionAccounts,
   args: UpdatePoolParametersInstructionArgs,
-  programId = new web3.PublicKey('5k28XzdwaWVXaWBwfm4ZFXQAnBaTfzu25k1sHatsnsL1')
+  programId = new web3.PublicKey('7nDVRAFPTYDfcSZv9F7JxfbFxNDABfB1edG7gKHavwpt')
 ) {
   const [data] = updatePoolParametersStruct.serialize({
     instructionDiscriminator: updatePoolParametersInstructionDiscriminator,
