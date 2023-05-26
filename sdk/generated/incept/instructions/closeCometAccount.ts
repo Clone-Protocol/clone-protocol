@@ -53,7 +53,7 @@ export const closeCometAccountInstructionDiscriminator = [
  */
 export function createCloseCometAccountInstruction(
   accounts: CloseCometAccountInstructionAccounts,
-  programId = new web3.PublicKey('5k28XzdwaWVXaWBwfm4ZFXQAnBaTfzu25k1sHatsnsL1')
+  programId = new web3.PublicKey('7nDVRAFPTYDfcSZv9F7JxfbFxNDABfB1edG7gKHavwpt')
 ) {
   const [data] = closeCometAccountStruct.serialize({
     instructionDiscriminator: closeCometAccountInstructionDiscriminator,

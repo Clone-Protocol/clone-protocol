@@ -86,7 +86,7 @@ export const jupiterMockSwapInstructionDiscriminator = [
 export function createJupiterMockSwapInstruction(
   accounts: JupiterMockSwapInstructionAccounts,
   args: JupiterMockSwapInstructionArgs,
-  programId = new web3.PublicKey('6HAQXsz7ScT5SueXukgDB8ExE9FKeqj5q1z925SujZsu')
+  programId = new web3.PublicKey('CNEvgsmVcYBwUzWQj6iss9MJaFDAzpF8BHSEjejLTXDh')
 ) {
   const [data] = jupiterMockSwapStruct.serialize({
     instructionDiscriminator: jupiterMockSwapInstructionDiscriminator,
