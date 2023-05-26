@@ -37,6 +37,7 @@ pub fn calculate_liquidity_provider_values_from_usdi(
     iasset_amm_value: Decimal,
     usdi_amm_value: Decimal,
     liquidity_token_supply: Decimal,
+    oracle_price: Decimal,
 ) -> Result<(Decimal, Decimal)> {
     let liquidity_proportion =
         calculate_liquidity_proportion_from_usdi(usdi_liquidity_value, usdi_amm_value)?;
@@ -46,7 +47,7 @@ pub fn calculate_liquidity_provider_values_from_usdi(
     // check to see if the market is empty
     if iasset_amm_value.is_zero() {
         // choose arbtrary amount of usdi to provide and liquidity tokens to recieve
-        iasset_liquidity_value = usdi_liquidity_value;
+        iasset_liquidity_value = usdi_liquidity_value / oracle_price;
         liquidity_tokens_value = usdi_liquidity_value * Decimal::new(10, 0);
     } else {
         // calculate arbtrary amount of usdi to provide and liquidity tokens to recieve
