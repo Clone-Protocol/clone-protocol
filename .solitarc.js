@@ -1,27 +1,23 @@
 const path = require('path');
+const toml = require('toml');
+const fs = require('fs');
 
 const moduleFromEnv = () => {
+  const homedir = require('os').homedir();
   const programDirectory = process.env.PROGRAM_DIR
 
   const programDir = path.join(__dirname, '..', 'incept-protocol', 'programs', programDirectory);
   const idlDir = path.join(__dirname, 'target', 'idl');
   const sdkDir = path.join(__dirname, 'sdk', 'generated', programDirectory);
-  const binaryInstallDir = '.cargo';
+  const binaryInstallDir = `${homedir}/.cargo`;
   const removeExistingIdl = false;
 
   const programId = (() => {
-    switch (programDirectory) {
-      default:
-        throw new Error(`Unrecognized program directory: ${programDirectory}`)
-      case 'incept':
-        return '5k28XzdwaWVXaWBwfm4ZFXQAnBaTfzu25k1sHatsnsL1'
-      case 'incept-comet-manager':
-        return '6HAQXsz7ScT5SueXukgDB8ExE9FKeqj5q1z925SujZsu'
-      case 'pyth':
-        return 'EERmAuBdXCAZitXKg1E2GaxFtwWDjZSctXKCvuWT19ki'
-      case 'jupiter-agg-mock':
-        return '4tChJFNsWLMyk81ezv8N8gKVb2q7H1akSQENn4NToSuS'
-    }
+    const altName = programDirectory.replaceAll('-', '_')
+    const anchorToml = toml.parse(fs.readFileSync('./Anchor.toml', 'utf-8'));
+    const tomlId = anchorToml.programs.localnet[altName]
+    if (tomlId) return tomlId
+    throw new Error(`Unrecognized program directory: ${programDirectory}`)
   })()
 
   return {
