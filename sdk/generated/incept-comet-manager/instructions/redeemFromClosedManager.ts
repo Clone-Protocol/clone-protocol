@@ -70,7 +70,7 @@ export const redeemFromClosedManagerInstructionDiscriminator = [
  */
 export function createRedeemFromClosedManagerInstruction(
   accounts: RedeemFromClosedManagerInstructionAccounts,
-  programId = new web3.PublicKey('CNEvgsmVcYBwUzWQj6iss9MJaFDAzpF8BHSEjejLTXDh')
+  programId = new web3.PublicKey('8whRvQqudRqsQpcUFwFfnP1WB67V4ApCDLgMT65pVpL6')
 ) {
   const [data] = redeemFromClosedManagerStruct.serialize({
     instructionDiscriminator: redeemFromClosedManagerInstructionDiscriminator,

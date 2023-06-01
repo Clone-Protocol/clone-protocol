@@ -18,17 +18,11 @@ import {
 import { toDevnetScale } from "../../sdk/src/incept";
 import { getOrCreateAssociatedTokenAccount } from "../../tests/utils";
 import { toNumber } from "../../sdk/src/decimal";
-import {
-  createVersionedTx
-} from "../../sdk/src/utils";
+import { createVersionedTx } from "../../sdk/src/utils";
 import {
   Incept as InceptProgram,
   IDL as InceptIDL,
 } from "../../sdk/src/idl/incept";
-import {
-  InceptCometManager,
-  IDL as InceptCometManagerIDL,
-} from "../../sdk/src/idl/incept_comet_manager";
 import {
   IDL as JupiterAggMockIDL,
   JupiterAggMock,
@@ -71,6 +65,10 @@ import {
   getManagerTokenAccountAddresses,
   getTreasuryTokenAccountAddresses,
 } from "./address_lookup";
+import {
+  buildUpdateNetValueInstruction,
+  buildUpdatePricesInstruction,
+} from "./utils";
 
 const main = async () => {
   let config = {
@@ -79,21 +77,29 @@ const main = async () => {
       process.env.COMET_MANAGER_PROGRAM_ID!
     ),
     jupiterProgramID: new PublicKey(process.env.JUPITER_PROGRAM_ID!),
-    usdiToMint: 1_000_000,
+    usdiToMint: 4_000_000,
     liquidityToAdd: [
-      {liquidity: 1_000_000, poolIndex: 0},
-      {liquidity: 1_000_000, poolIndex: 1},
+      { liquidity: 1_000_000, poolIndex: 0 },
+      { liquidity: 1_000_000, poolIndex: 1 },
+      { liquidity: 1_000_000, poolIndex: 2 },
+      { liquidity: 1_000_000, poolIndex: 3 },
+      { liquidity: 1_000_000, poolIndex: 4 },
+      { liquidity: 1_000_000, poolIndex: 5 },
+      { liquidity: 1_000_000, poolIndex: 6 },
+      { liquidity: 1_000_000, poolIndex: 7 },
+      { liquidity: 1_000_000, poolIndex: 8 },
+      { liquidity: 1_000_000, poolIndex: 9 },
     ],
   };
 
   const provider = anchor.AnchorProvider.env();
 
-  const airdropSignature = await provider.connection.requestAirdrop(
-    provider.publicKey,
-    LAMPORTS_PER_SOL
-  );
+  // const airdropSignature = await provider.connection.requestAirdrop(
+  //   provider.publicKey,
+  //   LAMPORTS_PER_SOL
+  // );
 
-  await provider.connection.confirmTransaction(airdropSignature);
+  // await provider.connection.confirmTransaction(airdropSignature);
 
   const inceptProgram = new anchor.Program<InceptProgram>(
     InceptIDL,
@@ -169,6 +175,7 @@ const main = async () => {
     new Transaction().add(createIx).add(createManagerIx),
     [cometAccount]
   );
+  console.log("CREATED COMET MANAGER!");
 
   const usdcTokenAccount = await getOrCreateAssociatedTokenAccount(
     provider,
@@ -180,6 +187,7 @@ const main = async () => {
     incept.usdiMint,
     provider.publicKey!
   );
+
   // const managerUsdcTokenAccount = await getOrCreateAssociatedTokenAccount(
   //     provider,
   //     jupiter.usdcMint,
@@ -193,6 +201,14 @@ const main = async () => {
     true
   );
 
+  const treasuryAddresses = await getTreasuryTokenAccountAddresses(
+    provider,
+    incept.treasuryAddress,
+    tokenData,
+    incept.usdiMint,
+    jupiter.usdcMint
+  );
+
   const managerAddresses = await getManagerTokenAccountAddresses(
     provider,
     managerInfoAddress,
@@ -200,13 +216,6 @@ const main = async () => {
     incept.usdiMint,
     jupiter.usdcMint,
     jupiter.assetMints.slice(0, jupiter.nAssets)
-  );
-  const treasuryAddresses = await getTreasuryTokenAccountAddresses(
-    provider,
-    incept.treasuryAddress,
-    tokenData,
-    incept.usdiMint,
-    jupiter.usdcMint
   );
 
   // Mint USDC from jupiter,
@@ -219,7 +228,7 @@ const main = async () => {
     } as MintUsdcInstructionAccounts,
     {
       nonce: jupiterBump,
-      amount: new anchor.BN(config.usdiToMint * 10_000_000),
+      amount: new anchor.BN(config.usdiToMint * Math.pow(10, 7)),
     } as MintUsdcInstructionArgs
   );
   // Mint USDI for subscription.
@@ -241,10 +250,19 @@ const main = async () => {
   );
 
   await provider.sendAndConfirm(
-    new Transaction().add(mintUsdcIx).add(mintUsdiIx)
+    new Transaction().add(mintUsdcIx).add(mintUsdiIx),
+    [],
+    { commitment: "recent" }
   );
+  console.log(`MINTED USDC and WRAPPED USDi: ${config.usdiToMint}`);
 
   // Initial subscription
+  let updatePricesIx = buildUpdatePricesInstruction(
+    inceptAccountAddress,
+    incept.tokenData,
+    tokenData
+  );
+
   let [subscribeAccountAddress, _bump] = PublicKey.findProgramAddressSync(
     [
       Buffer.from("subscriber"),
@@ -285,9 +303,28 @@ const main = async () => {
       usdiCollateralToProvide: toDevnetScale(config.usdiToMint),
     } as SubscribeInstructionArgs
   );
-
+  console.log("CREATING SUBSCRIPTION...");
   await provider.sendAndConfirm(
-    new Transaction().add(createInitializeSubscription).add(createSubscribe)
+    new Transaction().add(createInitializeSubscription)
+  );
+  console.log("CREATED SUBSCRIPTION!");
+
+  // let updateNetValueIx = await buildUpdateNetValueInstruction(
+  //   provider,
+  //   tokenData,
+  //   managerInfoAddress,
+  //   inceptAccountAddress,
+  //   incept,
+  //   managerAddresses.usdiToken,
+  //   managerAddresses.usdcToken,
+  //   managerAddresses.iassetToken,
+  //   managerAddresses.underlyingToken!,
+  //   jupiter.assetMints.slice(0, Number(jupiter.nAssets)),
+  // );
+
+  console.log("CONTRIBUTING CAPITAL!");
+  await provider.sendAndConfirm(
+    new Transaction().add(updatePricesIx).add(createSubscribe)
   );
 
   const managerInfo = await ManagerInfo.fromAccountAddress(
@@ -299,12 +336,14 @@ const main = async () => {
     userAccountAddress
   );
 
+  console.log("ALT:", process.env.LOOKUP_TABLE_ADDRESS);
+
   const altAccount = await (async () => {
-    if(!process.env.ADDRESS_LOOKUP_TABLE) {
+    if (process.env.LOOKUP_TABLE_ADDRESS) {
       const account = (await provider.connection
-        .getAddressLookupTable(new PublicKey(process.env.ADDRESS_LOOKUP_TABLE!))
+        .getAddressLookupTable(new PublicKey(process.env.LOOKUP_TABLE_ADDRESS!))
         .then((res) => res.value))!;
-      return account
+      return account;
     } else {
       const [account, _altAddress] = await setupAddressLookupTable(
         provider,
@@ -320,43 +359,14 @@ const main = async () => {
         jupiterAccountAddress,
         config.jupiterProgramID
       );
-      return account
+      return account;
     }
   })();
 
-  let tx = new Transaction()
+  let tx = new Transaction();
+  tx.add(updatePricesIx);
 
-  // Update prices instruction
-  let indices: number[] = [];
-  let priceFeeds: Array<{
-    pubkey: PublicKey;
-    isWritable: boolean;
-    isSigner: boolean;
-  }> = [];
-
-  tokenData.pools.slice(0, Number(tokenData.numPools)).forEach((_, i) => {
-    indices.push(i);
-    priceFeeds.push({
-      pubkey: tokenData.pools[i].assetInfo.pythAddress,
-      isWritable: false,
-      isSigner: false,
-    });
-  });
-
-  let zero_padding = 128 - indices.length;
-  for (let i = 0; i < zero_padding; i++) {
-    indices.push(0);
-  }
-  let updatePrices = createUpdatePricesInstruction(
-    {
-      incept: inceptAccountAddress,
-      tokenData: incept.tokenData,
-      anchorRemainingAccounts: priceFeeds,
-    } as UpdatePricesInstructionAccounts,
-    { poolIndices: { indices } } as UpdatePricesInstructionArgs
-  );
-
-  tx.add(updatePrices)
+  console.log("MANAGER USDI", managerUsdiTokenAccount.amount);
 
   // Add collateral to comet.
   let addCollateralToComet = createAddCollateralToCometInstruction(
@@ -378,10 +388,10 @@ const main = async () => {
     } as AddCollateralToCometInstructionArgs
   );
 
-  tx.add(addCollateralToComet)
+  tx.add(addCollateralToComet);
 
   // Add liquidity to comet
-  for (let {liquidity, poolIndex} of config.liquidityToAdd) {
+  for (let { liquidity, poolIndex } of config.liquidityToAdd) {
     const pool = tokenData.pools[poolIndex];
     let addLiquidityToComet = createAddLiquidityInstruction(
       {
@@ -405,26 +415,23 @@ const main = async () => {
         usdiAmount: toDevnetScale(liquidity),
       } as AddLiquidityInstructionArgs
     );
-    tx.add(addLiquidityToComet)
+    tx.add(addLiquidityToComet);
   }
 
-// Should use a versioned transaction for this.
-const { blockhash } =
-  await provider.connection.getLatestBlockhash("finalized");
-let versionedTx = createVersionedTx(
-  provider.publicKey!,
-  blockhash,
-  tx,
-  [altAccount]
-);
-await provider.sendAndConfirm(
-  versionedTx
-);
+  // Should use a versioned transaction for this.
+  const { blockhash } = await provider.connection.getLatestBlockhash(
+    "finalized"
+  );
+  let versionedTx = createVersionedTx(provider.publicKey!, blockhash, tx, [
+    altAccount,
+  ]);
+  console.log("SENDING VERSIONED TX");
+  await provider.sendAndConfirm(versionedTx);
 
   // Verify that we have a comet with collateral
   const managersComet = await Comet.fromAccountAddress(
     provider.connection,
-    cometAccount.publicKey
+    user.comet
   );
   console.log(
     `MANAGER COMET POSITION: 

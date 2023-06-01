@@ -2,22 +2,23 @@ import { TokenData, Comet } from "./interfaces";
 import { toNumber } from "./decimal";
 import { CalculationError } from "./error";
 import { floorToDevnetScale } from "./utils"
+import { TokenData as SolitaTokenData, Comet as SolitaComet } from "../generated/incept/index"
 
 export const getEffectiveUSDCollateralValue = (
-  tokenData: TokenData,
-  comet: Comet
+  tokenData: TokenData | SolitaTokenData,
+  comet: Comet | SolitaComet
 ) => {
   // Iterate through collaterals.
   let effectiveUSDCollateral = 0;
 
   comet.collaterals
-    .slice(0, comet.numCollaterals.toNumber())
+    .slice(0, Number(comet.numCollaterals))
     .forEach((cometCollateral) => {
       const collateral = tokenData.collaterals[cometCollateral.collateralIndex];
-      if (collateral.stable.toNumber() === 1) {
+      if (Number(collateral.stable) === 1) {
         effectiveUSDCollateral += toNumber(cometCollateral.collateralAmount);
       } else {
-        const pool = tokenData.pools[collateral.poolIndex.toNumber()];
+        const pool = tokenData.pools[Number(collateral.poolIndex)];
         const oraclePrice = toNumber(pool.assetInfo.price);
         effectiveUSDCollateral +=
           (oraclePrice * toNumber(cometCollateral.collateralAmount)) /
@@ -29,8 +30,8 @@ export const getEffectiveUSDCollateralValue = (
 };
 
 export const getHealthScore = (
-  tokenData: TokenData,
-  comet: Comet
+  tokenData: TokenData | SolitaTokenData,
+  comet: Comet | SolitaComet
 ): {
   healthScore: number;
   ildHealthImpact: number;

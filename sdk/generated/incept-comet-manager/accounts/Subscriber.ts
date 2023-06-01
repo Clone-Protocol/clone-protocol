@@ -96,7 +96,7 @@ export class Subscriber implements SubscriberArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      'CNEvgsmVcYBwUzWQj6iss9MJaFDAzpF8BHSEjejLTXDh'
+      '8whRvQqudRqsQpcUFwFfnP1WB67V4ApCDLgMT65pVpL6'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, subscriberBeet)

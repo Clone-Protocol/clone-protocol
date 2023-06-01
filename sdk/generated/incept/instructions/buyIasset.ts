@@ -82,7 +82,7 @@ export const buyIassetInstructionDiscriminator = [
 export function createBuyIassetInstruction(
   accounts: BuyIassetInstructionAccounts,
   args: BuyIassetInstructionArgs,
-  programId = new web3.PublicKey('7nDVRAFPTYDfcSZv9F7JxfbFxNDABfB1edG7gKHavwpt')
+  programId = new web3.PublicKey('6dXq5ocMBYHsVRsGHxckdPmhimip4nisLqR6rqZ8pwt9')
 ) {
   const [data] = buyIassetStruct.serialize({
     instructionDiscriminator: buyIassetInstructionDiscriminator,

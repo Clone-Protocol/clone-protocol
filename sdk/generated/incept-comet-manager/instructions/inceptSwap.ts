@@ -94,7 +94,7 @@ export const inceptSwapInstructionDiscriminator = [
 export function createInceptSwapInstruction(
   accounts: InceptSwapInstructionAccounts,
   args: InceptSwapInstructionArgs,
-  programId = new web3.PublicKey('CNEvgsmVcYBwUzWQj6iss9MJaFDAzpF8BHSEjejLTXDh')
+  programId = new web3.PublicKey('8whRvQqudRqsQpcUFwFfnP1WB67V4ApCDLgMT65pVpL6')
 ) {
   const [data] = inceptSwapStruct.serialize({
     instructionDiscriminator: inceptSwapInstructionDiscriminator,
