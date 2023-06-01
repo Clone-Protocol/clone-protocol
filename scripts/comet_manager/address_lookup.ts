@@ -1,5 +1,9 @@
 import * as anchor from "@coral-xyz/anchor";
-import { TOKEN_PROGRAM_ID, getAccount } from "@solana/spl-token";
+import {
+  TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import {
   PublicKey,
   Transaction,
@@ -31,48 +35,47 @@ export const getManagerTokenAccountAddresses = async (
     return pool.assetInfo.iassetMint;
   });
 
-  const iassetToken = (
-    await Promise.all(
-      iassetMints.map((mint) => {
-        return getOrCreateAssociatedTokenAccount(
-          provider,
-          mint,
-          managerAddress,
-          true
-        );
-      })
-    )
-  ).map((a) => a.address);
-
-  const underlyingToken = (
-    await Promise.all(
-      underlyingMints.map((mint) => {
-        return getOrCreateAssociatedTokenAccount(
-          provider,
-          mint,
-          managerAddress,
-          true
-        );
-      })
-    )
-  ).map((x) => x.address);
-
-  const usdiToken = (
-    await getOrCreateAssociatedTokenAccount(
-      provider,
-      usdiMint,
+  let iassetToken: PublicKey[] = [];
+  for (const mint of iassetMints) {
+    console.log("MANAGER IASSET MINT:", mint.toString());
+    const associatedToken = await getAssociatedTokenAddress(
+      mint,
       managerAddress,
-      true
-    )
-  ).address;
-  const usdcToken = (
-    await getOrCreateAssociatedTokenAccount(
-      provider,
-      usdcMint,
+      true,
+      TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+    iassetToken.push(associatedToken);
+  }
+
+  let underlyingToken: PublicKey[] = [];
+  for (const mint of underlyingMints) {
+    console.log("MANAGER UNDERLYING MINT:", mint.toString());
+    const associatedToken = await getAssociatedTokenAddress(
+      mint,
       managerAddress,
-      true
-    )
-  ).address;
+      true,
+      TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+    underlyingToken.push(associatedToken);
+  }
+
+  const usdiToken = await getAssociatedTokenAddress(
+    usdiMint,
+    managerAddress,
+    true,
+    TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  );
+
+  const usdcToken = await getAssociatedTokenAddress(
+    usdcMint,
+    managerAddress,
+    true,
+    TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  );
 
   return {
     iassetToken,
@@ -95,46 +98,33 @@ export const getTreasuryTokenAccountAddresses = async (
     return pool.assetInfo.iassetMint;
   });
 
-  const iassetToken = (
-    await Promise.all(
-      iassetMints.map((mint) => {
-        return getOrCreateAssociatedTokenAccount(
-          provider,
-          mint,
-          treasuryAddress,
-          false
-        );
-      })
-    )
-  ).map((a) => a.address);
-
-  const usdiAccount = await getOrCreateAssociatedTokenAccount(
-    provider,
+  let iassetToken: PublicKey[] = [];
+  for (const mint of iassetMints) {
+    console.log("TREASURY IASSET MINT:", mint.toString());
+    const associatedToken = await getAssociatedTokenAddress(
+      mint,
+      treasuryAddress,
+      false,
+      TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+    iassetToken.push(associatedToken);
+  }
+  const usdiToken = await getAssociatedTokenAddress(
     usdiMint,
     treasuryAddress,
-    false
+    false,
+    TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID
   );
-  console.log("treasury:", treasuryAddress.toString());
-  console.log("USDI TREASURY:", usdiAccount.address.toString());
-  console.log("USDI TREASURY OWNER:", usdiAccount.owner.toString());
-  console.log("USDI TREASURY MINT:", usdiAccount.mint.toString());
 
-  const usdiToken = (
-    await getOrCreateAssociatedTokenAccount(
-      provider,
-      usdiMint,
-      treasuryAddress,
-      false
-    )
-  ).address;
-  const usdcToken = (
-    await getOrCreateAssociatedTokenAccount(
-      provider,
-      usdcMint,
-      treasuryAddress,
-      false
-    )
-  ).address;
+  const usdcToken = await getAssociatedTokenAddress(
+    usdcMint,
+    treasuryAddress,
+    false,
+    TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  );
 
   return {
     iassetToken,

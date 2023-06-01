@@ -16,7 +16,7 @@ import {
 } from "@solana/web3.js";
 import { DEVNET_TOKEN_SCALE, toDevnetScale } from "../../sdk/src/incept";
 import { getOrCreateAssociatedTokenAccount } from "../../tests/utils";
-import { toNumber } from "../../sdk/src/decimal";
+import { getMantissa, toNumber } from "../../sdk/src/decimal";
 import {
   calculateExecutionThreshold,
   calculateExecutionThresholdFromParams,
@@ -94,8 +94,10 @@ import {
   getTreasuryTokenAccountAddresses,
 } from "./address_lookup";
 import {
-  updatePricesInstructionCreate
-} from "./utils"
+  buildUpdatePricesInstruction,
+  getKeypairFromAWSSecretsManager,
+  generateKeypairFromBuffer,
+} from "./utils";
 
 type PoolState = {
   eventId: anchor.BN;
@@ -420,10 +422,22 @@ const onPriceChangeUpdate = async (
   pricePctThreshold: number,
   addressLookupTableAccount: anchor.web3.AddressLookupTableAccount
 ): Promise<boolean> => {
+  console.log("POOL DATA:", poolId, poolData);
   const conversionFactor = Math.pow(10, -DEVNET_TOKEN_SCALE);
   const poolUsdi = poolData.usdi.toNumber() * conversionFactor;
   const poolIasset = poolData.iasset.toNumber() * conversionFactor;
   const poolPrice = poolUsdi / poolIasset;
+  console.log(
+    "TOKEN DATA POOL PRICE:",
+    toNumber(tokenData.pools[0].usdiAmount),
+    toNumber(tokenData.pools[0].iassetAmount)
+  );
+  console.log(
+    "PRICES: pool, oracle, saved oracle:",
+    poolPrice,
+    oraclePrice,
+    toNumber(tokenData.pools[poolId].assetInfo.price)
+  );
   const lowerThreshold = poolPrice * (1 - pricePctThreshold);
   const higherThrehsold = poolPrice * (1 + pricePctThreshold);
   const lowerBreached = oraclePrice < lowerThreshold;
@@ -455,6 +469,7 @@ const onPriceChangeUpdate = async (
   // Estimate pool after withdrawing all liquidity
   const newPoolUsdi = poolUsdi - claimableUsdi;
   const newPoolIasset = poolIasset - claimableIasset;
+  console.log("pools:", poolUsdi, poolIasset, claimableUsdi, claimableIasset);
   console.log("NEW POOL AMOUNTS:", newPoolUsdi, newPoolIasset);
   // Figure out how much reward is gained, where to sell if in iasset.
   // Figure out how much ILD is owed.
@@ -494,9 +509,10 @@ const onPriceChangeUpdate = async (
     jupiterProgramId
   );
 
+  console.log("LP TOKENS TO WITHDRAW:", lpTokens, lpTokenSupply);
   let instructions: TransactionInstruction[] = [
     // Update prices instruction.
-    updatePricesInstructionCreate(
+    buildUpdatePricesInstruction(
       inceptAccountAddress,
       incept.tokenData,
       tokenData
@@ -544,37 +560,43 @@ const onPriceChangeUpdate = async (
         } as InceptSwapInstructionArgs)
       );
     }
-    // convert to asset
-    instructions.push(
-      createUnwrapIassetInstruction(ixnAccounts.unwrapIasset, {
-        amount: toDevnetScale(Math.abs(jupiterExchangeTrade)),
-        poolIndex: poolId,
-      } as UnwrapIassetInstructionArgs)
-    );
-    // sell underlying asset on jupiter
-    instructions.push(
-      createJupiterMockSwapInstruction(ixnAccounts.jupiterSwap, {
-        jupiterNonce,
-        isBuy: false,
-        assetIndex: poolId,
-        amount: toDevnetScale(Math.abs(jupiterExchangeTrade)),
-      } as JupiterMockSwapInstructionArgs)
-    );
-    // Convert USDC -> USDi
-    const saleUsdAmount =
-      Math.abs(jupiterExchangeTrade) * toNumber(pool.assetInfo.price);
-    instructions.push(
-      createMintUsdiInstruction(ixnAccounts.mintUsdi, {
-        amount: toDevnetScale(saleUsdAmount),
-      } as MintUsdiInstructionArgs)
-    );
-    // Deposit USDi to collateral, subtract any USDi required for payILD
-    const collateralDeposit = saleUsdAmount - Math.max(0, usdiILD);
-    instructions.push(
-      createAddCollateralToCometInstruction(ixnAccounts.addCollateralToComet, {
-        amount: toDevnetScale(collateralDeposit),
-      } as AddCollateralToCometInstructionArgs)
-    );
+
+    if (jupiterExchangeTrade !== 0) {
+      // convert to asset
+      instructions.push(
+        createUnwrapIassetInstruction(ixnAccounts.unwrapIasset, {
+          amount: toDevnetScale(Math.abs(jupiterExchangeTrade)),
+          poolIndex: poolId,
+        } as UnwrapIassetInstructionArgs)
+      );
+      // sell underlying asset on jupiter
+      instructions.push(
+        createJupiterMockSwapInstruction(ixnAccounts.jupiterSwap, {
+          jupiterNonce,
+          isBuy: false,
+          assetIndex: poolId,
+          amount: toDevnetScale(Math.abs(jupiterExchangeTrade)),
+        } as JupiterMockSwapInstructionArgs)
+      );
+      // Convert USDC -> USDi
+      const saleUsdAmount =
+        Math.abs(jupiterExchangeTrade) * toNumber(pool.assetInfo.price);
+      instructions.push(
+        createMintUsdiInstruction(ixnAccounts.mintUsdi, {
+          amount: toDevnetScale(saleUsdAmount),
+        } as MintUsdiInstructionArgs)
+      );
+      // Deposit USDi to collateral, subtract any USDi required for payILD
+      const collateralDeposit = saleUsdAmount - Math.max(0, usdiILD);
+      instructions.push(
+        createAddCollateralToCometInstruction(
+          ixnAccounts.addCollateralToComet,
+          {
+            amount: toDevnetScale(collateralDeposit),
+          } as AddCollateralToCometInstructionArgs
+        )
+      );
+    }
   } else {
     // SCENARIO 2
     // Estimate required USDC for trade, net the reward from USDi
@@ -592,28 +614,33 @@ const onPriceChangeUpdate = async (
         )
       );
     }
-    // Convert USDi -> USDC
-    instructions.push(
-      createBurnUsdiInstruction(ixnAccounts.burnUsdi, {
-        amount: toDevnetScale(requiredUsdc),
-      } as BurnUsdiInstructionArgs)
-    );
-    // buy underlying asset on jupiter
-    instructions.push(
-      createJupiterMockSwapInstruction(ixnAccounts.jupiterSwap, {
-        jupiterNonce,
-        isBuy: true,
-        assetIndex: poolId,
-        amount: toDevnetScale(Math.abs(jupiterExchangeTrade)),
-      } as JupiterMockSwapInstructionArgs)
-    );
-    // Convert from underlying to iasset.
-    instructions.push(
-      createWrapAssetInstruction(ixnAccounts.wrapAsset, {
-        amount: toDevnetScale(Math.abs(jupiterExchangeTrade)),
-        poolIndex: poolId,
-      } as WrapAssetInstructionArgs)
-    );
+    if (requiredUsdc !== 0) {
+      // Convert USDi -> USDC
+      instructions.push(
+        createBurnUsdiInstruction(ixnAccounts.burnUsdi, {
+          amount: toDevnetScale(requiredUsdc),
+        } as BurnUsdiInstructionArgs)
+      );
+    }
+
+    if (jupiterExchangeTrade !== 0) {
+      // buy underlying asset on jupiter
+      instructions.push(
+        createJupiterMockSwapInstruction(ixnAccounts.jupiterSwap, {
+          jupiterNonce,
+          isBuy: true,
+          assetIndex: poolId,
+          amount: toDevnetScale(Math.abs(jupiterExchangeTrade)),
+        } as JupiterMockSwapInstructionArgs)
+      );
+      // Convert from underlying to iasset.
+      instructions.push(
+        createWrapAssetInstruction(ixnAccounts.wrapAsset, {
+          amount: toDevnetScale(Math.abs(jupiterExchangeTrade)),
+          poolIndex: poolId,
+        } as WrapAssetInstructionArgs)
+      );
+    }
     // Convert the iasset thats not used for Paying ILD to usdi and deposit it.
     if (Math.abs(iassetInceptTrade) > 0) {
       // sell on incept
@@ -659,7 +686,7 @@ const onPriceChangeUpdate = async (
 
   // Add liquidity
   const usdiToAdd = L < 1 ? (L * newPoolUsdi) / (1 - L) : poolUsdi;
-  console.log("LIQUIDITY TO ADD:", poolUsdi);
+  console.log("LIQUIDITY TO ADD:", usdiToAdd);
   instructions.push(
     createAddLiquidityInstruction(ixnAccounts.addLiquidityToComet, {
       poolIndex: poolId,
@@ -670,6 +697,7 @@ const onPriceChangeUpdate = async (
   const { blockhash } = await provider.connection.getLatestBlockhash(
     "finalized"
   );
+  console.log("NUM IXS:", instructions.length);
   const messageV0 = new anchor.web3.TransactionMessage({
     payerKey: managerInfo.owner,
     recentBlockhash: blockhash,
@@ -684,14 +712,32 @@ const onPriceChangeUpdate = async (
 };
 
 const main = async () => {
+  console.log("---COMET MANAGER POOL RECENTERING ALGORITHM RUNNING---");
   let config = {
     inceptProgramID: new PublicKey(process.env.INCEPT_PROGRAM_ID!),
     inceptCometManager: new PublicKey(process.env.COMET_MANAGER_PROGRAM_ID!),
     jupiterProgramId: new PublicKey(process.env.JUPITER_PROGRAM_ID!),
     lookupTableAddress: new PublicKey(process.env.LOOKUP_TABLE_ADDRESS!),
-    pctThreshold: Number(process.env.PCT_THRESHOLD!)// 0.01,
+    pctThreshold: Number(process.env.PCT_THRESHOLD!), // 0.01,
+    awsSecretName: process.env.AWS_SECRET_NAME,
   };
-  const provider = anchor.AnchorProvider.env();
+  const provider = await (async () => {
+    if (config.awsSecretName) {
+      const secretBuffer = await getKeypairFromAWSSecretsManager(
+        config.awsSecretName!
+      );
+      const keypair = generateKeypairFromBuffer(JSON.parse(secretBuffer));
+      const wallet = new anchor.Wallet(keypair);
+      const options = anchor.AnchorProvider.defaultOptions();
+      const connection = new Connection(
+        process.env.ANCHOR_PROVIDER_URL!,
+        options.commitment
+      );
+      return new anchor.AnchorProvider(connection, wallet, options);
+    } else {
+      return anchor.AnchorProvider.env();
+    }
+  })();
 
   const [inceptAccountAddress, _inceptNonce] = PublicKey.findProgramAddressSync(
     [Buffer.from("incept")],
@@ -738,10 +784,6 @@ const main = async () => {
     provider
   );
 
-  // Market state objects
-  let pythPrices: PythPriceData = new Map();
-  pythPrices.set(0, 1); // FOR TESTING!
-  let poolStates: PoolStateData = new Map();
   // Current manager state
   let managerState = await ManagerInfo.fromAccountAddress(
     provider.connection,
@@ -759,11 +801,31 @@ const main = async () => {
   console.log("USDI mint:", incept.usdiMint.toString());
   console.log(
     "COMET:",
-    comet.numPositions.toNumber(),
-    comet.numCollaterals.toNumber(),
+    Number(comet.numPositions),
+    Number(comet.numCollaterals),
     toNumber(comet.collaterals[0].collateralAmount),
     toNumber(comet.positions[0].borrowedUsdi)
   );
+
+  // Market state objects
+  let pythPrices: PythPriceData = new Map();
+  let poolStates: PoolStateData = (() => {
+    let initMap = new Map();
+    tokenData.pools
+      .slice(0, Number(tokenData.numPools))
+      .forEach((pool, index) => {
+        initMap.set(index, {
+          eventId: new anchor.BN(NaN),
+          poolIndex: index,
+          iasset: new anchor.BN(getMantissa(pool.iassetAmount)),
+          usdi: new anchor.BN(getMantissa(pool.usdiAmount)),
+          lpTokens: new anchor.BN(getMantissa(pool.liquidityTokenSupply)),
+          oraclePrice: new anchor.BN(getMantissa(pool.assetInfo.price)),
+        } as PoolState);
+      });
+    return initMap;
+  })();
+
   let jupiter = await Jupiter.fromAccountAddress(
     provider.connection,
     jupiterAccountAddress
@@ -800,6 +862,7 @@ const main = async () => {
   inceptProgram.account.tokenData
     .subscribe(incept.tokenData, "recent")
     .on("change", (account: TokenData) => {
+      console.log("TOKEN DATA UPDATED!");
       tokenData = account;
     });
   inceptProgram.account.comet
@@ -842,10 +905,16 @@ const main = async () => {
           jupiterNonce,
           config.pctThreshold,
           altAccount
-        ).then((result) => {
-          console.log("Algorithm ran:", result);
-          executing = false;
-        });
+        )
+          .then((result) => {
+            console.log("Algorithm ran:", event.poolIndex, result);
+          })
+          .catch((error) => {
+            console.log("Something went wrong:", error);
+          })
+          .finally(() => {
+            executing = false;
+          });
       }
     }
   );
@@ -854,44 +923,50 @@ const main = async () => {
   // TODO: Refactor to extract the price only.
   // Once we switch away from using Jupiter Mock Agg into the real jupiter we'll have to
   // figure out either streaming or polling quotes from Jupiter for our specific routes.
-  // const pythConnection = new PythConnection(
-  //   provider.connection,
-  //   getPythProgramKeyForCluster("devnet")
-  // );
-  // pythConnection.onPriceChange((product, data) => {
-  //   let poolIndex = PYTH_SYMBOL_MAPPING.get(product.symbol);
-  //   if (poolIndex === undefined) return;
-  //   pythPrices.set(poolIndex, data.price!)
-  //   if (!executing) {
-  //     executing = true;
-  //     onPriceChangeUpdate(
-  //       provider,
-  //       poolIndex,
-  //       pythPrices.get(poolIndex)!,
-  //       poolStates.get(poolIndex)!,
-  //       managerState,
-  //       cometManagerAccountAddress,
-  //       managerAddresses,
-  //       treasuryAddresses,
-  //       userAccount,
-  //       incept,
-  //       inceptAccountAddress,
-  //       tokenData,
-  //       comet,
-  //       jupiter,
-  //       config.jupiterProgramId,
-  //       jupiterAccountAddress,
-  //       jupiterNonce,
-  //       config.pctThreshold,
-  //       altAccount
-  //     ).then((result) => {
-  //       console.log("Algorithm ran:", result);
-  //       executing = false
-  //     })
-  //   }
-  // });
-  // // Start listening for price change events.
-  // await pythConnection.start();
+  const pythConnection = new PythConnection(
+    provider.connection,
+    getPythProgramKeyForCluster("devnet")
+  );
+  pythConnection.onPriceChange((product, data) => {
+    let poolIndex = PYTH_SYMBOL_MAPPING.get(product.symbol);
+    if (poolIndex === undefined) return;
+    pythPrices.set(poolIndex, data.price!);
+    if (!executing) {
+      executing = true;
+      onPriceChangeUpdate(
+        provider,
+        poolIndex,
+        pythPrices.get(poolIndex)!,
+        poolStates.get(poolIndex)!,
+        managerState,
+        cometManagerAccountAddress,
+        managerAddresses,
+        treasuryAddresses,
+        userAccount,
+        incept,
+        inceptAccountAddress,
+        tokenData,
+        comet,
+        jupiter,
+        config.jupiterProgramId,
+        jupiterAccountAddress,
+        jupiterNonce,
+        config.pctThreshold,
+        altAccount
+      )
+        .then((result) => {
+          console.log("Algorithm ran:", result);
+        })
+        .catch((error) => {
+          console.log("Something went wrong:", error);
+        })
+        .finally(() => {
+          executing = false;
+        });
+    }
+  });
+  // Start listening for price change events.
+  await pythConnection.start();
 };
 
 main();

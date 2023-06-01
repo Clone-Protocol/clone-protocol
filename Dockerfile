@@ -1,5 +1,5 @@
 # Use an official Node.js 17 runtime as a parent image
-FROM node:17
+FROM --platform=linux/amd64 node:17
 
 # Install ts-node globally so we can run our TypeScript file
 RUN npm install -g ts-node
@@ -13,6 +13,7 @@ RUN npm install --legacy-peer-deps
 # Copy the sdk and scripts directories into the working directory
 COPY sdk/ ./sdk/
 COPY scripts/ ./scripts/
+COPY tests/ ./tests/
 
 # Use environment variables
 ARG ANCHOR_WALLET
@@ -37,4 +38,4 @@ ARG PCT_THRESHOLD
 ENV PCT_THRESHOLD=$PCT_THRESHOLD
 
 # Define the command to run the app using ts-node
-CMD ["node -r", "ts-node/register", "scripts/comet_manager/pool_recentering.ts"]
+CMD ["node", "-r", "ts-node/register", "scripts/comet_manager/pool_recentering.ts"]

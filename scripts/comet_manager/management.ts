@@ -1,21 +1,16 @@
 import * as anchor from "@coral-xyz/anchor";
-import {
-  TOKEN_PROGRAM_ID,
-  getAccount,
-  Account,
-} from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, getAccount, Account } from "@solana/spl-token";
 import {
   PublicKey,
   Transaction,
   TransactionInstruction,
   AddressLookupTableAccount,
+  Connection,
 } from "@solana/web3.js";
 import { DEVNET_TOKEN_SCALE, toDevnetScale } from "../../sdk/src/incept";
 import { getOrCreateAssociatedTokenAccount } from "../../tests/utils";
 import { toNumber } from "../../sdk/src/decimal";
-import {
-  sleep,
-} from "../../sdk/src/utils";
+import { sleep } from "../../sdk/src/utils";
 import {
   Incept as InceptProgram,
   IDL as InceptIDL,
@@ -54,7 +49,11 @@ import {
   getManagerTokenAccountAddresses,
   getTreasuryTokenAccountAddresses,
 } from "./address_lookup";
-import { updatePricesInstructionCreate } from "./utils";
+import {
+  buildUpdatePricesInstruction,
+  getKeypairFromAWSSecretsManager,
+  generateKeypairFromBuffer,
+} from "./utils";
 
 const checkUsdiAndUpdateUsdiBalance = async (
   provider: anchor.Provider,
@@ -67,8 +66,9 @@ const checkUsdiAndUpdateUsdiBalance = async (
   managerInceptUser: User
 ) => {
   const usdiAccount = await getAccount(provider.connection, usdiAccountAddress);
-
+  console.log("USDI ADDRESS:", usdiAccountAddress.toString());
   if (Number(usdiAccount.amount) > 0) {
+    console.log("Adding USDi balance to comet!", Number(usdiAccount.amount));
     let tx = new Transaction();
     tx.add(
       createAddCollateralToCometInstruction(
@@ -85,7 +85,7 @@ const checkUsdiAndUpdateUsdiBalance = async (
           inceptProgram: managerInfo.inceptProgram,
           managerUsdiTokenAccount: usdiAccountAddress,
         },
-        { amount: usdiAccount.amount }
+        { amount: new anchor.BN(usdiAccount.amount) }
       )
     );
     await provider.sendAndConfirm!(tx);
@@ -99,13 +99,13 @@ const rebalanceStrategy = async (
   ildHealthImpact: number,
   collateralValue: number
 ) => {
-  const nPositions = comet.numPositions.toNumber();
+  const nPositions = Number(comet.numPositions);
   const targetPositionHealthImpact = targetHealthScore - ildHealthImpact;
   const perPositionImpact =
     (targetPositionHealthImpact * collateralValue) / nPositions;
 
   return comet.positions.slice(0, nPositions).map((pos) => {
-    const pool = tokenData.pools[pos.poolIndex.toNumber()];
+    const pool = tokenData.pools[Number(pos.poolIndex)];
     return (
       perPositionImpact /
       toNumber(pool.assetInfo.positionHealthScoreCoefficient)
@@ -126,7 +126,7 @@ const rebalancePositions = async (
   targetHealthScore: number,
   positionThreshold: number,
   addressLookupTableAccount: AddressLookupTableAccount
-): Promise<void> => {
+): Promise<boolean> => {
   // Calculate current position health score, (score without ILD)
   const nPositions = Number(comet.numPositions);
   const { healthScore, ildHealthImpact } = getHealthScore(tokenData, comet);
@@ -137,27 +137,41 @@ const rebalancePositions = async (
   const positionHealthScore =
     targetHealthScore - ildHealthImpact / totalCollateralAmount;
   const perPositionHealthScore = (100 - positionHealthScore) / nPositions;
-
-  const instructions: TransactionInstruction[] = [];
+  console.log(
+    "HEALTH SCORE:",
+    healthScore,
+    targetHealthScore,
+    ildHealthImpact,
+    perPositionHealthScore,
+    totalCollateralAmount
+  );
+  let updatePricesIx = buildUpdatePricesInstruction(
+    inceptAccountAddress,
+    incept.tokenData,
+    tokenData
+  );
+  const instructions: TransactionInstruction[] = [updatePricesIx];
 
   comet.positions.slice(0, nPositions).forEach((position, index) => {
-    const pool = tokenData.pools[position.poolIndex];
+    const pool = tokenData.pools[Number(position.poolIndex)];
     const usdiPositionSize = toNumber(position.borrowedUsdi);
     const coefficient = toNumber(pool.assetInfo.positionHealthScoreCoefficient);
-    const targetPositionSize = perPositionHealthScore / coefficient;
+    const targetPositionSize =
+      (totalCollateralAmount * perPositionHealthScore) / coefficient;
+    console.log("TARGET:", index, targetPositionSize, usdiPositionSize);
     const absPositionDiff = Math.abs(usdiPositionSize - targetPositionSize);
 
     if (absPositionDiff / targetPositionSize <= positionThreshold) {
       return;
     }
 
-    if (usdiPositionSize > perPositionHealthScore) {
+    if (targetPositionSize > usdiPositionSize) {
       // Add liquidity
       const addLiquidityToComet: AddLiquidityInstructionAccounts = {
         managerOwner: managerInfo.owner,
         managerInfo: managerInfoAddress,
-        incept: inceptAccountAddress,
-        managerInceptUser: managerInfo.incept,
+        incept: managerInfo.incept,
+        managerInceptUser: managerInfo.userAccount,
         usdiMint: incept.usdiMint,
         inceptProgram: managerInfo.inceptProgram,
         comet: managerInceptUser.comet,
@@ -169,30 +183,24 @@ const rebalancePositions = async (
         cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       };
+
       instructions.push(
         createAddLiquidityInstruction(addLiquidityToComet, {
-          poolIndex: position.poolIndex,
+          poolIndex: Number(position.poolIndex),
           usdiAmount: toDevnetScale(absPositionDiff),
         } as AddLiquidityInstructionArgs)
       );
     } else {
-      // Add prices updates.
-      instructions.push(
-        updatePricesInstructionCreate(
-          inceptAccountAddress,
-          incept.tokenData,
-          tokenData
-        )
-      );
       // Withdraw liquidity
       const lpToWithdraw =
         (absPositionDiff * toNumber(pool.liquidityTokenSupply)) /
         toNumber(pool.usdiAmount);
+      console.log();
       const withdrawLiquidity: WithdrawLiquidityInstructionAccounts = {
         signer: managerInfo.owner,
         managerInfo: managerInfoAddress,
-        incept: inceptAccountAddress,
-        managerInceptUser: managerInfo.incept,
+        incept: managerInfo.incept,
+        managerInceptUser: managerInfo.userAccount,
         usdiMint: incept.usdiMint,
         inceptProgram: managerInfo.inceptProgram,
         comet: managerInceptUser.comet,
@@ -204,7 +212,7 @@ const rebalancePositions = async (
         liquidityTokenMint: pool.liquidityTokenMint,
         cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
         managerIassetTokenAccount:
-          managerAddresses.iassetToken[position.poolIndex],
+          managerAddresses.iassetToken[Number(position.poolIndex)],
         managerUsdiTokenAccount: managerAddresses.usdiToken,
         tokenProgram: TOKEN_PROGRAM_ID,
       };
@@ -217,6 +225,9 @@ const rebalancePositions = async (
     }
   });
 
+  if (instructions.length === 1) {
+    return false;
+  }
   // Create versioned transaction and send
   const { blockhash } = await provider.connection.getLatestBlockhash(
     "finalized"
@@ -228,8 +239,9 @@ const rebalancePositions = async (
   }).compileToV0Message([addressLookupTableAccount]);
   // create a v0 transaction from the v0 message
   const transactionV0 = new anchor.web3.VersionedTransaction(messageV0);
-
   await provider.sendAndConfirm!(transactionV0);
+
+  return true;
 };
 
 const getNetValue = async (
@@ -254,11 +266,7 @@ const getNetValue = async (
     cometManagerInfoAddress
   );
 
-  for (
-    let poolIndex = 0;
-    poolIndex < tokenData.numPools.toNumber();
-    poolIndex++
-  ) {
+  for (let poolIndex = 0; poolIndex < Number(tokenData.numPools); poolIndex++) {
     let pool = tokenData.pools[poolIndex];
     iassetAccountsCalls.push(
       getOrCreateAssociatedTokenAccount(
@@ -281,7 +289,6 @@ const getNetValue = async (
           cometManagerInfoAddress,
           true
         );
-
         return underlyingAta;
       })()
     );
@@ -309,7 +316,7 @@ const getNetValue = async (
 
   let tx = new Transaction()
     .add(
-      updatePricesInstructionCreate(
+      buildUpdatePricesInstruction(
         inceptAccountAddress,
         incept.tokenData,
         tokenData
@@ -319,7 +326,7 @@ const getNetValue = async (
       createUpdateNetValueInstruction({
         signer: provider.publicKey!,
         managerInfo: cometManagerInfoAddress,
-        incept: inceptAccountAddress,
+        incept: managerInfo.incept,
         managerInceptUser: managerInfo.userAccount,
         usdiMint: incept.usdiMint,
         usdcMint: tokenData.collaterals[1].mint,
@@ -423,45 +430,44 @@ const handleRedemptions = async (
     toNumber(comet.collaterals[0].collateralAmount) - usdiToRedeem
   );
 
-  comet.positions
-    .slice(0, comet.numPositions.toNumber())
-    .forEach((pos, index) => {
-      const currentUsdiPosition = toNumber(pos.borrowedUsdi);
-      const targetUsdiPosition = usdiPositionTargets[index];
-      if (currentUsdiPosition < targetUsdiPosition) return;
+  comet.positions.slice(0, Number(comet.numPositions)).forEach((pos, index) => {
+    const currentUsdiPosition = toNumber(pos.borrowedUsdi);
+    const targetUsdiPosition = usdiPositionTargets[index];
+    if (currentUsdiPosition < targetUsdiPosition) return;
 
-      const pool = tokenData.pools[pos.poolIndex.toNumber()];
-      const poolUsdi = toNumber(pool.usdiAmount);
-      const lpSupply = toNumber(pool.liquidityTokenSupply);
-      const lpToWithdraw =
-        (lpSupply * (targetUsdiPosition - currentUsdiPosition)) / poolUsdi;
+    const pool = tokenData.pools[Number(pos.poolIndex)];
+    const poolUsdi = toNumber(pool.usdiAmount);
+    const lpSupply = toNumber(pool.liquidityTokenSupply);
+    const lpToWithdraw =
+      (lpSupply * (targetUsdiPosition - currentUsdiPosition)) / poolUsdi;
 
-      const withdrawLiquidity: WithdrawLiquidityInstructionAccounts = {
-        signer: managerInfo.owner,
-        managerInfo: managerInfoAddress,
-        incept: inceptAccountAddress,
-        managerInceptUser: managerInfo.incept,
-        usdiMint: incept.usdiMint,
-        inceptProgram: managerInfo.inceptProgram,
-        comet: managerInceptUser.comet,
-        tokenData: incept.tokenData,
-        inceptUsdiVault: tokenData.collaterals[0].vault,
-        iassetMint: pool.assetInfo.iassetMint,
-        ammUsdiTokenAccount: pool.usdiTokenAccount,
-        ammIassetTokenAccount: pool.iassetTokenAccount,
-        liquidityTokenMint: pool.liquidityTokenMint,
-        cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
-        managerIassetTokenAccount: managerAddresses.iassetToken[pos.poolIndex],
-        managerUsdiTokenAccount: managerAddresses.usdiToken,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      };
-      instructions.push(
-        createWithdrawLiquidityInstruction(withdrawLiquidity, {
-          cometPositionIndex: index,
-          liquidityTokenAmount: toDevnetScale(lpToWithdraw),
-        } as WithdrawLiquidityInstructionArgs)
-      );
-    });
+    const withdrawLiquidity: WithdrawLiquidityInstructionAccounts = {
+      signer: managerInfo.owner,
+      managerInfo: managerInfoAddress,
+      incept: managerInfo.incept,
+      managerInceptUser: managerInfo.userAccount,
+      usdiMint: incept.usdiMint,
+      inceptProgram: managerInfo.inceptProgram,
+      comet: managerInceptUser.comet,
+      tokenData: incept.tokenData,
+      inceptUsdiVault: tokenData.collaterals[0].vault,
+      iassetMint: pool.assetInfo.iassetMint,
+      ammUsdiTokenAccount: pool.usdiTokenAccount,
+      ammIassetTokenAccount: pool.iassetTokenAccount,
+      liquidityTokenMint: pool.liquidityTokenMint,
+      cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
+      managerIassetTokenAccount:
+        managerAddresses.iassetToken[Number(pos.poolIndex)],
+      managerUsdiTokenAccount: managerAddresses.usdiToken,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    };
+    instructions.push(
+      createWithdrawLiquidityInstruction(withdrawLiquidity, {
+        cometPositionIndex: index,
+        liquidityTokenAmount: toDevnetScale(lpToWithdraw),
+      } as WithdrawLiquidityInstructionArgs)
+    );
+  });
 
   // Withdraw Collateral
   instructions.push(
@@ -469,7 +475,7 @@ const handleRedemptions = async (
       {
         signer: managerInfo.owner,
         managerInfo: managerInfoAddress,
-        incept: inceptAccountAddress,
+        incept: managerInfo.incept,
         managerInceptUser: managerInfo.userAccount,
         usdiMint: incept.usdiMint,
         managerUsdiTokenAccount: managerAddresses.usdiToken,
@@ -547,16 +553,36 @@ const handleRedemptions = async (
 };
 
 const main = async () => {
+  console.log(
+    "---COMET MANAGER POOL LIQUIDITY MANAGEMENT ALGORITHM RUNNING---"
+  );
   let config = {
     inceptProgramID: new PublicKey(process.env.INCEPT_PROGRAM_ID!),
     inceptCometManager: new PublicKey(process.env.COMET_MANAGER_PROGRAM_ID!),
     jupiterProgramId: new PublicKey(process.env.JUPITER_PROGRAM_ID!),
     lookupTableAddress: new PublicKey(process.env.LOOKUP_TABLE_ADDRESS!),
-    intervalSeconds: 60,
-    targetHealthScore: 70,
-    positionThreshold: 0.05,
+    intervalSeconds: Number(process.env.INTERVAL ?? "60"),
+    targetHealthScore: Number(process.env.TARGET_HEALTH_SCORE ?? "90"),
+    positionThreshold: Number(process.env.POSITION_THRESHOLD ?? "0.05"),
+    awsSecretName: process.env.AWS_SECRET_NAME,
   };
-  const provider = anchor.AnchorProvider.env();
+  const provider = await (async () => {
+    if (config.awsSecretName) {
+      const secretBuffer = await getKeypairFromAWSSecretsManager(
+        config.awsSecretName!
+      );
+      const keypair = generateKeypairFromBuffer(JSON.parse(secretBuffer));
+      const wallet = new anchor.Wallet(keypair);
+      const options = anchor.AnchorProvider.defaultOptions();
+      const connection = new Connection(
+        process.env.ANCHOR_PROVIDER_URL!,
+        options.commitment
+      );
+      return new anchor.AnchorProvider(connection, wallet, options);
+    } else {
+      return anchor.AnchorProvider.env();
+    }
+  })();
 
   const [inceptAccountAddress, _inceptNonce] = PublicKey.findProgramAddressSync(
     [Buffer.from("incept")],
@@ -580,6 +606,7 @@ const main = async () => {
       [Buffer.from("user"), cometManagerAccountAddress.toBuffer()],
       config.inceptProgramID
     );
+  console.log("USER ACCOUNT ADDRESS:", userAccountAddress.toString());
 
   const incept = await Incept.fromAccountAddress(
     provider.connection,
@@ -632,13 +659,13 @@ const main = async () => {
     jupiter.assetMints.slice(0, jupiter.nAssets)
   );
 
-  const treasuryAddresses = await getTreasuryTokenAccountAddresses(
-    provider,
-    incept.treasuryAddress,
-    tokenData,
-    incept.usdiMint,
-    jupiter.usdcMint
-  );
+  // const treasuryAddresses = await getTreasuryTokenAccountAddresses(
+  //   provider,
+  //   incept.treasuryAddress,
+  //   tokenData,
+  //   incept.usdiMint,
+  //   jupiter.usdcMint
+  // );
 
   const altAccount = (await provider.connection
     .getAddressLookupTable(config.lookupTableAddress)
@@ -654,6 +681,7 @@ const main = async () => {
   inceptProgram.account.tokenData
     .subscribe(incept.tokenData, "recent")
     .on("change", (account: TokenData) => {
+      console.log("TOKEN DATA UPDATED!");
       tokenData = account;
     });
   inceptProgram.account.comet
@@ -697,7 +725,7 @@ const main = async () => {
     );
     // Else try and rebalance
     if (!executed) {
-      await rebalancePositions(
+      let rebalanced = await rebalancePositions(
         provider,
         managerState,
         cometManagerAccountAddress,
@@ -711,6 +739,9 @@ const main = async () => {
         config.positionThreshold,
         altAccount
       );
+      if (rebalanced) {
+        console.log("REBALANCED POSITIONS!");
+      }
     }
 
     await sleep(config.intervalSeconds * 1e3);
