@@ -64,7 +64,7 @@ export const updateNetValueInstructionDiscriminator = [
  */
 export function createUpdateNetValueInstruction(
   accounts: UpdateNetValueInstructionAccounts,
-  programId = new web3.PublicKey('CNEvgsmVcYBwUzWQj6iss9MJaFDAzpF8BHSEjejLTXDh')
+  programId = new web3.PublicKey('8whRvQqudRqsQpcUFwFfnP1WB67V4ApCDLgMT65pVpL6')
 ) {
   const [data] = updateNetValueStruct.serialize({
     instructionDiscriminator: updateNetValueInstructionDiscriminator,

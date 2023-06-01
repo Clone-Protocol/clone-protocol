@@ -94,7 +94,7 @@ export const payIldInstructionDiscriminator = [
 export function createPayIldInstruction(
   accounts: PayIldInstructionAccounts,
   args: PayIldInstructionArgs,
-  programId = new web3.PublicKey('CNEvgsmVcYBwUzWQj6iss9MJaFDAzpF8BHSEjejLTXDh')
+  programId = new web3.PublicKey('8whRvQqudRqsQpcUFwFfnP1WB67V4ApCDLgMT65pVpL6')
 ) {
   const [data] = payIldStruct.serialize({
     instructionDiscriminator: payIldInstructionDiscriminator,
