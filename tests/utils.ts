@@ -33,7 +33,6 @@ export const getOrCreateAssociatedTokenAccount = async (
     TOKEN_PROGRAM_ID,
     ASSOCIATED_TOKEN_PROGRAM_ID
   );
-  console.log(associatedToken.toString())
 
   let account: Account;
   try {
@@ -55,12 +54,9 @@ export const getOrCreateAssociatedTokenAccount = async (
           ASSOCIATED_TOKEN_PROGRAM_ID
         )
       );
-      try {
-        await provider.sendAndConfirm!(transaction, [], {commitment: "confirmed"});
-      } catch (error2: unknown) {
-        console.log('Error creating ata for', mint.toString(), associatedToken.toString(), (owner ? owner : provider.publicKey!).toString())
-        throw error2
-      }
+
+    await provider.sendAndConfirm!(transaction);
+      await sleep(6000);
       account = await getAccount(
         provider.connection,
         associatedToken,
@@ -68,7 +64,6 @@ export const getOrCreateAssociatedTokenAccount = async (
         TOKEN_PROGRAM_ID
       );
     } else {
-      console.log("UNRECOGNIZED ERROR!")
       throw error;
     }
   }
@@ -76,7 +71,6 @@ export const getOrCreateAssociatedTokenAccount = async (
   if (!account) {
     throw Error("Could not create account!");
   }
-  if (associatedToken.toString() === "CjBkBhxQG2w6LEZn34T2QhGRszgPz8eU5urV2jBU4bSS") console.log("OK THIS WORKED...")
   return account;
 };
 
