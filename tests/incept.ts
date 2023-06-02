@@ -3062,7 +3062,7 @@ describe("incept", async () => {
     await cometManagerProgram.methods
       .withdrawLiquidity(
         0,
-        toDevnetScale(toNumber(comet.positions[0].liquidityTokenValue))
+        toDevnetScale(toNumber(comet.positions[0].liquidityTokenValue) * 2)
       )
       .accounts({
         signer: inceptClient.provider.publicKey!,
