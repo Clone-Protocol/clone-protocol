@@ -116,6 +116,7 @@ export interface Pool {
   totalMintedAmount: RawDecimal;
   suppliedMintCollateralAmount: RawDecimal;
   assetInfo: AssetInfo;
+  deprecated: number;
 }
 
 export interface Collateral {

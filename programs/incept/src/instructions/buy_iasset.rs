@@ -22,7 +22,8 @@ pub struct BuyIasset<'info> {
     #[account(
         mut,
         has_one = incept,
-        constraint = (pool_index as u64) < token_data.load()?.num_pools @ InceptError::InvalidInputPositionIndex
+        constraint = (pool_index as u64) < token_data.load()?.num_pools @ InceptError::InvalidInputPositionIndex,
+        constraint = token_data.load()?.pools[pool_index as usize].deprecated == 0 @ InceptError::PoolDeprecated
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(

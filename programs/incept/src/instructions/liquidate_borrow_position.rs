@@ -40,7 +40,8 @@ pub struct LiquidateBorrowPosition<'info> {
     #[account(
         mut,
         owner = *user_account.to_account_info().owner,
-        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ InceptError::InvalidInputPositionIndex
+        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ InceptError::InvalidInputPositionIndex,
+        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].deprecated == 0 @ InceptError::PoolDeprecated
     )]
     pub borrow_positions: AccountLoader<'info, BorrowPositions>,
     #[account(

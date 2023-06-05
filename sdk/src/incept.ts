@@ -29,10 +29,10 @@ export const DEVNET_TOKEN_SCALE = 8;
 export const MAX_PRICE_SIZE = 128;
 
 export const toDevnetScale = (x: number): BN => {
-  const scale = new BN(`1${'0'.repeat(DEVNET_TOKEN_SCALE)}`)
-  const hi = (new BN(x)).mul(scale)
-  const low = new BN((x % 1) * Math.pow(10, DEVNET_TOKEN_SCALE))
-  return hi.add(low)
+  const scale = new BN(`1${"0".repeat(DEVNET_TOKEN_SCALE)}`);
+  const hi = new BN(x).mul(scale);
+  const low = new BN((x % 1) * Math.pow(10, DEVNET_TOKEN_SCALE));
+  return hi.add(low);
 };
 
 export class InceptClient {

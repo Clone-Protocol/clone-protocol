@@ -38,7 +38,8 @@ pub struct LiquidateCometBorrow<'info> {
         mut,
         constraint = comet.to_account_info().key() == user_account.comet || comet.to_account_info().key() == user_account.single_pool_comets,
         constraint = comet.load()?.is_single_pool == 0 || comet.load()?.is_single_pool == 1 @ InceptError::WrongCometType,
-        constraint = (comet_position_index as u64) < comet.load()?.num_positions @ InceptError::InvalidInputPositionIndex
+        constraint = (comet_position_index as u64) < comet.load()?.num_positions @ InceptError::InvalidInputPositionIndex,
+        constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].deprecated == 0 @ InceptError::PoolDeprecated
     )]
     pub comet: AccountLoader<'info, Comet>,
     #[account(

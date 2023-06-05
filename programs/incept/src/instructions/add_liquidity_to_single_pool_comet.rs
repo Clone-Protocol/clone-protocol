@@ -34,7 +34,8 @@ pub struct AddLiquidityToSinglePoolComet<'info> {
         mut,
         address = user_account.single_pool_comets,
         constraint = single_pool_comet.load()?.is_single_pool == 1 @ InceptError::WrongCometType,
-        constraint = (position_index as u64) < single_pool_comet.load()?.num_positions @ InceptError::InvalidInputPositionIndex
+        constraint = (position_index as u64) < single_pool_comet.load()?.num_positions @ InceptError::InvalidInputPositionIndex,
+        constraint = token_data.load()?.pools[single_pool_comet.load()?.positions[position_index as usize].pool_index as usize].deprecated == 0 @ InceptError::PoolDeprecated
     )]
     pub single_pool_comet: AccountLoader<'info, Comet>,
     #[account(

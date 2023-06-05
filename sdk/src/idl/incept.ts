@@ -2318,7 +2318,7 @@ export type Incept = {
       "args": []
     },
     {
-      "name": "removePool",
+      "name": "deprecatePool",
       "accounts": [
         {
           "name": "admin",
@@ -2340,10 +2340,6 @@ export type Incept = {
         {
           "name": "poolIndex",
           "type": "u8"
-        },
-        {
-          "name": "forceRemoval",
-          "type": "bool"
         }
       ]
     },
@@ -2920,6 +2916,10 @@ export type Incept = {
             "type": {
               "defined": "AssetInfo"
             }
+          },
+          {
+            "name": "deprecated",
+            "type": "u64"
           }
         ]
       }
@@ -3720,6 +3720,11 @@ export type Incept = {
       "code": 6052,
       "name": "FailedToLoadPyth",
       "msg": "Failed to Load Pyth Price Feed"
+    },
+    {
+      "code": 6053,
+      "name": "PoolDeprecated",
+      "msg": "Pool Deprecated"
     }
   ]
 };
@@ -6044,7 +6049,7 @@ export const IDL: Incept = {
       "args": []
     },
     {
-      "name": "removePool",
+      "name": "deprecatePool",
       "accounts": [
         {
           "name": "admin",
@@ -6066,10 +6071,6 @@ export const IDL: Incept = {
         {
           "name": "poolIndex",
           "type": "u8"
-        },
-        {
-          "name": "forceRemoval",
-          "type": "bool"
         }
       ]
     },
@@ -6646,6 +6647,10 @@ export const IDL: Incept = {
             "type": {
               "defined": "AssetInfo"
             }
+          },
+          {
+            "name": "deprecated",
+            "type": "u64"
           }
         ]
       }
@@ -7446,6 +7451,11 @@ export const IDL: Incept = {
       "code": 6052,
       "name": "FailedToLoadPyth",
       "msg": "Failed to Load Pyth Price Feed"
+    },
+    {
+      "code": 6053,
+      "name": "PoolDeprecated",
+      "msg": "Pool Deprecated"
     }
   ]
 };
