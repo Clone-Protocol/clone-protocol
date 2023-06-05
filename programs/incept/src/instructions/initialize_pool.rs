@@ -129,7 +129,7 @@ pub fn execute(
         asset_info: AssetInfo {
             ..Default::default()
         },
-        deprecated: false,
+        deprecated: 0,
     });
     let index = token_data.num_pools - 1;
     token_data.pools[index as usize].asset_info.iasset_mint =

@@ -36,7 +36,7 @@ pub struct LiquidateCometILD<'info> {
         mut,
         constraint = comet.to_account_info().key() == user_account.comet || comet.to_account_info().key() == user_account.single_pool_comets @ InceptError::InvalidAccountLoaderOwner,
         constraint = comet.load()?.num_positions > comet_position_index.into() @ InceptError::InvalidInputPositionIndex,
-        constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].deprecated == false @ InceptError::PoolDeprecated
+        constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].deprecated == 0 @ InceptError::PoolDeprecated
     )]
     pub comet: AccountLoader<'info, Comet>,
     #[account(

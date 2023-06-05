@@ -3,8 +3,9 @@ use crate::states::*;
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
-#[instruction(pool_index: u8, force_removal: bool)]
+#[instruction(pool_index: u8)]
 pub struct DeprecatePool<'info> {
+    #[account(address = incept.admin)]
     pub admin: Signer<'info>,
     #[account(
         seeds = [b"incept".as_ref()],
@@ -25,7 +26,7 @@ pub fn execute(ctx: Context<DeprecatePool>, pool_index: u8) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let pool_index = pool_index as usize;
  
-    token_data.pools[pool_index].deprecated = true;
+    token_data.pools[pool_index].deprecated = 1;
 
     Ok(())
 }

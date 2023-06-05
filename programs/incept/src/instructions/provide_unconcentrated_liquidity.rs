@@ -26,7 +26,7 @@ pub struct ProvideUnconcentratedLiquidity<'info> {
     #[account(
         mut,
         has_one = incept,
-        constraint = token_data.load()?.pools[pool_index as usize].deprecated == false @ InceptError::PoolDeprecated
+        constraint = token_data.load()?.pools[pool_index as usize].deprecated == 0 @ InceptError::PoolDeprecated
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(

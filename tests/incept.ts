@@ -213,33 +213,10 @@ describe("incept", async () => {
       .rpc();
   });
 
-  it("pools initialized!", async () => {
+  it("pool initialized!", async () => {
     const jupiterData = await jupiterProgram.account.jupiter.fetch(
       jupiterAddress
     );
-
-    await inceptClient.initializePool(
-      walletPubkey,
-      150,
-      200,
-      poolTradingFee,
-      treasuryTradingFee,
-      priceFeed,
-      ilHealthScoreCoefficient,
-      healthScoreCoefficient,
-      500,
-      10,
-      jupiterData.assetMints[0]
-    );
-
-    await inceptProgram.methods
-      .removePool(0, false)
-      .accounts({
-        admin: inceptClient.provider.publicKey!,
-        incept: inceptClient.inceptAddress[0],
-        tokenData: inceptClient.incept!.tokenData,
-      })
-      .rpc();
 
     await inceptClient.initializePool(
       walletPubkey,
@@ -3558,5 +3535,19 @@ describe("incept", async () => {
       Number(iassetAssociatedTokenAccount.amount),
       startingIassetBalance
     );
+  });
+
+  it("deprecate pool", async () => {
+    await inceptProgram.methods
+      .deprecatePool(1)
+      .accounts({
+        admin: inceptClient.incept!.admin,
+        incept: inceptClient.inceptAddress[0],
+        tokenData: inceptClient.incept!.tokenData,
+      })
+      .rpc();
+
+    let tokenData = await inceptClient.getTokenData();
+    assert.equal(tokenData.pools[1].deprecated, 1);
   });
 });

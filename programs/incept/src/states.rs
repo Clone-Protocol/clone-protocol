@@ -60,7 +60,7 @@ impl Default for RawDecimal {
 #[account]
 #[derive(Default)]
 pub struct Incept {
-    // 177
+    // 185
     pub usdi_mint: Pubkey,                     // 32
     pub token_data: Pubkey,                    // 32
     pub admin: Pubkey,                         // 32
@@ -80,11 +80,11 @@ pub struct LiquidationConfig {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 163,583
+    // 165,320
     pub incept: Pubkey,                        // 32
     pub num_pools: u64,                        // 8
     pub num_collaterals: u64,                  // 8
-    pub pools: [Pool; 255],                    // 255 * 497 = 126,735
+    pub pools: [Pool; 255],                    // 255 * 504 = 128,520
     pub collaterals: [Collateral; 255],        // 255 * 144 = 36,720
     pub il_health_score_cutoff: RawDecimal,    // 16
     pub il_liquidation_reward_pct: RawDecimal, // 16
@@ -164,7 +164,7 @@ pub struct AssetInfo {
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct Pool {
-    // 497
+    // 504
     pub iasset_token_account: Pubkey,                // 32
     pub usdi_token_account: Pubkey,                  // 32
     pub liquidity_token_mint: Pubkey,                // 32
@@ -178,7 +178,7 @@ pub struct Pool {
     pub total_minted_amount: RawDecimal,             // 16
     pub supplied_mint_collateral_amount: RawDecimal, // 16
     pub asset_info: AssetInfo,                       // 224
-    pub deprecated: bool,                            // 1
+    pub deprecated: u64,                             // 8
 }
 
 #[derive(Default, Debug)]
