@@ -22,6 +22,7 @@ pub struct InitializeSinglePoolComet<'info> {
         has_one = incept,
         constraint = (pool_index as u64) < token_data.load()?.num_pools,
         constraint = (collateral_index as u64) < token_data.load()?.num_collaterals,
+        constraint = token_data.load()?.pools[pool_index as usize].deprecated == false //@ InceptError::PoolDeprecated
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(

@@ -27,13 +27,14 @@ pub struct AddLiquidityToComet<'info> {
     pub incept: Account<'info, Incept>,
     #[account(
         mut,
-        has_one = incept
+        has_one = incept,
+        constraint = token_data.load()?.pools[pool_index as usize].deprecated == false @ InceptError::PoolDeprecated
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
         address = user_account.comet,
-        constraint = comet.load()?.is_single_pool == 0 @ InceptError::WrongCometType,
+        constraint = comet.load()?.is_single_pool == 0 @ InceptError::WrongCometType
     )]
     pub comet: AccountLoader<'info, Comet>,
     #[account(

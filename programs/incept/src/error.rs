@@ -213,6 +213,10 @@ pub enum InceptError {
     /// 52. Failed to Load Pyth Price Feed
     #[msg("Failed to Load Pyth Price Feed")]
     FailedToLoadPyth,
+
+    /// 53. Pool Deprecated
+    #[msg("Pool Deprecated")]
+    PoolDeprecated,
 }
 
 impl From<InceptError> for ProgramError {

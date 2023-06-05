@@ -10,7 +10,7 @@ pub mod states;
 
 use instructions::*;
 
-declare_id!("6dXq5ocMBYHsVRsGHxckdPmhimip4nisLqR6rqZ8pwt9");
+declare_id!("oA2F2E89xQnt5gox7wd6EhV3dJRFt57889UQyTq9che");
 
 #[program]
 pub mod incept {
@@ -388,12 +388,11 @@ pub mod incept {
         instructions::close_user_account::execute(ctx)
     }
 
-    pub fn remove_pool(
-        ctx: Context<RemovePool>,
+    pub fn deprecate_pool(
+        ctx: Context<DeprecatePool>,
         pool_index: u8,
-        force_removal: bool,
     ) -> Result<()> {
-        instructions::remove_pool::execute(ctx, pool_index, force_removal)
+        instructions::deprecate_pool::execute(ctx, pool_index)
     }
 
     pub fn wrap_asset(ctx: Context<WrapAsset>, amount: u64, pool_index: u8) -> Result<()> {
