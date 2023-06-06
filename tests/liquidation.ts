@@ -1,62 +1,62 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program, BN } from "@coral-xyz/anchor";
-import { Incept } from "../sdk/src/idl/incept";
+import { Clone } from "../sdk/src/idl/clone";
 import { Pyth } from "../sdk/src/idl/pyth";
 import { MockUsdc } from "../sdk/src/idl/mock_usdc";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { assert } from "chai";
 import {
-  Incept as InceptConnection,
+  Clone as CloneConnection,
   TokenData,
   User,
   MintPositions,
   LiquidityPositions,
   Manager,
   Pool,
-} from "../sdk/src/incept";
+} from "../sdk/src/clone";
 import { createPriceFeed, setPrice, getFeedData } from "../sdk/src/oracle";
 import { Network } from "../sdk/src/network";
-import { INCEPT_EXCHANGE_SEED } from "./utils";
+import { CLONE_EXCHANGE_SEED } from "./utils";
 import { sleep } from "../sdk/src/utils";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 
 describe("liquidation testing", function () {
-  let inceptClient;
+  let cloneClient;
   let walletPubkey;
   let priceFeed;
   let mockUSDCTokenAccountInfo;
-  let usdiTokenAccountInfo;
-  let iassetTokenAccountInfo;
+  let onusdTokenAccountInfo;
+  let onassetTokenAccountInfo;
   let liquidityTokenAccountInfo;
   let mockUSDCMint;
   let pythProgram;
 
-  before("setup incept client", async () => {
+  before("setup clone client", async () => {
     const provider = anchor.Provider.local();
     anchor.setProvider(provider);
 
-    const inceptProgram = anchor.workspace.Incept as Program<Incept>;
+    const cloneProgram = anchor.workspace.Clone as Program<Clone>;
     pythProgram = anchor.workspace.Pyth as Program<Pyth>;
     const mockUSDCProgram = anchor.workspace.MockUsdc as Program<MockUsdc>;
 
     mockUSDCMint = anchor.web3.Keypair.generate();
-    walletPubkey = inceptProgram.provider.wallet.publicKey;
+    walletPubkey = cloneProgram.provider.wallet.publicKey;
 
     const mockUSDCAccount = await anchor.web3.PublicKey.findProgramAddress(
       [Buffer.from("mock_usdc")],
       mockUSDCProgram.programId
     );
 
-    inceptClient = new InceptConnection(
-      inceptProgram.programId,
+    cloneClient = new CloneConnection(
+      cloneProgram.programId,
       provider
-    ) as InceptConnection;
+    ) as CloneConnection;
 
-    await inceptClient.initializeIncept();
+    await cloneClient.initializeClone();
 
-    await inceptClient.initializeUser();
+    await cloneClient.initializeUser();
 
     let price = 10;
     const expo = -7;
@@ -76,34 +76,34 @@ describe("liquidation testing", function () {
       signers: [mockUSDCMint],
     });
 
-    await inceptClient.addCollateral(
+    await cloneClient.addCollateral(
       walletPubkey,
       7,
       1,
       mockUSDCMint.publicKey
     );
 
-    await inceptClient.initializePool(walletPubkey, 150, 200, priceFeed);
+    await cloneClient.initializePool(walletPubkey, 150, 200, priceFeed);
 
     await sleep(200);
 
-    const tokenData = await inceptClient.getTokenData();
+    const tokenData = await cloneClient.getTokenData();
     const pool = tokenData.pools[0];
 
     mockUSDCTokenAccountInfo =
-      await inceptClient.getOrCreateAssociatedTokenAccount(
+      await cloneClient.getOrCreateAssociatedTokenAccount(
         mockUSDCMint.publicKey
       );
-    usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
+    onusdTokenAccountInfo = await cloneClient.getOrCreateAssociatedTokenAccount(
+      cloneClient.manager.onusdMint
     );
     liquidityTokenAccountInfo =
-      await inceptClient.getOrCreateAssociatedTokenAccount(
+      await cloneClient.getOrCreateAssociatedTokenAccount(
         pool.liquidityTokenMint
       );
-    iassetTokenAccountInfo =
-      await inceptClient.getOrCreateAssociatedTokenAccount(
-        pool.assetInfo.iassetMint
+    onassetTokenAccountInfo =
+      await cloneClient.getOrCreateAssociatedTokenAccount(
+        pool.assetInfo.onassetMint
       );
 
     await mockUSDCProgram.rpc.mintMockUsdc(mockUSDCAccount[1], {
@@ -119,9 +119,9 @@ describe("liquidation testing", function () {
     // @ts-ignore
     let signers: Array<Signer> = [provider.wallet.payer];
 
-    await inceptClient.mintUsdi(
+    await cloneClient.mintOnUsd(
       new BN(100000000000000),
-      usdiTokenAccountInfo.address,
+      onusdTokenAccountInfo.address,
       mockUSDCTokenAccountInfo.address,
       0,
       signers
@@ -129,20 +129,20 @@ describe("liquidation testing", function () {
 
     await sleep(200);
 
-    await inceptClient.initializeBorrowPositions(
+    await cloneClient.initializeBorrowPositions(
       new BN(20000000000000),
       new BN(200000000000000),
       mockUSDCTokenAccountInfo.address,
-      iassetTokenAccountInfo.address,
+      onassetTokenAccountInfo.address,
       0,
       0,
       signers
     );
 
-    await inceptClient.initializeLiquidityPosition(
+    await cloneClient.initializeLiquidityPosition(
       new BN(10000000000000),
-      usdiTokenAccountInfo.address,
-      iassetTokenAccountInfo.address,
+      onusdTokenAccountInfo.address,
+      onassetTokenAccountInfo.address,
       liquidityTokenAccountInfo.address,
       0
     );
@@ -152,7 +152,7 @@ describe("liquidation testing", function () {
     await sleep(2000);
 
     // Initialize a comet
-    await inceptClient.initializeComet(
+    await cloneClient.initializeComet(
       mockUSDCTokenAccountInfo.address,
       new BN(2500000000),
       new BN(50000000000),
@@ -160,16 +160,16 @@ describe("liquidation testing", function () {
       0
     );
     // Make a trade to trigger the price
-    await inceptClient.selliAsset(
+    await cloneClient.sellonAsset(
       new BN(4500000000000),
-      usdiTokenAccountInfo.address,
-      iassetTokenAccountInfo.address,
+      onusdTokenAccountInfo.address,
+      onassetTokenAccountInfo.address,
       0
     );
 
-    const { userPubkey, _bump } = await inceptClient.getUserAddress();
+    const { userPubkey, _bump } = await cloneClient.getUserAddress();
 
-    let cometPositions = await inceptClient.getCometPositions();
+    let cometPositions = await cloneClient.getCometPositions();
 
     assert.equal(
       Number(cometPositions.numPositions),
@@ -177,15 +177,15 @@ describe("liquidation testing", function () {
       "check comet was initialized"
     );
 
-    await inceptClient.liquidateComet(userPubkey, 0);
+    await cloneClient.liquidateComet(userPubkey, 0);
 
     await sleep(200);
 
-    await inceptClient.claimLiquidatedComet(0);
+    await cloneClient.claimLiquidatedComet(0);
 
     await sleep(200);
 
-    cometPositions = await inceptClient.getCometPositions();
+    cometPositions = await cloneClient.getCometPositions();
 
     assert.equal(
       Number(cometPositions.numPositions),
@@ -198,7 +198,7 @@ describe("liquidation testing", function () {
     await sleep(2000);
 
     // // Initialize a comet
-    await inceptClient.initializeComet(
+    await cloneClient.initializeComet(
       mockUSDCTokenAccountInfo.address,
       new BN(2500000000),
       new BN(50000000000),
@@ -206,16 +206,16 @@ describe("liquidation testing", function () {
       0
     );
     // Make a trade to trigger the price
-    await inceptClient.buyiAsset(
+    await cloneClient.buyonAsset(
       new BN(4200000000000),
-      usdiTokenAccountInfo.address,
-      iassetTokenAccountInfo.address,
+      onusdTokenAccountInfo.address,
+      onassetTokenAccountInfo.address,
       0
     );
 
-    const { userPubkey, _bump } = await inceptClient.getUserAddress();
+    const { userPubkey, _bump } = await cloneClient.getUserAddress();
 
-    let cometPositions = await inceptClient.getCometPositions();
+    let cometPositions = await cloneClient.getCometPositions();
 
     assert.equal(
       Number(cometPositions.numPositions),
@@ -223,15 +223,15 @@ describe("liquidation testing", function () {
       "check comet was initialized"
     );
 
-    await inceptClient.liquidateComet(userPubkey, 0);
+    await cloneClient.liquidateComet(userPubkey, 0);
 
     await sleep(200);
 
-    await inceptClient.claimLiquidatedComet(0);
+    await cloneClient.claimLiquidatedComet(0);
 
     await sleep(200);
 
-    cometPositions = await inceptClient.getCometPositions();
+    cometPositions = await cloneClient.getCometPositions();
 
     assert.equal(
       Number(cometPositions.numPositions),
@@ -244,7 +244,7 @@ describe("liquidation testing", function () {
     await sleep(200);
 
     // Initialize a comet
-    await inceptClient.initializeComet(
+    await cloneClient.initializeComet(
       mockUSDCTokenAccountInfo.address,
       new BN(2500000000),
       new BN(50000000000),
@@ -253,35 +253,35 @@ describe("liquidation testing", function () {
     );
 
     // // Make a trade to trigger the price
-    await inceptClient.selliAsset(
+    await cloneClient.sellonAsset(
       new BN(500000000000),
-      usdiTokenAccountInfo.address,
-      iassetTokenAccountInfo.address,
+      onusdTokenAccountInfo.address,
+      onassetTokenAccountInfo.address,
       0
     );
 
-    const { userPubkey, _bump } = await inceptClient.getUserAddress();
-    let tokenData: TokenData = await inceptClient.getTokenData();
-    let cometPositions = await inceptClient.getCometPositions();
+    const { userPubkey, _bump } = await cloneClient.getUserAddress();
+    let tokenData: TokenData = await cloneClient.getTokenData();
+    let cometPositions = await cloneClient.getCometPositions();
 
     let pool: Pool =
       tokenData.pools[cometPositions.cometPositions[0].poolIndex];
 
-    let liquidatorIassetTokenAccount =
-      await inceptClient.getOrCreateAssociatedTokenAccount(
-        pool.assetInfo.iassetMint
+    let liquidatorOnAssetTokenAccount =
+      await cloneClient.getOrCreateAssociatedTokenAccount(
+        pool.assetInfo.onassetMint
       );
 
     let initialCometPosition = cometPositions.cometPositions[0];
 
-    await inceptClient.partialCometLiquidation(
+    await cloneClient.partialCometLiquidation(
       userPubkey,
-      liquidatorIassetTokenAccount.address,
+      liquidatorOnAssetTokenAccount.address,
       0
     );
 
     await sleep(200);
-    cometPositions = await inceptClient.getCometPositions();
+    cometPositions = await cloneClient.getCometPositions();
     assert.equal(
       Number(cometPositions.numPositions),
       1,
@@ -304,7 +304,7 @@ describe("liquidation testing", function () {
 
   it("mint position liquidation", async () => {
     // Add more concentrated liquidity to the pool.
-    await inceptClient.initializeComet(
+    await cloneClient.initializeComet(
       mockUSDCTokenAccountInfo.address,
       new BN(250000000000),
       new BN(5000000000000),
@@ -312,22 +312,22 @@ describe("liquidation testing", function () {
       0
     );
 
-    usdiTokenAccountInfo = await inceptClient.getOrCreateAssociatedTokenAccount(
-      inceptClient.manager.usdiMint
+    onusdTokenAccountInfo = await cloneClient.getOrCreateAssociatedTokenAccount(
+      cloneClient.manager.onusdMint
     );
 
-    await inceptClient.hackathonMintUsdi(
-      usdiTokenAccountInfo.address,
+    await cloneClient.devnetMintOnUsd(
+      onusdTokenAccountInfo.address,
       5000000000000000
     );
 
     await sleep(200);
 
     // buy to burn
-    await inceptClient.buyiAsset(
+    await cloneClient.buyonAsset(
       new BN(20_350_000_000_000),
-      usdiTokenAccountInfo.address,
-      iassetTokenAccountInfo.address,
+      onusdTokenAccountInfo.address,
+      onassetTokenAccountInfo.address,
       0
     );
 
@@ -335,38 +335,38 @@ describe("liquidation testing", function () {
 
     await setPrice(pythProgram, 67, priceFeed);
 
-    const { userPubkey, _bump } = await inceptClient.getUserAddress();
+    const { userPubkey, _bump } = await cloneClient.getUserAddress();
 
-    let beforeLiquidationIasset =
-      await inceptClient.connection.getTokenAccountBalance(
-        iassetTokenAccountInfo.address,
+    let beforeLiquidationOnAsset =
+      await cloneClient.connection.getTokenAccountBalance(
+        onassetTokenAccountInfo.address,
         "recent"
       );
     let beforeLiquidationCollateral =
-      await inceptClient.connection.getTokenAccountBalance(
+      await cloneClient.connection.getTokenAccountBalance(
         mockUSDCTokenAccountInfo.address,
         "recent"
       );
 
     // call liquidation.
-    await inceptClient.liquidateBorrowPosition(userPubkey, 0);
+    await cloneClient.liquidateBorrowPosition(userPubkey, 0);
 
     await sleep(200);
 
-    let afterLiquidationIasset =
-      await inceptClient.connection.getTokenAccountBalance(
-        iassetTokenAccountInfo.address,
+    let afterLiquidationOnAsset =
+      await cloneClient.connection.getTokenAccountBalance(
+        onassetTokenAccountInfo.address,
         "recent"
       );
     let afterLiquidationCollateral =
-      await inceptClient.connection.getTokenAccountBalance(
+      await cloneClient.connection.getTokenAccountBalance(
         mockUSDCTokenAccountInfo.address,
         "recent"
       );
 
     assert.equal(
-      beforeLiquidationIasset.value.uiAmount -
-        afterLiquidationIasset.value.uiAmount,
+      beforeLiquidationOnAsset.value.uiAmount -
+        afterLiquidationOnAsset.value.uiAmount,
       200000,
       "check liquidated amount"
     );

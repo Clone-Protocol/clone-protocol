@@ -1,5 +1,5 @@
 import { toNumber, convertToDecimal, getMantissa } from "./decimal";
-import { InceptClient, DEVNET_TOKEN_SCALE, toDevnetScale } from "./incept";
+import { CloneClient, DEVNET_TOKEN_SCALE, toDevnetScale } from "./clone";
 import { Pool, Comet, TokenData, CometPosition } from "./interfaces";
 import {
   PublicKey,
@@ -14,7 +14,7 @@ import { JupiterAggMock } from "./idl/jupiter_agg_mock";
 import { AnchorProvider, Program } from "@coral-xyz/anchor";
 import {
   getHealthScore,
-  calculateNewSinglePoolCometFromUsdiBorrowed,
+  calculateNewSinglePoolCometFromOnUsdBorrowed,
 } from "./healthscore";
 
 export const sleep = async (ms: number) => {
@@ -58,42 +58,42 @@ export const calculateMantissa = (
 export const calculateOutputFromInput = (
   pool: Pool,
   input: number,
-  isInputUsdi: boolean
+  isInputOnUsd: boolean
 ) => {
   const treasuryFeeRate = toNumber(pool.treasuryTradingFee);
   const totalFeeRate = toNumber(pool.liquidityTradingFee) + treasuryFeeRate;
   const feeAdjustment = 1 - totalFeeRate;
 
-  const poolUsdi = toNumber(pool.usdiAmount);
-  const poolIasset = toNumber(pool.iassetAmount);
-  const invariant = poolIasset * poolUsdi;
+  const poolOnUsd = toNumber(pool.onusdAmount);
+  const poolOnAsset = toNumber(pool.onassetAmount);
+  const invariant = poolOnAsset * poolOnUsd;
 
   let resultPool = deepCopy(pool);
 
-  const outputBeforeFees = isInputUsdi
-    ? poolIasset - invariant / (poolUsdi + input)
-    : poolUsdi - invariant / (poolIasset + input);
+  const outputBeforeFees = isInputOnUsd
+    ? poolOnAsset - invariant / (poolOnUsd + input)
+    : poolOnUsd - invariant / (poolOnAsset + input);
   const output = floorToDevnetScale(feeAdjustment * outputBeforeFees);
   const totalFees = outputBeforeFees - output;
   const treasuryFee = floorToDevnetScale(
     (totalFees * treasuryFeeRate) / totalFeeRate
   );
-  if (isInputUsdi) {
-    resultPool.usdiAmount = convertToDecimal(
-      toNumber(resultPool.usdiAmount) + input,
+  if (isInputOnUsd) {
+    resultPool.onusdAmount = convertToDecimal(
+      toNumber(resultPool.onusdAmount) + input,
       DEVNET_TOKEN_SCALE
     ).toRawDecimal();
-    resultPool.iassetAmount = convertToDecimal(
-      toNumber(resultPool.iassetAmount) - output - treasuryFee,
+    resultPool.onassetAmount = convertToDecimal(
+      toNumber(resultPool.onassetAmount) - output - treasuryFee,
       DEVNET_TOKEN_SCALE
     ).toRawDecimal();
   } else {
-    resultPool.usdiAmount = convertToDecimal(
-      toNumber(resultPool.usdiAmount) - output - treasuryFee,
+    resultPool.onusdAmount = convertToDecimal(
+      toNumber(resultPool.onusdAmount) - output - treasuryFee,
       DEVNET_TOKEN_SCALE
     ).toRawDecimal();
-    resultPool.iassetAmount = convertToDecimal(
-      toNumber(resultPool.iassetAmount) + input,
+    resultPool.onassetAmount = convertToDecimal(
+      toNumber(resultPool.onassetAmount) + input,
       DEVNET_TOKEN_SCALE
     ).toRawDecimal();
   }
@@ -101,54 +101,54 @@ export const calculateOutputFromInput = (
 };
 
 export const calculateOutputFromInputFromParams = (
-  poolUsdi: number,
-  poolIasset: number, 
+  poolOnUsd: number,
+  poolOnAsset: number, 
   treasuryFeeRate: number,
   liquidityTradingFeeRate: number,
   input: number,
-  isInputUsdi: boolean
+  isInputOnUsd: boolean
 ) => {
   const totalFeeRate = liquidityTradingFeeRate + treasuryFeeRate;
   const feeAdjustment = 1 - totalFeeRate;
-  const invariant = poolIasset * poolUsdi;
+  const invariant = poolOnAsset * poolOnUsd;
 
-  const outputBeforeFees = isInputUsdi
-    ? poolIasset - invariant / (poolUsdi + input)
-    : poolUsdi - invariant / (poolIasset + input);
+  const outputBeforeFees = isInputOnUsd
+    ? poolOnAsset - invariant / (poolOnUsd + input)
+    : poolOnUsd - invariant / (poolOnAsset + input);
   const output = floorToDevnetScale(feeAdjustment * outputBeforeFees);
   const totalFees = outputBeforeFees - output;
   const treasuryFee = floorToDevnetScale(
     (totalFees * treasuryFeeRate) / totalFeeRate
   );
-  const [resultPoolUsdi, resultPoolIasset] = (() => {
-    if (isInputUsdi) {
+  const [resultPoolOnUsd, resultPoolOnAsset] = (() => {
+    if (isInputOnUsd) {
       return [
-        poolUsdi + input,
-        poolIasset - output - treasuryFee
+        poolOnUsd + input,
+        poolOnAsset - output - treasuryFee
       ]
     } else {
       return [
-        poolUsdi - output - treasuryFee,
-        poolIasset + input
+        poolOnUsd - output - treasuryFee,
+        poolOnAsset + input
       ]
     }
   })()
 
-  return { output, resultPoolUsdi, resultPoolIasset };
+  return { output, resultPoolOnUsd, resultPoolOnAsset };
 };
 
 export const calculateInputFromOutput = (
   pool: Pool,
   output: number,
-  isOutputUsdi: boolean
+  isOutputOnUsd: boolean
 ) => {
   const treasuryFeeRate = toNumber(pool.treasuryTradingFee);
   const totalFeeRate = toNumber(pool.liquidityTradingFee) + treasuryFeeRate;
   const feeAdjustment = 1 - totalFeeRate;
 
-  const poolUsdi = toNumber(pool.usdiAmount);
-  const poolIasset = toNumber(pool.iassetAmount);
-  const invariant = poolIasset * poolUsdi;
+  const poolOnUsd = toNumber(pool.onusdAmount);
+  const poolOnAsset = toNumber(pool.onassetAmount);
+  const invariant = poolOnAsset * poolOnUsd;
 
   const outputBeforeFees = output / feeAdjustment;
   const totalFees = outputBeforeFees - output;
@@ -156,28 +156,28 @@ export const calculateInputFromOutput = (
     (totalFees * treasuryFeeRate) / totalFeeRate
   );
   const input = floorToDevnetScale(
-    isOutputUsdi
-      ? invariant / (poolUsdi - outputBeforeFees) - poolIasset
-      : invariant / (poolIasset - outputBeforeFees) - poolUsdi
+    isOutputOnUsd
+      ? invariant / (poolOnUsd - outputBeforeFees) - poolOnAsset
+      : invariant / (poolOnAsset - outputBeforeFees) - poolOnUsd
   );
   let resultPool = deepCopy(pool);
 
-  if (isOutputUsdi) {
-    resultPool.usdiAmount = convertToDecimal(
-      toNumber(pool.usdiAmount) - outputBeforeFees - treasuryFee,
+  if (isOutputOnUsd) {
+    resultPool.onusdAmount = convertToDecimal(
+      toNumber(pool.onusdAmount) - outputBeforeFees - treasuryFee,
       DEVNET_TOKEN_SCALE
     ).toRawDecimal();
-    resultPool.iassetAmount = convertToDecimal(
-      toNumber(pool.iassetAmount) + input,
+    resultPool.onassetAmount = convertToDecimal(
+      toNumber(pool.onassetAmount) + input,
       DEVNET_TOKEN_SCALE
     ).toRawDecimal();
   } else {
-    resultPool.usdiAmount = convertToDecimal(
-      toNumber(pool.usdiAmount) + input,
+    resultPool.onusdAmount = convertToDecimal(
+      toNumber(pool.onusdAmount) + input,
       DEVNET_TOKEN_SCALE
     ).toRawDecimal();
-    resultPool.iassetAmount = convertToDecimal(
-      toNumber(pool.iassetAmount) - outputBeforeFees - treasuryFee,
+    resultPool.onassetAmount = convertToDecimal(
+      toNumber(pool.onassetAmount) - outputBeforeFees - treasuryFee,
       DEVNET_TOKEN_SCALE
     ).toRawDecimal();
   }
@@ -185,16 +185,16 @@ export const calculateInputFromOutput = (
 };
 
 export const calculateInputFromOutputFromParams = (
-  poolUsdi: number,
-  poolIasset: number, 
+  poolOnUsd: number,
+  poolOnAsset: number, 
   treasuryFeeRate: number,
   liquidityTradingFeeRate: number,
   output: number,
-  isOutputUsdi: boolean
+  isOutputOnUsd: boolean
 ) => {
   const totalFeeRate = liquidityTradingFeeRate + treasuryFeeRate;
   const feeAdjustment = 1 - totalFeeRate;
-  const invariant = poolIasset * poolUsdi;
+  const invariant = poolOnAsset * poolOnUsd;
 
   const outputBeforeFees = output / feeAdjustment;
   const totalFees = outputBeforeFees - output;
@@ -202,107 +202,107 @@ export const calculateInputFromOutputFromParams = (
     (totalFees * treasuryFeeRate) / totalFeeRate
   );
   const input = floorToDevnetScale(
-    isOutputUsdi
-      ? invariant / (poolUsdi - outputBeforeFees) - poolIasset
-      : invariant / (poolIasset - outputBeforeFees) - poolUsdi
+    isOutputOnUsd
+      ? invariant / (poolOnUsd - outputBeforeFees) - poolOnAsset
+      : invariant / (poolOnAsset - outputBeforeFees) - poolOnUsd
   );
-  const [resultPoolUsdi, resultPoolIasset] = (() => {
-    if (isOutputUsdi) {
+  const [resultPoolOnUsd, resultPoolOnAsset] = (() => {
+    if (isOutputOnUsd) {
       return [
-        poolUsdi - outputBeforeFees - treasuryFee,
-        poolIasset + input
+        poolOnUsd - outputBeforeFees - treasuryFee,
+        poolOnAsset + input
       ]
     } else {
       return [
-        poolUsdi + input,
-        poolIasset - outputBeforeFees - treasuryFee,
+        poolOnUsd + input,
+        poolOnAsset - outputBeforeFees - treasuryFee,
       ]
     }
   })()
-  return { input, resultPoolUsdi, resultPoolIasset };
+  return { input, resultPoolOnUsd, resultPoolOnAsset };
 };
 
 export const calculateExecutionThreshold = (
-  iassetAmount: number,
+  onassetAmount: number,
   isBuy: boolean,
   pool: Pool,
   slippage: number
 ): {
-  expectedUsdiAmount: number;
-  usdiThresholdAmount: number;
+  expectedOnUsdAmount: number;
+  onusdThresholdAmount: number;
   expectedPrice: number;
   thresholdPrice: number;
 } => {
-  let expectedUsdiAmount;
-  let usdiThresholdAmount;
+  let expectedOnUsdAmount;
+  let onusdThresholdAmount;
   if (isBuy) {
-    expectedUsdiAmount = calculateInputFromOutput(
+    expectedOnUsdAmount = calculateInputFromOutput(
       pool,
-      iassetAmount,
+      onassetAmount,
       false
     ).input;
-    usdiThresholdAmount = expectedUsdiAmount / (1 - slippage);
+    onusdThresholdAmount = expectedOnUsdAmount / (1 - slippage);
   } else {
-    expectedUsdiAmount = calculateOutputFromInput(
+    expectedOnUsdAmount = calculateOutputFromInput(
       pool,
-      iassetAmount,
+      onassetAmount,
       false
     ).output;
-    usdiThresholdAmount = expectedUsdiAmount * (1 - slippage);
+    onusdThresholdAmount = expectedOnUsdAmount * (1 - slippage);
   }
 
   return {
-    expectedUsdiAmount: floorToDevnetScale(expectedUsdiAmount),
-    usdiThresholdAmount: floorToDevnetScale(usdiThresholdAmount),
-    expectedPrice: floorToDevnetScale(expectedUsdiAmount / iassetAmount),
-    thresholdPrice: floorToDevnetScale(usdiThresholdAmount / iassetAmount),
+    expectedOnUsdAmount: floorToDevnetScale(expectedOnUsdAmount),
+    onusdThresholdAmount: floorToDevnetScale(onusdThresholdAmount),
+    expectedPrice: floorToDevnetScale(expectedOnUsdAmount / onassetAmount),
+    thresholdPrice: floorToDevnetScale(onusdThresholdAmount / onassetAmount),
   };
 };
 
 
 export const calculateExecutionThresholdFromParams = (
-  iassetAmount: number,
+  onassetAmount: number,
   isBuy: boolean,
-  poolUsdi: number,
-  poolIasset: number,
+  poolOnUsd: number,
+  poolOnAsset: number,
   treasuryTradingFee: number,
   liquidityTradingFee: number,
   slippage: number
 ): {
-  expectedUsdiAmount: number;
-  usdiThresholdAmount: number;
+  expectedOnUsdAmount: number;
+  onusdThresholdAmount: number;
   expectedPrice: number;
   thresholdPrice: number;
 } => {
-  let expectedUsdiAmount;
-  let usdiThresholdAmount;
+  let expectedOnUsdAmount;
+  let onusdThresholdAmount;
   if (isBuy) {
-    expectedUsdiAmount = calculateInputFromOutputFromParams(
-      poolUsdi,
-      poolIasset,
+    expectedOnUsdAmount = calculateInputFromOutputFromParams(
+      poolOnUsd,
+      poolOnAsset,
       treasuryTradingFee,
       liquidityTradingFee,
-      iassetAmount,
+      onassetAmount,
       false
     ).input;
-    usdiThresholdAmount = expectedUsdiAmount / (1 - slippage);
+    onusdThresholdAmount = expectedOnUsdAmount / (1 - slippage);
   } else {
-    expectedUsdiAmount = calculateOutputFromInputFromParams(
-      poolUsdi,
-      poolIasset,
+    expectedOnUsdAmount = calculateOutputFromInputFromParams(
+      poolOnUsd,
+      poolOnAsset,
       treasuryTradingFee,
       liquidityTradingFee,
-      iassetAmount,
+      onassetAmount,
       false
     ).output;
-    usdiThresholdAmount = expectedUsdiAmount * (1 - slippage);
+    onusdThresholdAmount = expectedOnUsdAmount * (1 - slippage);
   }
 
   return {
-    expectedUsdiAmount: floorToDevnetScale(expectedUsdiAmount),
-    usdiThresholdAmount: floorToDevnetScale(usdiThresholdAmount),
-    expectedPrice: floorToDevnetScale(expectedUsdiAmount / iassetAmount),
-    thresholdPrice: floorToDevnetScale(usdiThresholdAmount / iassetAmount),
+    expectedOnUsdAmount: floorToDevnetScale(expectedOnUsdAmount),
+    onusdThresholdAmount: floorToDevnetScale(onusdThresholdAmount),
+    expectedPrice: floorToDevnetScale(expectedOnUsdAmount / onassetAmount),
+    thresholdPrice: floorToDevnetScale(onusdThresholdAmount / onassetAmount),
   };
 };
 
@@ -314,8 +314,8 @@ export const executionCapacity = (
   priceLimit: number,
   amount: number
 ) => {
-  const x = toNumber(pool.iassetAmount);
-  const y = toNumber(pool.usdiAmount);
+  const x = toNumber(pool.onassetAmount);
+  const y = toNumber(pool.onusdAmount);
   const currentPoolPrice = y / x;
 
   if (
@@ -325,11 +325,11 @@ export const executionCapacity = (
   )
     return 0;
 
-  const calcExecutionPrice = (iassetAmount: number) => {
+  const calcExecutionPrice = (onassetAmount: number) => {
     return isBuy
-      ? calculateInputFromOutput(pool, iassetAmount, false).input / iassetAmount
-      : calculateOutputFromInput(pool, iassetAmount, false).output /
-          iassetAmount;
+      ? calculateInputFromOutput(pool, onassetAmount, false).input / onassetAmount
+      : calculateOutputFromInput(pool, onassetAmount, false).output /
+          onassetAmount;
   };
 
   const fullExecutionPrice = calcExecutionPrice(amount);
@@ -344,7 +344,7 @@ export const executionCapacity = (
   const tol = Math.pow(10, -DEVNET_TOKEN_SCALE);
 
   return (() => {
-    // Guess the amount of iAsset we can buy/sell
+    // Guess the amount of OnAsset we can buy/sell
     let [leftGuess, rightGuess] = isBuy ? [0, amount] : [amount, 0];
     let midpointGuess = (leftGuess + rightGuess) * 0.5;
 
@@ -399,18 +399,18 @@ export const resultantPool = (
 ): Pool => {
   let resultPool = deepCopy(pool);
   const lpSupply = toNumber(pool.liquidityTokenSupply);
-  const poolUsdi = toNumber(pool.usdiAmount);
-  const poolIasset = toNumber(pool.iassetAmount);
+  const poolOnUsd = toNumber(pool.onusdAmount);
+  const poolOnAsset = toNumber(pool.onassetAmount);
   const L = lpTokens / lpSupply;
   if (isWithdraw) {
-    const claimableUsdi = L * poolUsdi;
-    const claimableIasset = L * poolIasset;
-    resultPool.usdiAmount = convertToDecimal(
-      poolUsdi - claimableUsdi,
+    const claimableOnUsd = L * poolOnUsd;
+    const claimableOnAsset = L * poolOnAsset;
+    resultPool.onusdAmount = convertToDecimal(
+      poolOnUsd - claimableOnUsd,
       DEVNET_TOKEN_SCALE
     ).toRawDecimal();
-    resultPool.iassetAmount = convertToDecimal(
-      poolIasset - claimableIasset,
+    resultPool.onassetAmount = convertToDecimal(
+      poolOnAsset - claimableOnAsset,
       DEVNET_TOKEN_SCALE
     ).toRawDecimal();
     resultPool.liquidityTokenSupply = convertToDecimal(
@@ -418,14 +418,14 @@ export const resultantPool = (
       DEVNET_TOKEN_SCALE
     ).toRawDecimal();
   } else {
-    const addedUsdi = L * poolUsdi;
-    const addedIasset = L * poolIasset;
-    resultPool.usdiAmount = convertToDecimal(
-      poolUsdi + addedUsdi,
+    const addedOnUsd = L * poolOnUsd;
+    const addedOnAsset = L * poolOnAsset;
+    resultPool.onusdAmount = convertToDecimal(
+      poolOnUsd + addedOnUsd,
       DEVNET_TOKEN_SCALE
     ).toRawDecimal();
-    resultPool.iassetAmount = convertToDecimal(
-      poolIasset + addedIasset,
+    resultPool.onassetAmount = convertToDecimal(
+      poolOnAsset + addedOnAsset,
       DEVNET_TOKEN_SCALE
     ).toRawDecimal();
     resultPool.liquidityTokenSupply = convertToDecimal(
@@ -439,23 +439,23 @@ export const resultantPool = (
 
 // To be used for testing and devnet.
 export const recenterProcedureInstructions = (
-  incept: InceptClient,
+  clone: CloneClient,
   comet: Comet,
   tokenData: TokenData,
   positionIndex: number,
-  usdiTokenAccountInfo: PublicKey,
-  iassetTokenAccountInfo: PublicKey,
-  treasuryUsdiTokenAccount: PublicKey,
-  treasuryIassetTokenAccount: PublicKey
+  onusdTokenAccountInfo: PublicKey,
+  onassetTokenAccountInfo: PublicKey,
+  treasuryOnUsdTokenAccount: PublicKey,
+  treasuryOnAssetTokenAccount: PublicKey
 ): {
   healthScore: number;
-  usdiCost: number;
+  onusdCost: number;
   ixs: Promise<TransactionInstruction>[];
   upperPrice?: number;
   lowerPrice?: number;
 } => {
   let ixs: Promise<TransactionInstruction>[] = [
-    incept.updatePricesInstruction(),
+    clone.updatePricesInstruction(),
   ];
   const isSinglePool = comet.isSinglePool.toNumber() === 1;
   const cometPosition = deepCopy(comet.positions[positionIndex]);
@@ -465,28 +465,28 @@ export const recenterProcedureInstructions = (
 
   // Need to withdraw all liquidity from comet.
   ixs.push(
-    incept.withdrawLiquidityFromCometInstruction(
+    clone.withdrawLiquidityFromCometInstruction(
       toDevnetScale(lpTokens),
       positionIndex,
-      iassetTokenAccountInfo,
-      usdiTokenAccountInfo,
+      onassetTokenAccountInfo,
+      onusdTokenAccountInfo,
       isSinglePool
     )
   );
 
-  // Either buy or sell iasset depending on additional reward.
+  // Either buy or sell onasset depending on additional reward.
   const L =
     toNumber(cometPosition.liquidityTokenValue) /
     toNumber(pool.liquidityTokenSupply);
-  const claimableUsdi = floorToDevnetScale(L * toNumber(pool.usdiAmount));
-  const claimableIasset = floorToDevnetScale(L * toNumber(pool.iassetAmount));
-  const surplusUsdi =
-    claimableUsdi - floorToDevnetScale(toNumber(cometPosition.borrowedUsdi));
-  const surplusIasset =
-    claimableIasset -
-    floorToDevnetScale(toNumber(cometPosition.borrowedIasset));
+  const claimableOnUsd = floorToDevnetScale(L * toNumber(pool.onusdAmount));
+  const claimableOnAsset = floorToDevnetScale(L * toNumber(pool.onassetAmount));
+  const surplusOnUsd =
+    claimableOnUsd - floorToDevnetScale(toNumber(cometPosition.borrowedOnusd));
+  const surplusOnAsset =
+    claimableOnAsset -
+    floorToDevnetScale(toNumber(cometPosition.borrowedOnasset));
   const currentPoolPrice =
-    toNumber(pool.usdiAmount) / toNumber(pool.iassetAmount);
+    toNumber(pool.onusdAmount) / toNumber(pool.onassetAmount);
 
   let recenterPool = resultantPool(
     pool,
@@ -494,68 +494,68 @@ export const recenterProcedureInstructions = (
     true
   );
   // TODO: Optimize by splitting across exchanges with Jupiter.
-  const absIassetAmount = Math.abs(surplusIasset);
-  let usdiCost = -surplusUsdi; // Only need to add/sub based on iasset trading.
+  const absOnAssetAmount = Math.abs(surplusOnAsset);
+  let onusdCost = -surplusOnUsd; // Only need to add/sub based on onasset trading.
 
-  if (surplusIasset > 0) {
+  if (surplusOnAsset > 0) {
     // Want to sell surplus.
     ixs.push(
-      incept.sellIassetInstruction(
-        usdiTokenAccountInfo,
-        iassetTokenAccountInfo,
-        toDevnetScale(absIassetAmount),
+      clone.sellOnAssetInstruction(
+        onusdTokenAccountInfo,
+        onassetTokenAccountInfo,
+        toDevnetScale(absOnAssetAmount),
         poolIndex,
-        toDevnetScale((currentPoolPrice * Math.abs(surplusIasset)) / 1.5),
-        treasuryUsdiTokenAccount
+        toDevnetScale((currentPoolPrice * Math.abs(surplusOnAsset)) / 1.5),
+        treasuryOnUsdTokenAccount
       )
     );
     let { output, resultPool } = calculateOutputFromInput(
       recenterPool,
-      surplusIasset,
+      surplusOnAsset,
       false
     );
-    usdiCost -= output;
+    onusdCost -= output;
     recenterPool = deepCopy(resultPool);
-  } else if (surplusIasset < 0) {
+  } else if (surplusOnAsset < 0) {
     // Want to buy deficit.
     ixs.push(
-      incept.buyIassetInstruction(
-        usdiTokenAccountInfo,
-        iassetTokenAccountInfo,
-        toDevnetScale(absIassetAmount),
+      clone.buyOnAssetInstruction(
+        onusdTokenAccountInfo,
+        onassetTokenAccountInfo,
+        toDevnetScale(absOnAssetAmount),
         poolIndex,
-        toDevnetScale(currentPoolPrice * Math.abs(surplusIasset) * 1.5),
-        treasuryIassetTokenAccount
+        toDevnetScale(currentPoolPrice * Math.abs(surplusOnAsset) * 1.5),
+        treasuryOnAssetTokenAccount
       )
     );
     let { input, resultPool } = calculateInputFromOutput(
       recenterPool,
-      absIassetAmount,
+      absOnAssetAmount,
       false
     );
-    usdiCost += input;
+    onusdCost += input;
     recenterPool = deepCopy(resultPool);
-    // Pay Iasset ILD
+    // Pay OnAsset ILD
     ixs.push(
-      incept.payCometILDInstruction(
+      clone.payCometILDInstruction(
         positionIndex,
-        toDevnetScale(absIassetAmount),
+        toDevnetScale(absOnAssetAmount),
         false,
-        iassetTokenAccountInfo,
-        usdiTokenAccountInfo,
+        onassetTokenAccountInfo,
+        onusdTokenAccountInfo,
         isSinglePool
       )
     );
   }
-  // Pay USDi ILD
-  if (surplusUsdi < 0) {
+  // Pay onUSD ILD
+  if (surplusOnUsd < 0) {
     ixs.push(
-      incept.payCometILDInstruction(
+      clone.payCometILDInstruction(
         positionIndex,
-        toDevnetScale(Math.abs(surplusUsdi)),
+        toDevnetScale(Math.abs(surplusOnUsd)),
         true,
-        iassetTokenAccountInfo,
-        usdiTokenAccountInfo,
+        onassetTokenAccountInfo,
+        onusdTokenAccountInfo,
         isSinglePool
       )
     );
@@ -564,29 +564,29 @@ export const recenterProcedureInstructions = (
   let Lnew =
     toNumber(cometPosition.liquidityTokenValue) /
     toNumber(recenterPool.liquidityTokenSupply);
-  let usdiToDeploy = Lnew * toNumber(recenterPool.usdiAmount);
-  let iassetToDeploy = Lnew * toNumber(recenterPool.iassetAmount);
+  let onusdToDeploy = Lnew * toNumber(recenterPool.onusdAmount);
+  let onassetToDeploy = Lnew * toNumber(recenterPool.onassetAmount);
 
   ixs.push(
     isSinglePool
-      ? incept.addLiquidityToSinglePoolCometInstruction(
-          toDevnetScale(usdiToDeploy),
+      ? clone.addLiquidityToSinglePoolCometInstruction(
+          toDevnetScale(onusdToDeploy),
           positionIndex,
           poolIndex
         )
-      : incept.addLiquidityToCometInstruction(
-          toDevnetScale(usdiToDeploy),
+      : clone.addLiquidityToCometInstruction(
+          toDevnetScale(onusdToDeploy),
           poolIndex
         )
   );
 
   let resultantComet = deepCopy(comet);
-  resultantComet.positions[positionIndex].borrowedUsdi = convertToDecimal(
-    usdiToDeploy,
+  resultantComet.positions[positionIndex].borrowedOnusd = convertToDecimal(
+    onusdToDeploy,
     DEVNET_TOKEN_SCALE
   ).toRawDecimal();
-  resultantComet.positions[positionIndex].borrowedIasset = convertToDecimal(
-    iassetToDeploy,
+  resultantComet.positions[positionIndex].borrowedOnasset = convertToDecimal(
+    onassetToDeploy,
     DEVNET_TOKEN_SCALE
   ).toRawDecimal();
   const cometCollateral = toNumber(
@@ -594,15 +594,15 @@ export const recenterProcedureInstructions = (
   );
 
   let newPositionInfo = isSinglePool
-    ? calculateNewSinglePoolCometFromUsdiBorrowed(
+    ? calculateNewSinglePoolCometFromOnUsdBorrowed(
         poolIndex,
         cometCollateral,
-        usdiToDeploy,
+        onusdToDeploy,
         tokenData
       )
     : getHealthScore(tokenData, resultantComet);
 
-  usdiCost = Math.max(usdiCost, 0);
+  onusdCost = Math.max(onusdCost, 0);
 
-  return { ...newPositionInfo, ixs, usdiCost };
+  return { ...newPositionInfo, ixs, onusdCost };
 };

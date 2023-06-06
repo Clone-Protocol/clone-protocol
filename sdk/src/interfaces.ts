@@ -2,8 +2,8 @@ import { PublicKey } from "@solana/web3.js";
 import { RawDecimal } from "./decimal";
 import { BN } from "@coral-xyz/anchor";
 
-export interface Incept {
-  usdiMint: PublicKey;
+export interface Clone {
+  onusdMint: PublicKey;
   tokenData: PublicKey;
   admin: PublicKey;
   bump: number;
@@ -26,7 +26,7 @@ export interface User {
 }
 
 export interface TokenData {
-  incept: PublicKey;
+  clone: PublicKey;
   numPools: BN;
   numCollaterals: BN;
   pools: Array<Pool>;
@@ -44,7 +44,7 @@ export interface BorrowPosition {
   collateralAmount: RawDecimal;
   poolIndex: number;
   collateralIndex: number;
-  borrowedIasset: RawDecimal;
+  borrowedOnasset: RawDecimal;
 }
 
 export interface LiquidationStatus {
@@ -55,7 +55,7 @@ export interface LiquidationStatus {
 
 export interface CometLiquidation {
   status: number;
-  excessTokenTypeIsUsdi: number;
+  excessTokenTypeIsOnUsd: number;
   excessTokenAmount: RawDecimal;
 }
 
@@ -71,8 +71,8 @@ export interface Comet {
 export interface CometPosition {
   authority: PublicKey;
   poolIndex: number;
-  borrowedUsdi: RawDecimal;
-  borrowedIasset: RawDecimal;
+  borrowedOnusd: RawDecimal;
+  borrowedOnasset: RawDecimal;
   liquidityTokenValue: RawDecimal;
   cometLiquidation: CometLiquidation;
 }
@@ -89,7 +89,7 @@ export interface Value {
 }
 
 export interface AssetInfo {
-  iassetMint: PublicKey;
+  onassetMint: PublicKey;
   pythAddress: PublicKey;
   price: RawDecimal;
   twap: RawDecimal;
@@ -103,13 +103,13 @@ export interface AssetInfo {
 }
 
 export interface Pool {
-  iassetTokenAccount: PublicKey;
-  usdiTokenAccount: PublicKey;
+  onassetTokenAccount: PublicKey;
+  onusdTokenAccount: PublicKey;
   liquidityTokenMint: PublicKey;
   underlyingAssetTokenAccount: PublicKey;
   cometLiquidityTokenAccount: PublicKey;
-  iassetAmount: RawDecimal;
-  usdiAmount: RawDecimal;
+  onassetAmount: RawDecimal;
+  onusdAmount: RawDecimal;
   liquidityTokenSupply: RawDecimal;
   treasuryTradingFee: RawDecimal;
   liquidityTradingFee: RawDecimal;
@@ -123,7 +123,7 @@ export interface Collateral {
   poolIndex: BN;
   mint: PublicKey;
   vault: PublicKey;
-  vaultUsdiSupply: RawDecimal;
+  vaultOnUsdSupply: RawDecimal;
   vaultMintSupply: RawDecimal;
   vaultCometSupply: RawDecimal;
   stable: BN;

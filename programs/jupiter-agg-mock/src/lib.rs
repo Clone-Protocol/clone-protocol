@@ -5,7 +5,7 @@ use pyth_sdk_solana::Price;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
-declare_id!("6Cfr7tR217PGkSgzDecqb6oeqaz5f32DD7xDzAvFq4Dm");
+declare_id!("6LHFDGiQtKZKdq1Gn8TnaQfxr4VYLTGHfJRxffQwVKpa");
 
 const DEVNET_TOKEN_SCALE: u32 = 8;
 const USDC_TOKEN_SCALE: u8 = 7;
@@ -111,9 +111,9 @@ pub mod jupiter_agg_mock {
             rust_decimal::Decimal::new(price_feed.price, (-price_feed.expo).try_into().unwrap());
 
         if is_amount_asset {
-            let iasset_decimal =
+            let onasset_decimal =
                 rust_decimal::Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
-            let mut usdc_amount = (iasset_decimal * price)
+            let mut usdc_amount = (onasset_decimal * price)
                 .round_dp_with_strategy(USDC_TOKEN_SCALE.into(), RoundingStrategy::ToZero);
             usdc_amount.rescale(USDC_TOKEN_SCALE.into());
 
@@ -182,20 +182,20 @@ pub mod jupiter_agg_mock {
                         .clone(),
                     authority: ctx.accounts.user.to_account_info().clone(),
                 };
-                let burn_usdi_context = CpiContext::new_with_signer(
+                let burn_onusd_context = CpiContext::new_with_signer(
                     ctx.accounts.token_program.to_account_info().clone(),
                     cpi_accounts,
                     seeds,
                 );
                 token::burn(
-                    burn_usdi_context,
+                    burn_onusd_context,
                     usdc_amount.mantissa().try_into().unwrap(),
                 )?;
             }
         } else {
-            let usdi_decimal =
+            let onusd_decimal =
                 rust_decimal::Decimal::new(amount.try_into().unwrap(), USDC_TOKEN_SCALE.into());
-            let mut asset_amount = (usdi_decimal / price)
+            let mut asset_amount = (onusd_decimal / price)
                 .round_dp_with_strategy(DEVNET_TOKEN_SCALE, RoundingStrategy::ToZero);
             asset_amount.rescale(DEVNET_TOKEN_SCALE);
 

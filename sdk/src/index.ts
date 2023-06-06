@@ -1,5 +1,5 @@
 import { BN } from "@coral-xyz/anchor";
-import { Incept } from "./incept";
+import { CloneClient } from "./clone";
 import { Network, DEV_NET, TEST_NET } from "./network";
 import { PublicKey, Transaction } from "@solana/web3.js";
 export interface IWallet {
@@ -7,4 +7,4 @@ export interface IWallet {
   signAllTransactions(txs: Transaction[]): Promise<Transaction[]>;
   publicKey: PublicKey;
 }
-export { BN, Network, Incept, DEV_NET, TEST_NET };
+export { BN, Network, CloneClient, DEV_NET, TEST_NET };

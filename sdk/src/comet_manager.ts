@@ -2,8 +2,8 @@ import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 
 export interface ManagerInfo {
-  inceptProgram: PublicKey;
-  incept: PublicKey;
+  cloneProgram: PublicKey;
+  clone: PublicKey;
   owner: PublicKey;
   membershipTokenSupply: BN;
   userAccount: PublicKey;
