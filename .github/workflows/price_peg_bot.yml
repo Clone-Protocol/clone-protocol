@@ -11,7 +11,7 @@ jobs:
   run-pegging:
     runs-on: ubuntu-latest
     env:
-      INCEPT_PROGRAM_ID: ${{ vars.INCEPT_PROGRAM_ID }}
+      CLONE_PROGRAM_ID: ${{ vars.CLONE_PROGRAM_ID }}
       ANCHOR_PROVIDER_URL: ${{ secrets.ANCHOR_PROVIDER_URL }}
       SOLANA_PRIVATE_KEY: ${{ secrets.SOLANA_BOT_PRIVATE_KEY }}
       KEY_OUTFILE: key.json

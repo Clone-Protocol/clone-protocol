@@ -9,7 +9,7 @@ exports.createTable = async (db) => {
       pool_index INTEGER NOT NULL,
       is_concentrated BOOLEAN NOT NULL,
       iasset_delta BIGINT NOT NULL,
-      usdi_delta BIGINT NOT NULL,
+      onusd_delta BIGINT NOT NULL,
       lp_token_delta BIGINT NOT NULL
     );
     
@@ -20,7 +20,7 @@ exports.createTable = async (db) => {
 
 exports.insertEvent = async (db, event) => {
   await db.none(
-    "INSERT INTO liquidity_delta (block_time, slot, event_id, pool_index, is_concentrated, iasset_delta, usdi_delta, lp_token_delta) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+    "INSERT INTO liquidity_delta (block_time, slot, event_id, pool_index, is_concentrated, iasset_delta, onusd_delta, lp_token_delta) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
     [
       event.blockTime,
       event.slot,
@@ -28,7 +28,7 @@ exports.insertEvent = async (db, event) => {
       event.poolIndex,
       event.isConcentrated,
       event.iassetDelta,
-      event.usdiDelta,
+      event.onusdDelta,
       event.lpTokenDelta,
     ]
   );
@@ -44,7 +44,7 @@ exports.insertEvents = async (pgp, db, events) => {
     "pool_index",
     "is_concentrated",
     "iasset_delta",
-    "usdi_delta",
+    "onusd_delta",
     "lp_token_delta",
   ];
   const query = pgp.helpers.insert(events, columns, "liquidity_delta");

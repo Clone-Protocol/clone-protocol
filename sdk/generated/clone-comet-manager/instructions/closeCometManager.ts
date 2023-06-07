@@ -71,7 +71,7 @@ export const closeCometManagerInstructionDiscriminator = [
  */
 export function createCloseCometManagerInstruction(
   accounts: CloseCometManagerInstructionAccounts,
-  programId = new web3.PublicKey('AB3CFBB2cY5godSjfZCJaTvq9qSKzqjzXmJWEwqQ7VJR')
+  programId = new web3.PublicKey('HX81GDFSZ9GktdpQCg8N1sBRr1AydZMnkpkNw7dffQym')
 ) {
   const [data] = closeCometManagerStruct.serialize({
     instructionDiscriminator: closeCometManagerInstructionDiscriminator,

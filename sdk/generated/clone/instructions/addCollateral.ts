@@ -80,7 +80,7 @@ export const addCollateralInstructionDiscriminator = [
 export function createAddCollateralInstruction(
   accounts: AddCollateralInstructionAccounts,
   args: AddCollateralInstructionArgs,
-  programId = new web3.PublicKey('oA2F2E89xQnt5gox7wd6EhV3dJRFt57889UQyTq9che')
+  programId = new web3.PublicKey('6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g')
 ) {
   const [data] = addCollateralStruct.serialize({
     instructionDiscriminator: addCollateralInstructionDiscriminator,

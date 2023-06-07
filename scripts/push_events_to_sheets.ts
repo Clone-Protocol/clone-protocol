@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program, EventParser, AnchorProvider } from "@coral-xyz/anchor";
 import { IdlEvent } from "@coral-xyz/anchor/dist/cjs/idl";
-import { Incept, IDL } from "../sdk/src/idl/incept";
+import { Clone, IDL } from "../sdk/src/idl/clone";
 import {
   PublicKey,
   GetVersionedTransactionConfig,
@@ -19,7 +19,7 @@ type SwapEvent = {
   poolIndex: number;
   isBuy: boolean;
   iasset: number;
-  usdi: number;
+  onusd: number;
   tradingFee: number;
   treasuryFee: number;
 };
@@ -31,7 +31,7 @@ type PoolState = {
   eventId: number;
   poolIndex: number;
   iasset: number;
-  usdi: number;
+  onusd: number;
   lpTokens: number;
   oraclePrice: number;
 };
@@ -44,7 +44,7 @@ type LiquidityDelta = {
   poolIndex: number;
   isConcentrated: boolean;
   iassetDelta: number;
-  usdiDelta: number;
+  onusdDelta: number;
   lpTokenDelta: number;
 };
 
@@ -79,7 +79,7 @@ const parseEvent = (
         poolIndex: data.poolIndex,
         isConcentrated: data.isConcentrated,
         iassetDelta: data.iassetDelta.toNumber(),
-        usdiDelta: data.usdiDelta.toNumber(),
+        onusdDelta: data.onusdDelta.toNumber(),
         lpTokenDelta: data.lpTokenDelta.toNumber(),
       } as LiquidityDelta;
       break;
@@ -91,7 +91,7 @@ const parseEvent = (
         eventId,
         poolIndex: data.poolIndex,
         iasset: data.iasset.toNumber(),
-        usdi: data.usdi.toNumber(),
+        onusd: data.onusd.toNumber(),
         lpTokens: data.lpTokens.toNumber(),
         oraclePrice: data.oraclePrice.toNumber(),
       } as PoolState;
@@ -106,7 +106,7 @@ const parseEvent = (
         poolIndex: data.poolIndex,
         isBuy: data.isBuy,
         iasset: data.iasset.toNumber(),
-        usdi: data.usdi.toNumber(),
+        onusd: data.onusd.toNumber(),
         tradingFee: data.tradingFee.toNumber(),
         treasuryFee: data.treasuryFee.toNumber(),
       } as SwapEvent;
@@ -118,7 +118,7 @@ const parseEvent = (
 };
 
 const fetchParsedTransactions = async (
-  inceptProgramID: PublicKey,
+  cloneProgramID: PublicKey,
   provider: AnchorProvider,
   options?: anchor.web3.SignaturesForAddressOptions
 ): Promise<{
@@ -127,7 +127,7 @@ const fetchParsedTransactions = async (
 }> => {
   const signatures = (
     await provider.connection.getSignaturesForAddress(
-      inceptProgramID,
+      cloneProgramID,
       options,
       "finalized"
     )
@@ -163,12 +163,12 @@ type InstructionLog = {
   name: string;
 };
 
-const parseLogForInceptIx = (
-  inceptProgramID: PublicKey,
+const parseLogForCloneIx = (
+  cloneProgramID: PublicKey,
   txns: anchor.web3.ParsedTransactionWithMeta[],
   signatures: string[]
 ): InstructionLog[] => {
-  const programToken = `Program ${inceptProgramID.toString()}`;
+  const programToken = `Program ${cloneProgramID.toString()}`;
   const instructionToken = "Program log: Instruction: ";
 
   let captureInstruction = false;
@@ -200,13 +200,13 @@ const parseLogForInceptIx = (
 };
 
 const getEvents = (
-  inceptProgramID: PublicKey,
+  cloneProgramID: PublicKey,
   provider: AnchorProvider,
   txns: anchor.web3.ParsedTransactionWithMeta[],
   signatures: string[]
 ): EventData[] => {
-  let inceptProgram = new Program<Incept>(IDL, inceptProgramID, provider);
-  let parser = new EventParser(inceptProgramID, inceptProgram.coder);
+  let cloneProgram = new Program<Clone>(IDL, cloneProgramID, provider);
+  let parser = new EventParser(cloneProgramID, cloneProgram.coder);
   let events: { type: EventType; event: Event }[] = [];
 
   for (let [i, tx] of txns.entries()) {
@@ -302,7 +302,7 @@ const postToSheets = async (
 
 const main = async () => {
   let config = {
-    inceptProgramID: new PublicKey(process.env.INCEPT_PROGRAM_ID!),
+    cloneProgramID: new PublicKey(process.env.INCEPT_PROGRAM_ID!),
     documentId: process.env.DOCUMENT_ID!,
     serviceEmail: process.env.SERVICE_EMAIL!,
     servicePrivateKey: process.env.SERVICE_PRIVATE_KEY!.replace(/\\n/gm, "\n"),
@@ -322,14 +322,14 @@ const main = async () => {
   let until = await getMostRecentSignature(doc);
 
   let { signatures, txns } = await fetchParsedTransactions(
-    config.inceptProgramID,
+    config.cloneProgramID,
     provider,
     { until }
   );
 
-  let ixnLogs = parseLogForInceptIx(config.inceptProgramID, txns, signatures);
+  let ixnLogs = parseLogForCloneIx(config.cloneProgramID, txns, signatures);
   let events: EventData[] = getEvents(
-    config.inceptProgramID,
+    config.cloneProgramID,
     provider,
     txns,
     signatures

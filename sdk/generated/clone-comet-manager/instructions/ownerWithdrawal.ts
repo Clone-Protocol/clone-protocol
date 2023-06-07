@@ -74,7 +74,7 @@ export const ownerWithdrawalInstructionDiscriminator = [
 export function createOwnerWithdrawalInstruction(
   accounts: OwnerWithdrawalInstructionAccounts,
   args: OwnerWithdrawalInstructionArgs,
-  programId = new web3.PublicKey('AB3CFBB2cY5godSjfZCJaTvq9qSKzqjzXmJWEwqQ7VJR')
+  programId = new web3.PublicKey('HX81GDFSZ9GktdpQCg8N1sBRr1AydZMnkpkNw7dffQym')
 ) {
   const [data] = ownerWithdrawalStruct.serialize({
     instructionDiscriminator: ownerWithdrawalInstructionDiscriminator,

@@ -84,7 +84,7 @@ export const subscribeInstructionDiscriminator = [
 export function createSubscribeInstruction(
   accounts: SubscribeInstructionAccounts,
   args: SubscribeInstructionArgs,
-  programId = new web3.PublicKey('AB3CFBB2cY5godSjfZCJaTvq9qSKzqjzXmJWEwqQ7VJR')
+  programId = new web3.PublicKey('HX81GDFSZ9GktdpQCg8N1sBRr1AydZMnkpkNw7dffQym')
 ) {
   const [data] = subscribeStruct.serialize({
     instructionDiscriminator: subscribeInstructionDiscriminator,

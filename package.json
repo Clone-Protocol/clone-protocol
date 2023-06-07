@@ -1,5 +1,5 @@
 {
-    "name": "incept-protocol",
+    "name": "clone-protocol",
     "version": "0.1.0",
     "dependencies": {
         "@aws-sdk/client-secrets-manager": "^3.342.0",

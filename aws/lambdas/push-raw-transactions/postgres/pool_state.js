@@ -7,7 +7,7 @@ exports.createTable = async (db) => {
       event_id BIGINT NOT NULL,
       pool_index SMALLINT NOT NULL,
       iasset BIGINT NOT NULL,
-      usdi BIGINT NOT NULL,
+      onusd BIGINT NOT NULL,
       lp_tokens BIGINT NOT NULL,
       oracle_price BIGINT NOT NULL
     );
@@ -19,14 +19,14 @@ exports.createTable = async (db) => {
 
 exports.insertEvent = async (db, event) => {
   await db.none(
-    "INSERT INTO pool_state (block_time, slot, event_id, pool_index, iasset, usdi, lp_tokens, oracle_price) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+    "INSERT INTO pool_state (block_time, slot, event_id, pool_index, iasset, onusd, lp_tokens, oracle_price) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
     [
       event.blockTime,
       event.slot,
       event.eventId,
       event.poolIndex,
       event.iasset,
-      event.usdi,
+      event.onusd,
       event.lpTokens,
       event.oraclePrice,
     ]
@@ -42,7 +42,7 @@ exports.insertEvents = async (pgp, db, events) => {
     "event_id",
     "pool_index",
     "iasset",
-    "usdi",
+    "onusd",
     "lp_tokens",
     "oracle_price",
   ];

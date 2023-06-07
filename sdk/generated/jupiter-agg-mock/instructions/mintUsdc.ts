@@ -70,7 +70,7 @@ export const mintUsdcInstructionDiscriminator = [
 export function createMintUsdcInstruction(
   accounts: MintUsdcInstructionAccounts,
   args: MintUsdcInstructionArgs,
-  programId = new web3.PublicKey('6LHFDGiQtKZKdq1Gn8TnaQfxr4VYLTGHfJRxffQwVKpa')
+  programId = new web3.PublicKey('4pVZGe5ygMM4CGhshdLUfSYjzDayxDkaVE5W6yWwC5Fi')
 ) {
   const [data] = mintUsdcStruct.serialize({
     instructionDiscriminator: mintUsdcInstructionDiscriminator,

@@ -15,14 +15,14 @@ import {
   AddressLookupTableProgram,
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
-import { toDevnetScale } from "../../sdk/src/incept";
+import { toDevnetScale } from "../../sdk/src/clone";
 import { getOrCreateAssociatedTokenAccount } from "../../tests/utils";
 import { toNumber } from "../../sdk/src/decimal";
 import { createVersionedTx } from "../../sdk/src/utils";
 import {
-  Incept as InceptProgram,
-  IDL as InceptIDL,
-} from "../../sdk/src/idl/incept";
+  Clone as CloneProgram,
+  IDL as CloneIDL,
+} from "../../sdk/src/idl/clone";
 import {
   IDL as JupiterAggMockIDL,
   JupiterAggMock,
@@ -46,10 +46,10 @@ import {
   SubscribeInstructionArgs,
   AddLiquidityInstructionAccounts,
   AddLiquidityInstructionArgs,
-} from "../../sdk/generated/incept-comet-manager";
+} from "../../sdk/generated/clone-comet-manager";
 import { Jupiter } from "../../sdk/generated/jupiter-agg-mock/index";
 import {
-  Incept,
+  Clone,
   TokenData,
   Comet,
   createUpdatePricesInstruction,
@@ -59,7 +59,7 @@ import {
   MintUsdiInstructionAccounts,
   MintUsdiInstructionArgs,
   User,
-} from "../../sdk/generated/incept/index";
+} from "../../sdk/generated/clone/index";
 import {
   setupAddressLookupTable,
   getManagerTokenAccountAddresses,
@@ -72,12 +72,12 @@ import {
 
 const main = async () => {
   let config = {
-    inceptProgramID: new PublicKey(process.env.INCEPT_PROGRAM_ID!),
-    inceptCometManagerProgramID: new PublicKey(
+    cloneProgramID: new PublicKey(process.env.INCEPT_PROGRAM_ID!),
+    cloneCometManagerProgramID: new PublicKey(
       process.env.COMET_MANAGER_PROGRAM_ID!
     ),
     jupiterProgramID: new PublicKey(process.env.JUPITER_PROGRAM_ID!),
-    usdiToMint: 4_000_000,
+    onusdToMint: 4_000_000,
     liquidityToAdd: [
       { liquidity: 1_000_000, poolIndex: 0 },
       { liquidity: 1_000_000, poolIndex: 1 },
@@ -101,9 +101,9 @@ const main = async () => {
 
   // await provider.connection.confirmTransaction(airdropSignature);
 
-  const inceptProgram = new anchor.Program<InceptProgram>(
-    InceptIDL,
-    config.inceptProgramID,
+  const cloneProgram = new anchor.Program<CloneProgram>(
+    CloneIDL,
+    config.cloneProgramID,
     provider
   );
   const jupiterProgram = new anchor.Program<JupiterAggMock>(
@@ -117,18 +117,18 @@ const main = async () => {
   const [managerInfoAddress, _managerInfoBump] =
     PublicKey.findProgramAddressSync(
       [Buffer.from("manager-info"), provider.publicKey!.toBuffer()],
-      config.inceptCometManagerProgramID
+      config.cloneCometManagerProgramID
     );
 
-  const [inceptAccountAddress, _inceptNonce] = PublicKey.findProgramAddressSync(
-    [Buffer.from("incept")],
-    config.inceptProgramID
+  const [cloneAccountAddress, _cloneNonce] = PublicKey.findProgramAddressSync(
+    [Buffer.from("clone")],
+    config.cloneProgramID
   );
 
   const [userAccountAddress, userAccountBump] =
     PublicKey.findProgramAddressSync(
       [Buffer.from("user"), managerInfoAddress.toBuffer()],
-      config.inceptProgramID
+      config.cloneProgramID
     );
 
   const [jupiterAccountAddress, jupiterBump] = PublicKey.findProgramAddressSync(
@@ -136,9 +136,9 @@ const main = async () => {
     config.jupiterProgramID
   );
 
-  const incept = await Incept.fromAccountAddress(
+  const clone = await Clone.fromAccountAddress(
     provider.connection,
-    inceptAccountAddress
+    cloneAccountAddress
   );
   const jupiter = await Jupiter.fromAccountAddress(
     provider.connection,
@@ -146,10 +146,10 @@ const main = async () => {
   );
   const tokenData = await TokenData.fromAccountAddress(
     provider.connection,
-    incept.tokenData
+    clone.tokenData
   );
 
-  let createIx = await inceptProgram.account.comet.createInstruction(
+  let createIx = await cloneProgram.account.comet.createInstruction(
     cometAccount
   );
 
@@ -159,8 +159,8 @@ const main = async () => {
       managerInfo: managerInfoAddress,
       userAccount: userAccountAddress,
       comet: cometAccount.publicKey,
-      incept: inceptAccountAddress,
-      inceptProgram: config.inceptProgramID,
+      clone: cloneAccountAddress,
+      cloneProgram: config.cloneProgramID,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: anchor.web3.SystemProgram.programId,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -182,9 +182,9 @@ const main = async () => {
     jupiter.usdcMint,
     provider.publicKey!
   );
-  const usdiTokenAccount = await getOrCreateAssociatedTokenAccount(
+  const onusdTokenAccount = await getOrCreateAssociatedTokenAccount(
     provider,
-    incept.usdiMint,
+    clone.onusdMint,
     provider.publicKey!
   );
 
@@ -196,16 +196,16 @@ const main = async () => {
   // )
   const managerUsdiTokenAccount = await getOrCreateAssociatedTokenAccount(
     provider,
-    incept.usdiMint,
+    clone.onusdMint,
     managerInfoAddress,
     true
   );
 
   const treasuryAddresses = await getTreasuryTokenAccountAddresses(
     provider,
-    incept.treasuryAddress,
+    clone.treasuryAddress,
     tokenData,
-    incept.usdiMint,
+    clone.onusdMint,
     jupiter.usdcMint
   );
 
@@ -213,7 +213,7 @@ const main = async () => {
     provider,
     managerInfoAddress,
     tokenData,
-    incept.usdiMint,
+    clone.onusdMint,
     jupiter.usdcMint,
     jupiter.assetMints.slice(0, jupiter.nAssets)
   );
@@ -228,24 +228,24 @@ const main = async () => {
     } as MintUsdcInstructionAccounts,
     {
       nonce: jupiterBump,
-      amount: new anchor.BN(config.usdiToMint * Math.pow(10, 7)),
+      amount: new anchor.BN(config.onusdToMint * Math.pow(10, 7)),
     } as MintUsdcInstructionArgs
   );
   // Mint USDI for subscription.
   let mintUsdiIx = createMintUsdiInstruction(
     {
       user: provider.publicKey!,
-      incept: inceptAccountAddress,
-      usdiMint: incept.usdiMint,
-      userUsdiTokenAccount: usdiTokenAccount.address,
+      clone: cloneAccountAddress,
+      onusdMint: clone.onusdMint,
+      userUsdiTokenAccount: onusdTokenAccount.address,
       usdcMint: jupiter.usdcMint,
       userCollateralTokenAccount: usdcTokenAccount.address,
-      inceptProgram: config.inceptProgramID,
-      tokenData: incept.tokenData,
+      cloneProgram: config.cloneProgramID,
+      tokenData: clone.tokenData,
       usdcVault: tokenData.collaterals[1].vault,
     } as MintUsdiInstructionAccounts,
     {
-      amount: toDevnetScale(config.usdiToMint),
+      amount: toDevnetScale(config.onusdToMint),
     } as MintUsdiInstructionArgs
   );
 
@@ -254,12 +254,12 @@ const main = async () => {
     [],
     { commitment: "recent" }
   );
-  console.log(`MINTED USDC and WRAPPED USDi: ${config.usdiToMint}`);
+  console.log(`MINTED USDC and WRAPPED USDi: ${config.onusdToMint}`);
 
   // Initial subscription
   let updatePricesIx = buildUpdatePricesInstruction(
-    inceptAccountAddress,
-    incept.tokenData,
+    cloneAccountAddress,
+    clone.tokenData,
     tokenData
   );
 
@@ -269,7 +269,7 @@ const main = async () => {
       provider.publicKey!.toBuffer(),
       managerInfoAddress.toBuffer(),
     ],
-    config.inceptCometManagerProgramID
+    config.cloneCometManagerProgramID
   );
   // Create subscription account
   let createInitializeSubscription = createInitializeSubscriptionInstruction(
@@ -281,7 +281,7 @@ const main = async () => {
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: anchor.web3.SystemProgram.programId,
     } as InitializeSubscriptionInstructionAccounts,
-    config.inceptCometManagerProgramID
+    config.cloneCometManagerProgramID
   );
   // Supply USDi
   let createSubscribe = createSubscribeInstruction(
@@ -289,18 +289,18 @@ const main = async () => {
       subscriber: provider.publicKey!,
       subscriberAccount: subscribeAccountAddress,
       managerInfo: managerInfoAddress,
-      incept: inceptAccountAddress,
-      managerInceptUser: userAccountAddress,
-      usdiMint: incept.usdiMint,
-      subscriberUsdiTokenAccount: usdiTokenAccount.address,
+      clone: cloneAccountAddress,
+      managerCloneUser: userAccountAddress,
+      onusdMint: clone.onusdMint,
+      subscriberUsdiTokenAccount: onusdTokenAccount.address,
       managerUsdiTokenAccount: managerUsdiTokenAccount.address,
-      inceptProgram: config.inceptProgramID,
-      tokenData: incept.tokenData,
-      inceptUsdiVault: tokenData.collaterals[0].vault,
+      cloneProgram: config.cloneProgramID,
+      tokenData: clone.tokenData,
+      cloneUsdiVault: tokenData.collaterals[0].vault,
       tokenProgram: TOKEN_PROGRAM_ID,
     } as SubscribeInstructionAccounts,
     {
-      usdiCollateralToProvide: toDevnetScale(config.usdiToMint),
+      onusdCollateralToProvide: toDevnetScale(config.onusdToMint),
     } as SubscribeInstructionArgs
   );
   console.log("CREATING SUBSCRIPTION...");
@@ -313,9 +313,9 @@ const main = async () => {
   //   provider,
   //   tokenData,
   //   managerInfoAddress,
-  //   inceptAccountAddress,
-  //   incept,
-  //   managerAddresses.usdiToken,
+  //   cloneAccountAddress,
+  //   clone,
+  //   managerAddresses.onusdToken,
   //   managerAddresses.usdcToken,
   //   managerAddresses.iassetToken,
   //   managerAddresses.underlyingToken!,
@@ -347,8 +347,8 @@ const main = async () => {
     } else {
       const [account, _altAddress] = await setupAddressLookupTable(
         provider,
-        incept,
-        inceptAccountAddress,
+        clone,
+        cloneAccountAddress,
         managerInfo,
         managerAddresses,
         managerInfoAddress,
@@ -373,18 +373,18 @@ const main = async () => {
     {
       managerOwner: managerInfo.owner,
       managerInfo: managerInfoAddress,
-      incept: managerInfo.incept,
-      managerInceptUser: managerInfo.userAccount,
-      usdiMint: incept.usdiMint,
+      clone: managerInfo.clone,
+      managerCloneUser: managerInfo.userAccount,
+      onusdMint: clone.onusdMint,
       managerUsdiTokenAccount: managerUsdiTokenAccount.address,
-      inceptProgram: config.inceptProgramID,
+      cloneProgram: config.cloneProgramID,
       comet: user.comet,
-      tokenData: incept.tokenData,
-      inceptUsdiVault: tokenData.collaterals[0].vault,
+      tokenData: clone.tokenData,
+      cloneUsdiVault: tokenData.collaterals[0].vault,
       tokenProgram: TOKEN_PROGRAM_ID,
     } as AddCollateralToCometInstructionAccounts,
     {
-      amount: toDevnetScale(config.usdiToMint),
+      amount: toDevnetScale(config.onusdToMint),
     } as AddCollateralToCometInstructionArgs
   );
 
@@ -397,14 +397,14 @@ const main = async () => {
       {
         managerOwner: managerInfo.owner,
         managerInfo: managerInfoAddress,
-        incept: managerInfo.incept,
-        managerInceptUser: managerInfo.userAccount,
-        usdiMint: incept.usdiMint,
-        inceptProgram: config.inceptProgramID,
+        clone: managerInfo.clone,
+        managerCloneUser: managerInfo.userAccount,
+        onusdMint: clone.onusdMint,
+        cloneProgram: config.cloneProgramID,
         comet: user.comet,
-        tokenData: incept.tokenData,
+        tokenData: clone.tokenData,
         iassetMint: pool.assetInfo.iassetMint,
-        ammUsdiTokenAccount: pool.usdiTokenAccount,
+        ammUsdiTokenAccount: pool.onusdTokenAccount,
         ammIassetTokenAccount: pool.iassetTokenAccount,
         liquidityTokenMint: pool.liquidityTokenMint,
         cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
@@ -412,7 +412,7 @@ const main = async () => {
       } as AddLiquidityInstructionAccounts,
       {
         poolIndex,
-        usdiAmount: toDevnetScale(liquidity),
+        onusdAmount: toDevnetScale(liquidity),
       } as AddLiquidityInstructionArgs
     );
     tx.add(addLiquidityToComet);

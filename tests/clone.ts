@@ -10,7 +10,6 @@ import {
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
   getAccount,
-  getMint,
   createTransferInstruction,
 } from "@solana/spl-token";
 import {
@@ -39,7 +38,7 @@ import {
   fromDevnetNumber,
 } from "./utils";
 import {
-  calculateEditCometSinglePoolWithOnUsdBorrowed,
+  calculateEditCometSinglePoolWithOnusdBorrowed,
   getSinglePoolHealthScore,
   getHealthScore,
   getEffectiveUSDCollateralValue,
@@ -64,8 +63,8 @@ describe("clone", async () => {
 
   const mockUSDCMint = anchor.web3.Keypair.generate();
   const treasuryAddress = anchor.web3.Keypair.generate();
-  let treasuryOnUsdTokenAccount;
-  let treasuryOnAssetTokenAccount;
+  let treasuryOnusdTokenAccount;
+  let treasuryOnassetTokenAccount;
 
   const healthScoreCoefficient = 1.059;
   const ilHealthScoreCoefficient = 128.288;
@@ -261,7 +260,7 @@ describe("clone", async () => {
   //     cloneClient.provider,
   //     cloneClient.clone!.onusdMint,
   //   );
-  //   await cloneClient.hackathonMintOnUsd(
+  //   await cloneClient.hackathonMintOnusd(
   //     onusdTokenAccountInfo.address,
   //     toDevnetScale(2000),
   //   );
@@ -470,7 +469,7 @@ describe("clone", async () => {
 
     const mintAmount = 1000000;
     const USDC_SCALE = 7;
-    await cloneClient.mintOnUsd(
+    await cloneClient.mintOnusd(
       mintAmount,
       onusdTokenAccountInfo.address,
       mockUSDCTokenAccountInfo.address
@@ -1120,7 +1119,7 @@ describe("clone", async () => {
       0.0001
     );
 
-    const treasuryOnAssetAssociatedTokenAddress =
+    const treasuryOnassetAssociatedTokenAddress =
       await getAssociatedTokenAddress(
         pool.assetInfo.onassetMint,
         treasuryAddress.publicKey,
@@ -1128,7 +1127,7 @@ describe("clone", async () => {
         TOKEN_PROGRAM_ID,
         ASSOCIATED_TOKEN_PROGRAM_ID
       );
-    const treasuryOnUsdAssociatedTokenAddress = await getAssociatedTokenAddress(
+    const treasuryOnusdAssociatedTokenAddress = await getAssociatedTokenAddress(
       cloneClient.clone!.onusdMint,
       treasuryAddress.publicKey,
       false,
@@ -1140,7 +1139,7 @@ describe("clone", async () => {
         .add(
           await createAssociatedTokenAccountInstruction(
             cloneClient.provider.publicKey!,
-            treasuryOnAssetAssociatedTokenAddress,
+            treasuryOnassetAssociatedTokenAddress,
             treasuryAddress.publicKey,
             pool.assetInfo.onassetMint,
             TOKEN_PROGRAM_ID,
@@ -1150,7 +1149,7 @@ describe("clone", async () => {
         .add(
           await createAssociatedTokenAccountInstruction(
             cloneClient.provider.publicKey!,
-            treasuryOnUsdAssociatedTokenAddress,
+            treasuryOnusdAssociatedTokenAddress,
             treasuryAddress.publicKey,
             cloneClient.clone!.onusdMint,
             TOKEN_PROGRAM_ID,
@@ -1158,24 +1157,24 @@ describe("clone", async () => {
           )
         )
     );
-    treasuryOnAssetTokenAccount = await getAccount(
+    treasuryOnassetTokenAccount = await getAccount(
       cloneClient.provider.connection,
-      treasuryOnAssetAssociatedTokenAddress,
+      treasuryOnassetAssociatedTokenAddress,
       "recent"
     );
-    treasuryOnUsdTokenAccount = await getAccount(
+    treasuryOnusdTokenAccount = await getAccount(
       cloneClient.provider.connection,
-      treasuryOnUsdAssociatedTokenAddress,
+      treasuryOnusdAssociatedTokenAddress,
       "recent"
     );
 
-    await cloneClient.buyOnAsset(
+    await cloneClient.buyOnasset(
       toDevnetScale(purchaseAmount),
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       poolIndex,
       toDevnetScale(executionEst.onusdThresholdAmount),
-      treasuryOnAssetTokenAccount.address
+      treasuryOnassetTokenAccount.address
     );
 
     onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
@@ -1226,7 +1225,7 @@ describe("clone", async () => {
       Number(
         (
           await cloneClient.connection.getTokenAccountBalance(
-            treasuryOnAssetTokenAccount.address,
+            treasuryOnassetTokenAccount.address,
             "recent"
           )
         ).value!.uiAmount
@@ -1252,13 +1251,13 @@ describe("clone", async () => {
 
     let executionEst = calculateExecutionThreshold(10000, false, pool, 0.0001);
 
-    await cloneClient.sellOnAsset(
+    await cloneClient.sellOnasset(
       new BN(1000000000000),
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       poolIndex,
       new BN(executionEst.onusdThresholdAmount),
-      treasuryOnUsdTokenAccount.address
+      treasuryOnusdTokenAccount.address
     );
 
     onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
@@ -1323,7 +1322,7 @@ describe("clone", async () => {
       cloneClient.provider,
       mockUSDCMint.publicKey
     );
-    await cloneClient.mintOnUsd(
+    await cloneClient.mintOnusd(
       25,
       onusdTokenAccountInfo.address,
       mockUSDCTokenAccountInfo.address
@@ -1353,7 +1352,7 @@ describe("clone", async () => {
     let tokenData = await cloneClient.getTokenData();
 
     // Estimate using edit.
-    const estimation = calculateEditCometSinglePoolWithOnUsdBorrowed(
+    const estimation = calculateEditCometSinglePoolWithOnusdBorrowed(
       tokenData,
       comet,
       0,
@@ -1423,9 +1422,9 @@ describe("clone", async () => {
     );
     const comet = await cloneClient.getSinglePoolComets();
 
-    const startingOnUsdBalance =
+    const startingOnusdBalance =
       Number(onusdTokenAccountInfo.amount) * Math.pow(10, -DEVNET_TOKEN_SCALE);
-    const startingOnAssetBalance =
+    const startingOnassetBalance =
       Number(onassetTokenAccountInfo.amount) * Math.pow(10, -DEVNET_TOKEN_SCALE);
 
     await cloneClient.withdrawLiquidityFromComet(
@@ -1445,13 +1444,13 @@ describe("clone", async () => {
       pool.assetInfo.onassetMint
     );
 
-    const finalOnUsdBalance =
+    const finalOnusdBalance =
       Number(onusdTokenAccountInfo.amount) * Math.pow(10, -DEVNET_TOKEN_SCALE);
-    const finalOnAssetBalance =
+    const finalOnassetBalance =
       Number(onassetTokenAccountInfo.amount) * Math.pow(10, -DEVNET_TOKEN_SCALE);
 
-    assert.isAtLeast(finalOnUsdBalance, startingOnUsdBalance);
-    assert.isAtLeast(finalOnAssetBalance, startingOnAssetBalance);
+    assert.isAtLeast(finalOnusdBalance, startingOnusdBalance);
+    assert.isAtLeast(finalOnassetBalance, startingOnassetBalance);
 
     const onusdAccountBalance =
       await cloneClient.connection.getTokenAccountBalance(
@@ -1493,13 +1492,13 @@ describe("clone", async () => {
     );
     const executionEst = calculateExecutionThreshold(10000, true, pool, 0.0001);
 
-    await cloneClient.buyOnAsset(
+    await cloneClient.buyOnasset(
       new BN(1000000000000),
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       poolIndex,
       toDevnetScale(executionEst.onusdThresholdAmount),
-      treasuryOnAssetTokenAccount.address
+      treasuryOnassetTokenAccount.address
     );
 
     onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
@@ -1581,8 +1580,8 @@ describe("clone", async () => {
       positionIndex,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
-      treasuryOnUsdTokenAccount.address,
-      treasuryOnAssetTokenAccount.address
+      treasuryOnusdTokenAccount.address,
+      treasuryOnassetTokenAccount.address
     );
 
     let tx = await createTx(recenterInfo.ixs);
@@ -1667,13 +1666,13 @@ describe("clone", async () => {
 
     let executionEst = calculateExecutionThreshold(15000, false, pool, 0.0001);
     // Decrease pool price
-    await cloneClient.sellOnAsset(
+    await cloneClient.sellOnasset(
       toDevnetScale(15000),
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       poolIndex,
       toDevnetScale(executionEst.onusdThresholdAmount),
-      treasuryOnUsdTokenAccount.address
+      treasuryOnusdTokenAccount.address
     );
 
     await sleep(2000);
@@ -1723,13 +1722,13 @@ describe("clone", async () => {
       );
     executionEst = calculateExecutionThreshold(onAssetToBuy, true, pool3, 0.002);
 
-    await cloneClient.buyOnAsset(
+    await cloneClient.buyOnasset(
       toDevnetScale(onAssetToBuy),
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       poolIndex,
       toDevnetScale(executionEst.onusdThresholdAmount),
-      treasuryOnAssetTokenAccount.address
+      treasuryOnassetTokenAccount.address
     );
   });
 
@@ -1777,7 +1776,7 @@ describe("clone", async () => {
       cloneClient.clone!.onusdMint
     );
 
-    const startingOnUsdWallet = fromDevnetNumber(onusdTokenAccountInfo.amount);
+    const startingOnusdWallet = fromDevnetNumber(onusdTokenAccountInfo.amount);
     let vault = await cloneClient.connection.getTokenAccountBalance(
       collateral.vault,
       "recent"
@@ -1796,10 +1795,10 @@ describe("clone", async () => {
       cloneClient.provider,
       cloneClient.clone!.onusdMint
     );
-    const endingOnUsdWallet = fromDevnetNumber(onusdTokenAccountInfo.amount);
+    const endingOnusdWallet = fromDevnetNumber(onusdTokenAccountInfo.amount);
 
     assert.equal(
-      startingOnUsdWallet - endingOnUsdWallet,
+      startingOnusdWallet - endingOnusdWallet,
       collateralToAdd,
       "check user onUSD"
     );
@@ -1859,7 +1858,7 @@ describe("clone", async () => {
       cloneClient.provider,
       cloneClient.clone!.onusdMint
     );
-    const startingOnUsdWallet = fromDevnetNumber(onusdTokenAccountInfo.amount);
+    const startingOnusdWallet = fromDevnetNumber(onusdTokenAccountInfo.amount);
     const collateralToWithdraw = 10000;
     const startingVaultBalance = vault.value.uiAmount!;
 
@@ -1880,10 +1879,10 @@ describe("clone", async () => {
       cloneClient.provider,
       cloneClient.clone!.onusdMint
     );
-    const endingOnUsdWallet = fromDevnetNumber(onusdTokenAccountInfo.amount);
+    const endingOnusdWallet = fromDevnetNumber(onusdTokenAccountInfo.amount);
 
     assert.equal(
-      endingOnUsdWallet - startingOnUsdWallet,
+      endingOnusdWallet - startingOnusdWallet,
       collateralToWithdraw,
       "check user onUSD"
     );
@@ -2019,16 +2018,16 @@ describe("clone", async () => {
       cloneClient.provider,
       cloneClient.clone!.onusdMint
     );
-    const startingOnUsdAmount = fromDevnetNumber(onusdTokenAccountInfo.amount);
+    const startingOnusdAmount = fromDevnetNumber(onusdTokenAccountInfo.amount);
     let onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
       pool.assetInfo.onassetMint
     );
-    const startingOnAssetAmount = fromDevnetNumber(
+    const startingOnassetAmount = fromDevnetNumber(
       onassetTokenAccountInfo.amount
     );
-    const startingBorrowedOnUsd = toNumber(position.borrowedOnusd);
-    const startingBorrowedOnAsset = toNumber(position.borrowedOnasset);
+    const startingBorrowedOnusd = toNumber(position.borrowedOnusd);
+    const startingBorrowedOnasset = toNumber(position.borrowedOnasset);
 
     await cloneClient.withdrawLiquidityFromComet(
       toDevnetScale(withdrawAmount),
@@ -2052,23 +2051,23 @@ describe("clone", async () => {
 
     assert.isAtLeast(
       fromDevnetNumber(onusdTokenAccountInfo.amount),
-      startingOnUsdAmount,
+      startingOnusdAmount,
       "check onusd user balance"
     );
 
     assert.isAtLeast(
       fromDevnetNumber(onassetTokenAccountInfo.amount),
-      startingOnAssetAmount,
+      startingOnassetAmount,
       "check onasset user balance"
     );
     assert.isBelow(
       toNumber(position.borrowedOnusd),
-      startingBorrowedOnUsd,
+      startingBorrowedOnusd,
       "borrowed onusd should be lower"
     );
     assert.isBelow(
       toNumber(position.borrowedOnasset),
-      startingBorrowedOnAsset,
+      startingBorrowedOnasset,
       "borrowed onasset should be lower"
     );
   });
@@ -2081,7 +2080,7 @@ describe("clone", async () => {
 
     const currentOnUSD = Number(onusdTokenAccountInfo.amount) / 100000000;
 
-    await cloneClient.devnetMintOnUsd(
+    await cloneClient.devnetMintOnusd(
       onusdTokenAccountInfo.address,
       500000000000000
     );
@@ -2119,7 +2118,7 @@ describe("clone", async () => {
       pool.assetInfo.onassetMint
     );
 
-    treasuryOnAssetTokenAccount = await getOrCreateAssociatedTokenAccount(
+    treasuryOnassetTokenAccount = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
       pool.assetInfo.onassetMint,
       cloneClient.clone!.treasuryAddress,
@@ -2135,13 +2134,13 @@ describe("clone", async () => {
       0.0001
     );
 
-    await cloneClient.sellOnAsset(
+    await cloneClient.sellOnasset(
       toDevnetScale(onassetToSell),
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       poolIndex,
       toDevnetScale(executionEst.onusdThresholdAmount),
-      treasuryOnUsdTokenAccount.address
+      treasuryOnusdTokenAccount.address
     );
 
     tokenData = await cloneClient.getTokenData();
@@ -2168,8 +2167,8 @@ describe("clone", async () => {
       positionIndex,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
-      treasuryOnUsdTokenAccount.address,
-      treasuryOnAssetTokenAccount.address
+      treasuryOnusdTokenAccount.address,
+      treasuryOnassetTokenAccount.address
     );
 
     let tx = await createTx(recenterInfo.ixs);
@@ -2287,8 +2286,8 @@ describe("clone", async () => {
       pool.assetInfo.onassetMint
     );
     const collateralLeftover = 50;
-    const totalOnUsdCollateral = toNumber(comet.collaterals[0].collateralAmount);
-    const collateralWithdrawn = totalOnUsdCollateral - collateralLeftover;
+    const totalOnusdCollateral = toNumber(comet.collaterals[0].collateralAmount);
+    const collateralWithdrawn = totalOnusdCollateral - collateralLeftover;
 
     await cloneClient.withdrawCollateralFromComet(
       onusdTokenAccountInfo.address,
@@ -2299,13 +2298,13 @@ describe("clone", async () => {
 
     let executionEst = calculateExecutionThreshold(29998, true, pool, 0.0001);
 
-    await cloneClient.buyOnAsset(
+    await cloneClient.buyOnasset(
       buyAmount,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       poolIndex,
       toDevnetScale(executionEst.onusdThresholdAmount),
-      treasuryOnAssetTokenAccount.address
+      treasuryOnassetTokenAccount.address
     );
 
     tokenData = await cloneClient.getTokenData();
@@ -2646,7 +2645,7 @@ describe("clone", async () => {
     );
 
     // Mint position
-    await cloneClient.devnetMintOnUsd(
+    await cloneClient.devnetMintOnusd(
       onusdTokenAccountInfo.address,
       8000000 * 100000000
     );
@@ -2816,9 +2815,9 @@ describe("clone", async () => {
       cometManagerProgram.provider,
       cloneClient.clone!.onusdMint
     );
-    let currentOnUsdBalance =
+    let currentOnusdBalance =
       Number(subscriberOnusdTokenAccount.amount) / 100000000;
-    let cometManagerOnUsdTokenAccount = await getOrCreateAssociatedTokenAccount(
+    let cometManagerOnusdTokenAccount = await getOrCreateAssociatedTokenAccount(
       cometManagerProgram.provider,
       cloneClient.clone!.onusdMint,
       cometManagerInfoAddress,
@@ -2839,7 +2838,7 @@ describe("clone", async () => {
         managerCloneUser: cometManagerInfo.userAccount,
         onusdMint: cloneClient.clone!.onusdMint,
         subscriberOnusdTokenAccount: subscriberOnusdTokenAccount.address,
-        managerOnusdTokenAccount: cometManagerOnUsdTokenAccount.address,
+        managerOnusdTokenAccount: cometManagerOnusdTokenAccount.address,
         cloneProgram: cloneClient.programId,
         tokenData: cloneClient.clone!.tokenData,
         cloneOnusdVault: tokenData.collaterals[0].vault,
@@ -2858,7 +2857,7 @@ describe("clone", async () => {
     cometManagerInfo = (await cometManagerProgram.account.managerInfo.fetch(
       cometManagerInfoAddress
     )) as ManagerInfo;
-    cometManagerOnUsdTokenAccount = await getOrCreateAssociatedTokenAccount(
+    cometManagerOnusdTokenAccount = await getOrCreateAssociatedTokenAccount(
       cometManagerProgram.provider,
       cloneClient.clone!.onusdMint,
       cometManagerInfoAddress,
@@ -2884,7 +2883,7 @@ describe("clone", async () => {
 
     assert.equal(
       Number(subscriberOnusdTokenAccount.amount) / 100000000,
-      currentOnUsdBalance - 100,
+      currentOnusdBalance - 100,
       "onusd balance"
     );
 
@@ -2895,7 +2894,7 @@ describe("clone", async () => {
     );
 
     assert.equal(
-      Number(cometManagerOnUsdTokenAccount.amount) / 100000000,
+      Number(cometManagerOnusdTokenAccount.amount) / 100000000,
       100,
       "Manager onusd balance"
     );
@@ -2910,7 +2909,7 @@ describe("clone", async () => {
     let tokenData = await cloneClient.getTokenData();
     let poolIndex = 0;
     let onusdAmount = 120;
-    let cometManagerOnUsdTokenAccount = await getOrCreateAssociatedTokenAccount(
+    let cometManagerOnusdTokenAccount = await getOrCreateAssociatedTokenAccount(
       cometManagerProgram.provider,
       cloneClient.clone!.onusdMint,
       cometManagerInfoAddress,
@@ -2932,7 +2931,7 @@ describe("clone", async () => {
             comet: cometManagerUser.comet,
             tokenData: cloneClient.clone!.tokenData,
             tokenProgram: TOKEN_PROGRAM_ID,
-            managerOnusdTokenAccount: cometManagerOnUsdTokenAccount.address,
+            managerOnusdTokenAccount: cometManagerOnusdTokenAccount.address,
             cloneOnusdVault: tokenData.collaterals[0].vault,
           })
           .instruction()
@@ -2968,7 +2967,7 @@ describe("clone", async () => {
     assert.equal(
       toNumber(comet.positions[0].borrowedOnusd),
       onusdAmount,
-      "OnUsd position size"
+      "Onusd position size"
     );
   });
 
@@ -3006,13 +3005,13 @@ describe("clone", async () => {
     let poolIndex = 0;
     let positionIndex = 0;
     let comet = await cloneClient.getComet(cometManagerInfo.userAccount);
-    let cometManagerOnUsdTokenAccount = await getOrCreateAssociatedTokenAccount(
+    let cometManagerOnusdTokenAccount = await getOrCreateAssociatedTokenAccount(
       cometManagerProgram.provider,
       cloneClient.clone!.onusdMint,
       cometManagerInfoAddress,
       true
     );
-    let cometManagerOnAssetTokenAccount =
+    let cometManagerOnassetTokenAccount =
       await getOrCreateAssociatedTokenAccount(
         cometManagerProgram.provider,
         tokenData.pools[poolIndex].assetInfo.onassetMint,
@@ -3024,7 +3023,7 @@ describe("clone", async () => {
     const transaction = new Transaction().add(
       createTransferInstruction(
         onusdTokenAccountInfo.address,
-        cometManagerOnUsdTokenAccount.address,
+        cometManagerOnusdTokenAccount.address,
         provider.publicKey!,
         toDevnetScale(100).toNumber(),
         [],
@@ -3058,8 +3057,8 @@ describe("clone", async () => {
         cometLiquidityTokenAccount:
           tokenData.pools[poolIndex].cometLiquidityTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
-        managerOnusdTokenAccount: cometManagerOnUsdTokenAccount.address,
-        managerOnassetTokenAccount: cometManagerOnAssetTokenAccount.address,
+        managerOnusdTokenAccount: cometManagerOnusdTokenAccount.address,
+        managerOnassetTokenAccount: cometManagerOnassetTokenAccount.address,
       })
       .rpc();
     comet = await cloneClient.getComet(cometManagerInfo.userAccount);
@@ -3083,8 +3082,8 @@ describe("clone", async () => {
         onassetMint: tokenData.pools[poolIndex].assetInfo.onassetMint,
         ammOnusdTokenAccount: tokenData.pools[poolIndex].onusdTokenAccount,
         ammOnassetTokenAccount: tokenData.pools[poolIndex].onassetTokenAccount,
-        managerOnusdTokenAccount: cometManagerOnUsdTokenAccount.address,
-        managerOnassetTokenAccount: cometManagerOnAssetTokenAccount.address,
+        managerOnusdTokenAccount: cometManagerOnusdTokenAccount.address,
+        managerOnassetTokenAccount: cometManagerOnassetTokenAccount.address,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
@@ -3094,12 +3093,12 @@ describe("clone", async () => {
     assert.equal(
       toNumber(comet.positions[0].borrowedOnusd),
       0,
-      "OnUsd position size"
+      "Onusd position size"
     );
     assert.equal(
       toNumber(comet.positions[0].borrowedOnasset),
       0,
-      "OnAsset position size"
+      "Onasset position size"
     );
     assert.equal(
       toNumber(comet.collaterals[0].collateralAmount),
@@ -3114,9 +3113,9 @@ describe("clone", async () => {
       cometManagerProgram.provider,
       cloneClient.clone!.onusdMint
     );
-    const subscriberOnUsdValue = Number(subscriberOnusdTokenAccount.amount);
+    const subscriberOnusdValue = Number(subscriberOnusdTokenAccount.amount);
 
-    let cometManagerOnUsdTokenAccount = await getOrCreateAssociatedTokenAccount(
+    let cometManagerOnusdTokenAccount = await getOrCreateAssociatedTokenAccount(
       cometManagerProgram.provider,
       cloneClient.clone!.onusdMint,
       cometManagerInfoAddress,
@@ -3198,7 +3197,7 @@ describe("clone", async () => {
             usdcMint: usdcMint,
             comet: cometManagerUser.comet,
             tokenData: cloneClient.clone!.tokenData,
-            managerOnusdTokenAccount: cometManagerOnUsdTokenAccount.address,
+            managerOnusdTokenAccount: cometManagerOnusdTokenAccount.address,
             managerUsdcTokenAccount: cometManagerUsdcTokenAccount.address,
           })
           .remainingAccounts(
@@ -3219,7 +3218,7 @@ describe("clone", async () => {
             onusdMint: cloneClient.clone!.onusdMint,
             comet: cometManagerUser.comet,
             tokenData: cloneClient.clone!.tokenData,
-            managerOnusdTokenAccount: cometManagerOnUsdTokenAccount.address,
+            managerOnusdTokenAccount: cometManagerOnusdTokenAccount.address,
             tokenProgram: TOKEN_PROGRAM_ID,
             cloneOnusdVault: tokenData.collaterals[0].vault,
             cloneProgram: cloneClient.programId,
@@ -3237,7 +3236,7 @@ describe("clone", async () => {
             subscriberAccount: subscribeAccountAddress,
             onusdMint: cloneClient.clone!.onusdMint,
             subscriberOnusdTokenAccount: subscriberOnusdTokenAccount.address,
-            managerOnusdTokenAccount: cometManagerOnUsdTokenAccount.address,
+            managerOnusdTokenAccount: cometManagerOnusdTokenAccount.address,
             cloneProgram: cloneClient.programId,
             tokenData: cloneClient.clone!.tokenData,
             cloneOnusdVault: tokenData.collaterals[0].vault,
@@ -3278,8 +3277,8 @@ describe("clone", async () => {
     );
     assert.isAbove(
       Number(subscriberOnusdTokenAccount.amount),
-      subscriberOnUsdValue,
-      "OnUsd account"
+      subscriberOnusdValue,
+      "Onusd account"
     );
   });
 
@@ -3313,40 +3312,40 @@ describe("clone", async () => {
   });
 
   it("comet manager onusd withdraw", async () => {
-    let ownerOnUsdTokenAccount = await getOrCreateAssociatedTokenAccount(
+    let ownerOnusdTokenAccount = await getOrCreateAssociatedTokenAccount(
       cometManagerProgram.provider,
       cloneClient.clone!.onusdMint
     );
 
-    let currentOnUsdBalance = ownerOnUsdTokenAccount.amount;
+    let currentOnusdBalance = ownerOnusdTokenAccount.amount;
 
-    let cometManagerOnUsdTokenAccount = await getOrCreateAssociatedTokenAccount(
+    let cometManagerOnusdTokenAccount = await getOrCreateAssociatedTokenAccount(
       cometManagerProgram.provider,
       cloneClient.clone!.onusdMint,
       cometManagerInfoAddress,
       true
     );
 
-    let managerOnUsdBalance = Number(cometManagerOnUsdTokenAccount.amount);
+    let managerOnusdBalance = Number(cometManagerOnusdTokenAccount.amount);
 
     await cometManagerProgram.methods
-      .ownerWithdrawal(new BN(managerOnUsdBalance))
+      .ownerWithdrawal(new BN(managerOnusdBalance))
       .accounts({
         managerOwner: cometManagerProgram.provider.publicKey!,
         managerInfo: cometManagerInfoAddress,
         clone: cloneClient.cloneAddress[0],
         onusdMint: cloneClient.clone!.onusdMint,
-        managerOnusdTokenAccount: cometManagerOnUsdTokenAccount.address,
-        ownerOnusdTokenAccount: ownerOnUsdTokenAccount.address,
+        managerOnusdTokenAccount: cometManagerOnusdTokenAccount.address,
+        ownerOnusdTokenAccount: ownerOnusdTokenAccount.address,
       })
       .rpc();
 
-    ownerOnUsdTokenAccount = await getOrCreateAssociatedTokenAccount(
+    ownerOnusdTokenAccount = await getOrCreateAssociatedTokenAccount(
       cometManagerProgram.provider,
       cloneClient.clone!.onusdMint
     );
 
-    cometManagerOnUsdTokenAccount = await getOrCreateAssociatedTokenAccount(
+    cometManagerOnusdTokenAccount = await getOrCreateAssociatedTokenAccount(
       cometManagerProgram.provider,
       cloneClient.clone!.onusdMint,
       cometManagerInfoAddress,
@@ -3354,12 +3353,12 @@ describe("clone", async () => {
     );
 
     assert.equal(
-      Number(ownerOnUsdTokenAccount.amount),
-      Number(currentOnUsdBalance) + managerOnUsdBalance,
+      Number(ownerOnusdTokenAccount.amount),
+      Number(currentOnusdBalance) + managerOnusdBalance,
       "owner onusd account"
     );
     assert.equal(
-      Number(cometManagerOnUsdTokenAccount.amount),
+      Number(cometManagerOnusdTokenAccount.amount),
       0,
       "manager onusd account"
     );
@@ -3390,13 +3389,13 @@ describe("clone", async () => {
   });
 
   it("comet manager terminated", async () => {
-    let cometManagerOnUsdTokenAccount = await getOrCreateAssociatedTokenAccount(
+    let cometManagerOnusdTokenAccount = await getOrCreateAssociatedTokenAccount(
       cometManagerProgram.provider,
       cloneClient.clone!.onusdMint,
       cometManagerInfoAddress,
       true
     );
-    let ownerOnUsdTokenAccount = await getOrCreateAssociatedTokenAccount(
+    let ownerOnusdTokenAccount = await getOrCreateAssociatedTokenAccount(
       cometManagerProgram.provider,
       cloneClient.clone!.onusdMint
     );
@@ -3414,13 +3413,13 @@ describe("clone", async () => {
         clone: cloneClient.cloneAddress[0],
         managerCloneUser: cometManagerInfo.userAccount,
         onusdMint: cloneClient.clone!.onusdMint,
-        managerOnusdTokenAccount: cometManagerOnUsdTokenAccount.address,
-        treasuryOnusdTokenAccount: treasuryOnUsdTokenAccount.address,
+        managerOnusdTokenAccount: cometManagerOnusdTokenAccount.address,
+        treasuryOnusdTokenAccount: treasuryOnusdTokenAccount.address,
         cloneProgram: cloneClient.programId,
         comet: cometManagerCloneUser.comet,
         tokenData: cloneClient.clone!.tokenData,
         cloneOnusdVault: tokenData.collaterals[0].vault,
-        ownerOnusdTokenAccount: ownerOnUsdTokenAccount.address,
+        ownerOnusdTokenAccount: ownerOnusdTokenAccount.address,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: anchor.web3.SystemProgram.programId,
       })
@@ -3462,7 +3461,7 @@ describe("clone", async () => {
     );
 
     let startingAssetBalance = Number(mockAssetAssociatedTokenAccount.amount);
-    let startingOnAssetBalance = Number(onassetAssociatedTokenAccount.amount);
+    let startingOnassetBalance = Number(onassetAssociatedTokenAccount.amount);
 
     let amount = toDevnetScale(5);
     let [cloneAddress, bump] = await cloneClient.getCloneAddress();
@@ -3498,7 +3497,7 @@ describe("clone", async () => {
       "check asset"
     );
     assert.equal(
-      Number(onassetAssociatedTokenAccount.amount) - startingOnAssetBalance,
+      Number(onassetAssociatedTokenAccount.amount) - startingOnassetBalance,
       Number(amount),
       "check onasset"
     );
@@ -3533,7 +3532,7 @@ describe("clone", async () => {
     );
     assert.equal(
       Number(onassetAssociatedTokenAccount.amount),
-      startingOnAssetBalance
+      startingOnassetBalance
     );
   });
 

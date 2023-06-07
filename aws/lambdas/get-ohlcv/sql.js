@@ -15,8 +15,8 @@ const getOhlcvQuery = ({interval, filter, pool}) => {
         SELECT
             pool_index,
             date_trunc('${interval}', to_timestamp(block_time)) AS time_interval,
-            usdi::numeric / iasset::numeric AS price,
-            usdi * 2 AS volume,
+            onusd::numeric / iasset::numeric AS price,
+            onusd * 2 AS volume,
             trading_fee + treasury_fee AS fees
         FROM
             swap_event

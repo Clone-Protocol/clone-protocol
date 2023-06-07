@@ -14,7 +14,7 @@ import {
   TransactionInstruction,
   AddressLookupTableProgram,
 } from "@solana/web3.js";
-import { DEVNET_TOKEN_SCALE, toDevnetScale } from "../../sdk/src/incept";
+import { DEVNET_TOKEN_SCALE, toDevnetScale } from "../../sdk/src/clone";
 import { getOrCreateAssociatedTokenAccount } from "../../tests/utils";
 import { getMantissa, toNumber } from "../../sdk/src/decimal";
 import {
@@ -25,13 +25,13 @@ import {
   floorToDevnetScale,
 } from "../../sdk/src/utils";
 import {
-  Incept as InceptProgram,
-  IDL as InceptIDL,
-} from "../../sdk/src/idl/incept";
+  Clone as CloneProgram,
+  IDL as CloneIDL,
+} from "../../sdk/src/idl/clone";
 import {
-  InceptCometManager,
-  IDL as InceptCometManagerIDL,
-} from "../../sdk/src/idl/incept_comet_manager";
+  CloneCometManager,
+  IDL as CloneCometManagerIDL,
+} from "../../sdk/src/idl/clone_comet_manager";
 import {
   PythConnection,
   getPythProgramKeyForCluster,
@@ -42,30 +42,30 @@ import {
   WithdrawCollateralFromCometInstructionAccounts,
   createWithdrawCollateralFromCometInstruction,
   AddCollateralToCometInstructionAccounts,
-  InceptSwapInstructionAccounts,
+  CloneSwapInstructionAccounts,
   JupiterMockSwapInstructionAccounts,
   createAddCollateralToCometInstruction,
-  createInceptSwapInstruction,
+  createCloneSwapInstruction,
   WithdrawCollateralFromCometInstructionArgs,
-  InceptSwapInstructionArgs,
+  CloneSwapInstructionArgs,
   WithdrawLiquidityInstructionAccounts,
   createWithdrawLiquidityInstruction,
   WithdrawLiquidityInstructionArgs,
-  createUnwrapIassetInstruction,
-  UnwrapIassetInstructionAccounts,
-  UnwrapIassetInstructionArgs,
+  createUnwrapOnassetInstruction,
+  UnwrapOnassetInstructionAccounts,
+  UnwrapOnassetInstructionArgs,
   createJupiterMockSwapInstruction,
   JupiterMockSwapInstructionArgs,
-  createMintUsdiInstruction,
-  MintUsdiInstructionAccounts,
-  MintUsdiInstructionArgs,
+  createMintOnusdInstruction,
+  MintOnusdInstructionAccounts,
+  MintOnusdInstructionArgs,
   AddCollateralToCometInstructionArgs,
   createPayIldInstruction,
   PayIldInstructionAccounts,
   PayIldInstructionArgs,
-  createBurnUsdiInstruction,
-  BurnUsdiInstructionAccounts,
-  BurnUsdiInstructionArgs,
+  createBurnOnusdInstruction,
+  BurnOnusdInstructionAccounts,
+  BurnOnusdInstructionArgs,
   createWrapAssetInstruction,
   WrapAssetInstructionAccounts,
   WrapAssetInstructionArgs,
@@ -73,17 +73,17 @@ import {
   createAddLiquidityInstruction,
   AddLiquidityInstructionArgs,
   Subscriber,
-} from "../../sdk/generated/incept-comet-manager";
+} from "../../sdk/generated/clone-comet-manager";
 import { Jupiter } from "../../sdk/generated/jupiter-agg-mock/index";
 import {
-  Incept,
+  Clone,
   TokenData,
   Comet,
   createUpdatePricesInstruction,
   UpdatePricesInstructionAccounts,
   UpdatePricesInstructionArgs,
   User,
-} from "../../sdk/generated/incept/index";
+} from "../../sdk/generated/clone/index";
 import {
   getHealthScore,
   getEffectiveUSDCollateralValue,
@@ -102,8 +102,8 @@ import {
 type PoolState = {
   eventId: anchor.BN;
   poolIndex: number;
-  iasset: anchor.BN;
-  usdi: anchor.BN;
+  onasset: anchor.BN;
+  onusd: anchor.BN;
   lpTokens: anchor.BN;
   oraclePrice: anchor.BN;
 };
@@ -129,12 +129,12 @@ const PYTH_SYMBOL_MAPPING: Map<PythSymbol, PoolId> = new Map([
 
 const getInstructionAccounts = (
   poolId: number,
-  incept: Incept,
-  inceptAccountAddress: PublicKey,
+  clone: Clone,
+  cloneAccountAddress: PublicKey,
   managerInfo: ManagerInfo,
   managerAddresses: TokenAccountAddresses,
   managerInfoAddress: PublicKey,
-  managerInceptUser: User,
+  managerCloneUser: User,
   tokenData: TokenData,
   treasuryAddresses: TokenAccountAddresses,
   jupiter: Jupiter,
@@ -147,44 +147,44 @@ const getInstructionAccounts = (
     {
       signer: managerInfo.owner,
       managerInfo: managerInfoAddress,
-      incept: inceptAccountAddress,
-      managerInceptUser: managerInfo.userAccount,
-      usdiMint: incept.usdiMint,
-      managerUsdiTokenAccount: managerAddresses.usdiToken,
-      inceptProgram: managerInfo.inceptProgram,
-      comet: managerInceptUser.comet,
-      tokenData: incept.tokenData,
-      inceptUsdiVault: tokenData.collaterals[0].vault,
+      clone: cloneAccountAddress,
+      managerCloneUser: managerInfo.userAccount,
+      onusdMint: clone.onusdMint,
+      managerOnusdTokenAccount: managerAddresses.onusdToken,
+      cloneProgram: managerInfo.cloneProgram,
+      comet: managerCloneUser.comet,
+      tokenData: clone.tokenData,
+      cloneOnusdVault: tokenData.collaterals[0].vault,
       tokenProgram: TOKEN_PROGRAM_ID,
     };
   const addCollateralToComet: AddCollateralToCometInstructionAccounts = {
     managerOwner: managerInfo.owner,
     managerInfo: managerInfoAddress,
-    incept: inceptAccountAddress,
-    managerInceptUser: managerInfo.userAccount,
-    usdiMint: incept.usdiMint,
-    comet: managerInceptUser.comet,
-    tokenData: incept.tokenData,
-    inceptUsdiVault: tokenData.collaterals[0].vault,
+    clone: cloneAccountAddress,
+    managerCloneUser: managerInfo.userAccount,
+    onusdMint: clone.onusdMint,
+    comet: managerCloneUser.comet,
+    tokenData: clone.tokenData,
+    cloneOnusdVault: tokenData.collaterals[0].vault,
     tokenProgram: TOKEN_PROGRAM_ID,
-    inceptProgram: managerInfo.inceptProgram,
-    managerUsdiTokenAccount: managerAddresses.usdiToken,
+    cloneProgram: managerInfo.cloneProgram,
+    managerOnusdTokenAccount: managerAddresses.onusdToken,
   };
-  const inceptSwap: InceptSwapInstructionAccounts = {
+  const cloneSwap: CloneSwapInstructionAccounts = {
     signer: managerInfo.owner,
     managerInfo: managerInfoAddress,
-    incept: inceptAccountAddress,
-    usdiMint: incept.usdiMint,
-    managerUsdiTokenAccount: managerAddresses.usdiToken,
-    treasuryUsdiTokenAccount: treasuryAddresses.usdiToken,
-    treasuryIassetTokenAccount: treasuryAddresses.iassetToken[poolId],
-    inceptProgram: managerInfo.inceptProgram,
-    tokenData: incept.tokenData,
+    clone: cloneAccountAddress,
+    onusdMint: clone.onusdMint,
+    managerOnusdTokenAccount: managerAddresses.onusdToken,
+    treasuryOnusdTokenAccount: treasuryAddresses.onusdToken,
+    treasuryOnassetTokenAccount: treasuryAddresses.onassetToken[poolId],
+    cloneProgram: managerInfo.cloneProgram,
+    tokenData: clone.tokenData,
     tokenProgram: TOKEN_PROGRAM_ID,
-    ammUsdiTokenAccount: pool.usdiTokenAccount,
-    ammIassetTokenAccount: pool.iassetTokenAccount,
-    iassetMint: pool.assetInfo.iassetMint,
-    managerIassetTokenAccount: managerAddresses.iassetToken[poolId],
+    ammOnusdTokenAccount: pool.onusdTokenAccount,
+    ammOnassetTokenAccount: pool.onassetTokenAccount,
+    onassetMint: pool.assetInfo.onassetMint,
+    managerOnassetTokenAccount: managerAddresses.onassetToken[poolId],
   };
 
   const jupiterSwap: JupiterMockSwapInstructionAccounts = {
@@ -203,116 +203,116 @@ const getInstructionAccounts = (
   const withdrawLiquidity: WithdrawLiquidityInstructionAccounts = {
     signer: managerInfo.owner,
     managerInfo: managerInfoAddress,
-    incept: inceptAccountAddress,
-    managerInceptUser: managerInfo.userAccount,
-    usdiMint: incept.usdiMint,
-    inceptProgram: managerInfo.inceptProgram,
-    comet: managerInceptUser.comet,
-    tokenData: incept.tokenData,
-    inceptUsdiVault: tokenData.collaterals[0].vault,
-    iassetMint: pool.assetInfo.iassetMint,
-    ammUsdiTokenAccount: pool.usdiTokenAccount,
-    ammIassetTokenAccount: pool.iassetTokenAccount,
+    clone: cloneAccountAddress,
+    managerCloneUser: managerInfo.userAccount,
+    onusdMint: clone.onusdMint,
+    cloneProgram: managerInfo.cloneProgram,
+    comet: managerCloneUser.comet,
+    tokenData: clone.tokenData,
+    cloneOnusdVault: tokenData.collaterals[0].vault,
+    onassetMint: pool.assetInfo.onassetMint,
+    ammOnusdTokenAccount: pool.onusdTokenAccount,
+    ammOnassetTokenAccount: pool.onassetTokenAccount,
     liquidityTokenMint: pool.liquidityTokenMint,
     cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
-    managerIassetTokenAccount: managerAddresses.iassetToken[poolId],
-    managerUsdiTokenAccount: managerAddresses.usdiToken,
+    managerOnassetTokenAccount: managerAddresses.onassetToken[poolId],
+    managerOnusdTokenAccount: managerAddresses.onusdToken,
     tokenProgram: TOKEN_PROGRAM_ID,
   };
 
-  const unwrapIasset: UnwrapIassetInstructionAccounts = {
+  const unwrapOnasset: UnwrapOnassetInstructionAccounts = {
     signer: managerInfo.owner,
     managerInfo: managerInfoAddress,
-    incept: inceptAccountAddress,
-    iassetMint: tokenData.pools[poolId].assetInfo.iassetMint,
-    managerIassetTokenAccount: managerAddresses.iassetToken[poolId],
+    clone: cloneAccountAddress,
+    onassetMint: tokenData.pools[poolId].assetInfo.onassetMint,
+    managerOnassetTokenAccount: managerAddresses.onassetToken[poolId],
     underlyingAssetTokenAccount:
       tokenData.pools[poolId].underlyingAssetTokenAccount,
     assetMint: jupiter.assetMints[poolId],
     managerAssetTokenAccount: managerAddresses.underlyingToken![poolId],
-    inceptProgram: managerInfo.inceptProgram,
-    tokenData: incept.tokenData,
+    cloneProgram: managerInfo.cloneProgram,
+    tokenData: clone.tokenData,
     tokenProgram: TOKEN_PROGRAM_ID,
   };
 
   const updatePrices: UpdatePricesInstructionAccounts = {
-    incept: inceptAccountAddress,
-    tokenData: incept.tokenData,
+    clone: cloneAccountAddress,
+    tokenData: clone.tokenData,
   };
 
-  const burnUsdi: BurnUsdiInstructionAccounts = {
+  const burnOnusd: BurnOnusdInstructionAccounts = {
     signer: managerInfo.owner,
     managerInfo: managerInfoAddress,
-    incept: inceptAccountAddress,
-    usdiMint: incept.usdiMint,
-    managerUsdiTokenAccount: managerAddresses.usdiToken,
+    clone: cloneAccountAddress,
+    onusdMint: clone.onusdMint,
+    managerOnusdTokenAccount: managerAddresses.onusdToken,
     usdcMint: jupiter.usdcMint,
     managerUsdcTokenAccount: managerAddresses.usdcToken,
-    inceptProgram: managerInfo.inceptProgram,
-    tokenData: incept.tokenData,
+    cloneProgram: managerInfo.cloneProgram,
+    tokenData: clone.tokenData,
     tokenProgram: TOKEN_PROGRAM_ID,
-    inceptUsdcVault: tokenData.collaterals[1].vault,
+    cloneUsdcVault: tokenData.collaterals[1].vault,
   };
 
-  const mintUsdi: MintUsdiInstructionAccounts = {
+  const mintOnusd: MintOnusdInstructionAccounts = {
     signer: managerInfo.owner,
     managerInfo: managerInfoAddress,
-    incept: inceptAccountAddress,
-    usdiMint: incept.usdiMint,
-    managerUsdiTokenAccount: managerAddresses.usdiToken,
+    clone: cloneAccountAddress,
+    onusdMint: clone.onusdMint,
+    managerOnusdTokenAccount: managerAddresses.onusdToken,
     usdcMint: jupiter.usdcMint,
     managerUsdcTokenAccount: managerAddresses.usdcToken,
-    inceptProgram: managerInfo.inceptProgram,
-    tokenData: incept.tokenData,
+    cloneProgram: managerInfo.cloneProgram,
+    tokenData: clone.tokenData,
     tokenProgram: TOKEN_PROGRAM_ID,
-    inceptUsdcVault: tokenData.collaterals[1].vault,
+    cloneUsdcVault: tokenData.collaterals[1].vault,
   };
 
   const wrapAsset: WrapAssetInstructionAccounts = {
     signer: managerInfo.owner,
     managerInfo: managerInfoAddress,
-    incept: inceptAccountAddress,
-    iassetMint: tokenData.pools[poolId].assetInfo.iassetMint,
-    managerIassetTokenAccount: managerAddresses.iassetToken[poolId],
+    clone: cloneAccountAddress,
+    onassetMint: tokenData.pools[poolId].assetInfo.onassetMint,
+    managerOnassetTokenAccount: managerAddresses.onassetToken[poolId],
     underlyingAssetTokenAccount:
       tokenData.pools[poolId].underlyingAssetTokenAccount,
     assetMint: jupiter.assetMints[poolId],
     managerAssetTokenAccount: managerAddresses.underlyingToken![poolId],
-    inceptProgram: managerInfo.inceptProgram,
-    tokenData: incept.tokenData,
+    cloneProgram: managerInfo.cloneProgram,
+    tokenData: clone.tokenData,
     tokenProgram: TOKEN_PROGRAM_ID,
   };
 
   const payIld: PayIldInstructionAccounts = {
     signer: managerInfo.owner,
     managerInfo: managerInfoAddress,
-    incept: inceptAccountAddress,
-    managerInceptUser: managerInfo.userAccount,
-    usdiMint: incept.usdiMint,
-    inceptProgram: managerInfo.inceptProgram,
-    comet: managerInceptUser.comet,
-    tokenData: incept.tokenData,
-    iassetMint: tokenData.pools[poolId].assetInfo.iassetMint,
-    ammUsdiTokenAccount: pool.usdiTokenAccount,
-    ammIassetTokenAccount: pool.iassetTokenAccount,
-    managerIassetTokenAccount: managerAddresses.iassetToken[poolId],
-    managerUsdiTokenAccount: managerAddresses.usdiToken,
+    clone: cloneAccountAddress,
+    managerCloneUser: managerInfo.userAccount,
+    onusdMint: clone.onusdMint,
+    cloneProgram: managerInfo.cloneProgram,
+    comet: managerCloneUser.comet,
+    tokenData: clone.tokenData,
+    onassetMint: tokenData.pools[poolId].assetInfo.onassetMint,
+    ammOnusdTokenAccount: pool.onusdTokenAccount,
+    ammOnassetTokenAccount: pool.onassetTokenAccount,
+    managerOnassetTokenAccount: managerAddresses.onassetToken[poolId],
+    managerOnusdTokenAccount: managerAddresses.onusdToken,
     tokenProgram: TOKEN_PROGRAM_ID,
-    inceptUsdiVault: tokenData.collaterals[0].vault,
+    cloneOnusdVault: tokenData.collaterals[0].vault,
   };
 
   const addLiquidityToComet: AddLiquidityInstructionAccounts = {
     managerOwner: managerInfo.owner,
     managerInfo: managerInfoAddress,
-    incept: inceptAccountAddress,
-    managerInceptUser: managerInfo.userAccount,
-    usdiMint: incept.usdiMint,
-    inceptProgram: managerInfo.inceptProgram,
-    comet: managerInceptUser.comet,
-    tokenData: incept.tokenData,
-    iassetMint: pool.assetInfo.iassetMint,
-    ammUsdiTokenAccount: pool.usdiTokenAccount,
-    ammIassetTokenAccount: pool.iassetTokenAccount,
+    clone: cloneAccountAddress,
+    managerCloneUser: managerInfo.userAccount,
+    onusdMint: clone.onusdMint,
+    cloneProgram: managerInfo.cloneProgram,
+    comet: managerCloneUser.comet,
+    tokenData: clone.tokenData,
+    onassetMint: pool.assetInfo.onassetMint,
+    ammOnusdTokenAccount: pool.onusdTokenAccount,
+    ammOnassetTokenAccount: pool.onassetTokenAccount,
     liquidityTokenMint: pool.liquidityTokenMint,
     cometLiquidityTokenAccount: pool.cometLiquidityTokenAccount,
     tokenProgram: TOKEN_PROGRAM_ID,
@@ -321,27 +321,27 @@ const getInstructionAccounts = (
   return {
     withdrawCollateralFromComet,
     addCollateralToComet,
-    inceptSwap,
+    cloneSwap,
     jupiterSwap,
     withdrawLiquidity,
-    unwrapIasset,
+    unwrapOnasset,
     updatePrices,
-    burnUsdi,
-    mintUsdi,
+    burnOnusd,
+    mintOnusd,
     wrapAsset,
     payIld,
     addLiquidityToComet,
   };
 };
 
-const calculateIassetTrade = (
-  poolUsdi: number,
-  poolIasset: number,
+const calculateOnassetTrade = (
+  poolOnusd: number,
+  poolOnasset: number,
   treasuryFee: number,
   liquidityFee: number,
   targetPrice: number
 ) => {
-  const currentPrice = poolUsdi / poolIasset;
+  const currentPrice = poolOnusd / poolOnasset;
   const isBuy = currentPrice < targetPrice;
 
   let [fn, start, end] = (() => {
@@ -349,32 +349,32 @@ const calculateIassetTrade = (
       return [
         (x: number) => {
           let res = calculateInputFromOutputFromParams(
-            poolUsdi,
-            poolIasset,
+            poolOnusd,
+            poolOnasset,
             treasuryFee,
             liquidityFee,
             x,
             false
           );
-          return res.resultPoolUsdi / res.resultPoolIasset;
+          return res.resultPoolOnusd / res.resultPoolOnasset;
         },
         0,
-        poolIasset,
+        poolOnasset,
       ];
     } else {
       return [
         (x: number) => {
           let res = calculateOutputFromInputFromParams(
-            poolUsdi,
-            poolIasset,
+            poolOnusd,
+            poolOnasset,
             treasuryFee,
             liquidityFee,
             x,
             false
           );
-          return res.resultPoolUsdi / res.resultPoolIasset;
+          return res.resultPoolOnusd / res.resultPoolOnasset;
         },
-        poolUsdi,
+        poolOnusd,
         0,
       ];
     }
@@ -410,9 +410,9 @@ const onPriceChangeUpdate = async (
   managerInfoAddress: PublicKey,
   managerAddresses: TokenAccountAddresses,
   treasuryAddresses: TokenAccountAddresses,
-  managerInceptUser: User,
-  incept: Incept,
-  inceptAccountAddress: PublicKey,
+  managerCloneUser: User,
+  clone: Clone,
+  cloneAccountAddress: PublicKey,
   tokenData: TokenData,
   comet: Comet,
   jupiter: Jupiter,
@@ -424,13 +424,13 @@ const onPriceChangeUpdate = async (
 ): Promise<boolean> => {
   console.log("POOL DATA:", poolId, poolData);
   const conversionFactor = Math.pow(10, -DEVNET_TOKEN_SCALE);
-  const poolUsdi = poolData.usdi.toNumber() * conversionFactor;
-  const poolIasset = poolData.iasset.toNumber() * conversionFactor;
-  const poolPrice = poolUsdi / poolIasset;
+  const poolOnusd = poolData.onusd.toNumber() * conversionFactor;
+  const poolOnasset = poolData.onasset.toNumber() * conversionFactor;
+  const poolPrice = poolOnusd / poolOnasset;
   console.log(
     "TOKEN DATA POOL PRICE:",
-    toNumber(tokenData.pools[0].usdiAmount),
-    toNumber(tokenData.pools[0].iassetAmount)
+    toNumber(tokenData.pools[0].onusdAmount),
+    toNumber(tokenData.pools[0].onassetAmount)
   );
   console.log(
     "PRICES: pool, oracle, saved oracle:",
@@ -464,25 +464,25 @@ const onPriceChangeUpdate = async (
   const lpTokens = toNumber(cometPosition.liquidityTokenValue);
   const lpTokenSupply = poolData.lpTokens.toNumber() * conversionFactor;
   const L = lpTokens / lpTokenSupply;
-  const claimableUsdi = L * poolUsdi;
-  const claimableIasset = L * poolIasset;
+  const claimableOnusd = L * poolOnusd;
+  const claimableOnasset = L * poolOnasset;
   // Estimate pool after withdrawing all liquidity
-  const newPoolUsdi = poolUsdi - claimableUsdi;
-  const newPoolIasset = poolIasset - claimableIasset;
-  console.log("pools:", poolUsdi, poolIasset, claimableUsdi, claimableIasset);
-  console.log("NEW POOL AMOUNTS:", newPoolUsdi, newPoolIasset);
-  // Figure out how much reward is gained, where to sell if in iasset.
+  const newPoolOnusd = poolOnusd - claimableOnusd;
+  const newPoolOnasset = poolOnasset - claimableOnasset;
+  console.log("pools:", poolOnusd, poolOnasset, claimableOnusd, claimableOnasset);
+  console.log("NEW POOL AMOUNTS:", newPoolOnusd, newPoolOnasset);
+  // Figure out how much reward is gained, where to sell if in onasset.
   // Figure out how much ILD is owed.
-  const iassetILD = toNumber(cometPosition.borrowedIasset) - claimableIasset;
-  const usdiILD = toNumber(cometPosition.borrowedUsdi) - claimableUsdi;
-  console.log("ILD/REWARD:", usdiILD, iassetILD);
+  const onassetILD = toNumber(cometPosition.borrowedOnasset) - claimableOnasset;
+  const onusdILD = toNumber(cometPosition.borrowedOnusd) - claimableOnusd;
+  console.log("ILD/REWARD:", onusdILD, onassetILD);
   // Figure out how much buy/sell is needed to push price to oracle. NOTE that this will be arbed.
   // Use simple invariant equation for now. Positive means buy.
-  const iassetInceptTrade = (() => {
-    if (newPoolUsdi > 0 && newPoolIasset > 0) {
-      return calculateIassetTrade(
-        newPoolUsdi,
-        newPoolIasset,
+  const onassetCloneTrade = (() => {
+    if (newPoolOnusd > 0 && newPoolOnasset > 0) {
+      return calculateOnassetTrade(
+        newPoolOnusd,
+        newPoolOnasset,
         treasuryFee,
         liquidityFee,
         oraclePrice
@@ -490,18 +490,18 @@ const onPriceChangeUpdate = async (
     }
     return 0;
   })();
-  // For other side of arb trade, always perform the opposite action but net the iasset ILD/reward.
-  const jupiterExchangeTrade = -iassetInceptTrade + iassetILD;
-  console.log("TRADES:", iassetInceptTrade, jupiterExchangeTrade);
+  // For other side of arb trade, always perform the opposite action but net the onasset ILD/reward.
+  const jupiterExchangeTrade = -onassetCloneTrade + onassetILD;
+  console.log("TRADES:", onassetCloneTrade, jupiterExchangeTrade);
 
   const ixnAccounts = getInstructionAccounts(
     poolId,
-    incept,
-    inceptAccountAddress,
+    clone,
+    cloneAccountAddress,
     managerInfo,
     managerAddresses,
     managerInfoAddress,
-    managerInceptUser,
+    managerCloneUser,
     tokenData,
     treasuryAddresses,
     jupiter,
@@ -513,8 +513,8 @@ const onPriceChangeUpdate = async (
   let instructions: TransactionInstruction[] = [
     // Update prices instruction.
     buildUpdatePricesInstruction(
-      inceptAccountAddress,
-      incept.tokenData,
+      cloneAccountAddress,
+      clone.tokenData,
       tokenData
     ),
     // Withdraw all liquidity
@@ -526,48 +526,48 @@ const onPriceChangeUpdate = async (
   // SCENARIO 1: Pool price < Jupiter price
   //
   if (higherBreached) {
-    // If buying on incept:
-    if (iassetInceptTrade > 0) {
+    // If buying on clone:
+    if (onassetCloneTrade > 0) {
       // Estimate required USDi
       const execution = calculateExecutionThresholdFromParams(
-        iassetInceptTrade,
+        onassetCloneTrade,
         true,
-        newPoolUsdi,
-        newPoolIasset,
+        newPoolOnusd,
+        newPoolOnasset,
         treasuryFee,
         liquidityFee,
         0.0005
       );
-      const usdiToWithdraw = execution.expectedUsdiAmount - claimableUsdi;
+      const onusdToWithdraw = execution.expectedOnusdAmount - claimableOnusd;
       // Withdraw USDi from collateral
-      if (usdiToWithdraw > 0) {
+      if (onusdToWithdraw > 0) {
         instructions.push(
           createWithdrawCollateralFromCometInstruction(
             ixnAccounts.withdrawCollateralFromComet,
             {
-              amount: toDevnetScale(usdiToWithdraw),
+              amount: toDevnetScale(onusdToWithdraw),
             } as WithdrawCollateralFromCometInstructionArgs
           )
         );
       }
-      // Buy Iasset on incept
+      // Buy Onasset on clone
       instructions.push(
-        createInceptSwapInstruction(ixnAccounts.inceptSwap, {
+        createCloneSwapInstruction(ixnAccounts.cloneSwap, {
           isBuy: true,
           poolIndex: poolId,
-          amount: toDevnetScale(iassetInceptTrade),
-          usdiThreshold: toDevnetScale(execution.usdiThresholdAmount),
-        } as InceptSwapInstructionArgs)
+          amount: toDevnetScale(onassetCloneTrade),
+          onusdThreshold: toDevnetScale(execution.onusdThresholdAmount),
+        } as CloneSwapInstructionArgs)
       );
     }
 
     if (jupiterExchangeTrade !== 0) {
       // convert to asset
       instructions.push(
-        createUnwrapIassetInstruction(ixnAccounts.unwrapIasset, {
+        createUnwrapOnassetInstruction(ixnAccounts.unwrapOnasset, {
           amount: toDevnetScale(Math.abs(jupiterExchangeTrade)),
           poolIndex: poolId,
-        } as UnwrapIassetInstructionArgs)
+        } as UnwrapOnassetInstructionArgs)
       );
       // sell underlying asset on jupiter
       instructions.push(
@@ -582,12 +582,12 @@ const onPriceChangeUpdate = async (
       const saleUsdAmount =
         Math.abs(jupiterExchangeTrade) * toNumber(pool.assetInfo.price);
       instructions.push(
-        createMintUsdiInstruction(ixnAccounts.mintUsdi, {
+        createMintOnusdInstruction(ixnAccounts.mintOnusd, {
           amount: toDevnetScale(saleUsdAmount),
-        } as MintUsdiInstructionArgs)
+        } as MintOnusdInstructionArgs)
       );
       // Deposit USDi to collateral, subtract any USDi required for payILD
-      const collateralDeposit = saleUsdAmount - Math.max(0, usdiILD);
+      const collateralDeposit = saleUsdAmount - Math.max(0, onusdILD);
       instructions.push(
         createAddCollateralToCometInstruction(
           ixnAccounts.addCollateralToComet,
@@ -601,15 +601,15 @@ const onPriceChangeUpdate = async (
     // SCENARIO 2
     // Estimate required USDC for trade, net the reward from USDi
     const requiredUsdc = jupiterExchangeTrade * toNumber(pool.assetInfo.price);
-    const usdiToWithdraw = requiredUsdc - claimableUsdi;
-    console.log(requiredUsdc, jupiterExchangeTrade, usdiToWithdraw);
-    if (usdiToWithdraw > 0) {
+    const onusdToWithdraw = requiredUsdc - claimableOnusd;
+    console.log(requiredUsdc, jupiterExchangeTrade, onusdToWithdraw);
+    if (onusdToWithdraw > 0) {
       // Withdraw USDi from collateral
       instructions.push(
         createWithdrawCollateralFromCometInstruction(
           ixnAccounts.withdrawCollateralFromComet,
           {
-            amount: toDevnetScale(usdiToWithdraw),
+            amount: toDevnetScale(onusdToWithdraw),
           } as WithdrawCollateralFromCometInstructionArgs
         )
       );
@@ -617,9 +617,9 @@ const onPriceChangeUpdate = async (
     if (requiredUsdc !== 0) {
       // Convert USDi -> USDC
       instructions.push(
-        createBurnUsdiInstruction(ixnAccounts.burnUsdi, {
+        createBurnOnusdInstruction(ixnAccounts.burnOnusd, {
           amount: toDevnetScale(requiredUsdc),
-        } as BurnUsdiInstructionArgs)
+        } as BurnOnusdInstructionArgs)
       );
     }
 
@@ -633,7 +633,7 @@ const onPriceChangeUpdate = async (
           amount: toDevnetScale(Math.abs(jupiterExchangeTrade)),
         } as JupiterMockSwapInstructionArgs)
       );
-      // Convert from underlying to iasset.
+      // Convert from underlying to onasset.
       instructions.push(
         createWrapAssetInstruction(ixnAccounts.wrapAsset, {
           amount: toDevnetScale(Math.abs(jupiterExchangeTrade)),
@@ -641,56 +641,56 @@ const onPriceChangeUpdate = async (
         } as WrapAssetInstructionArgs)
       );
     }
-    // Convert the iasset thats not used for Paying ILD to usdi and deposit it.
-    if (Math.abs(iassetInceptTrade) > 0) {
-      // sell on incept
+    // Convert the onasset thats not used for Paying ILD to onusd and deposit it.
+    if (Math.abs(onassetCloneTrade) > 0) {
+      // sell on clone
       const execution = calculateExecutionThresholdFromParams(
-        Math.abs(iassetInceptTrade),
+        Math.abs(onassetCloneTrade),
         false,
-        newPoolUsdi,
-        newPoolIasset,
+        newPoolOnusd,
+        newPoolOnasset,
         treasuryFee,
         liquidityFee,
         0.005
       );
       instructions.push(
-        createInceptSwapInstruction(ixnAccounts.inceptSwap, {
+        createCloneSwapInstruction(ixnAccounts.cloneSwap, {
           isBuy: false,
           poolIndex: poolId,
-          amount: toDevnetScale(Math.abs(iassetInceptTrade)),
-          usdiThreshold: toDevnetScale(execution.usdiThresholdAmount),
-        } as InceptSwapInstructionArgs)
+          amount: toDevnetScale(Math.abs(onassetCloneTrade)),
+          onusdThreshold: toDevnetScale(execution.onusdThresholdAmount),
+        } as CloneSwapInstructionArgs)
       );
       // Deposit USDi to collateral
       instructions.push(
         createAddCollateralToCometInstruction(
           ixnAccounts.addCollateralToComet,
           {
-            amount: toDevnetScale(execution.expectedUsdiAmount),
+            amount: toDevnetScale(execution.expectedOnusdAmount),
           } as AddCollateralToCometInstructionArgs
         )
       );
     }
   }
-  let collateralAmount = usdiILD > 0 ? usdiILD : iassetILD;
+  let collateralAmount = onusdILD > 0 ? onusdILD : onassetILD;
   if (collateralAmount > 0) {
     // Pay ILD
     instructions.push(
       createPayIldInstruction(ixnAccounts.payIld, {
         cometPositionIndex,
-        payUsdiDebt: usdiILD > 0,
+        payOnusdDebt: onusdILD > 0,
         collateralAmount: toDevnetScale(collateralAmount),
       } as PayIldInstructionArgs)
     );
   }
 
   // Add liquidity
-  const usdiToAdd = L < 1 ? (L * newPoolUsdi) / (1 - L) : poolUsdi;
-  console.log("LIQUIDITY TO ADD:", usdiToAdd);
+  const onusdToAdd = L < 1 ? (L * newPoolOnusd) / (1 - L) : poolOnusd;
+  console.log("LIQUIDITY TO ADD:", onusdToAdd);
   instructions.push(
     createAddLiquidityInstruction(ixnAccounts.addLiquidityToComet, {
       poolIndex: poolId,
-      usdiAmount: toDevnetScale(usdiToAdd),
+      onusdAmount: toDevnetScale(onusdToAdd),
     } as AddLiquidityInstructionArgs)
   );
   // Create versioned transaction and send
@@ -714,8 +714,8 @@ const onPriceChangeUpdate = async (
 const main = async () => {
   console.log("---COMET MANAGER POOL RECENTERING ALGORITHM RUNNING---");
   let config = {
-    inceptProgramID: new PublicKey(process.env.INCEPT_PROGRAM_ID!),
-    inceptCometManager: new PublicKey(process.env.COMET_MANAGER_PROGRAM_ID!),
+    cloneProgramID: new PublicKey(process.env.INCEPT_PROGRAM_ID!),
+    cloneCometManager: new PublicKey(process.env.COMET_MANAGER_PROGRAM_ID!),
     jupiterProgramId: new PublicKey(process.env.JUPITER_PROGRAM_ID!),
     lookupTableAddress: new PublicKey(process.env.LOOKUP_TABLE_ADDRESS!),
     pctThreshold: Number(process.env.PCT_THRESHOLD!), // 0.01,
@@ -739,15 +739,15 @@ const main = async () => {
     }
   })();
 
-  const [inceptAccountAddress, _inceptNonce] = PublicKey.findProgramAddressSync(
-    [Buffer.from("incept")],
-    config.inceptProgramID
+  const [cloneAccountAddress, _cloneNonce] = PublicKey.findProgramAddressSync(
+    [Buffer.from("clone")],
+    config.cloneProgramID
   );
 
   const [cometManagerAccountAddress, _cometManagerNonce] =
     PublicKey.findProgramAddressSync(
       [Buffer.from("manager-info"), provider.publicKey!.toBuffer()],
-      config.inceptCometManager
+      config.cloneCometManager
     );
 
   const [jupiterAccountAddress, jupiterNonce] =
@@ -756,15 +756,15 @@ const main = async () => {
       config.jupiterProgramId
     );
 
-  const [userAccountAddress, _inceptUserNonce] =
+  const [userAccountAddress, _cloneUserNonce] =
     PublicKey.findProgramAddressSync(
       [Buffer.from("user"), cometManagerAccountAddress.toBuffer()],
-      config.inceptProgramID
+      config.cloneProgramID
     );
 
-  const incept = await Incept.fromAccountAddress(
+  const clone = await Clone.fromAccountAddress(
     provider.connection,
-    inceptAccountAddress
+    cloneAccountAddress
   );
 
   const userAccount = await User.fromAccountAddress(
@@ -772,15 +772,15 @@ const main = async () => {
     userAccountAddress
   );
 
-  const inceptProgram = new anchor.Program<InceptProgram>(
-    InceptIDL,
-    config.inceptProgramID,
+  const cloneProgram = new anchor.Program<CloneProgram>(
+    CloneIDL,
+    config.cloneProgramID,
     provider
   );
 
-  const managerProgram = new anchor.Program<InceptCometManager>(
-    InceptCometManagerIDL,
-    config.inceptCometManager,
+  const managerProgram = new anchor.Program<CloneCometManager>(
+    CloneCometManagerIDL,
+    config.cloneCometManager,
     provider
   );
 
@@ -792,19 +792,19 @@ const main = async () => {
 
   let tokenData = await TokenData.fromAccountAddress(
     provider.connection,
-    incept.tokenData
+    clone.tokenData
   );
   let comet = await Comet.fromAccountAddress(
     provider.connection,
     userAccount.comet
   );
-  console.log("USDI mint:", incept.usdiMint.toString());
+  console.log("USDI mint:", clone.onusdMint.toString());
   console.log(
     "COMET:",
     Number(comet.numPositions),
     Number(comet.numCollaterals),
     toNumber(comet.collaterals[0].collateralAmount),
-    toNumber(comet.positions[0].borrowedUsdi)
+    toNumber(comet.positions[0].borrowedOnusd)
   );
 
   // Market state objects
@@ -817,8 +817,8 @@ const main = async () => {
         initMap.set(index, {
           eventId: new anchor.BN(NaN),
           poolIndex: index,
-          iasset: new anchor.BN(getMantissa(pool.iassetAmount)),
-          usdi: new anchor.BN(getMantissa(pool.usdiAmount)),
+          onasset: new anchor.BN(getMantissa(pool.onassetAmount)),
+          onusd: new anchor.BN(getMantissa(pool.onusdAmount)),
           lpTokens: new anchor.BN(getMantissa(pool.liquidityTokenSupply)),
           oraclePrice: new anchor.BN(getMantissa(pool.assetInfo.price)),
         } as PoolState);
@@ -835,16 +835,16 @@ const main = async () => {
     provider,
     cometManagerAccountAddress,
     tokenData,
-    incept.usdiMint,
+    clone.onusdMint,
     jupiter.usdcMint,
     jupiter.assetMints.slice(0, jupiter.nAssets)
   );
 
   const treasuryAddresses = await getTreasuryTokenAccountAddresses(
     provider,
-    incept.treasuryAddress,
+    clone.treasuryAddress,
     tokenData,
-    incept.usdiMint,
+    clone.onusdMint,
     jupiter.usdcMint
   );
 
@@ -859,13 +859,13 @@ const main = async () => {
     .on("change", (account: ManagerInfo) => {
       managerState = account;
     });
-  inceptProgram.account.tokenData
-    .subscribe(incept.tokenData, "recent")
+  cloneProgram.account.tokenData
+    .subscribe(clone.tokenData, "recent")
     .on("change", (account: TokenData) => {
       console.log("TOKEN DATA UPDATED!");
       tokenData = account;
     });
-  inceptProgram.account.comet
+  cloneProgram.account.comet
     .subscribe(userAccount.comet, "recent")
     .on("change", (account: Comet) => {
       comet = account;
@@ -874,7 +874,7 @@ const main = async () => {
   console.log("SUBSCRIBING!");
   let executing = false;
   // Setup pool listening
-  inceptProgram.addEventListener(
+  cloneProgram.addEventListener(
     "PoolState",
     (event: PoolState, slot: number) => {
       console.log(
@@ -895,8 +895,8 @@ const main = async () => {
           managerAddresses,
           treasuryAddresses,
           userAccount,
-          incept,
-          inceptAccountAddress,
+          clone,
+          cloneAccountAddress,
           tokenData,
           comet,
           jupiter,
@@ -943,8 +943,8 @@ const main = async () => {
         managerAddresses,
         treasuryAddresses,
         userAccount,
-        incept,
-        inceptAccountAddress,
+        clone,
+        cloneAccountAddress,
         tokenData,
         comet,
         jupiter,
