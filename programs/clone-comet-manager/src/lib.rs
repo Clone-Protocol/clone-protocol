@@ -6,7 +6,7 @@ mod states;
 
 use crate::instructions::*;
 
-declare_id!("8whRvQqudRqsQpcUFwFfnP1WB67V4ApCDLgMT65pVpL6");
+declare_id!("HX81GDFSZ9GktdpQCg8N1sBRr1AydZMnkpkNw7dffQym");
 
 #[program]
 pub mod clone_comet_manager {
