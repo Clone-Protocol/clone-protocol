@@ -8,8 +8,10 @@
         "@solana/buffer-layout": "^4.0.0",
         "@solana/spl-token": "^0.2.0",
         "axios": "^1.4.0",
+        "boxen": "^4.2.0",
         "google-spreadsheet": "^3.3.0",
-        "toml": "^3.0.0"
+        "toml": "^3.0.0",
+        "yargs": "^17.7.2"
     },
     "devDependencies": {
         "@metaplex-foundation/solita": "^0.19.4",
@@ -17,6 +19,7 @@
         "@types/google-spreadsheet": "^3.1.15",
         "@types/mocha": "^8.0.0",
         "@types/node": "^18.14.6",
+        "@types/yargs": "^17.0.24",
         "chai": "^4.3.6",
         "mocha": "^8.4.0",
         "ts-mocha": "^8.0.0",
