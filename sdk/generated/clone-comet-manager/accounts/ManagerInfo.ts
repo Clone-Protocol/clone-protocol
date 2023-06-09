@@ -129,7 +129,7 @@ export class ManagerInfo implements ManagerInfoArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      'AB3CFBB2cY5godSjfZCJaTvq9qSKzqjzXmJWEwqQ7VJR'
+      'HX81GDFSZ9GktdpQCg8N1sBRr1AydZMnkpkNw7dffQym'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, managerInfoBeet)

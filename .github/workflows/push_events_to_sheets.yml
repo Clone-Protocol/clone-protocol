@@ -17,7 +17,7 @@ jobs:
       DOCUMENT_ID: ${{ vars.DOCUMENT_ID }}
       SERVICE_EMAIL: ${{ vars.SERVICE_EMAIL }}
       SERVICE_PRIVATE_KEY: ${{ secrets.SERVICE_PRIVATE_KEY }}
-      INCEPT_PROGRAM_ID: ${{ vars.INCEPT_PROGRAM_ID }}
+      CLONE_PROGRAM_ID: ${{ vars.CLONE_PROGRAM_ID }}
       KEY_OUTFILE: key.json
       ANCHOR_WALLET: key.json
     steps:

@@ -96,7 +96,7 @@ export class Jupiter implements JupiterArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      '6LHFDGiQtKZKdq1Gn8TnaQfxr4VYLTGHfJRxffQwVKpa'
+      '4pVZGe5ygMM4CGhshdLUfSYjzDayxDkaVE5W6yWwC5Fi'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, jupiterBeet)

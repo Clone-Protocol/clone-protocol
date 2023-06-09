@@ -92,7 +92,7 @@ export const liquidateCometIldInstructionDiscriminator = [
 export function createLiquidateCometIldInstruction(
   accounts: LiquidateCometIldInstructionAccounts,
   args: LiquidateCometIldInstructionArgs,
-  programId = new web3.PublicKey('oA2F2E89xQnt5gox7wd6EhV3dJRFt57889UQyTq9che')
+  programId = new web3.PublicKey('6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g')
 ) {
   const [data] = liquidateCometIldStruct.serialize({
     instructionDiscriminator: liquidateCometIldInstructionDiscriminator,

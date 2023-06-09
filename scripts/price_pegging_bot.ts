@@ -13,9 +13,9 @@ import {
 } from "@solana/web3.js";
 import {
   DEVNET_TOKEN_SCALE,
-  InceptClient,
+  CloneClient,
   toDevnetScale,
-} from "../sdk/src/incept";
+} from "../sdk/src/clone";
 import { BorrowPositions, TokenData, User } from "../sdk/src/interfaces";
 import { getOrCreateAssociatedTokenAccount } from "../tests/utils";
 import { toNumber } from "../sdk/src/decimal";
@@ -59,16 +59,16 @@ export const getTokenAccount = async (
 };
 
 const generatePeggingInstructions = async (
-  incept: InceptClient,
+  clone: CloneClient,
   userBorrows: BorrowPositions,
   poolIndex: number,
   percentThreshold: number,
   accounts: TokenAccounts
 ): Promise<TransactionInstruction[]> => {
-  const tokenData = await incept.getTokenData();
+  const tokenData = await clone.getTokenData();
   let pool = tokenData.pools[poolIndex];
 
-  let poolUsdi = toNumber(pool.usdiAmount);
+  let poolUsdi = toNumber(pool.onusdAmount);
   let poolIasset = toNumber(pool.iassetAmount);
   let poolPrice = poolUsdi / poolIasset;
   let oraclePrice = toNumber(pool.assetInfo.price);
@@ -77,58 +77,58 @@ const generatePeggingInstructions = async (
     return [];
 
   let ixCalls: Promise<TransactionInstruction>[] = [];
-  ixCalls.push(incept.updatePricesInstruction());
+  ixCalls.push(clone.updatePricesInstruction());
 
-  // Mint extra usdi if required.
-  let usdiAccount = await getAccount(
-    incept.provider.connection,
+  // Mint extra onusd if required.
+  let onusdAccount = await getAccount(
+    clone.provider.connection,
     accounts.userUsdi
   );
-  let usdiBalance = Number(usdiAccount.amount) * 10 ** -DEVNET_TOKEN_SCALE;
+  let onusdBalance = Number(onusdAccount.amount) * 10 ** -DEVNET_TOKEN_SCALE;
 
   const adjustedIassetRatio = Math.sqrt((poolUsdi * poolIasset) / oraclePrice);
 
   if (oraclePrice > poolPrice) {
     // Need to buy iasset
     let iassetRequiredToBuy = poolIasset - adjustedIassetRatio;
-    let usdiRequired = calculateInputFromOutput(
+    let onusdRequired = calculateInputFromOutput(
       pool,
       iassetRequiredToBuy,
       false
     ).input;
-    if (usdiRequired > usdiBalance) {
+    if (onusdRequired > onusdBalance) {
       ixCalls.push(
-        incept.hackathonMintUsdiInstruction(
+        clone.hackathonMintUsdiInstruction(
           accounts.userUsdi,
-          toDevnetScale(usdiRequired - usdiBalance).toNumber()
+          toDevnetScale(onusdRequired - onusdBalance).toNumber()
         )
       );
     }
 
     ixCalls.push(
-      incept.buyIassetInstruction(
+      clone.buyIassetInstruction(
         accounts.userUsdi,
         accounts.userIassets[poolIndex],
         toDevnetScale(iassetRequiredToBuy),
         poolIndex,
-        toDevnetScale(usdiRequired * 1.1),
+        toDevnetScale(onusdRequired * 1.1),
         accounts.treasuryIasset[poolIndex]
       )
     );
   } else {
     let iassetRequiredToSell = adjustedIassetRatio - poolIasset;
-    let usdiRequiredforMint = 2 * iassetRequiredToSell * oraclePrice;
+    let onusdRequiredforMint = 2 * iassetRequiredToSell * oraclePrice;
 
-    if (usdiRequiredforMint > usdiBalance) {
+    if (onusdRequiredforMint > onusdBalance) {
       ixCalls.push(
-        incept.hackathonMintUsdiInstruction(
+        clone.hackathonMintUsdiInstruction(
           accounts.userUsdi,
-          toDevnetScale(usdiRequiredforMint * 1.1 - usdiBalance).toNumber()
+          toDevnetScale(onusdRequiredforMint * 1.1 - onusdBalance).toNumber()
         )
       );
     }
 
-    let usdiGained = calculateOutputFromInput(
+    let onusdGained = calculateOutputFromInput(
       pool,
       iassetRequiredToSell,
       false
@@ -148,25 +148,25 @@ const generatePeggingInstructions = async (
 
     if (borrowPositionIndex === -1) {
       ixCalls.push(
-        incept.initializeBorrowPositionInstruction(
+        clone.initializeBorrowPositionInstruction(
           accounts.userUsdi,
           accounts.userIassets[poolIndex],
           toDevnetScale(iassetRequiredToSell),
-          toDevnetScale(usdiRequiredforMint),
+          toDevnetScale(onusdRequiredforMint),
           poolIndex,
           0
         )
       );
     } else {
       ixCalls.push(
-        incept.addCollateralToBorrowInstruction(
+        clone.addCollateralToBorrowInstruction(
           borrowPositionIndex,
           accounts.userUsdi,
-          toDevnetScale(usdiRequiredforMint)
+          toDevnetScale(onusdRequiredforMint)
         )
       );
       ixCalls.push(
-        incept.subtractIassetFromBorrowInstruction(
+        clone.subtractIassetFromBorrowInstruction(
           accounts.userIassets[poolIndex],
           toDevnetScale(iassetRequiredToSell),
           borrowPositionIndex
@@ -175,12 +175,12 @@ const generatePeggingInstructions = async (
     }
 
     ixCalls.push(
-      incept.sellIassetInstruction(
+      clone.sellIassetInstruction(
         accounts.userUsdi,
         accounts.userIassets[poolIndex],
         toDevnetScale(iassetRequiredToSell),
         poolIndex,
-        toDevnetScale(usdiGained * 0.9),
+        toDevnetScale(onusdGained * 0.9),
         accounts.treasuryUsdi
       )
     );
@@ -191,25 +191,25 @@ const generatePeggingInstructions = async (
 };
 
 const pegPrices = async (
-  incept: InceptClient,
+  clone: CloneClient,
   accounts: TokenAccounts,
   pctThreshold: number
 ) => {
-  await incept.updatePrices();
-  const tokenData = await incept.getTokenData();
-  const userAccount = await incept.getUserAccount();
+  await clone.updatePrices();
+  const tokenData = await clone.getTokenData();
+  const userAccount = await clone.getUserAccount();
 
   if (userAccount.borrowPositions.equals(anchor.web3.PublicKey.default)) {
-    const { userPubkey, bump } = await incept.getUserAddress();
+    const { userPubkey, bump } = await clone.getUserAddress();
     const borrowPositionsKeypair = anchor.web3.Keypair.generate();
     console.log(
       "Generating borrow position account:",
       borrowPositionsKeypair.publicKey.toString()
     );
-    await incept.program.methods
+    await clone.program.methods
       .initializeBorrowPositions()
       .accounts({
-        user: incept.provider.publicKey!,
+        user: clone.provider.publicKey!,
         userAccount: userPubkey,
         borrowPositions: borrowPositionsKeypair.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -217,7 +217,7 @@ const pegPrices = async (
         systemProgram: anchor.web3.SystemProgram.programId,
       })
       .preInstructions([
-        await incept.program.account.borrowPositions.createInstruction(
+        await clone.program.account.borrowPositions.createInstruction(
           borrowPositionsKeypair
         ),
       ])
@@ -226,7 +226,7 @@ const pegPrices = async (
     await sleep(4000);
   }
 
-  const userBorrows = await incept.getBorrowPositions();
+  const userBorrows = await clone.getBorrowPositions();
 
   for (
     let poolIndex = 0;
@@ -234,7 +234,7 @@ const pegPrices = async (
     poolIndex++
   ) {
     let ixs = await generatePeggingInstructions(
-      incept,
+      clone,
       userBorrows,
       poolIndex,
       pctThreshold,
@@ -247,33 +247,33 @@ const pegPrices = async (
 
     ixs.forEach((ix) => tx.add(ix));
 
-    await incept.provider.sendAndConfirm!(tx, []);
+    await clone.provider.sendAndConfirm!(tx, []);
     console.log("Price pegged for pool:", poolIndex);
   }
 };
 
-const fetchAccounts = async (incept: InceptClient): Promise<TokenAccounts> => {
-  const tokenData = await incept.getTokenData();
+const fetchAccounts = async (clone: CloneClient): Promise<TokenAccounts> => {
+  const tokenData = await clone.getTokenData();
 
   let [userUsdi, treasuryUsdi] = await Promise.all([
     getOrCreateAssociatedTokenAccount(
-      incept.provider,
-      incept.incept!.usdiMint,
-      incept.provider.publicKey!
+      clone.provider,
+      clone.clone!.onusdMint,
+      clone.provider.publicKey!
     ),
     getOrCreateAssociatedTokenAccount(
-      incept.provider,
-      incept.incept!.usdiMint,
-      incept.incept!.treasuryAddress
+      clone.provider,
+      clone.clone!.onusdMint,
+      clone.clone!.treasuryAddress
     ),
   ]);
 
   let userIassetAccounts = await Promise.all(
     tokenData.pools.slice(0, tokenData.numPools.toNumber()).map((pool) => {
       return getOrCreateAssociatedTokenAccount(
-        incept.provider,
+        clone.provider,
         pool.assetInfo.iassetMint,
-        incept.provider.publicKey!
+        clone.provider.publicKey!
       );
     })
   );
@@ -281,9 +281,9 @@ const fetchAccounts = async (incept: InceptClient): Promise<TokenAccounts> => {
   let treasuryIassetAccounts = await Promise.all(
     tokenData.pools.slice(0, tokenData.numPools.toNumber()).map((pool) => {
       return getOrCreateAssociatedTokenAccount(
-        incept.provider,
+        clone.provider,
         pool.assetInfo.iassetMint,
-        incept.incept!.treasuryAddress
+        clone.clone!.treasuryAddress
       );
     })
   );
@@ -298,12 +298,12 @@ const fetchAccounts = async (incept: InceptClient): Promise<TokenAccounts> => {
 
 const main = async () => {
   let config = {
-    inceptProgramID: process.env.INCEPT_PROGRAM_ID!,
+    cloneProgramID: process.env.INCEPT_PROGRAM_ID!,
     pctThreshold: 0.01,
   };
   let provider = anchor.AnchorProvider.env();
-  const client = new InceptClient(
-    new PublicKey(config.inceptProgramID),
+  const client = new CloneClient(
+    new PublicKey(config.cloneProgramID),
     provider
   );
   await client.loadManager();

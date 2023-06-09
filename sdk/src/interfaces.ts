@@ -55,7 +55,7 @@ export interface LiquidationStatus {
 
 export interface CometLiquidation {
   status: number;
-  excessTokenTypeIsOnUsd: number;
+  excessTokenTypeIsOnusd: number;
   excessTokenAmount: RawDecimal;
 }
 
@@ -123,7 +123,7 @@ export interface Collateral {
   poolIndex: BN;
   mint: PublicKey;
   vault: PublicKey;
-  vaultOnUsdSupply: RawDecimal;
+  vaultOnusdSupply: RawDecimal;
   vaultMintSupply: RawDecimal;
   vaultCometSupply: RawDecimal;
   stable: BN;

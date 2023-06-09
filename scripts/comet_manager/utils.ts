@@ -1,17 +1,17 @@
 import { PublicKey, Keypair } from "@solana/web3.js";
 import { getAccount, getAssociatedTokenAddress } from "@solana/spl-token";
 import {
-  Incept,
+  Clone,
   User,
   TokenData,
   createUpdatePricesInstruction,
-} from "../../sdk/generated/incept/index";
+} from "../../sdk/generated/clone/index";
 import { AnchorProvider } from "@coral-xyz/anchor";
 import { getOrCreateAssociatedTokenAccount } from "../../tests/utils";
 import {
   createUpdateNetValueInstruction,
   ManagerInfo,
-} from "../../sdk/generated/incept-comet-manager";
+} from "../../sdk/generated/clone-comet-manager";
 import {
   SecretsManagerClient,
   GetSecretValueCommand,
@@ -19,7 +19,7 @@ import {
 import { fromEnv } from "@aws-sdk/credential-provider-env";
 
 export const buildUpdatePricesInstruction = (
-  inceptAccountAddress: PublicKey,
+  cloneAccountAddress: PublicKey,
   tokenDataAddress: PublicKey,
   tokenData: TokenData
 ) => {
@@ -45,7 +45,7 @@ export const buildUpdatePricesInstruction = (
   }
   return createUpdatePricesInstruction(
     {
-      incept: inceptAccountAddress,
+      clone: cloneAccountAddress,
       tokenData: tokenDataAddress,
       anchorRemainingAccounts: priceFeeds,
     },
@@ -57,9 +57,9 @@ export const buildUpdateNetValueInstruction = async (
   provider: AnchorProvider,
   tokenData: TokenData,
   cometManagerInfoAddress: PublicKey,
-  inceptAccountAddress: PublicKey,
-  incept: Incept,
-  managerUsdiTokenAddress: PublicKey,
+  cloneAccountAddress: PublicKey,
+  clone: Clone,
+  managerOnonusdTokenAddress: PublicKey,
   managerUsdcTokenAddress: PublicKey,
   managerIassetTokenAddresses: PublicKey[],
   managerUnderlyingTokenAddress: PublicKey[],
@@ -69,7 +69,7 @@ export const buildUpdateNetValueInstruction = async (
     provider.connection,
     cometManagerInfoAddress
   );
-  const managerInceptUser = await User.fromAccountAddress(
+  const managerCloneUser = await User.fromAccountAddress(
     provider.connection,
     managerInfo.userAccount
   );
@@ -129,13 +129,13 @@ export const buildUpdateNetValueInstruction = async (
   let updateNetValueIx = createUpdateNetValueInstruction({
     signer: provider.publicKey!,
     managerInfo: cometManagerInfoAddress,
-    incept: inceptAccountAddress,
-    managerInceptUser: managerInfo.userAccount,
-    usdiMint: incept.usdiMint,
+    clone: cloneAccountAddress,
+    managerCloneUser: managerInfo.userAccount,
+    onusdMint: clone.onusdMint,
     usdcMint: usdcMint,
-    comet: managerInceptUser.comet,
-    tokenData: incept.tokenData,
-    managerUsdiTokenAccount: managerUsdiTokenAddress,
+    comet: managerCloneUser.comet,
+    tokenData: clone.tokenData,
+    managerOnusdTokenAccount: managerOnonusdTokenAddress,
     managerUsdcTokenAccount: managerUsdcTokenAddress,
     anchorRemainingAccounts: remainingAccounts.map((pk) => {
       return { pubkey: pk, isSigner: false, isWritable: false };

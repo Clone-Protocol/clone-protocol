@@ -1,9 +1,9 @@
 {
   "version": "0.1.0",
-  "name": "incept",
+  "name": "clone",
   "instructions": [
     {
-      "name": "initializeIncept",
+      "name": "initializeClone",
       "accounts": [
         {
           "name": "admin",
@@ -11,17 +11,17 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "usdiMint",
+          "name": "onusdMint",
           "isMut": true,
           "isSigner": true
         },
         {
-          "name": "usdiVault",
+          "name": "onusdVault",
           "isMut": true,
           "isSigner": true
         },
@@ -80,7 +80,7 @@
       ]
     },
     {
-      "name": "updateInceptParameters",
+      "name": "updateCloneParameters",
       "accounts": [
         {
           "name": "admin",
@@ -88,7 +88,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -102,7 +102,7 @@
         {
           "name": "params",
           "type": {
-            "defined": "InceptParameters"
+            "defined": "CloneParameters"
           }
         }
       ]
@@ -116,7 +116,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -148,7 +148,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -293,7 +293,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -356,7 +356,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -366,22 +366,22 @@
           "isSigner": false
         },
         {
-          "name": "usdiMint",
+          "name": "onusdMint",
           "isMut": false,
           "isSigner": false
         },
         {
-          "name": "usdiTokenAccount",
+          "name": "onusdTokenAccount",
           "isMut": true,
           "isSigner": true
         },
         {
-          "name": "iassetMint",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": true
         },
         {
-          "name": "iassetTokenAccount",
+          "name": "onassetTokenAccount",
           "isMut": true,
           "isSigner": true
         },
@@ -465,7 +465,7 @@
       "name": "updatePrices",
       "accounts": [
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -485,7 +485,7 @@
       ]
     },
     {
-      "name": "mintUsdi",
+      "name": "mintOnusd",
       "accounts": [
         {
           "name": "user",
@@ -493,7 +493,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -508,12 +508,12 @@
           "isSigner": false
         },
         {
-          "name": "usdiMint",
+          "name": "onusdMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userUsdiTokenAccount",
+          "name": "userOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -536,7 +536,7 @@
       ]
     },
     {
-      "name": "burnUsdi",
+      "name": "burnOnusd",
       "accounts": [
         {
           "name": "user",
@@ -544,7 +544,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -559,12 +559,12 @@
           "isSigner": false
         },
         {
-          "name": "usdiMint",
+          "name": "onusdMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userUsdiTokenAccount",
+          "name": "userOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -600,7 +600,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -625,12 +625,12 @@
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
+          "name": "userOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -650,7 +650,7 @@
           "type": "u8"
         },
         {
-          "name": "iassetAmount",
+          "name": "onassetAmount",
           "type": "u64"
         },
         {
@@ -673,7 +673,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -728,7 +728,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -770,7 +770,7 @@
       ]
     },
     {
-      "name": "subtractIassetFromBorrow",
+      "name": "payBorrowDebt",
       "accounts": [
         {
           "name": "user",
@@ -783,7 +783,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -793,7 +793,7 @@
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
+          "name": "userOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -803,7 +803,7 @@
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
@@ -825,7 +825,7 @@
       ]
     },
     {
-      "name": "addIassetToBorrow",
+      "name": "borrowMore",
       "accounts": [
         {
           "name": "user",
@@ -838,7 +838,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -848,7 +848,7 @@
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
+          "name": "userOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -858,7 +858,7 @@
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
@@ -893,7 +893,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -903,12 +903,12 @@
           "isSigner": false
         },
         {
-          "name": "userUsdiTokenAccount",
+          "name": "userOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
+          "name": "userOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -918,12 +918,12 @@
           "isSigner": false
         },
         {
-          "name": "ammUsdiTokenAccount",
+          "name": "ammOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammIassetTokenAccount",
+          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -944,7 +944,7 @@
           "type": "u8"
         },
         {
-          "name": "iassetAmount",
+          "name": "onassetAmount",
           "type": "u64"
         }
       ]
@@ -963,7 +963,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -973,12 +973,12 @@
           "isSigner": false
         },
         {
-          "name": "userUsdiTokenAccount",
+          "name": "userOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
+          "name": "userOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -988,12 +988,12 @@
           "isSigner": false
         },
         {
-          "name": "ammUsdiTokenAccount",
+          "name": "ammOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammIassetTokenAccount",
+          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1020,7 +1020,7 @@
       ]
     },
     {
-      "name": "buyIasset",
+      "name": "buyOnasset",
       "accounts": [
         {
           "name": "user",
@@ -1028,7 +1028,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -1038,27 +1038,27 @@
           "isSigner": false
         },
         {
-          "name": "userUsdiTokenAccount",
+          "name": "userOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
+          "name": "userOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammUsdiTokenAccount",
+          "name": "ammOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammIassetTokenAccount",
+          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "treasuryIassetTokenAccount",
+          "name": "treasuryOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1078,13 +1078,13 @@
           "type": "u64"
         },
         {
-          "name": "usdiSpendThreshold",
+          "name": "onusdSpendThreshold",
           "type": "u64"
         }
       ]
     },
     {
-      "name": "sellIasset",
+      "name": "sellOnasset",
       "accounts": [
         {
           "name": "user",
@@ -1092,7 +1092,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -1102,27 +1102,27 @@
           "isSigner": false
         },
         {
-          "name": "userUsdiTokenAccount",
+          "name": "userOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
+          "name": "userOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammUsdiTokenAccount",
+          "name": "ammOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammIassetTokenAccount",
+          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "treasuryUsdiTokenAccount",
+          "name": "treasuryOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1142,7 +1142,7 @@
           "type": "u64"
         },
         {
-          "name": "usdiReceivedThreshold",
+          "name": "onusdReceivedThreshold",
           "type": "u64"
         }
       ]
@@ -1161,7 +1161,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -1232,7 +1232,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -1287,7 +1287,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -1342,7 +1342,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -1397,7 +1397,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -1452,7 +1452,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -1467,22 +1467,22 @@
           "isSigner": false
         },
         {
-          "name": "usdiMint",
+          "name": "onusdMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammUsdiTokenAccount",
+          "name": "ammOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammIassetTokenAccount",
+          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1508,7 +1508,7 @@
           "type": "u8"
         },
         {
-          "name": "usdiAmount",
+          "name": "onusdAmount",
           "type": "u64"
         }
       ]
@@ -1527,7 +1527,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -1542,22 +1542,22 @@
           "isSigner": false
         },
         {
-          "name": "usdiMint",
+          "name": "onusdMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammUsdiTokenAccount",
+          "name": "ammOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammIassetTokenAccount",
+          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1583,7 +1583,7 @@
           "type": "u8"
         },
         {
-          "name": "usdiAmount",
+          "name": "onusdAmount",
           "type": "u64"
         }
       ]
@@ -1602,7 +1602,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -1617,22 +1617,22 @@
           "isSigner": false
         },
         {
-          "name": "usdiMint",
+          "name": "onusdMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammUsdiTokenAccount",
+          "name": "ammOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammIassetTokenAccount",
+          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1647,12 +1647,12 @@
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
+          "name": "userOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userUsdiTokenAccount",
+          "name": "userOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1674,7 +1674,7 @@
       ]
     },
     {
-      "name": "mintUsdiHackathon",
+      "name": "mintOnusdDevnet",
       "accounts": [
         {
           "name": "user",
@@ -1682,7 +1682,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -1692,12 +1692,12 @@
           "isSigner": false
         },
         {
-          "name": "usdiMint",
+          "name": "onusdMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userUsdiTokenAccount",
+          "name": "userOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1723,7 +1723,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -1743,7 +1743,7 @@
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
@@ -1758,12 +1758,12 @@
           "isSigner": false
         },
         {
-          "name": "ammUsdiTokenAccount",
+          "name": "ammOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammIassetTokenAccount",
+          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1773,7 +1773,7 @@
           "isSigner": false
         },
         {
-          "name": "liquidatorIassetTokenAccount",
+          "name": "liquidatorOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1804,7 +1804,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -1819,32 +1819,32 @@
           "isSigner": false
         },
         {
-          "name": "usdiMint",
+          "name": "onusdMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userUsdiTokenAccount",
+          "name": "userOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
+          "name": "userOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammUsdiTokenAccount",
+          "name": "ammOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammIassetTokenAccount",
+          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1864,7 +1864,7 @@
           "type": "u64"
         },
         {
-          "name": "payUsdiDebt",
+          "name": "payOnusdDebt",
           "type": "bool"
         }
       ]
@@ -1878,7 +1878,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -1962,7 +1962,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -1987,7 +1987,7 @@
           "isSigner": false
         },
         {
-          "name": "usdiMint",
+          "name": "onusdMint",
           "isMut": true,
           "isSigner": false
         },
@@ -1997,7 +1997,7 @@
           "isSigner": false
         },
         {
-          "name": "usdiVault",
+          "name": "onusdVault",
           "isMut": true,
           "isSigner": false
         },
@@ -2033,7 +2033,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -2048,37 +2048,37 @@
           "isSigner": false
         },
         {
-          "name": "usdiMint",
+          "name": "onusdMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "liquidatorUsdiTokenAccount",
+          "name": "liquidatorOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "liquidatorIassetTokenAccount",
+          "name": "liquidatorOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammUsdiTokenAccount",
+          "name": "ammOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammIassetTokenAccount",
+          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "usdiVault",
+          "name": "onusdVault",
           "isMut": true,
           "isSigner": false
         },
@@ -2098,7 +2098,7 @@
           "type": "u64"
         },
         {
-          "name": "payUsdiDebt",
+          "name": "payOnusdDebt",
           "type": "bool"
         }
       ]
@@ -2122,7 +2122,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -2137,22 +2137,22 @@
           "isSigner": false
         },
         {
-          "name": "usdiMint",
+          "name": "onusdMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammUsdiTokenAccount",
+          "name": "ammOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "ammIassetTokenAccount",
+          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -2167,17 +2167,17 @@
           "isSigner": false
         },
         {
-          "name": "liquidatorIassetTokenAccount",
+          "name": "liquidatorOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "liquidatorUsdiTokenAccount",
+          "name": "liquidatorOnusdTokenAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "usdiVault",
+          "name": "onusdVault",
           "isMut": true,
           "isSigner": false
         },
@@ -2318,7 +2318,7 @@
       "args": []
     },
     {
-      "name": "removePool",
+      "name": "deprecatePool",
       "accounts": [
         {
           "name": "admin",
@@ -2326,7 +2326,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -2340,10 +2340,6 @@
         {
           "name": "poolIndex",
           "type": "u8"
-        },
-        {
-          "name": "forceRemoval",
-          "type": "bool"
         }
       ]
     },
@@ -2356,7 +2352,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -2381,12 +2377,12 @@
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
+          "name": "userOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -2408,7 +2404,7 @@
       ]
     },
     {
-      "name": "unwrapIasset",
+      "name": "unwrapOnasset",
       "accounts": [
         {
           "name": "user",
@@ -2416,7 +2412,7 @@
           "isSigner": true
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": false,
           "isSigner": false
         },
@@ -2441,12 +2437,12 @@
           "isSigner": false
         },
         {
-          "name": "iassetMint",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "userIassetTokenAccount",
+          "name": "userOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -2481,7 +2477,7 @@
           "isSigner": false
         },
         {
-          "name": "incept",
+          "name": "clone",
           "isMut": true,
           "isSigner": false
         },
@@ -2506,12 +2502,12 @@
   ],
   "accounts": [
     {
-      "name": "Incept",
+      "name": "Clone",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "usdiMint",
+            "name": "onusdMint",
             "type": "publicKey"
           },
           {
@@ -2549,7 +2545,7 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "incept",
+            "name": "clone",
             "type": "publicKey"
           },
           {
@@ -2776,7 +2772,7 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "iassetMint",
+            "name": "onassetMint",
             "type": "publicKey"
           },
           {
@@ -2854,11 +2850,11 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "iassetTokenAccount",
+            "name": "onassetTokenAccount",
             "type": "publicKey"
           },
           {
-            "name": "usdiTokenAccount",
+            "name": "onusdTokenAccount",
             "type": "publicKey"
           },
           {
@@ -2874,13 +2870,13 @@
             "type": "publicKey"
           },
           {
-            "name": "iassetAmount",
+            "name": "onassetAmount",
             "type": {
               "defined": "RawDecimal"
             }
           },
           {
-            "name": "usdiAmount",
+            "name": "onusdAmount",
             "type": {
               "defined": "RawDecimal"
             }
@@ -2920,6 +2916,10 @@
             "type": {
               "defined": "AssetInfo"
             }
+          },
+          {
+            "name": "deprecated",
+            "type": "u64"
           }
         ]
       }
@@ -2942,7 +2942,7 @@
             "type": "publicKey"
           },
           {
-            "name": "vaultUsdiSupply",
+            "name": "vaultOnusdSupply",
             "type": {
               "defined": "RawDecimal"
             }
@@ -2986,13 +2986,13 @@
             "type": "u64"
           },
           {
-            "name": "borrowedUsdi",
+            "name": "borrowedOnusd",
             "type": {
               "defined": "RawDecimal"
             }
           },
           {
-            "name": "borrowedIasset",
+            "name": "borrowedOnasset",
             "type": {
               "defined": "RawDecimal"
             }
@@ -3044,7 +3044,7 @@
             "type": "u64"
           },
           {
-            "name": "excessTokenTypeIsUsdi",
+            "name": "excessTokenTypeIsOnusd",
             "type": "u64"
           },
           {
@@ -3080,7 +3080,7 @@
             "type": "u64"
           },
           {
-            "name": "borrowedIasset",
+            "name": "borrowedOnasset",
             "type": {
               "defined": "RawDecimal"
             }
@@ -3089,35 +3089,7 @@
       }
     },
     {
-      "name": "CollateralParameters",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "PoolIndex",
-            "fields": [
-              {
-                "name": "index",
-                "type": "u64"
-              }
-            ]
-          },
-          {
-            "name": "CollateralizationRatio",
-            "fields": [
-              {
-                "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "InceptParameters",
+      "name": "CloneParameters",
       "type": {
         "kind": "enum",
         "variants": [
@@ -3165,6 +3137,34 @@
           },
           {
             "name": "IlLiquidationRewardPct",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "CollateralParameters",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "PoolIndex",
+            "fields": [
+              {
+                "name": "index",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "CollateralizationRatio",
             "fields": [
               {
                 "name": "value",
@@ -3308,12 +3308,12 @@
           "index": false
         },
         {
-          "name": "iasset",
+          "name": "onasset",
           "type": "u64",
           "index": false
         },
         {
-          "name": "usdi",
+          "name": "onusd",
           "type": "u64",
           "index": false
         },
@@ -3353,12 +3353,12 @@
           "index": false
         },
         {
-          "name": "iassetDelta",
+          "name": "onassetDelta",
           "type": "i64",
           "index": false
         },
         {
-          "name": "usdiDelta",
+          "name": "onusdDelta",
           "type": "i64",
           "index": false
         },
@@ -3383,12 +3383,12 @@
           "index": false
         },
         {
-          "name": "iasset",
+          "name": "onasset",
           "type": "u64",
           "index": false
         },
         {
-          "name": "usdi",
+          "name": "onusd",
           "type": "u64",
           "index": false
         },
@@ -3573,8 +3573,8 @@
     },
     {
       "code": 6023,
-      "name": "InsufficientUSDiCollateral",
-      "msg": "Insufficient USDi Collateral"
+      "name": "InsufficientonUSDCollateral",
+      "msg": "Insufficient onUSD Collateral"
     },
     {
       "code": 6024,
@@ -3698,8 +3698,8 @@
     },
     {
       "code": 6048,
-      "name": "RequireOnlyUSDiCollateral",
-      "msg": "Collateral must be all in USDi"
+      "name": "RequireOnlyonUSDCollateral",
+      "msg": "Collateral must be all in onUSD"
     },
     {
       "code": 6049,
@@ -3720,9 +3720,11 @@
       "code": 6052,
       "name": "FailedToLoadPyth",
       "msg": "Failed to Load Pyth Price Feed"
+    },
+    {
+      "code": 6053,
+      "name": "PoolDeprecated",
+      "msg": "Pool Deprecated"
     }
-  ],
-  "metadata": {
-    "address": "5k28XzdwaWVXaWBwfm4ZFXQAnBaTfzu25k1sHatsnsL1"
-  }
+  ]
 }

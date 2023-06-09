@@ -82,7 +82,7 @@ export const addCollateralToCometInstructionDiscriminator = [
 export function createAddCollateralToCometInstruction(
   accounts: AddCollateralToCometInstructionAccounts,
   args: AddCollateralToCometInstructionArgs,
-  programId = new web3.PublicKey('AB3CFBB2cY5godSjfZCJaTvq9qSKzqjzXmJWEwqQ7VJR')
+  programId = new web3.PublicKey('HX81GDFSZ9GktdpQCg8N1sBRr1AydZMnkpkNw7dffQym')
 ) {
   const [data] = addCollateralToCometStruct.serialize({
     instructionDiscriminator: addCollateralToCometInstructionDiscriminator,

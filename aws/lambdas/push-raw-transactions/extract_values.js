@@ -1,5 +1,5 @@
 const anchor = require("@coral-xyz/anchor")
-const inceptIDL = require("./incept.json")
+const cloneIDL = require("./clone.json")
 
 const parseEvent = (
   log,
@@ -20,7 +20,7 @@ const parseEvent = (
         poolIndex: data.poolIndex,
         isConcentrated: data.isConcentrated,
         iassetDelta: data.iassetDelta.toString(),
-        usdiDelta: data.usdiDelta.toString(),
+        onusdDelta: data.onusdDelta.toString(),
         lpTokenDelta: data.lpTokenDelta.toString(),
       }
       break;
@@ -31,7 +31,7 @@ const parseEvent = (
         eventId,
         poolIndex: data.poolIndex,
         iasset: data.iasset.toString(),
-        usdi: data.usdi.toString(),
+        onusd: data.onusd.toString(),
         lpTokens: data.lpTokens.toString(),
         oraclePrice: data.oraclePrice.toString(),
       };
@@ -45,7 +45,7 @@ const parseEvent = (
         poolIndex: data.poolIndex,
         isBuy: data.isBuy,
         iasset: data.iasset.toString(),
-        usdi: data.usdi.toString(),
+        onusd: data.onusd.toString(),
         tradingFee: data.tradingFee.toString(),
         treasuryFee: data.treasuryFee.toString(),
       };
@@ -74,8 +74,8 @@ const parseEvent = (
 exports.extract = (raw) => {
 
     const connection = new anchor.web3.Connection(anchor.web3.clusterApiUrl("devnet"))
-    const programID = new anchor.web3.PublicKey(inceptIDL.metadata.address)
-    const program = new anchor.Program(inceptIDL, programID, { connection })
+    const programID = new anchor.web3.PublicKey(cloneIDL.metadata.address)
+    const program = new anchor.Program(cloneIDL, programID, { connection })
     const parser = new anchor.EventParser(programID, program.coder);
 
     let parsedEvents = [];

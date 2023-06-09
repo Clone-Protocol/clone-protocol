@@ -13,7 +13,7 @@ const getStatsQuery = (pool, interval) => {
       date_trunc('${interval}', to_timestamp(block_time)) AS date,
       pool_index,
       iasset,
-      usdi,
+      onusd,
       ROW_NUMBER() OVER (PARTITION BY date_trunc('${interval}', to_timestamp(block_time)), pool_index ORDER BY block_time DESC) AS row_number
     FROM
       pool_state
@@ -23,7 +23,7 @@ const getStatsQuery = (pool, interval) => {
     SELECT
       date,
       pool_index,
-      2 * usdi AS liquidity
+      2 * onusd AS liquidity
     FROM
       daily_latest
     WHERE
@@ -34,7 +34,7 @@ const getStatsQuery = (pool, interval) => {
     SELECT
       date_trunc('${interval}', to_timestamp(block_time)) AS date,
       pool_index,
-      SUM(2 * usdi) AS trading_volume,
+      SUM(2 * onusd) AS trading_volume,
       SUM(trading_fee) AS total_trading_fees,
       SUM(treasury_fee) AS total_treasury_fees
     FROM

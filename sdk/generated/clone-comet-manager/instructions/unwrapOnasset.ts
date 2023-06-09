@@ -84,7 +84,7 @@ export const unwrapOnassetInstructionDiscriminator = [
 export function createUnwrapOnassetInstruction(
   accounts: UnwrapOnassetInstructionAccounts,
   args: UnwrapOnassetInstructionArgs,
-  programId = new web3.PublicKey('AB3CFBB2cY5godSjfZCJaTvq9qSKzqjzXmJWEwqQ7VJR')
+  programId = new web3.PublicKey('HX81GDFSZ9GktdpQCg8N1sBRr1AydZMnkpkNw7dffQym')
 ) {
   const [data] = unwrapOnassetStruct.serialize({
     instructionDiscriminator: unwrapOnassetInstructionDiscriminator,

@@ -89,7 +89,7 @@ export class BorrowPositions implements BorrowPositionsArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      'oA2F2E89xQnt5gox7wd6EhV3dJRFt57889UQyTq9che'
+      '6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, borrowPositionsBeet)
