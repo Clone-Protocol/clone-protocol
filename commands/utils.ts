@@ -165,7 +165,6 @@ export async function getUSDC(
     case "devnet":
       errorLog(`Devnet not implemented for this command`);
       throw Error("invalid network");
-      break;
     case "mainnet":
       errorLog(`Mainnet not implemented for this command`);
       throw Error("invalid network");
@@ -174,6 +173,30 @@ export async function getUSDC(
   }
 
   return usdc;
+}
+
+export async function getAssetPriceFeed(
+  network: string,
+  provider: anchor.AnchorProvider,
+  index: number
+) {
+  let priceFeed: PublicKey;
+
+  switch (network) {
+    case "localnet":
+      priceFeed = await getMockAssetPriceFeed(network, provider, index);
+      break;
+    case "devnet":
+      errorLog(`Devnet not implemented for this command`);
+      throw Error("invalid network");
+    case "mainnet":
+      errorLog(`Mainnet not implemented for this command`);
+      throw Error("invalid network");
+    default:
+      throw Error("invalid network");
+  }
+
+  return priceFeed;
 }
 
 export async function getMockAssetPriceFeed(

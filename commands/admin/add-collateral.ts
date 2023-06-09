@@ -51,6 +51,7 @@ exports.handler = async function (yargs: CommandArguments) {
     const cloneProgram = getCloneProgram(setup.network, setup.provider);
 
     let cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
+    await cloneClient.loadClone();
 
     const collateralPubkey = new PublicKey(yargs.collateralPubkey);
 

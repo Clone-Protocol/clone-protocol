@@ -10,7 +10,7 @@ exports.handler = async function () {
   const setup = anchorSetup();
   const cloneProgram = getCloneProgram(setup.network, setup.provider);
 
-  let cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
+  const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
 
   try {
     let tx = new Transaction();

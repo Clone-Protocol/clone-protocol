@@ -40,7 +40,7 @@ exports.handler = async function () {
       backgroundColor: "#CCCCCC",
     };
 
-    const underline = new Array(`USDC Mint`.length).fill("-").join("");
+    let underline = new Array(`USDC`.length).fill("-").join("");
     let assetInfo =
       `USDC\n` + `${underline}\n` + `Mint: ${chalk.bold(jupiter.usdcMint)}\n`;
 
@@ -60,6 +60,7 @@ exports.handler = async function () {
       const exponent = feedData.exponent;
 
       const title = `Asset ${i + 1}`;
+      underline = new Array(title.length).fill("-").join("");
 
       assetInfo =
         `${chalk.bold(title)}\n` +
