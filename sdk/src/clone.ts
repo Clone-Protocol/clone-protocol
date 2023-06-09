@@ -102,7 +102,7 @@ export class CloneClient {
     )) as CloneInfo;
   }
 
-  public async loadManager() {
+  public async loadClone() {
     this.cloneAddress = await this.getCloneAddress();
     this.clone = (await this.getCloneAccount()) as CloneInfo;
   }
