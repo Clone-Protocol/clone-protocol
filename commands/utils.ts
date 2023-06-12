@@ -2,14 +2,26 @@ import os from "os";
 import toml from "toml";
 import fs from "fs";
 import * as anchor from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
 import { Program } from "@coral-xyz/anchor";
+import { PublicKey, Transaction } from "@solana/web3.js";
+import {
+  Account,
+  getAccount,
+  getAssociatedTokenAddress,
+  TokenAccountNotFoundError,
+  createAssociatedTokenAccountInstruction,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import {
   JupiterAggMock,
   IDL as mockJupIDL,
 } from "../sdk/src/idl/jupiter_agg_mock";
 import { Clone, IDL as cloneIDL } from "../sdk/src/idl/clone";
 import { Pyth, IDL as pythIDL } from "../sdk/src/idl/pyth";
+import { Provider, BN } from "@coral-xyz/anchor";
+import { Decimal } from "../sdk/src/decimal";
+import { DEVNET_TOKEN_SCALE, toDevnetScale } from "../sdk/src/clone";
 
 const chalk = require("chalk");
 
@@ -223,6 +235,68 @@ export async function getMockAssetPriceFeed(
   return priceFeed;
 }
 
+export const getOrCreateAssociatedTokenAccount = async (
+  provider: Provider,
+  mint: PublicKey,
+  owner?: PublicKey,
+  ownerOffCurve?: boolean
+): Promise<Account> => {
+  const associatedToken = await getAssociatedTokenAddress(
+    mint,
+    owner !== undefined ? owner : provider.publicKey!,
+    ownerOffCurve !== undefined ? ownerOffCurve : false,
+    TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  );
+
+  let account: Account;
+  try {
+    account = await getAccount(
+      provider.connection,
+      associatedToken,
+      "recent",
+      TOKEN_PROGRAM_ID
+    );
+  } catch (error: unknown) {
+    if (error instanceof TokenAccountNotFoundError) {
+      const transaction = new Transaction().add(
+        createAssociatedTokenAccountInstruction(
+          provider.publicKey!,
+          associatedToken,
+          owner ? owner : provider.publicKey!,
+          mint,
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      );
+
+      await provider.sendAndConfirm!(transaction);
+      await sleep(6000);
+      account = await getAccount(
+        provider.connection,
+        associatedToken,
+        "recent",
+        TOKEN_PROGRAM_ID
+      );
+    } else {
+      throw error;
+    }
+  }
+
+  if (!account) {
+    throw Error("Could not create account!");
+  }
+  return account;
+};
+
+export const convertToRawDecimal = (num: number) => {
+  let temp = new Decimal(
+    BigInt(toDevnetScale(num).toNumber()),
+    BigInt(DEVNET_TOKEN_SCALE)
+  );
+  return temp.toRawDecimal();
+};
+
 export function successLog(message: string) {
   console.log(chalk.greenBright.bold("✨ Success:"), message);
 }
@@ -230,3 +304,7 @@ export function successLog(message: string) {
 export function errorLog(message: string) {
   console.error(chalk.redBright.bold("❌ An error occurred:"), message);
 }
+
+export const sleep = async (ms: number) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};

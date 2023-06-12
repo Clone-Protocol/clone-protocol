@@ -34,6 +34,9 @@ exports.builder = (yargs: CommandArguments) => {
 exports.handler = async function (yargs: CommandArguments) {
   try {
     const setup = anchorSetup();
+    if (setup.network != "localnet") {
+      throw Error("Mock instruction must be run on localnet")
+    }
     const jupiterProgram = getJupiterProgram(setup.network, setup.provider);
     const pythProgram = getPythProgram(setup.network, setup.provider);
 
@@ -46,7 +49,7 @@ exports.handler = async function (yargs: CommandArguments) {
     const expo = yargs.expo;
     const conf = new BN((price / 10) * 10 ** -expo);
 
-    let priceFeed = await createPriceFeed(pythProgram, price, expo, conf);
+    const priceFeed = await createPriceFeed(pythProgram, price, expo, conf);
 
     const mockAssetMint = anchor.web3.Keypair.generate();
 

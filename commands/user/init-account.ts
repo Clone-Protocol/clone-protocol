@@ -7,12 +7,12 @@ exports.command = "init-account";
 exports.desc = "Initializes your user account, necessary to provide liquidity";
 exports.builder = () => {};
 exports.handler = async function () {
-  const setup = anchorSetup();
-  const cloneProgram = getCloneProgram(setup.network, setup.provider);
-
-  const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-
   try {
+    const setup = anchorSetup();
+    const cloneProgram = getCloneProgram(setup.network, setup.provider);
+
+    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
+
     let tx = new Transaction();
     tx.add(await cloneClient.initializeUserInstruction());
 

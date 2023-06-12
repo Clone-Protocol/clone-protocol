@@ -4,6 +4,7 @@ const initClone = require('./admin/init-clone');
 const initMockJup = require('./admin/init-mock-jup');
 const addPool = require('./admin/add-pool');
 const addCollateral = require('./admin/add-collateral');
+const updatePrices = require('./admin/update-prices');
 
 module.exports = (yargs: Argv) => {
   yargs
@@ -11,6 +12,7 @@ module.exports = (yargs: Argv) => {
     .command(initMockJup)
     .command(addPool)
     .command(addCollateral)
+    .command(updatePrices)
     .demandCommand()
     .help();
 }
