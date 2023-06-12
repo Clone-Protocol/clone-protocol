@@ -61,7 +61,7 @@ impl Default for RawDecimal {
 #[derive(Default)]
 pub struct Clone {
     // 185
-    pub onusd_mint: Pubkey,                     // 32
+    pub onusd_mint: Pubkey,                    // 32
     pub token_data: Pubkey,                    // 32
     pub admin: Pubkey,                         // 32
     pub bump: u8,                              // 1
@@ -81,7 +81,7 @@ pub struct LiquidationConfig {
 #[account(zero_copy)]
 pub struct TokenData {
     // 165,320
-    pub clone: Pubkey,                        // 32
+    pub clone: Pubkey,                         // 32
     pub num_pools: u64,                        // 8
     pub num_collaterals: u64,                  // 8
     pub pools: [Pool; 255],                    // 255 * 504 = 128,520
@@ -146,7 +146,7 @@ impl TokenData {
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct AssetInfo {
     // 208
-    pub onasset_mint: Pubkey,                           // 32
+    pub onasset_mint: Pubkey,                          // 32
     pub pyth_address: Pubkey,                          // 32
     pub price: RawDecimal,                             // 16
     pub twap: RawDecimal,                              // 16
@@ -165,13 +165,13 @@ pub struct AssetInfo {
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct Pool {
     // 504
-    pub onasset_token_account: Pubkey,                // 32
-    pub onusd_token_account: Pubkey,                  // 32
+    pub onasset_token_account: Pubkey,               // 32
+    pub onusd_token_account: Pubkey,                 // 32
     pub liquidity_token_mint: Pubkey,                // 32
     pub underlying_asset_token_account: Pubkey,      // 32
     pub comet_liquidity_token_account: Pubkey,       // 32
-    pub onasset_amount: RawDecimal,                   // 16
-    pub onusd_amount: RawDecimal,                     // 16
+    pub onasset_amount: RawDecimal,                  // 16
+    pub onusd_amount: RawDecimal,                    // 16
     pub liquidity_token_supply: RawDecimal,          // 16
     pub treasury_trading_fee: RawDecimal,            // 16
     pub liquidity_trading_fee: RawDecimal,           // 16
@@ -263,7 +263,7 @@ pub struct Collateral {
     pub pool_index: u64,                     // 8
     pub mint: Pubkey,                        // 32
     pub vault: Pubkey,                       // 32
-    pub vault_onusd_supply: RawDecimal,       // 16
+    pub vault_onusd_supply: RawDecimal,      // 16
     pub vault_mint_supply: RawDecimal,       // 16
     pub vault_comet_supply: RawDecimal,      // 16
     pub stable: u64,                         // 8
@@ -459,8 +459,8 @@ pub struct CometPosition {
     // 120
     pub authority: Pubkey,                   // 32
     pub pool_index: u64,                     // 8
-    pub borrowed_onusd: RawDecimal,           // 16
-    pub borrowed_onasset: RawDecimal,         // 16
+    pub borrowed_onusd: RawDecimal,          // 16
+    pub borrowed_onasset: RawDecimal,        // 16
     pub liquidity_token_value: RawDecimal,   // 16
     pub comet_liquidation: CometLiquidation, // 32
 }
@@ -508,47 +508,9 @@ impl Default for CometCollateral {
 pub struct CometLiquidation {
     // 32
     pub status: u64,                     // 8
-    pub excess_token_type_is_onusd: u64,  // 8
+    pub excess_token_type_is_onusd: u64, // 8
     pub excess_token_amount: RawDecimal, // 16
 }
-
-// #[account(zero_copy)]
-// pub struct LiquidityPositions {
-//     // 14,320
-//     pub owner: Pubkey,                                 // 32
-//     pub num_positions: u64,                            // 8
-//     pub liquidity_positions: [LiquidityPosition; 255], // 255 * 56 = 14,280
-// }
-
-// impl Default for LiquidityPositions {
-//     fn default() -> Self {
-//         Self {
-//             owner: Pubkey::default(),
-//             num_positions: 0,
-//             liquidity_positions: [LiquidityPosition::default(); 255],
-//         }
-//     }
-// }
-
-// impl LiquidityPositions {
-//     pub fn remove(&mut self, index: usize) {
-//         self.liquidity_positions[index] =
-//             self.liquidity_positions[(self.num_positions - 1) as usize];
-//         self.liquidity_positions[(self.num_positions - 1) as usize] = LiquidityPosition {
-//             ..Default::default()
-//         };
-//         self.num_positions -= 1;
-//     }
-// }
-
-// #[zero_copy]
-// #[derive(Default)]
-// pub struct LiquidityPosition {
-//     // 56
-//     pub authority: Pubkey,                 // 32
-//     pub liquidity_token_value: RawDecimal, // 16
-//     pub pool_index: u64,                   // 8
-// }
 
 #[account(zero_copy)]
 pub struct BorrowPositions {
@@ -586,5 +548,5 @@ pub struct BorrowPosition {
     pub collateral_amount: RawDecimal, // 16
     pub pool_index: u64,               // 8
     pub collateral_index: u64,         // 8
-    pub borrowed_onasset: RawDecimal,   // 16
+    pub borrowed_onasset: RawDecimal,  // 16
 }
