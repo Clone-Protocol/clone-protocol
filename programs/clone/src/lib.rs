@@ -170,30 +170,6 @@ pub mod clone {
         instructions::borrow_more::execute(ctx, borrow_index, amount)
     }
 
-    // pub fn provide_unconcentrated_liquidity(
-    //     ctx: Context<ProvideUnconcentratedLiquidity>,
-    //     liquidity_position_index: u8,
-    //     onasset_amount: u64,
-    // ) -> Result<()> {
-    //     instructions::provide_unconcentrated_liquidity::execute(
-    //         ctx,
-    //         liquidity_position_index,
-    //         onasset_amount,
-    //     )
-    // }
-
-    // pub fn withdraw_unconcentrated_liquidity(
-    //     ctx: Context<WithdrawUnconcentratedLiquidity>,
-    //     liquidity_position_index: u8,
-    //     liquidity_token_amount: u64,
-    // ) -> Result<()> {
-    //     instructions::withdraw_unconcentrated_liquidity::execute(
-    //         ctx,
-    //         liquidity_position_index,
-    //         liquidity_token_amount,
-    //     )
-    // }
-
     pub fn buy_onasset(
         ctx: Context<BuyOnAsset>,
         pool_index: u8,
