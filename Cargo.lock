@@ -416,19 +416,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "clone-comet-manager"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
- "anchor-spl",
- "bytemuck",
- "clone",
- "jupiter-agg-mock",
- "rust_decimal",
- "rust_decimal_macros",
-]
-
-[[package]]
 name = "console_error_panic_hook"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

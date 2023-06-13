@@ -2,7 +2,6 @@
 clone = "6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g"
 pyth = "CGN35EiXnmofHy3RmjcVYeQ4Yn5PyGaQuGV8TfEZnLs7"
 jupiter_agg_mock = "4pVZGe5ygMM4CGhshdLUfSYjzDayxDkaVE5W6yWwC5Fi"
-clone_comet_manager = "HX81GDFSZ9GktdpQCg8N1sBRr1AydZMnkpkNw7dffQym"
 
 [registry]
 url = "https://anchor.projectserum.com"
