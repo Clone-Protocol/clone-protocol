@@ -68,6 +68,11 @@ pub fn execute(
     let pool = token_data.pools[pool_index as usize];
 
     return_error_if_false!(
+        check_feed_update(pool.asset_info, Clock::get()?.slot).is_ok(),
+        CloneError::OutdatedOracle
+    );
+
+    return_error_if_false!(
         pool.committed_onusd_liquidity.to_decimal() > Decimal::ZERO,
         CloneError::PoolEmpty
     );
