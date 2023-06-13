@@ -217,6 +217,10 @@ pub enum CloneError {
     /// 53. Pool Deprecated
     #[msg("Pool Deprecated")]
     PoolDeprecated,
+
+    /// 53. Pool Deprecated
+    #[msg("Pool is empty")]
+    PoolEmpty,
 }
 
 impl From<CloneError> for ProgramError {

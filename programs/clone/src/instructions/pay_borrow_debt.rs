@@ -49,15 +49,14 @@ pub struct PayBorrowDebt<'info> {
     pub onasset_mint: Box<Account<'info, Mint>>,
     pub token_program: Program<'info, Token>,
 }
-impl<'a, 'b, 'c, 'info> From<&PayBorrowDebt<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, Burn<'info>>
-{
-    fn from(
-        accounts: &PayBorrowDebt<'info>,
-    ) -> CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
+impl<'a, 'b, 'c, 'info> From<&PayBorrowDebt<'info>> for CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
+    fn from(accounts: &PayBorrowDebt<'info>) -> CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
         let cpi_accounts = Burn {
             mint: accounts.onasset_mint.to_account_info().clone(),
-            from: accounts.user_onasset_token_account.to_account_info().clone(),
+            from: accounts
+                .user_onasset_token_account
+                .to_account_info()
+                .clone(),
             authority: accounts.user.to_account_info().clone(),
         };
         let cpi_program = accounts.token_program.to_account_info();
@@ -65,11 +64,7 @@ impl<'a, 'b, 'c, 'info> From<&PayBorrowDebt<'info>>
     }
 }
 
-pub fn execute(
-    ctx: Context<PayBorrowDebt>,
-    borrow_index: u8,
-    amount: u64,
-) -> Result<()> {
+pub fn execute(ctx: Context<PayBorrowDebt>, borrow_index: u8, amount: u64) -> Result<()> {
     let mut amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;

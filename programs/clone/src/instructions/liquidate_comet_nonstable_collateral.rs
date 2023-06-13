@@ -36,7 +36,6 @@ pub struct LiquidateCometNonStableCollateral<'info> {
     #[account(
         mut,
         address = user_account.comet,
-        constraint = comet.load()?.is_single_pool == 0,
         constraint = comet.load()?.num_collaterals > comet_stable_collateral_index.into() @ CloneError::InvalidInputPositionIndex,
         constraint = comet.load()?.num_collaterals > comet_nonstable_collateral_index.into() @ CloneError::InvalidInputPositionIndex
     )]
@@ -103,7 +102,7 @@ pub fn execute(
     let nonstable_asset_info =
         token_data.pools[nonstable_collateral.pool_index as usize].asset_info;
 
-    let health_score = calculate_health_score(&comet, &token_data, None)?;
+    let health_score = calculate_health_score(&comet, &token_data)?;
 
     return_error_if_false!(
         !health_score.is_healthy(),
@@ -202,7 +201,7 @@ pub fn execute(
                 + liquidator_stable_swap_in,
         );
 
-    let health_score = calculate_health_score(&comet, &token_data, None)?;
+    let health_score = calculate_health_score(&comet, &token_data)?;
 
     return_error_if_false!(
         health_score.score

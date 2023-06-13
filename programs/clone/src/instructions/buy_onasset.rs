@@ -9,7 +9,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction( pool_index: u8, onasset_amount: u64, onusd_amount_threshold: u64)]
+#[instruction(pool_index: u8, onasset_amount: u64, onusd_amount_threshold: u64)]
 pub struct BuyOnAsset<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -28,29 +28,29 @@ pub struct BuyOnAsset<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        associated_token::mint = clone.onusd_mint,
+        associated_token::mint = onusd_mint,
         associated_token::authority = user
     )]
     pub user_onusd_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        associated_token::mint = token_data.load()?.pools[pool_index as usize].asset_info.onasset_mint,
+        associated_token::mint = onasset_mint,
         associated_token::authority = user
     )]
     pub user_onasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[pool_index as usize].onusd_token_account,
+        address = token_data.load()?.pools[pool_index as usize].asset_info.onasset_mint,
     )]
-    pub amm_onusd_token_account: Box<Account<'info, TokenAccount>>,
+    pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[pool_index as usize].onasset_token_account,
+        address = clone.onusd_mint
     )]
-    pub amm_onasset_token_account: Box<Account<'info, TokenAccount>>,
+    pub onusd_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        associated_token::mint = token_data.load()?.pools[pool_index as usize].asset_info.onasset_mint,
+        associated_token::mint = onasset_mint,
         associated_token::authority = clone.treasury_address
     )]
     pub treasury_onasset_token_account: Box<Account<'info, TokenAccount>>,
@@ -67,11 +67,16 @@ pub fn execute(
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let pool = token_data.pools[pool_index as usize];
 
+    return_error_if_false!(
+        pool.committed_onusd_liquidity.to_decimal() > Decimal::ZERO,
+        CloneError::PoolEmpty
+    );
+
     let onasset_amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
     // calculate how much onusd must be spent
-    let swap_summary = pool.calculate_input_from_output(onasset_amount_value, false);
-    let onusd_amount_value = rescale_toward_zero(swap_summary.result, DEVNET_TOKEN_SCALE);
+    let swap_summary = pool.calculate_usd_to_buy(onasset_amount_value);
+    let onusd_amount_value = swap_summary.result;
     // ensure that the user has sufficient onusd
     return_error_if_false!(
         ctx.accounts.user_onusd_token_account.amount
@@ -79,45 +84,39 @@ pub fn execute(
         CloneError::InvalidTokenAmount
     );
     // ensure it's within slippage tolerance
-    let max_onusd_to_spend =
-        Decimal::new(onusd_spend_threshold.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let max_onusd_to_spend = Decimal::new(
+        onusd_spend_threshold.try_into().unwrap(),
+        DEVNET_TOKEN_SCALE,
+    );
 
     return_error_if_false!(
         max_onusd_to_spend >= onusd_amount_value,
         CloneError::SlippageToleranceExceeded
     );
 
-    // transfer onusd from user to amm
-    let cpi_accounts = Transfer {
+    // burn onusd from user
+    let cpi_accounts = Burn {
         from: ctx
             .accounts
             .user_onusd_token_account
             .to_account_info()
             .clone(),
-        to: ctx
-            .accounts
-            .amm_onusd_token_account
-            .to_account_info()
-            .clone(),
+        mint: ctx.accounts.onusd_mint.to_account_info().clone(),
         authority: ctx.accounts.user.to_account_info().clone(),
     };
-    let send_onusd_to_amm_context = CpiContext::new(
+    let burn_context = CpiContext::new(
         ctx.accounts.token_program.to_account_info().clone(),
         cpi_accounts,
     );
 
-    token::transfer(
-        send_onusd_to_amm_context,
+    token::burn(
+        burn_context,
         onusd_amount_value.mantissa().try_into().unwrap(),
     )?;
 
-    // transfer onasset to user from amm
-    let cpi_accounts = Transfer {
-        from: ctx
-            .accounts
-            .amm_onasset_token_account
-            .to_account_info()
-            .clone(),
+    // mint onasset to user
+    let cpi_accounts = MintTo {
+        mint: ctx.accounts.onasset_mint.to_account_info().clone(),
         to: ctx
             .accounts
             .user_onasset_token_account
@@ -125,26 +124,22 @@ pub fn execute(
             .clone(),
         authority: ctx.accounts.clone.to_account_info().clone(),
     };
-    let send_onasset_to_user_context = CpiContext::new_with_signer(
+    let mint_onasset_to_user_context = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info().clone(),
         cpi_accounts,
         seeds,
     );
 
-    token::transfer(
-        send_onasset_to_user_context,
+    token::mint_to(
+        mint_onasset_to_user_context,
         onasset_amount_value.mantissa().try_into().unwrap(),
     )?;
 
-    // Transfer treasury fee from pool to treasury token account
+    // Mint treasury fee to treasury token account
     let treasury_fee_to_pay =
         rescale_toward_zero(swap_summary.treasury_fees_paid, DEVNET_TOKEN_SCALE);
-    let cpi_accounts = Transfer {
-        from: ctx
-            .accounts
-            .amm_onasset_token_account
-            .to_account_info()
-            .clone(),
+    let cpi_accounts = MintTo {
+        mint: ctx.accounts.onasset_mint.to_account_info().clone(),
         to: ctx
             .accounts
             .treasury_onasset_token_account
@@ -152,48 +147,50 @@ pub fn execute(
             .clone(),
         authority: ctx.accounts.clone.to_account_info().clone(),
     };
-    let send_onasset_to_treasury_context = CpiContext::new_with_signer(
+    let mint_onasset_to_treasury_context = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info().clone(),
         cpi_accounts,
         seeds,
     );
 
-    token::transfer(
-        send_onasset_to_treasury_context,
+    token::mint_to(
+        mint_onasset_to_treasury_context,
         treasury_fee_to_pay.mantissa().try_into().unwrap(),
     )?;
 
     // update pool data
-    ctx.accounts.amm_onasset_token_account.reload()?;
-    ctx.accounts.amm_onusd_token_account.reload()?;
-    token_data.pools[pool_index as usize].onasset_amount = RawDecimal::new(
-        ctx.accounts
-            .amm_onasset_token_account
-            .amount
-            .try_into()
-            .unwrap(),
+    let onasset_ild = rescale_toward_zero(
+        token_data.pools[pool_index as usize]
+            .onasset_ild
+            .to_decimal()
+            + onasset_amount_value
+            + treasury_fee_to_pay,
         DEVNET_TOKEN_SCALE,
     );
-    token_data.pools[pool_index as usize].onusd_amount = RawDecimal::new(
-        ctx.accounts
-            .amm_onusd_token_account
-            .amount
-            .try_into()
-            .unwrap(),
+    let onusd_ild = rescale_toward_zero(
+        token_data.pools[pool_index as usize].onusd_ild.to_decimal() - onusd_amount_value,
         DEVNET_TOKEN_SCALE,
     );
-
-    let trading_fees = rescale_toward_zero(swap_summary.liquidity_fees_paid, DEVNET_TOKEN_SCALE);
+    token_data.pools[pool_index as usize].onasset_ild = RawDecimal::from(onasset_ild);
+    token_data.pools[pool_index as usize].onusd_ild = RawDecimal::from(onusd_ild);
 
     emit!(SwapEvent {
         event_id: ctx.accounts.clone.event_counter,
         user: ctx.accounts.user.key(),
         pool_index,
         is_buy: true,
-        onasset: amount,
+        onasset: onasset_amount_value.mantissa().try_into().unwrap(),
         onusd: onusd_amount_value.mantissa().try_into().unwrap(),
-        trading_fee: trading_fees.mantissa().try_into().unwrap(),
-        treasury_fee: treasury_fee_to_pay.mantissa().try_into().unwrap()
+        trading_fee: swap_summary
+            .liquidity_fees_paid
+            .mantissa()
+            .try_into()
+            .unwrap(),
+        treasury_fee: swap_summary
+            .treasury_fees_paid
+            .mantissa()
+            .try_into()
+            .unwrap()
     });
 
     let pool = token_data.pools[pool_index as usize];
@@ -202,10 +199,10 @@ pub fn execute(
     emit!(PoolState {
         event_id: ctx.accounts.clone.event_counter,
         pool_index,
-        onasset: ctx.accounts.amm_onasset_token_account.amount,
-        onusd: ctx.accounts.amm_onusd_token_account.amount,
-        lp_tokens: pool
-            .liquidity_token_supply
+        onasset_ild: onasset_ild.mantissa().try_into().unwrap(),
+        onusd_ild: onusd_ild.mantissa().try_into().unwrap(),
+        committed_onusd_liquidity: pool
+            .committed_onusd_liquidity
             .to_decimal()
             .mantissa()
             .try_into()

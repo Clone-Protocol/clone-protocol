@@ -19,10 +19,9 @@ pub struct LiquidityDelta {
     pub event_id: u64,
     pub user: Pubkey,
     pub pool_index: u8,
-    pub is_concentrated: bool,
-    pub onasset_delta: i64,
-    pub onusd_delta: i64,
-    pub lp_token_delta: i64,
+    pub committed_onusd_delta: i64,
+    pub onusd_ild_delta: i64,
+    pub onasset_ild_delta: i64,
 }
 
 // POOL UPDATE
@@ -30,9 +29,9 @@ pub struct LiquidityDelta {
 pub struct PoolState {
     pub event_id: u64,
     pub pool_index: u8,
-    pub onasset: u64,
-    pub onusd: u64,
-    pub lp_tokens: u64,
+    pub onasset_ild: i64,
+    pub onusd_ild: i64,
+    pub committed_onusd_liquidity: u64,
     pub oracle_price: u64,
 }
 

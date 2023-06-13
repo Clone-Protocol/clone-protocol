@@ -52,16 +52,6 @@ pub struct LiquidateBorrowPosition<'info> {
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].onusd_token_account,
-    )]
-    pub amm_onusd_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        address = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].onasset_token_account,
-    )]
-    pub amm_onasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
         associated_token::mint = vault.mint,
         associated_token::authority = liquidator
    )]
