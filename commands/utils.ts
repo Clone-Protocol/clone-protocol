@@ -187,6 +187,30 @@ export async function getUSDC(
   return usdc;
 }
 
+export async function getMockAssetMint(
+  network: string,
+  provider: anchor.AnchorProvider,
+  index: number
+) {
+  let assetMint: PublicKey;
+
+  switch (network) {
+    case "localnet":
+      const jupiterProgram = getJupiterProgram(network, provider);
+      let [jupiterAddress, _] = await PublicKey.findProgramAddress(
+        [anchor.utils.bytes.utf8.encode("jupiter")],
+        jupiterProgram.programId
+      );
+      assetMint = (await jupiterProgram.account.jupiter.fetch(jupiterAddress))
+        .assetMints[index];
+      break;
+    default:
+      throw Error("invalid network");
+  }
+
+  return assetMint;
+}
+
 export async function getAssetPriceFeed(
   network: string,
   provider: anchor.AnchorProvider,

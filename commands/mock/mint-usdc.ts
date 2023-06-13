@@ -18,7 +18,7 @@ interface CommandArguments extends Argv {
   amount: number;
 }
 
-exports.command = "mint-mock-usdc <amount>";
+exports.command = "mint-usdc <amount>";
 exports.desc = "Mints mock USDC into user's wallet";
 exports.builder = (yargs: CommandArguments) => {
   return yargs.positional("amount", {
