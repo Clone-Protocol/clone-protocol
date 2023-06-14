@@ -51,7 +51,7 @@ exports.handler = async function () {
         `${chalk.bold(title)}\n` +
         `${underline}\n` +
         `onAsset Mint: ${chalk.bold(pool.assetInfo.onassetMint)}\n` +
-        `Clone Price: ${chalk.bold(getMantissa(pool.onusdAmount) / getMantissa(pool.onassetAmount))}\n` +
+        `Clone Price: $${chalk.bold(getMantissa(pool.onusdAmount) / getMantissa(pool.onassetAmount))}\n` +
         `onAsset Pool Balance: ${chalk.bold(getMantissa(pool.onassetAmount))}\n` +
         `onUSD Pool Balance: ${chalk.bold(getMantissa(pool.onusdAmount))}\n` +
         `onAsset Pool Address: ${chalk.bold(pool.onassetTokenAccount)}\n` +
@@ -59,7 +59,7 @@ exports.handler = async function () {
         `Liquidity Token Mint: ${chalk.bold(pool.liquidityTokenMint)}\n` +
         `Liquidity Token Supply: ${chalk.bold(getMantissa(pool.liquidityTokenSupply))}\n` +
         `Trading Fee: ${chalk.bold(getMantissa(pool.liquidityTradingFee))}\n` +
-        `Oracle Price: ${chalk.bold(oraclePrice)}\n` +
+        `Oracle Price: $${chalk.bold(oraclePrice)}\n` +
         `Pyth Address: ${chalk.bold(pool.assetInfo.pythAddress)}\n` +
         `Deprecated: ${chalk.bold(pool.deprecated)}\n`;
       console.log(boxen(assetInfo, assetBoxenOptions));

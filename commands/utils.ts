@@ -321,6 +321,11 @@ export const convertToRawDecimal = (num: number) => {
   return temp.toRawDecimal();
 };
 
+export const fromDevnetScale = (x: number): number => {
+  const scale = Math.pow(10, DEVNET_TOKEN_SCALE);
+  return x / scale;
+};
+
 export function successLog(message: string) {
   console.log(chalk.greenBright.bold("✨ Success:"), message);
 }

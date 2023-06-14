@@ -18,7 +18,7 @@ interface CommandArguments extends Argv {
 
 exports.command =
   "init <pool-index> <collateral-index> <collateral-amount> <borrow-amount>";
-exports.desc = "Initializes your user account, necessary to provide liquidity";
+exports.desc = "Initializes your borrow position";
 exports.builder = (yargs: CommandArguments) => {
   yargs
     .positional("pool-index", {
@@ -48,14 +48,14 @@ exports.handler = async function (yargs: CommandArguments) {
 
     const tokenData = await cloneClient.getTokenData();
     const pool = tokenData.pools[yargs.poolIndex];
-    const collateral = tokenData.collaterals[yargs.collateralIndex];;
+    const collateral = tokenData.collaterals[yargs.collateralIndex];
 
     const onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      cloneClient.provider,
+      setup.provider,
       pool.assetInfo.onassetMint
     );
     const collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      cloneClient.provider,
+      setup.provider,
       collateral.mint
     );
 
@@ -63,7 +63,7 @@ exports.handler = async function (yargs: CommandArguments) {
     const collateralAmount = new BN(`${toDevnetScale(yargs.collateralAmount)}`);
 
     // @ts-ignore
-    let signers: Array<Signer> = [provider.wallet.payer];
+    let signers: Array<Signer> = [setup.provider.wallet.payer];
 
     await cloneClient.initializeBorrowPosition(
       borrowAmount,
@@ -75,8 +75,10 @@ exports.handler = async function (yargs: CommandArguments) {
       signers
     );
 
-    successLog("User Account Initialized!");
+    successLog(
+      `Borrowed Initialized:\nPool Index: ${yargs.poolIndex}\nCollateral Index: ${yargs.collateralIndex}\nCollateral Amount: ${yargs.collateralAmount}\nBorrowed Amount: ${yargs.borrowAmount}`
+    );
   } catch (error: any) {
-    errorLog(`Failed to Initialize User Account:\n${error.message}`);
+    errorLog(`Failed to initialize borrow:\n${error.message}`);
   }
 };

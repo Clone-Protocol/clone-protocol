@@ -21,7 +21,7 @@ exports.handler = async function () {
     const cloneProgram = getCloneProgram(setup.network, setup.provider);
     const pythProgram = getPythProgram(setup.network, setup.provider);
 
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider)
+    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
     await cloneClient.loadClone();
 
     const tokenData = await cloneClient.getTokenData();
@@ -62,11 +62,17 @@ exports.handler = async function () {
         `${underline}\n` +
         `Mint: ${chalk.bold(collateral.mint)}\n` +
         `Vault: ${chalk.bold(collateral.vault)}\n` +
-        `Vault Comet Supply: ${chalk.bold(getMantissa(collateral.vaultCometSupply))}\n` +
-        `Vault Borrow Supply: ${chalk.bold(getMantissa(collateral.vaultMintSupply))}\n` +
-        `Vault OnUSD Supply: ${chalk.bold(getMantissa(collateral.vaultOnusdSupply))}\n` +
+        `Vault Comet Supply: ${chalk.bold(
+          getMantissa(collateral.vaultCometSupply)
+        )}\n` +
+        `Vault Borrow Supply: ${chalk.bold(
+          getMantissa(collateral.vaultMintSupply)
+        )}\n` +
+        `Vault OnUSD Supply: ${chalk.bold(
+          getMantissa(collateral.vaultOnusdSupply)
+        )}\n` +
         `Stable: ${chalk.bold(stable)}\n` +
-        `Oracle Price: ${chalk.bold(oraclePrice)}\n` +
+        `Oracle Price: $${chalk.bold(oraclePrice)}\n` +
         `Pyth Address: ${chalk.bold(priceFeedString)}\n` +
         `Pool Index: ${chalk.bold(poolIndex)}\n`;
       console.log(boxen(assetInfo, assetBoxenOptions));

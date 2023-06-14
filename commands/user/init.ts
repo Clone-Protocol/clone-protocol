@@ -3,7 +3,7 @@ import { CloneClient } from "../../sdk/src/clone";
 import { Transaction } from "@solana/web3.js";
 import { successLog, errorLog, anchorSetup, getCloneProgram } from "../utils";
 
-exports.command = "init-account";
+exports.command = "init";
 exports.desc = "Initializes your user account, necessary to provide liquidity";
 exports.builder = () => {};
 exports.handler = async function () {
