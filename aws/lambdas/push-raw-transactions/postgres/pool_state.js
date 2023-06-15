@@ -1,14 +1,14 @@
 exports.createTable = async (db) => {
   await db.none(`
     CREATE TABLE IF NOT EXISTS pool_state (
-      id SERIAL PRIMARY KEY,
+      id BIGSERIAL PRIMARY KEY,
       block_time BIGINT NOT NULL,
       slot BIGINT NOT NULL,
       event_id BIGINT NOT NULL,
       pool_index SMALLINT NOT NULL,
-      iasset BIGINT NOT NULL,
-      onusd BIGINT NOT NULL,
-      lp_tokens BIGINT NOT NULL,
+      onasset_ild BIGINT NOT NULL,
+      onusd_ild BIGINT NOT NULL,
+      committed_onusd_liquidity BIGINT NOT NULL,
       oracle_price BIGINT NOT NULL
     );
     
@@ -19,15 +19,15 @@ exports.createTable = async (db) => {
 
 exports.insertEvent = async (db, event) => {
   await db.none(
-    "INSERT INTO pool_state (block_time, slot, event_id, pool_index, iasset, onusd, lp_tokens, oracle_price) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+    "INSERT INTO pool_state (block_time, slot, event_id, pool_index, onasset_ild, onusd_ild, committed_onusd_liquidity, oracle_price) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
     [
       event.blockTime,
       event.slot,
       event.eventId,
       event.poolIndex,
-      event.iasset,
-      event.onusd,
-      event.lpTokens,
+      event.onassetIld,
+      event.onusdIld,
+      event.committedOnusdLiquidity,
       event.oraclePrice,
     ]
   );
@@ -41,9 +41,9 @@ exports.insertEvents = async (pgp, db, events) => {
     "slot",
     "event_id",
     "pool_index",
-    "iasset",
-    "onusd",
-    "lp_tokens",
+    "onasset_ild",
+    "onusd_ild",
+    "committed_onusd_liquidity",
     "oracle_price",
   ];
   const query = pgp.helpers.insert(events, columns, "pool_state");

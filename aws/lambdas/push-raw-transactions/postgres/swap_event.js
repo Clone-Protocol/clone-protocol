@@ -5,10 +5,10 @@ exports.createTable = async (db) => {
       block_time BIGINT NOT NULL,
       slot BIGINT NOT NULL,
       event_id INTEGER NOT NULL,
-      user_id VARCHAR(50) NOT NULL,
+      user_address VARCHAR(50) NOT NULL,
       pool_index SMALLINT NOT NULL,
       is_buy BOOLEAN NOT NULL,
-      iasset BIGINT NOT NULL,
+      onasset BIGINT NOT NULL,
       onusd BIGINT NOT NULL,
       trading_fee BIGINT NOT NULL,
       treasury_fee BIGINT NOT NULL
@@ -21,15 +21,15 @@ exports.createTable = async (db) => {
 
 exports.insertEvent = async (db, event) => {
   await db.none(
-    "INSERT INTO swap_event (block_time, slot, event_id, user_id, pool_index, is_buy, iasset, onusd, trading_fee, treasury_fee) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+    "INSERT INTO swap_event (block_time, slot, event_id, user_address, pool_index, is_buy, onasset, onusd, trading_fee, treasury_fee) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
     [
       event.blockTime,
       event.slot,
       event.eventId,
-      event.userId,
+      event.userAddress,
       event.poolIndex,
       event.isBuy,
-      event.iasset,
+      event.onasset,
       event.onusd,
       event.tradingFee,
       event.treasuryFee,
@@ -47,7 +47,7 @@ exports.insertEvents = async (pgp, db, events) => {
     "user_id",
     "pool_index",
     "is_buy",
-    "iasset",
+    "onasset",
     "onusd",
     "trading_fee",
     "treasury_fee",
