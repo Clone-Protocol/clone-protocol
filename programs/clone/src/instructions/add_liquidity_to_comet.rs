@@ -4,7 +4,6 @@ use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token::*;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
@@ -36,17 +35,6 @@ pub struct AddLiquidityToComet<'info> {
         address = user_account.comet,
     )]
     pub comet: AccountLoader<'info, Comet>,
-    #[account(
-        mut,
-        address = clone.onusd_mint
-    )]
-    pub onusd_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        address = token_data.load()?.pools[pool_index as usize].asset_info.onasset_mint,
-    )]
-    pub onasset_mint: Box<Account<'info, Mint>>,
-    pub token_program: Program<'info, Token>,
 }
 
 pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, onusd_amount: u64) -> Result<()> {
@@ -56,7 +44,12 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, onusd_amount: 
     let committed_onusd_value = pool.committed_onusd_liquidity.to_decimal();
     let onusd_liquidity_value = Decimal::new(onusd_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
-    let proportion_value = onusd_liquidity_value / committed_onusd_value;
+    let proportion_value = if committed_onusd_value > Decimal::ZERO {
+        onusd_liquidity_value / committed_onusd_value
+    } else {
+        Decimal::ZERO
+    };
+
     let onusd_ild = rescale_toward_zero(
         pool.onusd_ild.to_decimal() * proportion_value,
         DEVNET_TOKEN_SCALE,
@@ -101,11 +94,12 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, onusd_amount: 
     }
 
     // Update pool
+    let updated_committed_onusd_liquidity = rescale_toward_zero(
+        committed_onusd_value + onusd_liquidity_value,
+        DEVNET_TOKEN_SCALE,
+    );
     token_data.pools[pool_index as usize].committed_onusd_liquidity =
-        RawDecimal::from(rescale_toward_zero(
-            committed_onusd_value + onusd_liquidity_value,
-            DEVNET_TOKEN_SCALE,
-        ));
+        RawDecimal::from(updated_committed_onusd_liquidity);
     token_data.pools[pool_index as usize].onasset_ild = RawDecimal::from(rescale_toward_zero(
         pool.onasset_ild.to_decimal() + onasset_ild,
         DEVNET_TOKEN_SCALE,
@@ -121,7 +115,7 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, onusd_amount: 
 
     emit!(LiquidityDelta {
         event_id: ctx.accounts.clone.event_counter,
-        user: ctx.accounts.user.key(),
+        user_address: ctx.accounts.user.key(),
         pool_index,
         committed_onusd_delta: onusd_amount.try_into().unwrap(),
         onusd_ild_delta: onusd_ild.mantissa().try_into().unwrap(),

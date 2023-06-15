@@ -218,9 +218,13 @@ pub enum CloneError {
     #[msg("Pool Deprecated")]
     PoolDeprecated,
 
-    /// 53. Pool Deprecated
+    /// 54. Pool is empty
     #[msg("Pool is empty")]
     PoolEmpty,
+
+    /// 55. No liquidity to withdraw
+    #[msg("No liquidity to withdraw")]
+    NoLiquidityToWithdraw,
 }
 
 impl From<CloneError> for ProgramError {

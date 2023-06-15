@@ -78,7 +78,7 @@ pub fn execute(
 ) -> Result<()> {
     return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
     let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
-    let mut token_data = ctx.accounts.token_data.load_mut()?;
+    let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let comet = &mut ctx.accounts.comet.load_mut()?;
 
     let starting_health_score = calculate_health_score(&comet, &token_data)?;
@@ -197,10 +197,10 @@ pub fn execute(
             RawDecimal::from(new_collateral_onusd);
 
         // Check final health score.
-        let final_health_score = calculate_health_score(&comet, &token_data)?;
+        let post_liquidation_health_score = calculate_health_score(&comet, &token_data)?;
 
         return_error_if_false!(
-            final_health_score.score
+            post_liquidation_health_score.score
                 <= ctx
                     .accounts
                     .clone
@@ -209,25 +209,23 @@ pub fn execute(
                     .to_decimal(),
             CloneError::LiquidationAmountTooLarge
         );
-
-        return_error_if_false!(
-            starting_health_score.score < final_health_score.score,
-            CloneError::HealthScoreTooLow
-        );
     }
 
-    withdraw_liquidity(
-        &mut token_data,
-        &mut comet.positions[comet_position_index as usize],
-        comet_position
-            .committed_onusd_liquidity
-            .to_decimal()
-            .mantissa()
-            .try_into()
-            .unwrap(),
-        ctx.accounts.user.key(),
-        ctx.accounts.clone.event_counter,
-    )?;
+    // Withdraw liquidity position
+    let position_committed_onusd_liquidity = comet_position.committed_onusd_liquidity.to_decimal();
+    if position_committed_onusd_liquidity > Decimal::ZERO {
+        withdraw_liquidity(
+            token_data,
+            comet,
+            comet_position_index,
+            position_committed_onusd_liquidity
+                .mantissa()
+                .try_into()
+                .unwrap(),
+            ctx.accounts.user.key(),
+            ctx.accounts.clone.event_counter,
+        )?;
+    };
     ctx.accounts.clone.event_counter += 1;
 
     Ok(())

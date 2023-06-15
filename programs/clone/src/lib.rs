@@ -281,7 +281,7 @@ pub mod clone {
         instructions::liquidate_comet_stable_collateral::execute(ctx, comet_collateral_index)
     }
 
-    pub fn liquidate_comet_ild(
+    pub fn liquidate_comet_position(
         ctx: Context<LiquidateCometPosition>,
         comet_position_index: u8,
         amount: u64,

@@ -66,7 +66,11 @@ pub fn calculate_comet_position_loss(
     let position_committed_onusd_liquidity = comet_position.committed_onusd_liquidity.to_decimal();
     let total_committed_onusd_liquidity = pool.committed_onusd_liquidity.to_decimal();
 
-    let proportional_value = position_committed_onusd_liquidity / total_committed_onusd_liquidity;
+    let proportional_value = if total_committed_onusd_liquidity > Decimal::ZERO {
+        position_committed_onusd_liquidity / total_committed_onusd_liquidity
+    } else {
+        Decimal::ZERO
+    };
 
     let onusd_ild_share = rescale_toward_zero(
         pool.onusd_ild.to_decimal() * proportional_value

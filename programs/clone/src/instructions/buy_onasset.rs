@@ -181,7 +181,7 @@ pub fn execute(
 
     emit!(SwapEvent {
         event_id: ctx.accounts.clone.event_counter,
-        user: ctx.accounts.user.key(),
+        user_address: ctx.accounts.user.key(),
         pool_index,
         is_buy: true,
         onasset: onasset_amount_value.mantissa().try_into().unwrap(),
