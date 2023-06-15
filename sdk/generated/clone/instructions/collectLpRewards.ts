@@ -11,97 +11,105 @@ import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
- * @category MintOnusd
+ * @category CollectLpRewards
  * @category generated
  */
-export type MintOnusdInstructionArgs = {
-  amount: beet.bignum
+export type CollectLpRewardsInstructionArgs = {
+  cometPositionIndex: number
 }
 /**
  * @category Instructions
- * @category MintOnusd
+ * @category CollectLpRewards
  * @category generated
  */
-export const mintOnusdStruct = new beet.BeetArgsStruct<
-  MintOnusdInstructionArgs & {
+export const collectLpRewardsStruct = new beet.BeetArgsStruct<
+  CollectLpRewardsInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['amount', beet.u64],
+    ['cometPositionIndex', beet.u8],
   ],
-  'MintOnusdInstructionArgs'
+  'CollectLpRewardsInstructionArgs'
 )
 /**
- * Accounts required by the _mintOnusd_ instruction
+ * Accounts required by the _collectLpRewards_ instruction
  *
- * @property [**signer**] signer
- * @property [_writable_] managerInfo
- * @property [] clone
+ * @property [**signer**] user
+ * @property [] userAccount
+ * @property [_writable_] clone
+ * @property [] tokenData
+ * @property [_writable_] comet
  * @property [_writable_] onusdMint
- * @property [_writable_] managerOnusdTokenAccount
- * @property [_writable_] usdcMint
- * @property [_writable_] managerUsdcTokenAccount
- * @property [] cloneProgram
- * @property [_writable_] tokenData
- * @property [_writable_] cloneUsdcVault
+ * @property [_writable_] onassetMint
+ * @property [_writable_] userOnusdTokenAccount
+ * @property [_writable_] userOnassetTokenAccount
  * @category Instructions
- * @category MintOnusd
+ * @category CollectLpRewards
  * @category generated
  */
-export type MintOnusdInstructionAccounts = {
-  signer: web3.PublicKey
-  managerInfo: web3.PublicKey
+export type CollectLpRewardsInstructionAccounts = {
+  user: web3.PublicKey
+  userAccount: web3.PublicKey
   clone: web3.PublicKey
-  onusdMint: web3.PublicKey
-  managerOnusdTokenAccount: web3.PublicKey
-  usdcMint: web3.PublicKey
-  managerUsdcTokenAccount: web3.PublicKey
-  cloneProgram: web3.PublicKey
   tokenData: web3.PublicKey
-  cloneUsdcVault: web3.PublicKey
+  comet: web3.PublicKey
+  onusdMint: web3.PublicKey
+  onassetMint: web3.PublicKey
+  userOnusdTokenAccount: web3.PublicKey
+  userOnassetTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const mintOnusdInstructionDiscriminator = [
-  34, 182, 150, 49, 162, 72, 94, 39,
+export const collectLpRewardsInstructionDiscriminator = [
+  141, 134, 109, 237, 96, 31, 249, 148,
 ]
 
 /**
- * Creates a _MintOnusd_ instruction.
+ * Creates a _CollectLpRewards_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category MintOnusd
+ * @category CollectLpRewards
  * @category generated
  */
-export function createMintOnusdInstruction(
-  accounts: MintOnusdInstructionAccounts,
-  args: MintOnusdInstructionArgs,
-  programId = new web3.PublicKey('HX81GDFSZ9GktdpQCg8N1sBRr1AydZMnkpkNw7dffQym')
+export function createCollectLpRewardsInstruction(
+  accounts: CollectLpRewardsInstructionAccounts,
+  args: CollectLpRewardsInstructionArgs,
+  programId = new web3.PublicKey('6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g')
 ) {
-  const [data] = mintOnusdStruct.serialize({
-    instructionDiscriminator: mintOnusdInstructionDiscriminator,
+  const [data] = collectLpRewardsStruct.serialize({
+    instructionDiscriminator: collectLpRewardsInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.signer,
+      pubkey: accounts.user,
       isWritable: false,
       isSigner: true,
     },
     {
-      pubkey: accounts.managerInfo,
-      isWritable: true,
+      pubkey: accounts.userAccount,
+      isWritable: false,
       isSigner: false,
     },
     {
       pubkey: accounts.clone,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.tokenData,
       isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.comet,
+      isWritable: true,
       isSigner: false,
     },
     {
@@ -110,32 +118,17 @@ export function createMintOnusdInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.managerOnusdTokenAccount,
+      pubkey: accounts.onassetMint,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.usdcMint,
+      pubkey: accounts.userOnusdTokenAccount,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.managerUsdcTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.cloneProgram,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.tokenData,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.cloneUsdcVault,
+      pubkey: accounts.userOnassetTokenAccount,
       isWritable: true,
       isSigner: false,
     },

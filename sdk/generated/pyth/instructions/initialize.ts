@@ -66,7 +66,7 @@ export const initializeInstructionDiscriminator = [
 export function createInitializeInstruction(
   accounts: InitializeInstructionAccounts,
   args: InitializeInstructionArgs,
-  programId = new web3.PublicKey('CGN35EiXnmofHy3RmjcVYeQ4Yn5PyGaQuGV8TfEZnLs7')
+  programId = new web3.PublicKey('GegijnPoSC4ndamF6W3S57jLg8PTTBHbbttDMFvNqwyP')
 ) {
   const [data] = initializeStruct.serialize({
     instructionDiscriminator: initializeInstructionDiscriminator,

@@ -5,8 +5,8 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
+import * as beet from '@metaplex-foundation/beet'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
 import { CometPosition, cometPositionBeet } from '../types/CometPosition'
 import { CometCollateral, cometCollateralBeet } from '../types/CometCollateral'
@@ -17,7 +17,6 @@ import { CometCollateral, cometCollateralBeet } from '../types/CometCollateral'
  * @category generated
  */
 export type CometArgs = {
-  isSinglePool: beet.bignum
   owner: web3.PublicKey
   numPositions: beet.bignum
   numCollaterals: beet.bignum
@@ -35,7 +34,6 @@ export const cometDiscriminator = [162, 250, 25, 138, 55, 105, 60, 199]
  */
 export class Comet implements CometArgs {
   private constructor(
-    readonly isSinglePool: beet.bignum,
     readonly owner: web3.PublicKey,
     readonly numPositions: beet.bignum,
     readonly numCollaterals: beet.bignum,
@@ -48,7 +46,6 @@ export class Comet implements CometArgs {
    */
   static fromArgs(args: CometArgs) {
     return new Comet(
-      args.isSinglePool,
       args.owner,
       args.numPositions,
       args.numCollaterals,
@@ -160,17 +157,6 @@ export class Comet implements CometArgs {
    */
   pretty() {
     return {
-      isSinglePool: (() => {
-        const x = <{ toNumber: () => number }>this.isSinglePool
-        if (typeof x.toNumber === 'function') {
-          try {
-            return x.toNumber()
-          } catch (_) {
-            return x
-          }
-        }
-        return x
-      })(),
       owner: this.owner.toBase58(),
       numPositions: (() => {
         const x = <{ toNumber: () => number }>this.numPositions
@@ -212,7 +198,6 @@ export const cometBeet = new beet.BeetStruct<
 >(
   [
     ['accountDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['isSinglePool', beet.u64],
     ['owner', beetSolana.publicKey],
     ['numPositions', beet.u64],
     ['numCollaterals', beet.u64],

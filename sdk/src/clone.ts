@@ -12,7 +12,6 @@ import {
 } from "@solana/web3.js";
 import {
   BorrowPositionsUninitialized,
-  SinglePoolCometUninitialized,
 } from "./error";
 import { getMantissa, toNumber } from "./decimal";
 import {
@@ -28,11 +27,15 @@ const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 export const DEVNET_TOKEN_SCALE = 8;
 export const MAX_PRICE_SIZE = 128;
 
-export const toDevnetScale = (x: number): BN => {
-  const scale = new BN(`1${"0".repeat(DEVNET_TOKEN_SCALE)}`);
-  const hi = new BN(x).mul(scale);
-  const low = new BN((x % 1) * Math.pow(10, DEVNET_TOKEN_SCALE));
+export const toScale = (x: number, scale: number): BN => {
+  const multiplier = new BN(`1${"0".repeat(scale)}`);
+  const hi = new BN(x).mul(multiplier);
+  const low = new BN((x % 1) * Math.pow(10, scale));
   return hi.add(low);
+};
+
+export const toDevnetScale = (x: number): BN => {
+  return toScale(x, DEVNET_TOKEN_SCALE);
 };
 
 export class CloneClient {
@@ -95,21 +98,11 @@ export class CloneClient {
       ])
       .signers([onusdMint, onusdVault, usdcVault, tokenData])
       .rpc();
-
-    this.cloneAddress = managerPubkeyAndBump;
-    this.clone = (await this.program.account.clone.fetch(
-      this.cloneAddress[0]
-    )) as CloneInfo;
   }
 
   public async loadClone() {
     this.cloneAddress = await this.getCloneAddress();
     this.clone = (await this.getCloneAccount()) as CloneInfo;
-  }
-
-  public async initializeUser(user?: PublicKey) {
-    const tx = await this.initializeUserInstruction(user);
-    await this.program.provider.sendAndConfirm!(new Transaction().add(tx));
   }
 
   public async initializeUserInstruction(user?: PublicKey) {
@@ -177,6 +170,15 @@ export class CloneClient {
     const liquidityTokenMintAccount = anchor.web3.Keypair.generate();
     const cometLiquidityTokenAccount = anchor.web3.Keypair.generate();
 
+    let signers = [
+      onusdTokenAccount,
+      onassetMintAccount,
+      onassetTokenAccount,
+      underlyingAssetTokenAccount,
+      liquidityTokenMintAccount,
+      cometLiquidityTokenAccount,
+    ]
+
     await this.program.methods
       .initializePool(
         stableCollateralRatio,
@@ -205,29 +207,8 @@ export class CloneClient {
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SYSTEM_PROGRAM_ID,
       })
-      .signers([
-        onusdTokenAccount,
-        onassetMintAccount,
-        onassetTokenAccount,
-        underlyingAssetTokenAccount,
-        liquidityTokenMintAccount,
-        cometLiquidityTokenAccount,
-      ])
-      .rpc();
-  }
-
-  public async updatePrices(poolIndices?: number[], signers?: Array<Keypair>) {
-    let txn = new Transaction();
-    // const additionalComputeBudgetInstruction =
-    //   ComputeBudgetProgram.requestUnits({
-    //     units: 400000,
-    //     additionalFee: 0,
-    //   });
-    //txn.add(additionalComputeBudgetInstruction);
-    let updatePricesIx = await this.updatePricesInstruction(poolIndices);
-    txn.add(updatePricesIx);
-
-    await this.provider.sendAndConfirm!(txn, signers);
+      .signers(signers)
+      .rpc()
   }
 
   public async updatePricesInstruction(poolIndices?: number[]) {
@@ -273,43 +254,6 @@ export class CloneClient {
     )) as TokenData;
   }
 
-  public async getLiquidityPositions(): Promise<
-    { liquidityTokens: number; poolIndex: number }[]
-  > {
-    const tokenData = await this.getTokenData();
-
-    let balancesQueries = await Promise.allSettled(
-      tokenData.pools
-        .slice(0, tokenData.numPools.toNumber())
-        .map(async (pool) => {
-          let ata = await getAssociatedTokenAddress(
-            pool.liquidityTokenMint,
-            this.provider.publicKey!
-          );
-          let balance = await this.provider.connection.getTokenAccountBalance(
-            ata
-          );
-          return balance.value.uiAmount;
-        })
-    );
-
-    let positions = [];
-
-    for (let poolIndex = 0; poolIndex < balancesQueries.length; poolIndex++) {
-      let result = balancesQueries[poolIndex];
-      if (result.status === "fulfilled") {
-        if (result.value! > 0) {
-          positions.push({
-            poolIndex,
-            liquidityTokens: result.value!,
-          });
-        }
-      }
-    }
-
-    return positions;
-  }
-
   public async getBorrowPositions() {
     const userAccountData = (await this.getUserAccount()) as User;
 
@@ -325,16 +269,6 @@ export class CloneClient {
     )) as BorrowPositions;
   }
 
-  public async getSinglePoolComets(address?: PublicKey) {
-    const userAccountData = (await this.getUserAccount(address)) as User;
-    if (userAccountData.singlePoolComets.equals(PublicKey.default)) {
-      throw new SinglePoolCometUninitialized();
-    }
-    return (await this.program.account.comet.fetch(
-      userAccountData.singlePoolComets
-    )) as Comet;
-  }
-
   public async getComet(address?: PublicKey) {
     const userAccountData = (await this.getUserAccount(address)) as User;
     return (await this.program.account.comet.fetch(
@@ -343,7 +277,7 @@ export class CloneClient {
   }
 
   public async getCloneAddress() {
-    return await PublicKey.findProgramAddress(
+    return PublicKey.findProgramAddressSync(
       [Buffer.from("clone")],
       this.program.programId
     );
@@ -376,23 +310,6 @@ export class CloneClient {
     return (await this.program.account.user.fetch(address)) as User;
   }
 
-  public async mintOnusd(
-    amount: number,
-    userOnusdTokenAccount: PublicKey,
-    userCollateralTokenAccount: PublicKey,
-    signers?: Array<Keypair>
-  ) {
-    const mintOnusdIx = (await this.mintOnusdInstruction(
-      toDevnetScale(amount),
-      userOnusdTokenAccount,
-      userCollateralTokenAccount
-    )) as TransactionInstruction;
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(mintOnusdIx),
-      signers
-    );
-  }
-
   public async mintOnusdInstruction(
     amount: BN,
     userOnusdTokenAccount: PublicKey,
@@ -412,31 +329,6 @@ export class CloneClient {
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
-  }
-
-  public async initializeBorrowPosition(
-    onassetAmount: BN,
-    collateralAmount: BN,
-    userCollateralTokenAccount: PublicKey,
-    userOnassetTokenAccount: PublicKey,
-    poolIndex: number,
-    collateralIndex: number,
-    signers?: Array<Keypair>
-  ) {
-    const updatePricesIx = await this.updatePricesInstruction();
-    const initializeBorrowPositionIx =
-      await this.initializeBorrowPositionInstruction(
-        userCollateralTokenAccount,
-        userOnassetTokenAccount,
-        onassetAmount,
-        collateralAmount,
-        poolIndex,
-        collateralIndex
-      );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(updatePricesIx).add(initializeBorrowPositionIx),
-      signers
-    );
   }
 
   public async initializeBorrowPositionsAccountInstruction(
@@ -501,23 +393,6 @@ export class CloneClient {
       .instruction();
   }
 
-  public async addCollateralToBorrow(
-    borrowIndex: number,
-    userCollateralTokenAccount: PublicKey,
-    collateralAmount: BN,
-    signers?: Array<Keypair>
-  ) {
-    const addCollateralToBorrowIx = await this.addCollateralToBorrowInstruction(
-      borrowIndex,
-      userCollateralTokenAccount,
-      collateralAmount
-    );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(addCollateralToBorrowIx),
-      signers
-    );
-  }
-
   public async addCollateralToBorrowInstruction(
     borrowIndex: number,
     userCollateralTokenAccount: PublicKey,
@@ -543,26 +418,6 @@ export class CloneClient {
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
-  }
-
-  public async withdrawCollateralFromBorrow(
-    userCollateralTokenAccount: PublicKey,
-    borrowIndex: number,
-    collateralAmount: BN,
-    signers?: Array<Keypair>
-  ) {
-    const updatePricesIx = await this.updatePricesInstruction();
-    const withdrawCollateralFromBorrowIx =
-      await this.withdrawCollateralFromBorrowInstruction(
-        this.provider.publicKey!,
-        borrowIndex,
-        userCollateralTokenAccount,
-        collateralAmount
-      );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(updatePricesIx).add(withdrawCollateralFromBorrowIx),
-      signers
-    );
   }
 
   public async withdrawCollateralFromBorrowInstruction(
@@ -593,23 +448,6 @@ export class CloneClient {
       .instruction();
   }
 
-  public async payBorrowDebt(
-    userOnassetTokenAccount: PublicKey,
-    onassetAmount: BN,
-    borrowIndex: number,
-    signers: Array<Keypair>
-  ) {
-    const payBorrowDebtIx =
-      await this.payBorrowDebtInstruction(
-        userOnassetTokenAccount,
-        onassetAmount,
-        borrowIndex
-      );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(payBorrowDebtIx),
-      signers
-    );
-  }
   public async payBorrowDebtInstruction(
     userOnassetTokenAccount: PublicKey,
     onassetAmount: BN,
@@ -617,7 +455,7 @@ export class CloneClient {
   ) {
     let mint = (await this.getBorrowPositions()).borrowPositions[borrowIndex];
     let tokenData = await this.getTokenData();
-    let assetInfo = await tokenData.pools[mint.poolIndex].assetInfo;
+    let assetInfo = tokenData.pools[mint.poolIndex].assetInfo;
     let userAccount = await this.getUserAccount();
     let userAddress = await this.getUserAddress();
 
@@ -636,23 +474,6 @@ export class CloneClient {
       .instruction();
   }
 
-  public async borrowMore(
-    userOnassetTokenAccount: PublicKey,
-    onassetAmount: BN,
-    borrowIndex: number,
-    signers: Array<Keypair>
-  ) {
-    const updatePricesIx = await this.updatePricesInstruction();
-    const borrowMoreIx = await this.borrowMoreInstruction(
-      userOnassetTokenAccount,
-      onassetAmount,
-      borrowIndex
-    );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(updatePricesIx).add(borrowMoreIx),
-      signers
-    );
-  }
   public async borrowMoreInstruction(
     userOnassetTokenAccount: PublicKey,
     onassetAmount: BN,
@@ -679,73 +500,15 @@ export class CloneClient {
       .instruction();
   }
 
-  public async closeBorrowPosition(
-    userOnassetTokenAccount: PublicKey,
-    borrowIndex: number,
-    userCollateralTokenAccount: PublicKey,
-    signers: Array<Keypair>
-  ) {
-    let mintPosition = (await this.getBorrowPositions()).borrowPositions[
-      borrowIndex
-    ];
-
-    const payBorrowDebtIx =
-      await this.payBorrowDebtInstruction(
-        userOnassetTokenAccount,
-        new BN(getMantissa(mintPosition.borrowedOnasset)),
-        borrowIndex
-      );
-
-    const withdrawCollateralFromBorrowIx =
-      await this.withdrawCollateralFromBorrowInstruction(
-        this.provider.publicKey!,
-        borrowIndex,
-        userCollateralTokenAccount,
-        new BN(getMantissa(mintPosition.collateralAmount))
-      );
-
-    const updatePricesIx = await this.updatePricesInstruction();
-
-    await this.provider.sendAndConfirm!(
-      new Transaction()
-        .add(payBorrowDebtIx)
-        .add(updatePricesIx)
-        .add(withdrawCollateralFromBorrowIx),
-      signers
-    );
-  }
-
-  public async buyOnasset(
-    onassetAmount: BN,
-    userOnusdTokenAccount: PublicKey,
-    userOnassetTokenAccount: PublicKey,
-    poolIndex: number,
-    onusdSpendThreshold: BN,
-    treasuryOnassetTokenAccount: PublicKey,
-    signers?: Array<Keypair>
-  ) {
-    const buyOnassetIx = await this.buyOnassetInstruction(
-      userOnusdTokenAccount,
-      userOnassetTokenAccount,
-      onassetAmount,
-      poolIndex,
-      onusdSpendThreshold,
-      treasuryOnassetTokenAccount
-    );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(buyOnassetIx),
-      signers
-    );
-  }
   public async buyOnassetInstruction(
+    onassetAmount: BN,
+    onusdSpendThreshold: BN,
+    poolIndex: number,
     userOnusdTokenAccount: PublicKey,
     userOnassetTokenAccount: PublicKey,
-    onassetAmount: BN,
-    poolIndex: number,
-    onusdSpendThreshold: BN,
-    treasuryOnassetTokenAccount: PublicKey
+    treasuryOnassetTokenAccount: PublicKey,
+    onassetMint: PublicKey,
   ) {
-    let tokenData = await this.getTokenData();
     return await this.program.methods
       .buyOnasset(poolIndex, onassetAmount, onusdSpendThreshold)
       .accounts({
@@ -754,46 +517,23 @@ export class CloneClient {
         tokenData: this.clone!.tokenData,
         userOnusdTokenAccount: userOnusdTokenAccount,
         userOnassetTokenAccount: userOnassetTokenAccount,
-        ammOnusdTokenAccount: tokenData.pools[poolIndex].onusdTokenAccount,
-        ammOnassetTokenAccount: tokenData.pools[poolIndex].onassetTokenAccount,
         treasuryOnassetTokenAccount: treasuryOnassetTokenAccount,
+        onassetMint: onassetMint,
+        onusdMint: this.clone!.onusdMint,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
   }
 
-  public async sellOnasset(
-    onassetAmount: BN,
-    userOnusdTokenAccount: PublicKey,
-    userOnassetTokenAccount: PublicKey,
-    poolIndex: number,
-    onusdReceivedThreshold: BN,
-    treasuryOnusdTokenAccount: PublicKey,
-    signers?: Array<Keypair>
-  ) {
-    const sellOnassetIx = await this.sellOnassetInstruction(
-      userOnusdTokenAccount,
-      userOnassetTokenAccount,
-      onassetAmount,
-      poolIndex,
-      onusdReceivedThreshold,
-      treasuryOnusdTokenAccount
-    );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(sellOnassetIx),
-      signers
-    );
-  }
   public async sellOnassetInstruction(
+    onassetAmount: BN,
+    onusdReceivedThreshold: BN,
+    poolIndex: number,
     userOnusdTokenAccount: PublicKey,
     userOnassetTokenAccount: PublicKey,
-    onassetAmount: BN,
-    poolIndex: number,
-    onusdReceivedThreshold: BN,
-    treasuryOnusdTokenAccount: PublicKey
+    treasuryOnusdTokenAccount: PublicKey,
+    onassetMint: PublicKey,
   ) {
-    let tokenData = await this.getTokenData();
-
     return await this.program.methods
       .sellOnasset(poolIndex, onassetAmount, onusdReceivedThreshold)
       .accounts({
@@ -802,370 +542,16 @@ export class CloneClient {
         tokenData: this.clone!.tokenData,
         userOnusdTokenAccount: userOnusdTokenAccount,
         userOnassetTokenAccount: userOnassetTokenAccount,
-        ammOnusdTokenAccount: tokenData.pools[poolIndex].onusdTokenAccount,
-        ammOnassetTokenAccount: tokenData.pools[poolIndex].onassetTokenAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        treasuryOnusdTokenAccount: treasuryOnusdTokenAccount,
-      })
-      .instruction();
-  }
-
-  public async openNewSinglePoolComet(
-    userCollateralTokenAccount: PublicKey,
-    onusdAmount: BN,
-    collateralAmount: BN,
-    poolIndex: number,
-    collateralIndex: number,
-    signers?: Array<Keypair>
-  ) {
-    const singlePoolComets = await this.getSinglePoolComets();
-    const newIndex = singlePoolComets.numPositions.toNumber();
-    const updatePricesIx = await this.updatePricesInstruction();
-
-    const initializeSinglePoolCometInstruction =
-      await this.initializeSinglePoolCometInstruction(
-        poolIndex,
-        collateralIndex
-      );
-    const addCollateralToSinglePoolCometIx =
-      await this.addCollateralToSinglePoolCometInstruction(
-        userCollateralTokenAccount,
-        collateralAmount,
-        collateralIndex,
-        newIndex
-      );
-    const addLiquidityToSinglePoolCometIx =
-      await this.addLiquidityToSinglePoolCometInstruction(
-        onusdAmount,
-        newIndex,
-        poolIndex
-      );
-    await this.provider.sendAndConfirm!(
-      new Transaction()
-        .add(updatePricesIx)
-        .add(initializeSinglePoolCometInstruction)
-        .add(addCollateralToSinglePoolCometIx)
-        .add(addLiquidityToSinglePoolCometIx),
-      signers
-    );
-  }
-
-  public async initializeSinglePoolComet(
-    poolIndex: number,
-    collateralIndex: number
-  ) {
-    let tokenData = await this.getTokenData();
-    let userAccount = await this.getUserAccount();
-    let singlePoolCometsAccount = userAccount.singlePoolComets;
-    let { userPubkey, bump } = await this.getUserAddress();
-
-    if (userAccount.singlePoolComets.equals(PublicKey.default)) {
-      const singlePoolCometsAccountKeypair = anchor.web3.Keypair.generate();
-      singlePoolCometsAccount = singlePoolCometsAccountKeypair.publicKey;
-
-      await this.program.methods
-        .initializeComet(true)
-        .accounts({
-          user: this.provider.publicKey!,
-          userAccount: userPubkey,
-          comet: singlePoolCometsAccount,
-          rent: RENT_PUBKEY,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SYSTEM_PROGRAM_ID,
-        })
-        .preInstructions([
-          await this.program.account.comet.createInstruction(
-            singlePoolCometsAccountKeypair
-          ),
-        ])
-        .signers([singlePoolCometsAccountKeypair])
-        .rpc();
-    }
-    userAccount = await this.getUserAccount();
-
-    await this.program.methods
-      .initializeSinglePoolComet(poolIndex, collateralIndex)
-      .accounts({
-        user: this.provider.publicKey!,
-        userAccount: userPubkey,
-        clone: this.cloneAddress[0],
-        tokenData: this.clone!.tokenData,
-        singlePoolComets: userAccount.singlePoolComets,
-      })
-      // .preInstructions([
-      //   await this.program.account.comet.createInstruction(
-      //     singlePoolCometAccount
-      //   ),
-      // ])
-      .rpc();
-  }
-
-  public async initializeSinglePoolCometInstruction(
-    poolIndex: number,
-    collateralIndex: number
-  ) {
-    let userAccount = await this.getUserAccount();
-    let userAddress = await this.getUserAddress();
-
-    return await this.program.methods
-      .initializeSinglePoolComet(poolIndex, collateralIndex)
-      .accounts({
-        user: this.provider.publicKey!,
-        userAccount: userAddress.userPubkey,
-        clone: this.cloneAddress[0],
-        tokenData: this.clone!.tokenData,
-        singlePoolComets: userAccount.singlePoolComets,
-      })
-      // .preInstructions([
-      //   await this.program.account.comet.createInstruction(
-      //     singlePoolCometAccount
-      //   ),
-      // ])
-      .instruction();
-  }
-
-  public async addCollateralToSinglePoolComet(
-    userCollateralTokenAccount: PublicKey,
-    collateralAmount: BN,
-    positionIndex: number,
-    signers?: Array<Keypair>
-  ) {
-    let singlePoolComets = await this.getSinglePoolComets();
-    const addCollateralToCometIx =
-      await this.addCollateralToSinglePoolCometInstruction(
-        userCollateralTokenAccount,
-        collateralAmount,
-        singlePoolComets.collaterals[positionIndex].collateralIndex,
-        positionIndex
-      );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(addCollateralToCometIx),
-      signers
-    );
-  }
-  public async addCollateralToSinglePoolCometInstruction(
-    userCollateralTokenAccount: PublicKey,
-    collateralAmount: BN,
-    collateralIndex: number,
-    positionIndex: number
-  ) {
-    let tokenData = await this.getTokenData();
-    let userAccount = await this.getUserAccount();
-    let userAddress = await this.getUserAddress();
-
-    return await this.program.methods
-      .addCollateralToSinglePoolComet(positionIndex, collateralAmount)
-      .accounts({
-        user: this.provider.publicKey!,
-        userAccount: userAddress.userPubkey,
-        clone: this.cloneAddress[0],
-        tokenData: this.clone!.tokenData,
-        singlePoolComet: userAccount.singlePoolComets,
-        vault: tokenData.collaterals[collateralIndex].vault,
-        userCollateralTokenAccount: userCollateralTokenAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
-  }
-
-  public async withdrawCollateralFromSinglePoolComet(
-    userCollateralTokenAccount: PublicKey,
-    collateralAmount: BN,
-    cometIndex: number,
-    signers?: Array<Keypair>
-  ) {
-    const updatePricesIx = await this.updatePricesInstruction();
-    const withdrawCollateralFromCometIx =
-      await this.withdrawCollateralFromSinglePoolCometInstruction(
-        userCollateralTokenAccount,
-        collateralAmount,
-        cometIndex
-      );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(updatePricesIx).add(withdrawCollateralFromCometIx),
-      signers
-    );
-  }
-  public async withdrawCollateralFromSinglePoolCometInstruction(
-    userCollateralTokenAccount: PublicKey,
-    collateralAmount: BN,
-    cometIndex: number
-  ) {
-    const { userPubkey, bump } = await this.getUserAddress();
-    const userAccount = await this.getUserAccount();
-    let tokenData = await this.getTokenData();
-    let singlePoolComet = await this.getSinglePoolComets();
-
-    return await this.program.methods
-      .withdrawCollateralFromSinglePoolComet(cometIndex, collateralAmount)
-      .accounts({
-        user: this.provider.publicKey!,
-        userAccount: userPubkey,
-        clone: this.cloneAddress[0],
-        tokenData: this.clone!.tokenData,
-        comet: userAccount.singlePoolComets,
-        vault:
-          tokenData.collaterals[
-            singlePoolComet.collaterals[cometIndex].collateralIndex
-          ].vault,
-        userCollateralTokenAccount: userCollateralTokenAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
-  }
-
-  public async addLiquidityToSinglePoolComet(
-    onusdAmount: BN,
-    positionIndex: number,
-    signers?: Array<Keypair>
-  ) {
-    const updatePricesIx = await this.updatePricesInstruction();
-    const singlePoolComet = (await this.getSinglePoolComets()).positions[
-      positionIndex
-    ];
-    const addLiquidityToSinglePoolCometIx =
-      await this.addLiquidityToSinglePoolCometInstruction(
-        onusdAmount,
-        positionIndex,
-        singlePoolComet.poolIndex
-      );
-    await this.provider.sendAndConfirm!(
-      new Transaction()
-        .add(updatePricesIx)
-        .add(addLiquidityToSinglePoolCometIx),
-      signers
-    );
-  }
-  public async addLiquidityToSinglePoolCometInstruction(
-    onusdAmount: BN,
-    positionIndex: number,
-    poolIndex: number
-  ) {
-    let tokenData = await this.getTokenData();
-    const { userPubkey, bump } = await this.getUserAddress();
-    const userAccountData = (await this.getUserAccount()) as User;
-
-    return await this.program.methods
-      .addLiquidityToSinglePoolComet(positionIndex, onusdAmount)
-      .accounts({
-        user: this.provider.publicKey!,
-        userAccount: userPubkey,
-        clone: this.cloneAddress[0],
-        tokenData: this.clone!.tokenData,
-        singlePoolComet: userAccountData.singlePoolComets,
+        onassetMint: onassetMint,
         onusdMint: this.clone!.onusdMint,
-        onassetMint: tokenData.pools[poolIndex].assetInfo.onassetMint,
-        ammOnusdTokenAccount: tokenData.pools[poolIndex].onusdTokenAccount,
-        ammOnassetTokenAccount: tokenData.pools[poolIndex].onassetTokenAccount,
-        liquidityTokenMint: tokenData.pools[poolIndex].liquidityTokenMint,
-        cometLiquidityTokenAccount:
-          tokenData.pools[poolIndex].cometLiquidityTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
+        treasuryOnusdTokenAccount: treasuryOnusdTokenAccount
       })
       .instruction();
   }
-
-  public async closeSinglePoolComet(
-    cometIndex: number,
-    signers?: Array<Keypair>
-  ) {
-    const closeSinglePoolCometIx = await this.closeSinglePoolCometInstruction(
-      cometIndex
-    );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(closeSinglePoolCometIx),
-      signers
-    );
-  }
-  public async closeSinglePoolCometInstruction(cometIndex: number) {
-    const { userPubkey, bump } = await this.getUserAddress();
-    let userAccount = await this.getUserAccount();
-
-    return await this.program.methods
-      .closeSinglePoolComet(cometIndex)
-      .accounts({
-        user: this.provider.publicKey!,
-        userAccount: userPubkey,
-        singlePoolComet: userAccount.singlePoolComets,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
-  }
-
-  public async withdrawCollateralAndCloseSinglePoolComet(
-    userCollateralTokenAccount: PublicKey,
-    cometIndex: number,
-    signers?: Array<Keypair>
-  ) {
-    let singlePoolComet = await this.getSinglePoolComets();
-    if (
-      getMantissa(singlePoolComet.positions[cometIndex].liquidityTokenValue) !=
-      0
-    ) {
-      return;
-    }
-    const withdrawCollateralFromSinglePoolCometIx =
-      await this.withdrawCollateralFromSinglePoolCometInstruction(
-        userCollateralTokenAccount,
-        toDevnetScale(
-          toNumber(singlePoolComet.collaterals[cometIndex].collateralAmount)
-        ),
-        cometIndex
-      );
-    const closeSinglePoolCometIx = await this.closeSinglePoolCometInstruction(
-      cometIndex
-    );
-    await this.provider.sendAndConfirm!(
-      new Transaction()
-        .add(await this.updatePricesInstruction())
-        .add(withdrawCollateralFromSinglePoolCometIx)
-        .add(closeSinglePoolCometIx),
-      signers
-    );
-  }
-
-  public async addCollateralToComet(
-    userCollateralTokenAccount: PublicKey,
-    collateralAmount: BN,
-    collateralIndex: number,
-    signers?: Array<Keypair>
-  ) {
-    const addCollateralToCometIx = await this.addCollateralToCometInstruction(
-      userCollateralTokenAccount,
-      collateralAmount,
-      collateralIndex
-    );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(addCollateralToCometIx),
-      signers
-    );
-  }
-
-  public async initializeComet(user = this.provider.publicKey!) {
-    const cometAccount = anchor.web3.Keypair.generate();
-
-    await this.provider.sendAndConfirm!(
-      await this.initializeCometInstruction(cometAccount, false, user),
-      [cometAccount]
-    );
-  }
-
-  // public async initializeSinglePoolComet(
-  //   user = this.provider.publicKey!
-  // ) {
-  //   let { userPubkey, bump } = await this.getUserAddress(user);
-
-  //   const cometAccount = anchor.web3.Keypair.generate();
-
-  //   await this.provider.sendAndConfirm!(
-  //     await this.initializeCometInstruction(cometAccount, true, user),
-  //     [cometAccount]
-  //   );
-  // }
 
   public async initializeCometInstruction(
     cometAccount: Keypair,
-    isSinglePool: boolean,
     user?: PublicKey
   ) {
     let { userPubkey, bump } = await this.getUserAddress(user);
@@ -1173,7 +559,7 @@ export class CloneClient {
       .add(await this.program.account.comet.createInstruction(cometAccount))
       .add(
         await this.program.methods
-          .initializeComet(isSinglePool)
+          .initializeComet()
           .accounts({
             user: user ? user : this.provider.publicKey!,
             userAccount: userPubkey,
@@ -1212,24 +598,6 @@ export class CloneClient {
       .instruction();
   }
 
-  public async withdrawCollateralFromComet(
-    userCollateralTokenAccount: PublicKey,
-    collateralAmount: BN,
-    cometCollateralIndex: number,
-    signers?: Array<Keypair>
-  ) {
-    const updatePricesIx = await this.updatePricesInstruction();
-    const withdrawCollateralFromCometIx =
-      await this.withdrawCollateralFromCometInstruction(
-        userCollateralTokenAccount,
-        collateralAmount,
-        cometCollateralIndex
-      );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(updatePricesIx).add(withdrawCollateralFromCometIx),
-      signers
-    );
-  }
   public async withdrawCollateralFromCometInstruction(
     userCollateralTokenAccount: PublicKey,
     collateralAmount: BN,
@@ -1259,26 +627,10 @@ export class CloneClient {
       .instruction();
   }
 
-  public async addLiquidityToComet(
-    onusdAmount: BN,
-    poolIndex: number,
-    signers?: Array<Keypair>
-  ) {
-    const updatePricesIx = await this.updatePricesInstruction();
-    const addLiquidityToCometIx = await this.addLiquidityToCometInstruction(
-      onusdAmount,
-      poolIndex
-    );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(updatePricesIx).add(addLiquidityToCometIx),
-      signers
-    );
-  }
   public async addLiquidityToCometInstruction(
     onusdAmount: BN,
     poolIndex: number
   ) {
-    let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
     let cometAddress = userAccount.comet;
     let userAddress = await this.getUserAddress();
@@ -1290,117 +642,42 @@ export class CloneClient {
         userAccount: userAddress.userPubkey,
         clone: this.cloneAddress[0],
         tokenData: this.clone!.tokenData,
-        onusdMint: this.clone!.onusdMint,
-        onassetMint: tokenData.pools[poolIndex].assetInfo.onassetMint,
         comet: cometAddress,
-        ammOnusdTokenAccount: tokenData.pools[poolIndex].onusdTokenAccount,
-        ammOnassetTokenAccount: tokenData.pools[poolIndex].onassetTokenAccount,
-        liquidityTokenMint: tokenData.pools[poolIndex].liquidityTokenMint,
-        cometLiquidityTokenAccount:
-          tokenData.pools[poolIndex].cometLiquidityTokenAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
   }
 
-  public async withdrawLiquidityFromComet(
-    liquidityTokenAmount: BN,
-    cometPositionIndex: number,
-    userOnassetTokenAddress: PublicKey,
-    userOnusdTokenAddress: PublicKey,
-    isSinglePool: boolean,
-    signers?: Array<Keypair>
-  ) {
-    const withdrawLiquidityFromCometIx =
-      await this.withdrawLiquidityFromCometInstruction(
-        liquidityTokenAmount,
-        cometPositionIndex,
-        userOnassetTokenAddress,
-        userOnusdTokenAddress,
-        isSinglePool
-      );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(withdrawLiquidityFromCometIx),
-      signers
-    );
-  }
   public async withdrawLiquidityFromCometInstruction(
-    liquidityTokenAmount: BN,
+    onusdWithdrawal: BN,
     cometPositionIndex: number,
-    userOnassetTokenAddress: PublicKey,
-    userOnusdTokenAddress: PublicKey,
-    isSinglePool: boolean
   ) {
-    let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
-    let cometAddress = isSinglePool
-      ? userAccount.singlePoolComets
-      : userAccount.comet;
-    let comet = isSinglePool
-      ? await this.getSinglePoolComets()
-      : await this.getComet();
-    let position = comet.positions[cometPositionIndex];
+    let cometAddress = userAccount.comet
     let userAddress = await this.getUserAddress();
 
     return await this.program.methods
-      .withdrawLiquidityFromComet(cometPositionIndex, liquidityTokenAmount)
+      .withdrawLiquidityFromComet(cometPositionIndex, onusdWithdrawal)
       .accounts({
         user: this.provider.publicKey!,
         userAccount: userAddress.userPubkey,
         clone: this.cloneAddress[0],
         tokenData: this.clone!.tokenData,
-        onusdMint: this.clone!.onusdMint,
-        onassetMint: tokenData.pools[position.poolIndex].assetInfo.onassetMint,
         comet: cometAddress,
-        ammOnusdTokenAccount:
-          tokenData.pools[position.poolIndex].onusdTokenAccount,
-        ammOnassetTokenAccount:
-          tokenData.pools[position.poolIndex].onassetTokenAccount,
-        liquidityTokenMint:
-          tokenData.pools[position.poolIndex].liquidityTokenMint,
-        cometLiquidityTokenAccount:
-          tokenData.pools[position.poolIndex].cometLiquidityTokenAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        userOnassetTokenAccount: userOnassetTokenAddress,
-        userOnusdTokenAccount: userOnusdTokenAddress,
       })
       .instruction();
   }
 
-  public async payCometILD(
-    cometPositionIndex: number,
-    collateralAmount: number,
-    payOnusdDebt: boolean,
-    userOnassetTokenAccount: PublicKey,
-    userOnusdTokenAccount: PublicKey,
-    isSinglePool: boolean
-  ) {
-    const payCometILDIx = await this.payCometILDInstruction(
-      cometPositionIndex,
-      collateralAmount,
-      payOnusdDebt,
-      userOnassetTokenAccount,
-      userOnusdTokenAccount,
-      isSinglePool
-    );
-    await this.provider.sendAndConfirm!(new Transaction().add(payCometILDIx));
-  }
   public async payCometILDInstruction(
     cometPositionIndex: number,
     authorizedAmount: number,
     payOnusdDebt: boolean,
     userOnassetTokenAccount: PublicKey,
     userOnusdTokenAccount: PublicKey,
-    isSinglePool: boolean
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
-    let cometAddress = isSinglePool
-      ? userAccount.singlePoolComets
-      : userAccount.comet;
-    let comet = isSinglePool
-      ? await this.getSinglePoolComets()
-      : await this.getComet();
+    let cometAddress = userAccount.comet
+    let comet = await this.getComet()
     let cometPosition = comet.positions[cometPositionIndex];
     let userAddress = await this.getUserAddress();
 
@@ -1419,10 +696,6 @@ export class CloneClient {
         onassetMint:
           tokenData.pools[cometPosition.poolIndex].assetInfo.onassetMint,
         comet: cometAddress,
-        ammOnusdTokenAccount:
-          tokenData.pools[cometPosition.poolIndex].onusdTokenAccount,
-        ammOnassetTokenAccount:
-          tokenData.pools[cometPosition.poolIndex].onassetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
         userOnassetTokenAccount: userOnassetTokenAccount,
         userOnusdTokenAccount: userOnusdTokenAccount,
@@ -1448,44 +721,15 @@ export class CloneClient {
       .instruction();
   }
 
-  public async devnetMintOnusd(
-    userOnusdTokenAccount: PublicKey,
-    amount: number
-  ) {
-    const mintOnusdTx = await this.devnetMintOnusdInstruction(
-      userOnusdTokenAccount,
-      amount
-    );
-    await this.provider.sendAndConfirm!(new Transaction().add(mintOnusdTx));
-  }
-
-  public async liquidateBorrowPosition(
-    liquidateAccount: PublicKey,
-    borrowIndex: number,
-    liquidatorCollateralTokenAccount: PublicKey,
-    liquidatorOnassetTokenAccount: PublicKey
-  ) {
-    const updatePricesIx = await this.updatePricesInstruction();
-    const liquidateMintTx = await this.liquidateBorrowPositionInstruction(
-      liquidateAccount,
-      borrowIndex,
-      liquidatorCollateralTokenAccount,
-      liquidatorOnassetTokenAccount
-    );
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(updatePricesIx).add(liquidateMintTx)
-    );
-  }
-
   public async liquidateBorrowPositionInstruction(
     liquidateAccount: PublicKey,
     borrowIndex: number,
     liquidatorCollateralTokenAccount: PublicKey,
-    liquidatorOnassetTokenAccount: PublicKey
+    liquidatorOnassetTokenAccount: PublicKey,
+    tokenData: TokenData,
   ) {
     const { userPubkey, bump } = await this.getUserAddress(liquidateAccount);
     const userAccount = await this.getUserAccount(userPubkey);
-    const tokenData = await this.getTokenData();
 
     const mintPosition = (await this.getBorrowPositions()).borrowPositions[
       borrowIndex
@@ -1504,8 +748,6 @@ export class CloneClient {
         onassetMint: pool.assetInfo.onassetMint,
         borrowPositions: userAccount.borrowPositions,
         vault: collateral.vault,
-        ammOnusdTokenAccount: pool.onusdTokenAccount,
-        ammOnassetTokenAccount: pool.onassetTokenAccount,
         liquidatorCollateralTokenAccount: liquidatorCollateralTokenAccount,
         liquidatorOnassetTokenAccount: liquidatorOnassetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,

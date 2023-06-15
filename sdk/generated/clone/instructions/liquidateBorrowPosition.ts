@@ -44,8 +44,6 @@ export const liquidateBorrowPositionStruct = new beet.BeetArgsStruct<
  * @property [_writable_] onassetMint
  * @property [_writable_] borrowPositions
  * @property [_writable_] vault
- * @property [_writable_] ammOnusdTokenAccount
- * @property [_writable_] ammOnassetTokenAccount
  * @property [_writable_] liquidatorCollateralTokenAccount
  * @property [_writable_] liquidatorOnassetTokenAccount
  * @category Instructions
@@ -61,8 +59,6 @@ export type LiquidateBorrowPositionInstructionAccounts = {
   onassetMint: web3.PublicKey
   borrowPositions: web3.PublicKey
   vault: web3.PublicKey
-  ammOnusdTokenAccount: web3.PublicKey
-  ammOnassetTokenAccount: web3.PublicKey
   liquidatorCollateralTokenAccount: web3.PublicKey
   liquidatorOnassetTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
@@ -130,16 +126,6 @@ export function createLiquidateBorrowPositionInstruction(
     },
     {
       pubkey: accounts.vault,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.ammOnusdTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.ammOnassetTokenAccount,
       isWritable: true,
       isSigner: false,
     },

@@ -19,7 +19,6 @@ export interface LiquidationConfig {
 
 export interface User {
   authority: PublicKey;
-  singlePoolComets: PublicKey;
   borrowPositions: PublicKey;
   comet: PublicKey;
   bump: number;
@@ -47,20 +46,7 @@ export interface BorrowPosition {
   borrowedOnasset: RawDecimal;
 }
 
-export interface LiquidationStatus {
-  healthy: object;
-  partially: object;
-  fully: object;
-}
-
-export interface CometLiquidation {
-  status: number;
-  excessTokenTypeIsOnusd: number;
-  excessTokenAmount: RawDecimal;
-}
-
 export interface Comet {
-  isSinglePool: BN;
   owner: PublicKey;
   numPositions: BN;
   numCollaterals: BN;
@@ -71,21 +57,15 @@ export interface Comet {
 export interface CometPosition {
   authority: PublicKey;
   poolIndex: number;
-  borrowedOnusd: RawDecimal;
-  borrowedOnasset: RawDecimal;
-  liquidityTokenValue: RawDecimal;
-  cometLiquidation: CometLiquidation;
+  onusdIldRebate: RawDecimal;
+  onassetIldRebate: RawDecimal;
+  committedOnusdLiquidity: RawDecimal;
 }
 
 export interface CometCollateral {
   authority: PublicKey;
   collateralAmount: RawDecimal;
   collateralIndex: number;
-}
-
-export interface Value {
-  val: BN;
-  scale: BN;
 }
 
 export interface AssetInfo {
@@ -103,14 +83,10 @@ export interface AssetInfo {
 }
 
 export interface Pool {
-  onassetTokenAccount: PublicKey;
-  onusdTokenAccount: PublicKey;
-  liquidityTokenMint: PublicKey;
   underlyingAssetTokenAccount: PublicKey;
-  cometLiquidityTokenAccount: PublicKey;
-  onassetAmount: RawDecimal;
-  onusdAmount: RawDecimal;
-  liquidityTokenSupply: RawDecimal;
+  committedOnusdLiquidity: RawDecimal;
+  onusdIld: RawDecimal;
+  onassetIld: RawDecimal;
   treasuryTradingFee: RawDecimal;
   liquidityTradingFee: RawDecimal;
   totalMintedAmount: RawDecimal;

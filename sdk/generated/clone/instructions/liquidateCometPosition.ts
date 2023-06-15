@@ -11,103 +11,102 @@ import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
- * @category PayIld
+ * @category LiquidateCometPosition
  * @category generated
  */
-export type PayIldInstructionArgs = {
+export type LiquidateCometPositionInstructionArgs = {
   cometPositionIndex: number
-  collateralAmount: beet.bignum
+  amount: beet.bignum
   payOnusdDebt: boolean
 }
 /**
  * @category Instructions
- * @category PayIld
+ * @category LiquidateCometPosition
  * @category generated
  */
-export const payIldStruct = new beet.BeetArgsStruct<
-  PayIldInstructionArgs & {
+export const liquidateCometPositionStruct = new beet.BeetArgsStruct<
+  LiquidateCometPositionInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['cometPositionIndex', beet.u8],
-    ['collateralAmount', beet.u64],
+    ['amount', beet.u64],
     ['payOnusdDebt', beet.bool],
   ],
-  'PayIldInstructionArgs'
+  'LiquidateCometPositionInstructionArgs'
 )
 /**
- * Accounts required by the _payIld_ instruction
+ * Accounts required by the _liquidateCometPosition_ instruction
  *
- * @property [**signer**] signer
- * @property [] managerInfo
+ * @property [**signer**] liquidator
+ * @property [] user
+ * @property [] userAccount
  * @property [_writable_] clone
- * @property [_writable_] managerCloneUser
- * @property [_writable_] onusdMint
- * @property [] cloneProgram
+ * @property [] tokenData
  * @property [_writable_] comet
- * @property [_writable_] tokenData
+ * @property [_writable_] onusdMint
  * @property [_writable_] onassetMint
- * @property [_writable_] ammOnusdTokenAccount
- * @property [_writable_] ammOnassetTokenAccount
- * @property [_writable_] managerOnassetTokenAccount
- * @property [_writable_] managerOnusdTokenAccount
- * @property [_writable_] cloneOnusdVault
+ * @property [_writable_] liquidatorOnusdTokenAccount
+ * @property [_writable_] liquidatorOnassetTokenAccount
+ * @property [_writable_] onusdVault
  * @category Instructions
- * @category PayIld
+ * @category LiquidateCometPosition
  * @category generated
  */
-export type PayIldInstructionAccounts = {
-  signer: web3.PublicKey
-  managerInfo: web3.PublicKey
+export type LiquidateCometPositionInstructionAccounts = {
+  liquidator: web3.PublicKey
+  user: web3.PublicKey
+  userAccount: web3.PublicKey
   clone: web3.PublicKey
-  managerCloneUser: web3.PublicKey
-  onusdMint: web3.PublicKey
-  cloneProgram: web3.PublicKey
-  comet: web3.PublicKey
   tokenData: web3.PublicKey
+  comet: web3.PublicKey
+  onusdMint: web3.PublicKey
   onassetMint: web3.PublicKey
-  ammOnusdTokenAccount: web3.PublicKey
-  ammOnassetTokenAccount: web3.PublicKey
-  managerOnassetTokenAccount: web3.PublicKey
-  managerOnusdTokenAccount: web3.PublicKey
+  liquidatorOnusdTokenAccount: web3.PublicKey
+  liquidatorOnassetTokenAccount: web3.PublicKey
+  onusdVault: web3.PublicKey
   tokenProgram?: web3.PublicKey
-  cloneOnusdVault: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const payIldInstructionDiscriminator = [
-  45, 138, 207, 128, 127, 200, 87, 55,
+export const liquidateCometPositionInstructionDiscriminator = [
+  15, 195, 173, 61, 94, 219, 143, 205,
 ]
 
 /**
- * Creates a _PayIld_ instruction.
+ * Creates a _LiquidateCometPosition_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category PayIld
+ * @category LiquidateCometPosition
  * @category generated
  */
-export function createPayIldInstruction(
-  accounts: PayIldInstructionAccounts,
-  args: PayIldInstructionArgs,
-  programId = new web3.PublicKey('HX81GDFSZ9GktdpQCg8N1sBRr1AydZMnkpkNw7dffQym')
+export function createLiquidateCometPositionInstruction(
+  accounts: LiquidateCometPositionInstructionAccounts,
+  args: LiquidateCometPositionInstructionArgs,
+  programId = new web3.PublicKey('6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g')
 ) {
-  const [data] = payIldStruct.serialize({
-    instructionDiscriminator: payIldInstructionDiscriminator,
+  const [data] = liquidateCometPositionStruct.serialize({
+    instructionDiscriminator: liquidateCometPositionInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.signer,
+      pubkey: accounts.liquidator,
       isWritable: false,
       isSigner: true,
     },
     {
-      pubkey: accounts.managerInfo,
+      pubkey: accounts.user,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.userAccount,
       isWritable: false,
       isSigner: false,
     },
@@ -117,17 +116,7 @@ export function createPayIldInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.managerCloneUser,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.onusdMint,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.cloneProgram,
+      pubkey: accounts.tokenData,
       isWritable: false,
       isSigner: false,
     },
@@ -137,7 +126,7 @@ export function createPayIldInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.onusdMint,
       isWritable: true,
       isSigner: false,
     },
@@ -147,33 +136,23 @@ export function createPayIldInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.ammOnusdTokenAccount,
+      pubkey: accounts.liquidatorOnusdTokenAccount,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.ammOnassetTokenAccount,
+      pubkey: accounts.liquidatorOnassetTokenAccount,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.managerOnassetTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.managerOnusdTokenAccount,
+      pubkey: accounts.onusdVault,
       isWritable: true,
       isSigner: false,
     },
     {
       pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
       isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.cloneOnusdVault,
-      isWritable: true,
       isSigner: false,
     },
   ]

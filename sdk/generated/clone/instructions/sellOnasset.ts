@@ -45,8 +45,8 @@ export const sellOnassetStruct = new beet.BeetArgsStruct<
  * @property [_writable_] tokenData
  * @property [_writable_] userOnusdTokenAccount
  * @property [_writable_] userOnassetTokenAccount
- * @property [_writable_] ammOnusdTokenAccount
- * @property [_writable_] ammOnassetTokenAccount
+ * @property [_writable_] onassetMint
+ * @property [_writable_] onusdMint
  * @property [_writable_] treasuryOnusdTokenAccount
  * @category Instructions
  * @category SellOnasset
@@ -58,8 +58,8 @@ export type SellOnassetInstructionAccounts = {
   tokenData: web3.PublicKey
   userOnusdTokenAccount: web3.PublicKey
   userOnassetTokenAccount: web3.PublicKey
-  ammOnusdTokenAccount: web3.PublicKey
-  ammOnassetTokenAccount: web3.PublicKey
+  onassetMint: web3.PublicKey
+  onusdMint: web3.PublicKey
   treasuryOnusdTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
@@ -115,12 +115,12 @@ export function createSellOnassetInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.ammOnusdTokenAccount,
+      pubkey: accounts.onassetMint,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.ammOnassetTokenAccount,
+      pubkey: accounts.onusdMint,
       isWritable: true,
       isSigner: false,
     },
