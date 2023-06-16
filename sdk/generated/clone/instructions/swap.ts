@@ -11,34 +11,38 @@ import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
- * @category BuyOnasset
+ * @category Swap
  * @category generated
  */
-export type BuyOnassetInstructionArgs = {
+export type SwapInstructionArgs = {
   poolIndex: number
-  amount: beet.bignum
-  onusdSpendThreshold: beet.bignum
+  quantity: beet.bignum
+  quantityIsInput: boolean
+  quantityIsOnusd: boolean
+  resultThreshold: beet.bignum
 }
 /**
  * @category Instructions
- * @category BuyOnasset
+ * @category Swap
  * @category generated
  */
-export const buyOnassetStruct = new beet.BeetArgsStruct<
-  BuyOnassetInstructionArgs & {
+export const swapStruct = new beet.BeetArgsStruct<
+  SwapInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['poolIndex', beet.u8],
-    ['amount', beet.u64],
-    ['onusdSpendThreshold', beet.u64],
+    ['quantity', beet.u64],
+    ['quantityIsInput', beet.bool],
+    ['quantityIsOnusd', beet.bool],
+    ['resultThreshold', beet.u64],
   ],
-  'BuyOnassetInstructionArgs'
+  'SwapInstructionArgs'
 )
 /**
- * Accounts required by the _buyOnasset_ instruction
+ * Accounts required by the _swap_ instruction
  *
  * @property [**signer**] user
  * @property [_writable_] clone
@@ -48,11 +52,12 @@ export const buyOnassetStruct = new beet.BeetArgsStruct<
  * @property [_writable_] onassetMint
  * @property [_writable_] onusdMint
  * @property [_writable_] treasuryOnassetTokenAccount
+ * @property [_writable_] treasuryOnusdTokenAccount
  * @category Instructions
- * @category BuyOnasset
+ * @category Swap
  * @category generated
  */
-export type BuyOnassetInstructionAccounts = {
+export type SwapInstructionAccounts = {
   user: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
@@ -61,31 +66,32 @@ export type BuyOnassetInstructionAccounts = {
   onassetMint: web3.PublicKey
   onusdMint: web3.PublicKey
   treasuryOnassetTokenAccount: web3.PublicKey
+  treasuryOnusdTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const buyOnassetInstructionDiscriminator = [
-  48, 246, 255, 214, 52, 11, 3, 135,
+export const swapInstructionDiscriminator = [
+  248, 198, 158, 145, 225, 117, 135, 200,
 ]
 
 /**
- * Creates a _BuyOnasset_ instruction.
+ * Creates a _Swap_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category BuyOnasset
+ * @category Swap
  * @category generated
  */
-export function createBuyOnassetInstruction(
-  accounts: BuyOnassetInstructionAccounts,
-  args: BuyOnassetInstructionArgs,
+export function createSwapInstruction(
+  accounts: SwapInstructionAccounts,
+  args: SwapInstructionArgs,
   programId = new web3.PublicKey('6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g')
 ) {
-  const [data] = buyOnassetStruct.serialize({
-    instructionDiscriminator: buyOnassetInstructionDiscriminator,
+  const [data] = swapStruct.serialize({
+    instructionDiscriminator: swapInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
@@ -126,6 +132,11 @@ export function createBuyOnassetInstruction(
     },
     {
       pubkey: accounts.treasuryOnassetTokenAccount,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.treasuryOnusdTokenAccount,
       isWritable: true,
       isSigner: false,
     },

@@ -123,6 +123,60 @@ export const calculateInputFromOutputFromParams = (
   return { input, resultPoolOnusd, resultPoolOnasset };
 };
 
+export const calculatePoolAmounts = (
+  poolOnusdILD: number,
+  poolOnassetILD: number,
+  poolCommittedOnusdLiquidity: number,
+  oraclePrice: number
+  ) => {
+    const poolOnusd = floorToDevnetScale(poolCommittedOnusdLiquidity - poolOnusdILD)
+    const poolOnasset = floorToDevnetScale(poolCommittedOnusdLiquidity / oraclePrice - poolOnassetILD)
+    return { poolOnusd, poolOnasset }
+  }
+
+export const calculateSwapExecution = (
+  quantity: number,
+  quantityIsInput: boolean,
+  quantityIsOnusd: boolean,
+  poolOnusdILD: number,
+  poolOnassetILD: number,
+  poolCommittedOnusdLiquidity: number,
+  liquidityTradingFees: number,
+  treasuryTradingFees: number,
+  oraclePrice: number
+) => {
+  const { poolOnusd, poolOnasset } = calculatePoolAmounts(
+    poolOnusdILD, poolOnassetILD, poolCommittedOnusdLiquidity, oraclePrice
+  )
+  const invariant = poolOnusd * poolOnasset
+
+  if (quantityIsInput) {
+    const [inputSide, outputSide] = quantityIsOnusd ? [poolOnusd, poolOnasset] : [poolOnasset, poolOnusd];
+    const outputBeforeFees = floorToDevnetScale(
+      outputSide - invariant / (inputSide + quantity)
+    )
+    const liquidityFeesPaid = floorToDevnetScale(outputBeforeFees * liquidityTradingFees)
+    const treasuryFeesPaid = floorToDevnetScale(outputBeforeFees * treasuryTradingFees)
+    const result = floorToDevnetScale(outputBeforeFees - liquidityFeesPaid - treasuryFeesPaid)
+    return {
+      result, liquidityFeesPaid, treasuryFeesPaid
+    }
+  } else {
+    const [outputSide, inputSide] = quantityIsOnusd ? [poolOnusd, poolOnasset] : [poolOnasset, poolOnusd];
+    const outputBeforeFees = floorToDevnetScale(
+      quantity / (1. - liquidityTradingFees - treasuryTradingFees)
+    )
+    const result = floorToDevnetScale(
+      invariant / (outputSide - outputBeforeFees) - inputSide
+    )
+    const liquidityFeesPaid = floorToDevnetScale(outputBeforeFees * liquidityTradingFees)
+    const treasuryFeesPaid = floorToDevnetScale(outputBeforeFees * treasuryTradingFees)
+    return {
+      result, liquidityFeesPaid, treasuryFeesPaid
+    }
+  }
+}
+
 export const calculateExecutionThreshold = (
   onassetAmount: number,
   isBuy: boolean,
