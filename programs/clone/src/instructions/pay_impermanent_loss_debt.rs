@@ -8,7 +8,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(comet_position_index: u8, amount: u64)]
+#[instruction(comet_position_index: u8, amount: u64, pay_onusd_debt: bool)]
 pub struct PayImpermanentLossDebt<'info> {
     #[account(address = comet.load()?.owner)]
     pub user: Signer<'info>,

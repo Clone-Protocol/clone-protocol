@@ -152,7 +152,12 @@ pub fn calculate_ild_share(comet_position: &CometPosition, token_data: &TokenDat
     let position_committed_onusd_liquidity = comet_position.committed_onusd_liquidity.to_decimal();
     let total_committed_onusd_liquidity = pool.committed_onusd_liquidity.to_decimal();
 
-    let claimable_ratio = position_committed_onusd_liquidity / total_committed_onusd_liquidity;
+    let claimable_ratio = if total_committed_onusd_liquidity > Decimal::ZERO {
+        position_committed_onusd_liquidity / total_committed_onusd_liquidity
+    } else {
+        Decimal::ZERO
+    };
+
     let onusd_ild_claim = rescale_toward_zero(
         pool.onusd_ild.to_decimal() * claimable_ratio,
         DEVNET_TOKEN_SCALE,

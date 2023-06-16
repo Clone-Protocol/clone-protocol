@@ -59,6 +59,7 @@ pub struct CollectLpRewards<'info> {
 }
 
 pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Result<()> {
+    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
     let token_data = ctx.accounts.token_data.load()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
 
@@ -84,10 +85,14 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
                 .user_onusd_token_account
                 .to_account_info()
                 .clone(),
-            authority: ctx.accounts.user.to_account_info().clone(),
+            authority: ctx.accounts.clone.to_account_info().clone(),
         };
         token::mint_to(
-            CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts),
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                cpi_accounts,
+                seeds,
+            ),
             onusd_reward.mantissa().try_into().unwrap(),
         )?;
     }
@@ -108,10 +113,14 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
                 .user_onasset_token_account
                 .to_account_info()
                 .clone(),
-            authority: ctx.accounts.user.to_account_info().clone(),
+            authority: ctx.accounts.clone.to_account_info().clone(),
         };
         token::mint_to(
-            CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts),
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                cpi_accounts,
+                seeds,
+            ),
             onasset_reward.mantissa().try_into().unwrap(),
         )?;
     }
