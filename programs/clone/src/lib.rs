@@ -170,24 +170,6 @@ pub mod clone {
         instructions::borrow_more::execute(ctx, borrow_index, amount)
     }
 
-    pub fn buy_onasset(
-        ctx: Context<BuyOnAsset>,
-        pool_index: u8,
-        amount: u64,
-        onusd_spend_threshold: u64,
-    ) -> Result<()> {
-        instructions::buy_onasset::execute(ctx, pool_index, amount, onusd_spend_threshold)
-    }
-
-    pub fn sell_onasset(
-        ctx: Context<SellOnAsset>,
-        pool_index: u8,
-        amount: u64,
-        onusd_received_threshold: u64,
-    ) -> Result<()> {
-        instructions::sell_onasset::execute(ctx, pool_index, amount, onusd_received_threshold)
-    }
-
     pub fn add_collateral_to_comet(
         ctx: Context<AddCollateralToComet>,
         collateral_index: u8,
@@ -226,10 +208,6 @@ pub mod clone {
             comet_position_index,
             liquidity_token_amount,
         )
-    }
-
-    pub fn mint_onusd_devnet(ctx: Context<MintONUSDDevnet>, amount: u64) -> Result<()> {
-        instructions::mint_onusd_devnet::execute(ctx, amount)
     }
 
     pub fn liquidate_borrow_position(
@@ -324,5 +302,23 @@ pub mod clone {
         comet_position_index: u8,
     ) -> Result<()> {
         instructions::remove_comet_position::execute(ctx, comet_position_index)
+    }
+
+    pub fn swap(
+        ctx: Context<Swap>,
+        pool_index: u8,
+        quantity: u64,
+        quantity_is_input: bool,
+        quantity_is_onusd: bool,
+        result_threshold: u64,
+    ) -> Result<()> {
+        instructions::swap::execute(
+            ctx,
+            pool_index,
+            quantity,
+            quantity_is_input,
+            quantity_is_onusd,
+            result_threshold,
+        )
     }
 }

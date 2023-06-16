@@ -202,6 +202,72 @@ impl Pool {
         (pool_onusd, pool_onasset)
     }
 
+    pub fn calculate_swap(
+        &self,
+        quantity: Decimal,
+        quantity_is_input: bool,
+        quantity_is_onusd: bool,
+    ) -> SwapSummary {
+        let (pool_onusd, pool_onasset) = self.calculate_jit_pool();
+        let invariant = pool_onasset * pool_onusd;
+        let liquidity_trading_fee = self.liquidity_trading_fee.to_decimal();
+        let treasury_trading_fee = self.treasury_trading_fee.to_decimal();
+
+        if quantity_is_input {
+            let (i_pool, o_pool) = if quantity_is_onusd {
+                (pool_onusd, pool_onasset)
+            } else {
+                (pool_onasset, pool_onusd)
+            };
+            let output_before_fees =
+                rescale_toward_zero(o_pool - invariant / (i_pool + quantity), DEVNET_TOKEN_SCALE);
+            let liquidity_fees_paid = rescale_toward_zero(
+                output_before_fees * liquidity_trading_fee,
+                DEVNET_TOKEN_SCALE,
+            );
+            let treasury_fees_paid = rescale_toward_zero(
+                output_before_fees * treasury_trading_fee,
+                DEVNET_TOKEN_SCALE,
+            );
+            let result = rescale_toward_zero(
+                output_before_fees - liquidity_fees_paid - treasury_fees_paid,
+                DEVNET_TOKEN_SCALE,
+            );
+            SwapSummary {
+                result,
+                liquidity_fees_paid,
+                treasury_fees_paid,
+            }
+        } else {
+            let (o_pool, i_pool) = if quantity_is_onusd {
+                (pool_onusd, pool_onasset)
+            } else {
+                (pool_onasset, pool_onusd)
+            };
+            let output_before_fees = rescale_toward_zero(
+                quantity / (Decimal::ONE - liquidity_trading_fee - treasury_trading_fee),
+                DEVNET_TOKEN_SCALE,
+            );
+            let result = rescale_toward_zero(
+                invariant / (o_pool - output_before_fees) - i_pool,
+                DEVNET_TOKEN_SCALE,
+            );
+            let liquidity_fees_paid = rescale_toward_zero(
+                output_before_fees * liquidity_trading_fee,
+                DEVNET_TOKEN_SCALE,
+            );
+            let treasury_fees_paid = rescale_toward_zero(
+                output_before_fees * treasury_trading_fee,
+                DEVNET_TOKEN_SCALE,
+            );
+            SwapSummary {
+                result,
+                liquidity_fees_paid,
+                treasury_fees_paid,
+            }
+        }
+    }
+
     pub fn calculate_usd_to_buy(&self, amount: Decimal) -> SwapSummary {
         let (pool_onusd, pool_onasset) = self.calculate_jit_pool();
         let invariant = pool_onasset * pool_onusd;
