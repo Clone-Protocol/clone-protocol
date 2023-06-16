@@ -43,9 +43,9 @@ const parseEvent = (
         eventId,
         userAddress: data.userAddress.toString(),
         poolIndex: data.poolIndex,
-        isBuy: data.isBuy,
-        onasset: data.onasset.toString(),
-        onusd: data.onusd.toString(),
+        inputIsOnusd: data.inputIsOnusd,
+        input: data.input.toString(),
+        output: data.output.toString(),
         tradingFee: data.tradingFee.toString(),
         treasuryFee: data.treasuryFee.toString(),
       };

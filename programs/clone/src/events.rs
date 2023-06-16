@@ -6,9 +6,9 @@ pub struct SwapEvent {
     pub event_id: u64,
     pub user_address: Pubkey,
     pub pool_index: u8,
-    pub is_buy: bool,
-    pub onasset: u64,
-    pub onusd: u64,
+    pub input_is_onusd: bool,
+    pub input: u64,
+    pub output: u64,
     pub trading_fee: u64,
     pub treasury_fee: u64,
 }
