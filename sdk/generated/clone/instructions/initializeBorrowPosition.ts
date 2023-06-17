@@ -86,7 +86,7 @@ export const initializeBorrowPositionInstructionDiscriminator = [
 export function createInitializeBorrowPositionInstruction(
   accounts: InitializeBorrowPositionInstructionAccounts,
   args: InitializeBorrowPositionInstructionArgs,
-  programId = new web3.PublicKey('6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g')
+  programId = new web3.PublicKey('BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ')
 ) {
   const [data] = initializeBorrowPositionStruct.serialize({
     instructionDiscriminator: initializeBorrowPositionInstructionDiscriminator,

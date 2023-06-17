@@ -78,7 +78,7 @@ export const borrowMoreInstructionDiscriminator = [
 export function createBorrowMoreInstruction(
   accounts: BorrowMoreInstructionAccounts,
   args: BorrowMoreInstructionArgs,
-  programId = new web3.PublicKey('6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g')
+  programId = new web3.PublicKey('BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ')
 ) {
   const [data] = borrowMoreStruct.serialize({
     instructionDiscriminator: borrowMoreInstructionDiscriminator,

@@ -84,7 +84,7 @@ export class User implements UserArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      '6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g'
+      'BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, userBeet)

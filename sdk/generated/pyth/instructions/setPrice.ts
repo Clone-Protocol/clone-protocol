@@ -62,7 +62,7 @@ export const setPriceInstructionDiscriminator = [
 export function createSetPriceInstruction(
   accounts: SetPriceInstructionAccounts,
   args: SetPriceInstructionArgs,
-  programId = new web3.PublicKey('GegijnPoSC4ndamF6W3S57jLg8PTTBHbbttDMFvNqwyP')
+  programId = new web3.PublicKey('H38XT5NKW9g9sZpmjwDQkp6S3nLTfg7tZ4WbAfgk7ZCG')
 ) {
   const [data] = setPriceStruct.serialize({
     instructionDiscriminator: setPriceInstructionDiscriminator,
