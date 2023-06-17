@@ -98,6 +98,14 @@ pub fn execute(
         quantity_is_onusd,
     );
 
+    return_error_if_false!(
+        user_specified_quantity > Decimal::ZERO
+            && swap_summary.result > Decimal::ZERO
+            && swap_summary.liquidity_fees_paid > Decimal::ZERO
+            && swap_summary.treasury_fees_paid > Decimal::ZERO,
+        CloneError::InvalidTokenAmount
+    );
+
     let threshold = Decimal::new(result_threshold.try_into().unwrap(), DEVNET_TOKEN_SCALE);
 
     let (
