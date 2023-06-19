@@ -1,4 +1,11 @@
 import * as anchor from "@coral-xyz/anchor";
+import { Transaction } from "@solana/web3.js";
+import {
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+} from "@solana/spl-token";
 import { CloneClient } from "../../sdk/src/clone";
 import {
   successLog,
@@ -16,8 +23,7 @@ interface CommandArguments extends Argv {
   liquidatorFee: number;
 }
 
-exports.command =
-  "init-clone";
+exports.command = "init-clone";
 exports.desc = "Initializes the Clone program with optional parameters";
 exports.builder = (yargs: CommandArguments) => {
   return yargs
@@ -59,6 +65,27 @@ exports.handler = async function (yargs: CommandArguments) {
       yargs.liquidatorFee,
       treasuryAddress.publicKey,
       usdc
+    );
+
+    const treasuryOnusdAssociatedTokenAddress = await getAssociatedTokenAddress(
+      cloneClient.clone!.onusdMint,
+      treasuryAddress.publicKey,
+      false,
+      TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    await cloneClient.provider.sendAndConfirm!(
+      new Transaction().add(
+        await createAssociatedTokenAccountInstruction(
+          cloneClient.provider.publicKey!,
+          treasuryOnusdAssociatedTokenAddress,
+          treasuryAddress.publicKey,
+          cloneClient.clone!.onusdMint,
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      )
     );
 
     successLog("Clone Initialized!");

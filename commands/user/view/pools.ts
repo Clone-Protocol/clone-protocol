@@ -51,6 +51,7 @@ exports.handler = async function () {
         `${chalk.bold(title)}\n` +
         `${underline}\n` +
         `onAsset Mint: ${chalk.bold(pool.assetInfo.onassetMint)}\n` +
+        //this will change to called quotePrice function on sdk/utils
         `Clone Price: $${chalk.bold(getMantissa(pool.onusdAmount) / getMantissa(pool.onassetAmount))}\n` +
         `onAsset Pool Balance: ${chalk.bold(getMantissa(pool.onassetAmount))}\n` +
         `onUSD Pool Balance: ${chalk.bold(getMantissa(pool.onusdAmount))}\n` +

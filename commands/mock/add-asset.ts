@@ -16,16 +16,16 @@ interface CommandArguments extends Argv {
   expo: number;
 }
 
-exports.command = "add-asset";
+exports.command = "add-asset [price] [expo]";
 exports.desc = "Adds a mock asset using the Mock Jupiter and the Pyth program";
 exports.builder = (yargs: CommandArguments) => {
     return yargs
-      .option("price", {
+      .positional("price", {
         describe: "The initial price of the mock asset",
         type: "number",
         default: 10,
       })
-      .option("expo", {
+      .positional("expo", {
         describe: "The exponent of the mock asset",
         type: "number",
         default: -7,

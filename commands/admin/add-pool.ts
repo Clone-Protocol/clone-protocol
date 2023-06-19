@@ -1,4 +1,10 @@
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, Transaction } from "@solana/web3.js";
+import {
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+} from "@solana/spl-token";
 import { CloneClient } from "../../sdk/src/clone";
 import { successLog, errorLog, anchorSetup, getCloneProgram } from "../utils";
 import { Argv } from "yargs";
@@ -93,6 +99,31 @@ exports.handler = async function (yargs: CommandArguments) {
       yargs.liquidationDiscountRate,
       yargs.maxOwnershipPct,
       underlyingAssetMint
+    );
+
+    const tokenData = await cloneClient.getTokenData();
+    const pool = tokenData.pools[Number(tokenData.numPools) - 1];
+
+    const treasuryOnAssetAssociatedTokenAddress =
+      await getAssociatedTokenAddress(
+        pool.assetInfo.onassetMint,
+        cloneClient.clone!.treasuryAddress,
+        false,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+    await cloneClient.provider.sendAndConfirm!(
+      new Transaction().add(
+        await createAssociatedTokenAccountInstruction(
+          cloneClient.provider.publicKey!,
+          treasuryOnAssetAssociatedTokenAddress,
+          cloneClient.clone!.treasuryAddress,
+          pool.assetInfo.onassetMint,
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      )
     );
 
     successLog("Pool Added!");
