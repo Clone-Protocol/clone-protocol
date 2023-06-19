@@ -1,7 +1,6 @@
 # Clone Protocol
 This repository contains the on-chain programs for the Clone Protocol:
 - `clone` the main program which contains all logic for minting, borrowing, trading and liquidity provisioning
-- `clone-comet-manager` a manager program that provides liquidity to Clone.
 - `pyth` a substitute program only used for testing, allows you to change oracle prices at will, used for scenario testing.
 - `jupiter-mock-agg` a mock program of the Jupiter Aggregator, used for local and dev environments.
 

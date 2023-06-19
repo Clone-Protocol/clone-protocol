@@ -39,10 +39,7 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
             ctx.accounts.clone.liquidation_config.liquidator_fee = value;
         }
         CloneParameters::MaxHealthLiquidation { value } => {
-            ctx.accounts
-                .clone
-                .liquidation_config
-                .max_health_liquidation = value;
+            ctx.accounts.clone.liquidation_config.max_health_liquidation = value;
         }
         CloneParameters::TreasuryAddress { address } => {
             ctx.accounts.clone.treasury_address = address;

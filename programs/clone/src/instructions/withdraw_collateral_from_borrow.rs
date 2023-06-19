@@ -126,7 +126,7 @@ pub fn execute(
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
-        user: ctx.accounts.user.key(),
+        user_address: ctx.accounts.user.key(),
         pool_index: borrow_positions.borrow_positions[borrow_index as usize]
             .pool_index
             .try_into()

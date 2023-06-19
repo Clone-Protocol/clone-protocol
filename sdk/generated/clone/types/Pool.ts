@@ -11,14 +11,10 @@ import * as beetSolana from '@metaplex-foundation/beet-solana'
 import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 import { AssetInfo, assetInfoBeet } from './AssetInfo'
 export type Pool = {
-  onassetTokenAccount: web3.PublicKey
-  onusdTokenAccount: web3.PublicKey
-  liquidityTokenMint: web3.PublicKey
   underlyingAssetTokenAccount: web3.PublicKey
-  cometLiquidityTokenAccount: web3.PublicKey
-  onassetAmount: RawDecimal
-  onusdAmount: RawDecimal
-  liquidityTokenSupply: RawDecimal
+  committedOnusdLiquidity: RawDecimal
+  onusdIld: RawDecimal
+  onassetIld: RawDecimal
   treasuryTradingFee: RawDecimal
   liquidityTradingFee: RawDecimal
   totalMintedAmount: RawDecimal
@@ -33,14 +29,10 @@ export type Pool = {
  */
 export const poolBeet = new beet.BeetArgsStruct<Pool>(
   [
-    ['onassetTokenAccount', beetSolana.publicKey],
-    ['onusdTokenAccount', beetSolana.publicKey],
-    ['liquidityTokenMint', beetSolana.publicKey],
     ['underlyingAssetTokenAccount', beetSolana.publicKey],
-    ['cometLiquidityTokenAccount', beetSolana.publicKey],
-    ['onassetAmount', rawDecimalBeet],
-    ['onusdAmount', rawDecimalBeet],
-    ['liquidityTokenSupply', rawDecimalBeet],
+    ['committedOnusdLiquidity', rawDecimalBeet],
+    ['onusdIld', rawDecimalBeet],
+    ['onassetIld', rawDecimalBeet],
     ['treasuryTradingFee', rawDecimalBeet],
     ['liquidityTradingFee', rawDecimalBeet],
     ['totalMintedAmount', rawDecimalBeet],

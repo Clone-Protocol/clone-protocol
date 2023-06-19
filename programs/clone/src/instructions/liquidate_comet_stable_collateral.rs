@@ -35,7 +35,6 @@ pub struct LiquidateCometStableCollateral<'info> {
     #[account(
         mut,
         address = user_account.comet,
-        constraint = comet.load()?.is_single_pool == 0,
         constraint = comet.load()?.owner == user_account.authority @ CloneError::InvalidAccountLoaderOwner,
         constraint = comet.load()?.num_collaterals > comet_collateral_index.into() @ CloneError::InvalidInputPositionIndex
     )]
@@ -76,7 +75,7 @@ pub fn execute(
     );
 
     // Require a healthy score after transactions
-    let health_score = calculate_health_score(&comet, &token_data, None)?;
+    let health_score = calculate_health_score(&comet, &token_data)?;
 
     return_error_if_false!(
         !health_score.is_healthy(),

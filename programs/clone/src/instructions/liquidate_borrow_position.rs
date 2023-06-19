@@ -52,16 +52,6 @@ pub struct LiquidateBorrowPosition<'info> {
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].onusd_token_account,
-    )]
-    pub amm_onusd_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        address = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].onasset_token_account,
-    )]
-    pub amm_onasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
         associated_token::mint = vault.mint,
         associated_token::authority = liquidator
    )]
@@ -181,7 +171,7 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Resul
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
-        user: ctx.accounts.user.key(),
+        user_address: ctx.accounts.user.key(),
         pool_index: borrow_positions.borrow_positions[borrow_index as usize]
             .pool_index
             .try_into()

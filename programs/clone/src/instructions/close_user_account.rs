@@ -23,7 +23,6 @@ pub fn execute(ctx: Context<CloseUserAccount>) -> Result<()> {
     let user_account = ctx.accounts.user_account.clone();
     assert!(
         user_account.comet == Pubkey::default()
-            && user_account.single_pool_comets == Pubkey::default()
             && user_account.borrow_positions == Pubkey::default()
     );
 

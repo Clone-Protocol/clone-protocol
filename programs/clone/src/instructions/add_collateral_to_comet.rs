@@ -32,7 +32,6 @@ pub struct AddCollateralToComet<'info> {
     #[account(
         mut,
         address = user_account.comet,
-        constraint = comet.load()?.is_single_pool == 0 @ CloneError::WrongCometType,
         constraint = &comet.load()?.owner == user.to_account_info().key @ CloneError::InvalidAccountLoaderOwner,
     )]
     pub comet: AccountLoader<'info, Comet>,
@@ -108,11 +107,6 @@ pub fn execute(
 
     // check to see if a new collateral must be added to the position
     if comet_collateral_index == usize::MAX {
-        if comet.is_single_pool == 1 {
-            return Err(error!(
-                CloneError::AttemptedToAddNewCollateralToSingleComet
-            ));
-        }
         comet.add_collateral(CometCollateral {
             authority: *ctx.accounts.user.to_account_info().key,
             collateral_amount: RawDecimal::from(added_collateral_value),

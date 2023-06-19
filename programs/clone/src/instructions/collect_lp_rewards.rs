@@ -1,6 +1,5 @@
 use crate::error::*;
 use crate::math::*;
-use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -8,8 +7,8 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(comet_position_index: u8, amount: u64, pay_onusd_debt: bool)]
-pub struct PayImpermanentLossDebt<'info> {
+#[instruction(comet_position_index: u8)]
+pub struct CollectLpRewards<'info> {
     #[account(address = comet.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
@@ -59,69 +58,72 @@ pub struct PayImpermanentLossDebt<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(
-    ctx: Context<PayImpermanentLossDebt>,
-    comet_position_index: u8,
-    amount: u64,
-    pay_onusd_debt: bool,
-) -> Result<()> {
-    return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
-    let authorized_amount = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Result<()> {
+    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
     let token_data = ctx.accounts.token_data.load()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
 
     let comet_position = comet.positions[comet_position_index as usize];
+
     let onusd_ild_rebate = comet_position.onusd_ild_rebate.to_decimal();
     let onasset_ild_rebate = comet_position.onasset_ild_rebate.to_decimal();
     let ild_share = calculate_ild_share(&comet_position, &token_data);
 
-    if (pay_onusd_debt && ild_share.onusd_ild_share <= Decimal::ZERO)
-        || (!pay_onusd_debt && ild_share.onasset_ild_share <= Decimal::ZERO)
-    {
-        return Ok(());
+    if ild_share.onusd_ild_share < Decimal::ZERO {
+        let onusd_reward = ild_share.onusd_ild_share.abs();
+
+        // Update rebate amount such that the ild_share is now zero.
+        comet.positions[comet_position_index as usize].onusd_ild_rebate = RawDecimal::from(
+            rescale_toward_zero(onusd_ild_rebate - onusd_reward, DEVNET_TOKEN_SCALE),
+        );
+
+        // Mint reward amount to user
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.onusd_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .user_onusd_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.clone.to_account_info().clone(),
+        };
+        token::mint_to(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                cpi_accounts,
+                seeds,
+            ),
+            onusd_reward.mantissa().try_into().unwrap(),
+        )?;
     }
 
-    let (cpi_accounts, burn_amount) = if pay_onusd_debt {
-        let burn_amount = ild_share.onusd_ild_share.min(authorized_amount);
-        comet.positions[comet_position_index as usize].onusd_ild_rebate = RawDecimal::from(
-            rescale_toward_zero(onusd_ild_rebate + burn_amount, DEVNET_TOKEN_SCALE),
-        );
+    if ild_share.onasset_ild_share < Decimal::ZERO {
+        let onasset_reward = ild_share.onasset_ild_share.abs();
 
-        (
-            Burn {
-                mint: ctx.accounts.onusd_mint.to_account_info().clone(),
-                from: ctx
-                    .accounts
-                    .user_onusd_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.user.to_account_info().clone(),
-            },
-            burn_amount,
-        )
-    } else {
-        let burn_amount = ild_share.onasset_ild_share.min(authorized_amount);
+        // Update rebate amount such that the ild_share is now zero.
         comet.positions[comet_position_index as usize].onasset_ild_rebate = RawDecimal::from(
-            rescale_toward_zero(onasset_ild_rebate + burn_amount, DEVNET_TOKEN_SCALE),
+            rescale_toward_zero(onasset_ild_rebate - onasset_reward, DEVNET_TOKEN_SCALE),
         );
-        (
-            Burn {
-                mint: ctx.accounts.onasset_mint.to_account_info().clone(),
-                from: ctx
-                    .accounts
-                    .user_onasset_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.user.to_account_info().clone(),
-            },
-            burn_amount,
-        )
-    };
 
-    token::burn(
-        CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts),
-        burn_amount.mantissa().try_into().unwrap(),
-    )?;
+        // Mint reward amount to user
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.onasset_mint.to_account_info().clone(),
+            to: ctx
+                .accounts
+                .user_onasset_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.clone.to_account_info().clone(),
+        };
+        token::mint_to(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                cpi_accounts,
+                seeds,
+            ),
+            onasset_reward.mantissa().try_into().unwrap(),
+        )?;
+    }
 
     Ok(())
 }

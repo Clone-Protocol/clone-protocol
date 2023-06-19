@@ -16,7 +16,6 @@ import * as beet from '@metaplex-foundation/beet'
  */
 export type UserArgs = {
   authority: web3.PublicKey
-  singlePoolComets: web3.PublicKey
   borrowPositions: web3.PublicKey
   comet: web3.PublicKey
   bump: number
@@ -33,7 +32,6 @@ export const userDiscriminator = [159, 117, 95, 227, 239, 151, 58, 236]
 export class User implements UserArgs {
   private constructor(
     readonly authority: web3.PublicKey,
-    readonly singlePoolComets: web3.PublicKey,
     readonly borrowPositions: web3.PublicKey,
     readonly comet: web3.PublicKey,
     readonly bump: number
@@ -43,13 +41,7 @@ export class User implements UserArgs {
    * Creates a {@link User} instance from the provided args.
    */
   static fromArgs(args: UserArgs) {
-    return new User(
-      args.authority,
-      args.singlePoolComets,
-      args.borrowPositions,
-      args.comet,
-      args.bump
-    )
+    return new User(args.authority, args.borrowPositions, args.comet, args.bump)
   }
 
   /**
@@ -92,7 +84,7 @@ export class User implements UserArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      '6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g'
+      'BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, userBeet)
@@ -156,7 +148,6 @@ export class User implements UserArgs {
   pretty() {
     return {
       authority: this.authority.toBase58(),
-      singlePoolComets: this.singlePoolComets.toBase58(),
       borrowPositions: this.borrowPositions.toBase58(),
       comet: this.comet.toBase58(),
       bump: this.bump,
@@ -177,7 +168,6 @@ export const userBeet = new beet.BeetStruct<
   [
     ['accountDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['authority', beetSolana.publicKey],
-    ['singlePoolComets', beetSolana.publicKey],
     ['borrowPositions', beetSolana.publicKey],
     ['comet', beetSolana.publicKey],
     ['bump', beet.u8],

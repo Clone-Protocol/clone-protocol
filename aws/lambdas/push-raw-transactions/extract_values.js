@@ -18,10 +18,10 @@ const parseEvent = (
         slot,
         eventId,
         poolIndex: data.poolIndex,
-        isConcentrated: data.isConcentrated,
-        iassetDelta: data.iassetDelta.toString(),
-        onusdDelta: data.onusdDelta.toString(),
-        lpTokenDelta: data.lpTokenDelta.toString(),
+        userAddress: data.userAddress,
+        committedOnusdDelta: data.committedOnusdDelta.toString(),
+        onusdIldDelta: data.onusdIldDelta.toString(),
+        onassetIldDelta: data.onassetIldDelta.toString(),
       }
       break;
     case "PoolState":
@@ -30,9 +30,9 @@ const parseEvent = (
         slot,
         eventId,
         poolIndex: data.poolIndex,
-        iasset: data.iasset.toString(),
-        onusd: data.onusd.toString(),
-        lpTokens: data.lpTokens.toString(),
+        onassetIld: data.onassetIld.toString(),
+        onusdIld: data.onusdIld.toString(),
+        committedOnusdLiquidity: data.committedOnusdLiquidity.toString(),
         oraclePrice: data.oraclePrice.toString(),
       };
       break;
@@ -41,11 +41,11 @@ const parseEvent = (
         blockTime,
         slot,
         eventId,
-        userId: data.user.toString(),
+        userAddress: data.userAddress.toString(),
         poolIndex: data.poolIndex,
-        isBuy: data.isBuy,
-        iasset: data.iasset.toString(),
-        onusd: data.onusd.toString(),
+        inputIsOnusd: data.inputIsOnusd,
+        input: data.input.toString(),
+        output: data.output.toString(),
         tradingFee: data.tradingFee.toString(),
         treasuryFee: data.treasuryFee.toString(),
       };
@@ -56,7 +56,7 @@ const parseEvent = (
         slot,
         eventId,
         poolIndex: data.poolIndex,
-        userId: data.user.toString(),
+        userAddress: data.userAddress.toString(),
         isLiquidation: data.isLiquidation,
         collateralSupplied: data.collateralSupplied.toString(),
         collateralDelta: data.collateralDelta.toString(),

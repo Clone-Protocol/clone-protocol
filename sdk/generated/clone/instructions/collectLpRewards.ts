@@ -11,84 +11,79 @@ import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
- * @category ProvideUnconcentratedLiquidity
+ * @category CollectLpRewards
  * @category generated
  */
-export type ProvideUnconcentratedLiquidityInstructionArgs = {
-  liquidityPositionIndex: number
-  onassetAmount: beet.bignum
+export type CollectLpRewardsInstructionArgs = {
+  cometPositionIndex: number
 }
 /**
  * @category Instructions
- * @category ProvideUnconcentratedLiquidity
+ * @category CollectLpRewards
  * @category generated
  */
-export const provideUnconcentratedLiquidityStruct = new beet.BeetArgsStruct<
-  ProvideUnconcentratedLiquidityInstructionArgs & {
+export const collectLpRewardsStruct = new beet.BeetArgsStruct<
+  CollectLpRewardsInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['liquidityPositionIndex', beet.u8],
-    ['onassetAmount', beet.u64],
+    ['cometPositionIndex', beet.u8],
   ],
-  'ProvideUnconcentratedLiquidityInstructionArgs'
+  'CollectLpRewardsInstructionArgs'
 )
 /**
- * Accounts required by the _provideUnconcentratedLiquidity_ instruction
+ * Accounts required by the _collectLpRewards_ instruction
  *
  * @property [**signer**] user
  * @property [] userAccount
  * @property [_writable_] clone
- * @property [_writable_] tokenData
+ * @property [] tokenData
+ * @property [_writable_] comet
+ * @property [_writable_] onusdMint
+ * @property [_writable_] onassetMint
  * @property [_writable_] userOnusdTokenAccount
  * @property [_writable_] userOnassetTokenAccount
- * @property [_writable_] userLiquidityTokenAccount
- * @property [_writable_] ammOnusdTokenAccount
- * @property [_writable_] ammOnassetTokenAccount
- * @property [_writable_] liquidityTokenMint
  * @category Instructions
- * @category ProvideUnconcentratedLiquidity
+ * @category CollectLpRewards
  * @category generated
  */
-export type ProvideUnconcentratedLiquidityInstructionAccounts = {
+export type CollectLpRewardsInstructionAccounts = {
   user: web3.PublicKey
   userAccount: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
+  comet: web3.PublicKey
+  onusdMint: web3.PublicKey
+  onassetMint: web3.PublicKey
   userOnusdTokenAccount: web3.PublicKey
   userOnassetTokenAccount: web3.PublicKey
-  userLiquidityTokenAccount: web3.PublicKey
-  ammOnusdTokenAccount: web3.PublicKey
-  ammOnassetTokenAccount: web3.PublicKey
-  liquidityTokenMint: web3.PublicKey
   tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const provideUnconcentratedLiquidityInstructionDiscriminator = [
-  15, 150, 186, 92, 94, 156, 253, 195,
+export const collectLpRewardsInstructionDiscriminator = [
+  141, 134, 109, 237, 96, 31, 249, 148,
 ]
 
 /**
- * Creates a _ProvideUnconcentratedLiquidity_ instruction.
+ * Creates a _CollectLpRewards_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category ProvideUnconcentratedLiquidity
+ * @category CollectLpRewards
  * @category generated
  */
-export function createProvideUnconcentratedLiquidityInstruction(
-  accounts: ProvideUnconcentratedLiquidityInstructionAccounts,
-  args: ProvideUnconcentratedLiquidityInstructionArgs,
-  programId = new web3.PublicKey('6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g')
+export function createCollectLpRewardsInstruction(
+  accounts: CollectLpRewardsInstructionAccounts,
+  args: CollectLpRewardsInstructionArgs,
+  programId = new web3.PublicKey('BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ')
 ) {
-  const [data] = provideUnconcentratedLiquidityStruct.serialize({
-    instructionDiscriminator:
-      provideUnconcentratedLiquidityInstructionDiscriminator,
+  const [data] = collectLpRewardsStruct.serialize({
+    instructionDiscriminator: collectLpRewardsInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
@@ -109,6 +104,21 @@ export function createProvideUnconcentratedLiquidityInstruction(
     },
     {
       pubkey: accounts.tokenData,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.comet,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.onusdMint,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.onassetMint,
       isWritable: true,
       isSigner: false,
     },
@@ -119,26 +129,6 @@ export function createProvideUnconcentratedLiquidityInstruction(
     },
     {
       pubkey: accounts.userOnassetTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.userLiquidityTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.ammOnusdTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.ammOnassetTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.liquidityTokenMint,
       isWritable: true,
       isSigner: false,
     },

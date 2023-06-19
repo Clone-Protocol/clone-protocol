@@ -11,122 +11,98 @@ import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
- * @category MintOnusd
+ * @category Swap
  * @category generated
  */
-export type MintOnusdInstructionArgs = {
-  amount: beet.bignum
+export type SwapInstructionArgs = {
+  poolIndex: number
+  quantity: beet.bignum
+  quantityIsInput: boolean
+  quantityIsOnusd: boolean
+  resultThreshold: beet.bignum
 }
 /**
  * @category Instructions
- * @category MintOnusd
+ * @category Swap
  * @category generated
  */
-export const mintOnusdStruct = new beet.BeetArgsStruct<
-  MintOnusdInstructionArgs & {
+export const swapStruct = new beet.BeetArgsStruct<
+  SwapInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['amount', beet.u64],
+    ['poolIndex', beet.u8],
+    ['quantity', beet.u64],
+    ['quantityIsInput', beet.bool],
+    ['quantityIsOnusd', beet.bool],
+    ['resultThreshold', beet.u64],
   ],
-  'MintOnusdInstructionArgs'
+  'SwapInstructionArgs'
 )
 /**
- * Accounts required by the _mintOnusd_ instruction
+ * Accounts required by the _swap_ instruction
  *
- * @property [**signer**] signer
- * @property [_writable_] managerInfo
- * @property [] clone
- * @property [_writable_] onusdMint
- * @property [_writable_] managerOnusdTokenAccount
- * @property [_writable_] usdcMint
- * @property [_writable_] managerUsdcTokenAccount
- * @property [] cloneProgram
+ * @property [**signer**] user
+ * @property [_writable_] clone
  * @property [_writable_] tokenData
- * @property [_writable_] cloneUsdcVault
+ * @property [_writable_] userOnusdTokenAccount
+ * @property [_writable_] userOnassetTokenAccount
+ * @property [_writable_] onassetMint
+ * @property [_writable_] onusdMint
+ * @property [_writable_] treasuryOnassetTokenAccount
+ * @property [_writable_] treasuryOnusdTokenAccount
  * @category Instructions
- * @category MintOnusd
+ * @category Swap
  * @category generated
  */
-export type MintOnusdInstructionAccounts = {
-  signer: web3.PublicKey
-  managerInfo: web3.PublicKey
+export type SwapInstructionAccounts = {
+  user: web3.PublicKey
   clone: web3.PublicKey
-  onusdMint: web3.PublicKey
-  managerOnusdTokenAccount: web3.PublicKey
-  usdcMint: web3.PublicKey
-  managerUsdcTokenAccount: web3.PublicKey
-  cloneProgram: web3.PublicKey
   tokenData: web3.PublicKey
-  cloneUsdcVault: web3.PublicKey
+  userOnusdTokenAccount: web3.PublicKey
+  userOnassetTokenAccount: web3.PublicKey
+  onassetMint: web3.PublicKey
+  onusdMint: web3.PublicKey
+  treasuryOnassetTokenAccount: web3.PublicKey
+  treasuryOnusdTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const mintOnusdInstructionDiscriminator = [
-  34, 182, 150, 49, 162, 72, 94, 39,
+export const swapInstructionDiscriminator = [
+  248, 198, 158, 145, 225, 117, 135, 200,
 ]
 
 /**
- * Creates a _MintOnusd_ instruction.
+ * Creates a _Swap_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category MintOnusd
+ * @category Swap
  * @category generated
  */
-export function createMintOnusdInstruction(
-  accounts: MintOnusdInstructionAccounts,
-  args: MintOnusdInstructionArgs,
-  programId = new web3.PublicKey('HX81GDFSZ9GktdpQCg8N1sBRr1AydZMnkpkNw7dffQym')
+export function createSwapInstruction(
+  accounts: SwapInstructionAccounts,
+  args: SwapInstructionArgs,
+  programId = new web3.PublicKey('BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ')
 ) {
-  const [data] = mintOnusdStruct.serialize({
-    instructionDiscriminator: mintOnusdInstructionDiscriminator,
+  const [data] = swapStruct.serialize({
+    instructionDiscriminator: swapInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.signer,
+      pubkey: accounts.user,
       isWritable: false,
       isSigner: true,
     },
     {
-      pubkey: accounts.managerInfo,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
       pubkey: accounts.clone,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.onusdMint,
       isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.managerOnusdTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.usdcMint,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.managerUsdcTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.cloneProgram,
-      isWritable: false,
       isSigner: false,
     },
     {
@@ -135,7 +111,32 @@ export function createMintOnusdInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.cloneUsdcVault,
+      pubkey: accounts.userOnusdTokenAccount,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.userOnassetTokenAccount,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.onassetMint,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.onusdMint,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.treasuryOnassetTokenAccount,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.treasuryOnusdTokenAccount,
       isWritable: true,
       isSigner: false,
     },

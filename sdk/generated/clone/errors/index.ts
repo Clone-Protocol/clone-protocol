@@ -1299,6 +1299,49 @@ createErrorFromCodeLookup.set(0x17a5, () => new PoolDeprecatedError())
 createErrorFromNameLookup.set('PoolDeprecated', () => new PoolDeprecatedError())
 
 /**
+ * PoolEmpty: 'Pool is empty'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class PoolEmptyError extends Error {
+  readonly code: number = 0x17a6
+  readonly name: string = 'PoolEmpty'
+  constructor() {
+    super('Pool is empty')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, PoolEmptyError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x17a6, () => new PoolEmptyError())
+createErrorFromNameLookup.set('PoolEmpty', () => new PoolEmptyError())
+
+/**
+ * NoLiquidityToWithdraw: 'No liquidity to withdraw'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class NoLiquidityToWithdrawError extends Error {
+  readonly code: number = 0x17a7
+  readonly name: string = 'NoLiquidityToWithdraw'
+  constructor() {
+    super('No liquidity to withdraw')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, NoLiquidityToWithdrawError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x17a7, () => new NoLiquidityToWithdrawError())
+createErrorFromNameLookup.set(
+  'NoLiquidityToWithdraw',
+  () => new NoLiquidityToWithdrawError()
+)
+
+/**
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
  * @category generated
