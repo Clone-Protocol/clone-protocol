@@ -16,7 +16,6 @@ pub struct CloseCometAccount<'info> {
     pub user_account: Account<'info, User>,
     #[account(
         mut,
-        constraint = comet.load()?.is_single_pool == 0 @ CloneError::WrongCometType,
         address = user_account.comet
     )]
     pub comet: AccountLoader<'info, Comet>,

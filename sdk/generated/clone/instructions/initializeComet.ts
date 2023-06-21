@@ -14,23 +14,10 @@ import * as web3 from '@solana/web3.js'
  * @category InitializeComet
  * @category generated
  */
-export type InitializeCometInstructionArgs = {
-  isSinglePool: boolean
-}
-/**
- * @category Instructions
- * @category InitializeComet
- * @category generated
- */
-export const initializeCometStruct = new beet.BeetArgsStruct<
-  InitializeCometInstructionArgs & {
-    instructionDiscriminator: number[] /* size: 8 */
-  }
->(
-  [
-    ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['isSinglePool', beet.bool],
-  ],
+export const initializeCometStruct = new beet.BeetArgsStruct<{
+  instructionDiscriminator: number[] /* size: 8 */
+}>(
+  [['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)]],
   'InitializeCometInstructionArgs'
 )
 /**
@@ -61,20 +48,16 @@ export const initializeCometInstructionDiscriminator = [
  * Creates a _InitializeComet_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
- * @param args to provide as instruction data to the program
- *
  * @category Instructions
  * @category InitializeComet
  * @category generated
  */
 export function createInitializeCometInstruction(
   accounts: InitializeCometInstructionAccounts,
-  args: InitializeCometInstructionArgs,
-  programId = new web3.PublicKey('6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g')
+  programId = new web3.PublicKey('BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ')
 ) {
   const [data] = initializeCometStruct.serialize({
     instructionDiscriminator: initializeCometInstructionDiscriminator,
-    ...args,
   })
   const keys: web3.AccountMeta[] = [
     {

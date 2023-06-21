@@ -11,77 +11,79 @@ import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
- * @category AddCollateralToBorrow
+ * @category CollectLpRewards
  * @category generated
  */
-export type AddCollateralToBorrowInstructionArgs = {
-  borrowIndex: number
-  amount: beet.bignum
+export type CollectLpRewardsInstructionArgs = {
+  cometPositionIndex: number
 }
 /**
  * @category Instructions
- * @category AddCollateralToBorrow
+ * @category CollectLpRewards
  * @category generated
  */
-export const addCollateralToBorrowStruct = new beet.BeetArgsStruct<
-  AddCollateralToBorrowInstructionArgs & {
+export const collectLpRewardsStruct = new beet.BeetArgsStruct<
+  CollectLpRewardsInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['borrowIndex', beet.u8],
-    ['amount', beet.u64],
+    ['cometPositionIndex', beet.u8],
   ],
-  'AddCollateralToBorrowInstructionArgs'
+  'CollectLpRewardsInstructionArgs'
 )
 /**
- * Accounts required by the _addCollateralToBorrow_ instruction
+ * Accounts required by the _collectLpRewards_ instruction
  *
  * @property [**signer**] user
  * @property [] userAccount
- * @property [] clone
- * @property [_writable_] tokenData
- * @property [_writable_] borrowPositions
- * @property [_writable_] vault
- * @property [_writable_] userCollateralTokenAccount
+ * @property [_writable_] clone
+ * @property [] tokenData
+ * @property [_writable_] comet
+ * @property [_writable_] onusdMint
+ * @property [_writable_] onassetMint
+ * @property [_writable_] userOnusdTokenAccount
+ * @property [_writable_] userOnassetTokenAccount
  * @category Instructions
- * @category AddCollateralToBorrow
+ * @category CollectLpRewards
  * @category generated
  */
-export type AddCollateralToBorrowInstructionAccounts = {
+export type CollectLpRewardsInstructionAccounts = {
   user: web3.PublicKey
   userAccount: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
-  borrowPositions: web3.PublicKey
-  vault: web3.PublicKey
-  userCollateralTokenAccount: web3.PublicKey
+  comet: web3.PublicKey
+  onusdMint: web3.PublicKey
+  onassetMint: web3.PublicKey
+  userOnusdTokenAccount: web3.PublicKey
+  userOnassetTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const addCollateralToBorrowInstructionDiscriminator = [
-  205, 12, 181, 19, 249, 95, 13, 197,
+export const collectLpRewardsInstructionDiscriminator = [
+  141, 134, 109, 237, 96, 31, 249, 148,
 ]
 
 /**
- * Creates a _AddCollateralToBorrow_ instruction.
+ * Creates a _CollectLpRewards_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category AddCollateralToBorrow
+ * @category CollectLpRewards
  * @category generated
  */
-export function createAddCollateralToBorrowInstruction(
-  accounts: AddCollateralToBorrowInstructionAccounts,
-  args: AddCollateralToBorrowInstructionArgs,
+export function createCollectLpRewardsInstruction(
+  accounts: CollectLpRewardsInstructionAccounts,
+  args: CollectLpRewardsInstructionArgs,
   programId = new web3.PublicKey('BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ')
 ) {
-  const [data] = addCollateralToBorrowStruct.serialize({
-    instructionDiscriminator: addCollateralToBorrowInstructionDiscriminator,
+  const [data] = collectLpRewardsStruct.serialize({
+    instructionDiscriminator: collectLpRewardsInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
@@ -97,26 +99,36 @@ export function createAddCollateralToBorrowInstruction(
     },
     {
       pubkey: accounts.clone,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {
       pubkey: accounts.tokenData,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.comet,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.borrowPositions,
+      pubkey: accounts.onusdMint,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.vault,
+      pubkey: accounts.onassetMint,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.userCollateralTokenAccount,
+      pubkey: accounts.userOnusdTokenAccount,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.userOnassetTokenAccount,
       isWritable: true,
       isSigner: false,
     },

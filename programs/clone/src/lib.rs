@@ -10,7 +10,7 @@ pub mod states;
 
 use instructions::*;
 
-declare_id!("DhBtzLq7kHxxEVB4hS1bYjqS171JvyuxybPxWzGw7o4a");
+declare_id!("BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ");
 
 #[program]
 pub mod clone {
@@ -67,8 +67,8 @@ pub mod clone {
         instructions::initialize_borrow_positions::execute(ctx)
     }
 
-    pub fn initialize_comet(ctx: Context<InitializeComet>, is_single_pool: bool) -> Result<()> {
-        instructions::initialize_comet::execute(ctx, is_single_pool)
+    pub fn initialize_comet(ctx: Context<InitializeComet>) -> Result<()> {
+        instructions::initialize_comet::execute(ctx)
     }
 
     pub fn add_collateral(
@@ -166,69 +166,8 @@ pub mod clone {
         instructions::pay_borrow_debt::execute(ctx, borrow_index, amount)
     }
 
-    pub fn borrow_more(
-        ctx: Context<BorrowMore>,
-        borrow_index: u8,
-        amount: u64,
-    ) -> Result<()> {
+    pub fn borrow_more(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Result<()> {
         instructions::borrow_more::execute(ctx, borrow_index, amount)
-    }
-
-    pub fn provide_unconcentrated_liquidity(
-        ctx: Context<ProvideUnconcentratedLiquidity>,
-        liquidity_position_index: u8,
-        onasset_amount: u64,
-    ) -> Result<()> {
-        instructions::provide_unconcentrated_liquidity::execute(
-            ctx,
-            liquidity_position_index,
-            onasset_amount,
-        )
-    }
-
-    pub fn withdraw_unconcentrated_liquidity(
-        ctx: Context<WithdrawUnconcentratedLiquidity>,
-        liquidity_position_index: u8,
-        liquidity_token_amount: u64,
-    ) -> Result<()> {
-        instructions::withdraw_unconcentrated_liquidity::execute(
-            ctx,
-            liquidity_position_index,
-            liquidity_token_amount,
-        )
-    }
-
-    pub fn buy_onasset(
-        ctx: Context<BuyOnAsset>,
-        pool_index: u8,
-        amount: u64,
-        onusd_spend_threshold: u64,
-    ) -> Result<()> {
-        instructions::buy_onasset::execute(ctx, pool_index, amount, onusd_spend_threshold)
-    }
-
-    pub fn sell_onasset(
-        ctx: Context<SellOnAsset>,
-        pool_index: u8,
-        amount: u64,
-        onusd_received_threshold: u64,
-    ) -> Result<()> {
-        instructions::sell_onasset::execute(ctx, pool_index, amount, onusd_received_threshold)
-    }
-
-    pub fn initialize_single_pool_comet(
-        ctx: Context<InitializeSinglePoolComet>,
-        pool_index: u8,
-        collateral_index: u8,
-    ) -> Result<()> {
-        instructions::initialize_single_pool_comet::execute(ctx, pool_index, collateral_index)
-    }
-
-    pub fn close_single_pool_comet(
-        ctx: Context<CloseSinglePoolComet>,
-        comet_index: u8,
-    ) -> Result<()> {
-        instructions::close_single_pool_comet::execute(ctx, comet_index)
     }
 
     pub fn add_collateral_to_comet(
@@ -237,30 +176,6 @@ pub mod clone {
         collateral_amount: u64,
     ) -> Result<()> {
         instructions::add_collateral_to_comet::execute(ctx, collateral_index, collateral_amount)
-    }
-
-    pub fn add_collateral_to_single_pool_comet(
-        ctx: Context<AddCollateralToSinglePoolComet>,
-        position_index: u8,
-        collateral_amount: u64,
-    ) -> Result<()> {
-        instructions::add_collateral_to_single_pool_comet::execute(
-            ctx,
-            position_index,
-            collateral_amount,
-        )
-    }
-
-    pub fn withdraw_collateral_from_single_pool_comet(
-        ctx: Context<WithdrawCollateralFromSinglePoolComet>,
-        position_index: u8,
-        collateral_amount: u64,
-    ) -> Result<()> {
-        instructions::withdraw_collateral_from_single_pool_comet::execute(
-            ctx,
-            position_index,
-            collateral_amount,
-        )
     }
 
     pub fn withdraw_collateral_from_comet(
@@ -283,14 +198,6 @@ pub mod clone {
         instructions::add_liquidity_to_comet::execute(ctx, pool_index, onusd_amount)
     }
 
-    pub fn add_liquidity_to_single_pool_comet(
-        ctx: Context<AddLiquidityToSinglePoolComet>,
-        position_index: u8,
-        onusd_amount: u64,
-    ) -> Result<()> {
-        instructions::add_liquidity_to_single_pool_comet::execute(ctx, position_index, onusd_amount)
-    }
-
     pub fn withdraw_liquidity_from_comet(
         ctx: Context<WithdrawLiquidityFromComet>,
         comet_position_index: u8,
@@ -303,15 +210,18 @@ pub mod clone {
         )
     }
 
-    pub fn mint_onusd_devnet(ctx: Context<MintONUSDDevnet>, amount: u64) -> Result<()> {
-        instructions::mint_onusd_devnet::execute(ctx, amount)
-    }
-
     pub fn liquidate_borrow_position(
         ctx: Context<LiquidateBorrowPosition>,
         borrow_index: u8,
     ) -> Result<()> {
         instructions::liquidate_borrow_position::execute(ctx, borrow_index)
+    }
+
+    pub fn collect_lp_rewards(
+        ctx: Context<CollectLpRewards>,
+        comet_position_index: u8,
+    ) -> Result<()> {
+        instructions::collect_lp_rewards::execute(ctx, comet_position_index)
     }
 
     pub fn pay_impermanent_loss_debt(
@@ -349,35 +259,22 @@ pub mod clone {
         instructions::liquidate_comet_stable_collateral::execute(ctx, comet_collateral_index)
     }
 
-    pub fn liquidate_comet_ild(
-        ctx: Context<LiquidateCometILD>,
+    pub fn liquidate_comet_position(
+        ctx: Context<LiquidateCometPosition>,
         comet_position_index: u8,
         amount: u64,
         pay_onusd_debt: bool,
     ) -> Result<()> {
-        instructions::liquidate_comet_ild::execute(ctx, comet_position_index, amount, pay_onusd_debt)
-    }
-
-    pub fn liquidate_comet_borrow(
-        ctx: Context<LiquidateCometBorrow>,
-        comet_position_index: u8,
-        liquidity_token_amount: u64,
-    ) -> Result<()> {
-        instructions::liquidate_comet_borrow::execute(
+        instructions::liquidate_comet_position::execute(
             ctx,
             comet_position_index,
-            liquidity_token_amount,
+            amount,
+            pay_onusd_debt,
         )
     }
 
     pub fn close_comet_account(ctx: Context<CloseCometAccount>) -> Result<()> {
         instructions::close_comet_account::execute(ctx)
-    }
-
-    pub fn close_single_pool_comet_account(
-        ctx: Context<CloseSinglePoolCometAccount>,
-    ) -> Result<()> {
-        instructions::close_single_pool_comet_account::execute(ctx)
     }
 
     pub fn close_borrow_positions_account(ctx: Context<CloseBorrowPositionsAccount>) -> Result<()> {
@@ -388,10 +285,7 @@ pub mod clone {
         instructions::close_user_account::execute(ctx)
     }
 
-    pub fn deprecate_pool(
-        ctx: Context<DeprecatePool>,
-        pool_index: u8,
-    ) -> Result<()> {
+    pub fn deprecate_pool(ctx: Context<DeprecatePool>, pool_index: u8) -> Result<()> {
         instructions::deprecate_pool::execute(ctx, pool_index)
     }
 
@@ -408,5 +302,23 @@ pub mod clone {
         comet_position_index: u8,
     ) -> Result<()> {
         instructions::remove_comet_position::execute(ctx, comet_position_index)
+    }
+
+    pub fn swap(
+        ctx: Context<Swap>,
+        pool_index: u8,
+        quantity: u64,
+        quantity_is_input: bool,
+        quantity_is_onusd: bool,
+        result_threshold: u64,
+    ) -> Result<()> {
+        instructions::swap::execute(
+            ctx,
+            pool_index,
+            quantity,
+            quantity_is_input,
+            quantity_is_onusd,
+            result_threshold,
+        )
     }
 }

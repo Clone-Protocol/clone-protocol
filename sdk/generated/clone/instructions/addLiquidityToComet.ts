@@ -5,7 +5,6 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
 
@@ -43,12 +42,6 @@ export const addLiquidityToCometStruct = new beet.BeetArgsStruct<
  * @property [_writable_] clone
  * @property [_writable_] tokenData
  * @property [_writable_] comet
- * @property [_writable_] onusdMint
- * @property [_writable_] onassetMint
- * @property [_writable_] ammOnusdTokenAccount
- * @property [_writable_] ammOnassetTokenAccount
- * @property [_writable_] liquidityTokenMint
- * @property [_writable_] cometLiquidityTokenAccount
  * @category Instructions
  * @category AddLiquidityToComet
  * @category generated
@@ -59,13 +52,6 @@ export type AddLiquidityToCometInstructionAccounts = {
   clone: web3.PublicKey
   tokenData: web3.PublicKey
   comet: web3.PublicKey
-  onusdMint: web3.PublicKey
-  onassetMint: web3.PublicKey
-  ammOnusdTokenAccount: web3.PublicKey
-  ammOnassetTokenAccount: web3.PublicKey
-  liquidityTokenMint: web3.PublicKey
-  cometLiquidityTokenAccount: web3.PublicKey
-  tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
@@ -86,7 +72,7 @@ export const addLiquidityToCometInstructionDiscriminator = [
 export function createAddLiquidityToCometInstruction(
   accounts: AddLiquidityToCometInstructionAccounts,
   args: AddLiquidityToCometInstructionArgs,
-  programId = new web3.PublicKey('6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g')
+  programId = new web3.PublicKey('BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ')
 ) {
   const [data] = addLiquidityToCometStruct.serialize({
     instructionDiscriminator: addLiquidityToCometInstructionDiscriminator,
@@ -116,41 +102,6 @@ export function createAddLiquidityToCometInstruction(
     {
       pubkey: accounts.comet,
       isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.onusdMint,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.onassetMint,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.ammOnusdTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.ammOnassetTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.liquidityTokenMint,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.cometLiquidityTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
-      isWritable: false,
       isSigner: false,
     },
   ]

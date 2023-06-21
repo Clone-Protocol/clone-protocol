@@ -2,7 +2,6 @@ use crate::error::*;
 use crate::math::*;
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
-use std::cmp::Ordering;
 use std::convert::TryInto;
 
 pub const DEVNET_TOKEN_SCALE: u32 = 8;
@@ -61,7 +60,7 @@ impl Default for RawDecimal {
 #[derive(Default)]
 pub struct Clone {
     // 185
-    pub onusd_mint: Pubkey,                     // 32
+    pub onusd_mint: Pubkey,                    // 32
     pub token_data: Pubkey,                    // 32
     pub admin: Pubkey,                         // 32
     pub bump: u8,                              // 1
@@ -81,7 +80,7 @@ pub struct LiquidationConfig {
 #[account(zero_copy)]
 pub struct TokenData {
     // 165,320
-    pub clone: Pubkey,                        // 32
+    pub clone: Pubkey,                         // 32
     pub num_pools: u64,                        // 8
     pub num_collaterals: u64,                  // 8
     pub pools: [Pool; 255],                    // 255 * 504 = 128,520
@@ -146,7 +145,7 @@ impl TokenData {
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct AssetInfo {
     // 208
-    pub onasset_mint: Pubkey,                           // 32
+    pub onasset_mint: Pubkey,                          // 32
     pub pyth_address: Pubkey,                          // 32
     pub price: RawDecimal,                             // 16
     pub twap: RawDecimal,                              // 16
@@ -165,14 +164,10 @@ pub struct AssetInfo {
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct Pool {
     // 504
-    pub onasset_token_account: Pubkey,                // 32
-    pub onusd_token_account: Pubkey,                  // 32
-    pub liquidity_token_mint: Pubkey,                // 32
     pub underlying_asset_token_account: Pubkey,      // 32
-    pub comet_liquidity_token_account: Pubkey,       // 32
-    pub onasset_amount: RawDecimal,                   // 16
-    pub onusd_amount: RawDecimal,                     // 16
-    pub liquidity_token_supply: RawDecimal,          // 16
+    pub committed_onusd_liquidity: RawDecimal,       // 16
+    pub onusd_ild: RawDecimal,                       // 16
+    pub onasset_ild: RawDecimal,                     // 16
     pub treasury_trading_fee: RawDecimal,            // 16
     pub liquidity_trading_fee: RawDecimal,           // 16
     pub total_minted_amount: RawDecimal,             // 16
@@ -193,25 +188,105 @@ impl Pool {
         self.liquidity_trading_fee.to_decimal() + self.treasury_trading_fee.to_decimal()
     }
 
-    // Calculate how much you would get from inputting that amount into the pool.
-    pub fn calculate_output_from_input(&self, input: Decimal, input_is_onusd: bool) -> SwapSummary {
-        let pool_onusd = self.onusd_amount.to_decimal();
-        let pool_onasset = self.onasset_amount.to_decimal();
+    pub fn calculate_jit_pool(&self) -> (Decimal, Decimal) {
+        let oracle_price = self.asset_info.price.to_decimal();
+        let pool_onusd = rescale_toward_zero(
+            self.committed_onusd_liquidity.to_decimal() - self.onusd_ild.to_decimal(),
+            DEVNET_TOKEN_SCALE,
+        );
+        let pool_onasset = rescale_toward_zero(
+            self.committed_onusd_liquidity.to_decimal() / oracle_price
+                - self.onasset_ild.to_decimal(),
+            DEVNET_TOKEN_SCALE,
+        );
+        (pool_onusd, pool_onasset)
+    }
+
+    pub fn calculate_swap(
+        &self,
+        quantity: Decimal,
+        quantity_is_input: bool,
+        quantity_is_onusd: bool,
+    ) -> SwapSummary {
+        let (pool_onusd, pool_onasset) = self.calculate_jit_pool();
+        let invariant = pool_onasset * pool_onusd;
+        let liquidity_trading_fee = self.liquidity_trading_fee.to_decimal();
+        let treasury_trading_fee = self.treasury_trading_fee.to_decimal();
+
+        if quantity_is_input {
+            let (i_pool, o_pool) = if quantity_is_onusd {
+                (pool_onusd, pool_onasset)
+            } else {
+                (pool_onasset, pool_onusd)
+            };
+            let output_before_fees =
+                rescale_toward_zero(o_pool - invariant / (i_pool + quantity), DEVNET_TOKEN_SCALE);
+            let liquidity_fees_paid = rescale_toward_zero(
+                output_before_fees * liquidity_trading_fee,
+                DEVNET_TOKEN_SCALE,
+            );
+            let treasury_fees_paid = rescale_toward_zero(
+                output_before_fees * treasury_trading_fee,
+                DEVNET_TOKEN_SCALE,
+            );
+            let result = rescale_toward_zero(
+                output_before_fees - liquidity_fees_paid - treasury_fees_paid,
+                DEVNET_TOKEN_SCALE,
+            );
+            SwapSummary {
+                result,
+                liquidity_fees_paid,
+                treasury_fees_paid,
+            }
+        } else {
+            let (o_pool, i_pool) = if quantity_is_onusd {
+                (pool_onusd, pool_onasset)
+            } else {
+                (pool_onasset, pool_onusd)
+            };
+            let output_before_fees = rescale_toward_zero(
+                quantity / (Decimal::ONE - liquidity_trading_fee - treasury_trading_fee),
+                DEVNET_TOKEN_SCALE,
+            );
+            let result = rescale_toward_zero(
+                invariant / (o_pool - output_before_fees) - i_pool,
+                DEVNET_TOKEN_SCALE,
+            );
+            let liquidity_fees_paid = rescale_toward_zero(
+                output_before_fees * liquidity_trading_fee,
+                DEVNET_TOKEN_SCALE,
+            );
+            let treasury_fees_paid = rescale_toward_zero(
+                output_before_fees * treasury_trading_fee,
+                DEVNET_TOKEN_SCALE,
+            );
+            SwapSummary {
+                result,
+                liquidity_fees_paid,
+                treasury_fees_paid,
+            }
+        }
+    }
+
+    pub fn calculate_usd_to_buy(&self, amount: Decimal) -> SwapSummary {
+        let (pool_onusd, pool_onasset) = self.calculate_jit_pool();
         let invariant = pool_onasset * pool_onusd;
         let liquidity_trading_fee = self.liquidity_trading_fee.to_decimal();
         let treasury_trading_fee = self.treasury_trading_fee.to_decimal();
         let total_trading_fee = liquidity_trading_fee + treasury_trading_fee;
         let fee_adjustment = Decimal::ONE - total_trading_fee;
-
-        let output_before_fees = if input_is_onusd {
-            pool_onasset - invariant / (pool_onusd + input)
-        } else {
-            pool_onusd - invariant / (pool_onasset + input)
-        };
-        let result = output_before_fees * fee_adjustment;
-        let total_fees_paid = output_before_fees - result;
-        let liquidity_fees_paid = total_fees_paid * liquidity_trading_fee / total_trading_fee;
-        let treasury_fees_paid = total_fees_paid - liquidity_fees_paid;
+        let output_before_fees = amount / fee_adjustment;
+        let result = rescale_toward_zero(
+            invariant / (pool_onasset - output_before_fees) - pool_onusd,
+            DEVNET_TOKEN_SCALE,
+        );
+        let total_fees_paid = output_before_fees - amount;
+        let liquidity_fees_paid = rescale_toward_zero(
+            total_fees_paid * liquidity_trading_fee / total_trading_fee,
+            DEVNET_TOKEN_SCALE,
+        );
+        let treasury_fees_paid =
+            rescale_toward_zero(total_fees_paid - liquidity_fees_paid, DEVNET_TOKEN_SCALE);
 
         SwapSummary {
             result,
@@ -220,29 +295,22 @@ impl Pool {
         }
     }
 
-    // Calculate how much you would require to input into the pool given a desired output.
-    pub fn calculate_input_from_output(
-        &self,
-        output: Decimal,
-        output_is_onusd: bool,
-    ) -> SwapSummary {
-        let pool_onusd = self.onusd_amount.to_decimal();
-        let pool_onasset = self.onasset_amount.to_decimal();
+    pub fn calculate_usd_from_sell(&self, amount: Decimal) -> SwapSummary {
+        let (pool_onusd, pool_onasset) = self.calculate_jit_pool();
         let invariant = pool_onasset * pool_onusd;
         let liquidity_trading_fee = self.liquidity_trading_fee.to_decimal();
         let treasury_trading_fee = self.treasury_trading_fee.to_decimal();
         let total_trading_fee = liquidity_trading_fee + treasury_trading_fee;
         let fee_adjustment = Decimal::ONE - total_trading_fee;
-
-        let output_before_fees = output / fee_adjustment;
-        let result = if output_is_onusd {
-            invariant / (pool_onusd - output_before_fees) - pool_onasset
-        } else {
-            invariant / (pool_onasset - output_before_fees) - pool_onusd
-        };
-        let total_fees_paid = output_before_fees - output;
-        let liquidity_fees_paid = total_fees_paid * liquidity_trading_fee / total_trading_fee;
-        let treasury_fees_paid = total_fees_paid - liquidity_fees_paid;
+        let output_before_fees = pool_onusd - invariant / (pool_onasset + amount);
+        let result = rescale_toward_zero(output_before_fees * fee_adjustment, DEVNET_TOKEN_SCALE);
+        let total_fees_paid = output_before_fees - result;
+        let liquidity_fees_paid = rescale_toward_zero(
+            total_fees_paid * liquidity_trading_fee / total_trading_fee,
+            DEVNET_TOKEN_SCALE,
+        );
+        let treasury_fees_paid =
+            rescale_toward_zero(total_fees_paid - liquidity_fees_paid, DEVNET_TOKEN_SCALE);
 
         SwapSummary {
             result,
@@ -252,7 +320,9 @@ impl Pool {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.onasset_amount.to_decimal().is_zero() && self.onusd_amount.to_decimal().is_zero()
+        self.committed_onusd_liquidity.to_decimal().is_zero()
+            && self.onasset_ild.to_decimal().is_zero()
+            && self.onusd_ild.to_decimal().is_zero()
     }
 }
 
@@ -263,7 +333,7 @@ pub struct Collateral {
     pub pool_index: u64,                     // 8
     pub mint: Pubkey,                        // 32
     pub vault: Pubkey,                       // 32
-    pub vault_onusd_supply: RawDecimal,       // 16
+    pub vault_onusd_supply: RawDecimal,      // 16
     pub vault_mint_supply: RawDecimal,       // 16
     pub vault_comet_supply: RawDecimal,      // 16
     pub stable: u64,                         // 8
@@ -274,17 +344,15 @@ pub struct Collateral {
 #[derive(Default)]
 pub struct User {
     // 129
-    pub authority: Pubkey,          // 32
-    pub single_pool_comets: Pubkey, // 32
-    pub borrow_positions: Pubkey,   // 32
-    pub comet: Pubkey,              // 32
-    pub bump: u8,                   // 1
+    pub authority: Pubkey,        // 32
+    pub borrow_positions: Pubkey, // 32
+    pub comet: Pubkey,            // 32
+    pub bump: u8,                 // 1
 }
 
 #[account(zero_copy)]
 pub struct Comet {
     // 46,976
-    pub is_single_pool: u64,                 // 8
     pub owner: Pubkey,                       // 32
     pub num_positions: u64,                  // 8
     pub num_collaterals: u64,                // 8
@@ -295,7 +363,6 @@ pub struct Comet {
 impl Default for Comet {
     fn default() -> Self {
         Self {
-            is_single_pool: 0,
             owner: Pubkey::default(),
             num_positions: 0,
             num_collaterals: 0,
@@ -359,35 +426,20 @@ impl Comet {
         self.num_positions += 1;
     }
 
-    pub fn calculate_effective_collateral_value(
-        &self,
-        token_data: &TokenData,
-        single_collateral_position_index: Option<usize>,
-    ) -> Decimal {
+    pub fn calculate_effective_collateral_value(&self, token_data: &TokenData) -> Decimal {
         let mut total_value = Decimal::new(0, DEVNET_TOKEN_SCALE);
 
         self.collaterals[0..(self.num_collaterals as usize)]
             .iter()
             .enumerate()
-            .for_each(|(i, comet_collateral)| {
-                if let Some(index) = single_collateral_position_index {
-                    if index != i {
-                        return;
-                    }
-                }
+            .for_each(|(_, comet_collateral)| {
                 let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
                 let collateral_value = if collateral.stable == 1 {
                     comet_collateral.collateral_amount.to_decimal()
                 } else {
                     let pool = token_data.pools[collateral.pool_index as usize];
-                    let pool_price =
-                        pool.onusd_amount.to_decimal() / pool.onasset_amount.to_decimal();
-                    let eval_price = if pool_price < pool.asset_info.price.to_decimal() {
-                        pool_price
-                    } else {
-                        pool.asset_info.price.to_decimal()
-                    };
-                    comet_collateral.collateral_amount.to_decimal() * eval_price
+                    comet_collateral.collateral_amount.to_decimal()
+                        * pool.asset_info.price.to_decimal()
                         / collateral.collateralization_ratio.to_decimal()
                 };
                 total_value += collateral_value;
@@ -395,93 +447,34 @@ impl Comet {
 
         total_value
     }
-
-    pub fn estimate_onusd_value(&self, token_data: &TokenData) -> Decimal {
-        let mut onusd_value = self.calculate_effective_collateral_value(token_data, None);
-
-        self.positions[0..(self.num_positions as usize)]
-            .iter()
-            .for_each(|position| {
-                let mut pool = token_data.pools[position.pool_index as usize];
-                let pool_onusd = pool.onusd_amount.to_decimal();
-                let pool_onasset = pool.onasset_amount.to_decimal();
-                let pool_lp_tokens = pool.liquidity_token_supply.to_decimal();
-
-                let position_lp_tokens = position.liquidity_token_value.to_decimal();
-
-                let liquidity_proportion = calculate_liquidity_proportion_from_liquidity_tokens(
-                    position_lp_tokens,
-                    pool_lp_tokens,
-                );
-                let claimable_onusd = liquidity_proportion * pool_onusd;
-                let claimable_onasset = liquidity_proportion * pool_onasset;
-
-                let borrowed_onusd = position.borrowed_onusd.to_decimal();
-                let borrowed_onasset = position.borrowed_onasset.to_decimal();
-
-                // Adjust pool by claiming amounts:
-                pool.onasset_amount = RawDecimal::from(pool_onasset - claimable_onasset);
-                pool.onusd_amount = RawDecimal::from(pool_onusd - claimable_onusd);
-                pool.liquidity_token_supply = RawDecimal::from(pool_lp_tokens - position_lp_tokens);
-
-                // Factor in onusd deficit:
-                onusd_value += claimable_onusd;
-                onusd_value -= borrowed_onusd;
-
-                // Factor in onasset difference.
-                let onasset_difference = (borrowed_onasset - claimable_onasset).abs();
-                let oracle_marked_onasset_value =
-                    pool.asset_info.price.to_decimal() * onasset_difference;
-
-                match borrowed_onasset.cmp(&claimable_onasset) {
-                    Ordering::Greater => {
-                        onusd_value -= pool
-                            .calculate_input_from_output(onasset_difference, false)
-                            .result
-                            .max(oracle_marked_onasset_value);
-                    }
-                    Ordering::Less => {
-                        onusd_value += pool
-                            .calculate_output_from_input(onasset_difference, false)
-                            .result
-                            .min(oracle_marked_onasset_value)
-                    }
-                    _ => (),
-                };
-            });
-
-        onusd_value
-    }
 }
 
 #[zero_copy]
 pub struct CometPosition {
     // 120
-    pub authority: Pubkey,                   // 32
-    pub pool_index: u64,                     // 8
-    pub borrowed_onusd: RawDecimal,           // 16
-    pub borrowed_onasset: RawDecimal,         // 16
-    pub liquidity_token_value: RawDecimal,   // 16
-    pub comet_liquidation: CometLiquidation, // 32
+    pub authority: Pubkey,                     // 32
+    pub pool_index: u64,                       // 8
+    pub committed_onusd_liquidity: RawDecimal, //16
+    pub onusd_ild_rebate: RawDecimal,          // 16
+    pub onasset_ild_rebate: RawDecimal,        // 16
 }
 impl Default for CometPosition {
     fn default() -> Self {
         Self {
             authority: Pubkey::default(),
             pool_index: u8::MAX.into(),
-            borrowed_onusd: RawDecimal::default(),
-            borrowed_onasset: RawDecimal::default(),
-            liquidity_token_value: RawDecimal::default(),
-            comet_liquidation: CometLiquidation::default(),
+            committed_onusd_liquidity: RawDecimal::default(),
+            onusd_ild_rebate: RawDecimal::default(),
+            onasset_ild_rebate: RawDecimal::default(),
         }
     }
 }
 
 impl CometPosition {
     pub fn is_empty(&self) -> bool {
-        self.borrowed_onasset.to_decimal().is_zero()
-            && self.borrowed_onusd.to_decimal().is_zero()
-            && self.liquidity_token_value.to_decimal().is_zero()
+        self.committed_onusd_liquidity.to_decimal().is_zero()
+            && self.onusd_ild_rebate.to_decimal().is_zero()
+            && self.onasset_ild_rebate.to_decimal().is_zero()
     }
 }
 
@@ -502,54 +495,6 @@ impl Default for CometCollateral {
         }
     }
 }
-
-#[zero_copy]
-#[derive(PartialEq, Eq, Default, Debug)]
-pub struct CometLiquidation {
-    // 32
-    pub status: u64,                     // 8
-    pub excess_token_type_is_onusd: u64,  // 8
-    pub excess_token_amount: RawDecimal, // 16
-}
-
-// #[account(zero_copy)]
-// pub struct LiquidityPositions {
-//     // 14,320
-//     pub owner: Pubkey,                                 // 32
-//     pub num_positions: u64,                            // 8
-//     pub liquidity_positions: [LiquidityPosition; 255], // 255 * 56 = 14,280
-// }
-
-// impl Default for LiquidityPositions {
-//     fn default() -> Self {
-//         Self {
-//             owner: Pubkey::default(),
-//             num_positions: 0,
-//             liquidity_positions: [LiquidityPosition::default(); 255],
-//         }
-//     }
-// }
-
-// impl LiquidityPositions {
-//     pub fn remove(&mut self, index: usize) {
-//         self.liquidity_positions[index] =
-//             self.liquidity_positions[(self.num_positions - 1) as usize];
-//         self.liquidity_positions[(self.num_positions - 1) as usize] = LiquidityPosition {
-//             ..Default::default()
-//         };
-//         self.num_positions -= 1;
-//     }
-// }
-
-// #[zero_copy]
-// #[derive(Default)]
-// pub struct LiquidityPosition {
-//     // 56
-//     pub authority: Pubkey,                 // 32
-//     pub liquidity_token_value: RawDecimal, // 16
-//     pub pool_index: u64,                   // 8
-// }
-
 #[account(zero_copy)]
 pub struct BorrowPositions {
     // 20,440
@@ -586,5 +531,5 @@ pub struct BorrowPosition {
     pub collateral_amount: RawDecimal, // 16
     pub pool_index: u64,               // 8
     pub collateral_index: u64,         // 8
-    pub borrowed_onasset: RawDecimal,   // 16
+    pub borrowed_onasset: RawDecimal,  // 16
 }

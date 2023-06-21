@@ -1,9 +1,9 @@
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
@@ -31,315 +31,125 @@ pub struct WithdrawLiquidityFromComet<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        constraint = comet.to_account_info().key() == user_account.comet || comet.to_account_info().key() == user_account.single_pool_comets,
-        constraint = comet.load()?.is_single_pool == 0 || comet.load()?.is_single_pool == 1 @ CloneError::WrongCometType,
+        constraint = comet.to_account_info().key() == user_account.comet,
         constraint = (comet_position_index as u64) < comet.load()?.num_positions @ CloneError::InvalidInputPositionIndex
     )]
     pub comet: AccountLoader<'info, Comet>,
-    #[account(
-        mut,
-        address = clone.onusd_mint
-    )]
-    pub onusd_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        address = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
-    )]
-    pub onasset_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        address = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].onusd_token_account,
-    )]
-    pub amm_onusd_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        address = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].onasset_token_account,
-    )]
-    pub amm_onasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        address = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].liquidity_token_mint,
-    )]
-    pub liquidity_token_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        address = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].comet_liquidity_token_account,
-    )]
-    pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        associated_token::mint = onasset_mint,
-        associated_token::authority = user,
-    )]
-    pub user_onasset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        mut,
-        associated_token::mint = onusd_mint,
-        associated_token::authority = user,
-    )]
-    pub user_onusd_token_account: Box<Account<'info, TokenAccount>>,
-    pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(
-    ctx: Context<WithdrawLiquidityFromComet>,
+pub fn withdraw_liquidity(
+    token_data: &mut TokenData,
+    comet: &mut Comet,
     comet_position_index: u8,
-    liquidity_token_amount: u64,
+    onusd_amount: u64,
+    user: Pubkey,
+    event_counter: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
-    let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let mut comet = ctx.accounts.comet.load_mut()?;
     let comet_position = comet.positions[comet_position_index as usize];
     let pool_index = comet_position.pool_index;
-    let comet_liquidity_tokens = comet_position.liquidity_token_value.to_decimal();
+    let pool = token_data.pools[pool_index as usize];
+    let position_committed_onusd = comet_position.committed_onusd_liquidity.to_decimal();
+    return_error_if_false!(
+        position_committed_onusd > Decimal::ZERO,
+        CloneError::NoLiquidityToWithdraw
+    );
+    let total_committed_onusd_liquidity = pool.committed_onusd_liquidity.to_decimal();
 
-    let liquidity_token_value = Decimal::new(
-        liquidity_token_amount.try_into().unwrap(),
-        DEVNET_TOKEN_SCALE,
-    )
-    .min(comet_liquidity_tokens);
-
-    let onasset_amm_value = Decimal::new(
-        ctx.accounts
-            .amm_onasset_token_account
-            .amount
-            .try_into()
-            .unwrap(),
-        DEVNET_TOKEN_SCALE,
+    return_error_if_false!(
+        total_committed_onusd_liquidity > Decimal::ZERO,
+        CloneError::PoolEmpty
     );
 
-    let onusd_amm_value = Decimal::new(
-        ctx.accounts
-            .amm_onusd_token_account
-            .amount
-            .try_into()
-            .unwrap(),
+    let onusd_value_to_withdraw =
+        Decimal::new(onusd_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE)
+            .min(position_committed_onusd);
+
+    let proportional_value = onusd_value_to_withdraw / total_committed_onusd_liquidity;
+
+    let onusd_ild_claim = rescale_toward_zero(
+        pool.onusd_ild.to_decimal() * proportional_value,
         DEVNET_TOKEN_SCALE,
     );
-
-    let liquidity_token_supply = Decimal::new(
-        ctx.accounts.liquidity_token_mint.supply.try_into().unwrap(),
+    let onasset_ild_claim = rescale_toward_zero(
+        pool.onasset_ild.to_decimal() * proportional_value,
         DEVNET_TOKEN_SCALE,
     );
 
-    let lp_position_claimable_ratio = calculate_liquidity_proportion_from_liquidity_tokens(
-        liquidity_token_value,
-        liquidity_token_supply,
-    );
-
-    let borrowed_onusd = comet_position.borrowed_onusd.to_decimal();
-    let borrowed_onasset = comet_position.borrowed_onasset.to_decimal();
-
-    let claimable_onusd = rescale_toward_zero(
-        lp_position_claimable_ratio * onusd_amm_value,
+    // Update pool values:
+    token_data.pools[pool_index as usize].onasset_ild = RawDecimal::from(rescale_toward_zero(
+        pool.onasset_ild.to_decimal() - onasset_ild_claim,
         DEVNET_TOKEN_SCALE,
-    );
-    let claimable_onasset = rescale_toward_zero(
-        lp_position_claimable_ratio * onasset_amm_value,
+    ));
+    token_data.pools[pool_index as usize].onusd_ild = RawDecimal::from(rescale_toward_zero(
+        pool.onusd_ild.to_decimal() - onusd_ild_claim,
         DEVNET_TOKEN_SCALE,
-    );
-
-    let (mut onusd_to_burn, mut onusd_reward) = if claimable_onusd > borrowed_onusd {
-        comet.positions[comet_position_index as usize].borrowed_onusd =
-            RawDecimal::new(0, DEVNET_TOKEN_SCALE);
-        (borrowed_onusd, claimable_onusd - borrowed_onusd)
-    } else {
-        let new_borrowed_onusd =
-            rescale_toward_zero(borrowed_onusd - claimable_onusd, DEVNET_TOKEN_SCALE);
-        comet.positions[comet_position_index as usize].borrowed_onusd =
-            RawDecimal::from(new_borrowed_onusd);
-        (claimable_onusd, Decimal::zero())
-    };
-
-    let (mut onasset_to_burn, mut onasset_reward) = if claimable_onasset > borrowed_onasset {
-        comet.positions[comet_position_index as usize].borrowed_onasset =
-            RawDecimal::new(0, DEVNET_TOKEN_SCALE);
-        (borrowed_onasset, claimable_onasset - borrowed_onasset)
-    } else {
-        let new_borrowed_onasset =
-            rescale_toward_zero(borrowed_onasset - claimable_onasset, DEVNET_TOKEN_SCALE);
-        comet.positions[comet_position_index as usize].borrowed_onasset =
-            RawDecimal::from(new_borrowed_onasset);
-        (claimable_onasset, Decimal::zero())
-    };
-
-    // Send onusd reward from amm to user
-    onusd_reward = rescale_toward_zero(onusd_reward, DEVNET_TOKEN_SCALE);
-    if onusd_reward > Decimal::ZERO {
-        let cpi_accounts = Transfer {
-            from: ctx
-                .accounts
-                .amm_onusd_token_account
-                .to_account_info()
-                .clone(),
-            to: ctx
-                .accounts
-                .user_onusd_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.clone.to_account_info().clone(),
-        };
-        let transfer_onusd_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            cpi_accounts,
-            seeds,
-        );
-        token::transfer(
-            transfer_onusd_context,
-            onusd_reward.mantissa().try_into().unwrap(),
-        )?;
-    }
-
-    // Burn onUSD from amm
-    onusd_to_burn = rescale_toward_zero(onusd_to_burn, DEVNET_TOKEN_SCALE);
-    if onusd_to_burn > Decimal::ZERO {
-        let cpi_accounts = Burn {
-            mint: ctx.accounts.onusd_mint.to_account_info().clone(),
-            from: ctx
-                .accounts
-                .amm_onusd_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.clone.to_account_info().clone(),
-        };
-        let burn_onasset_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            cpi_accounts,
-            seeds,
-        );
-        token::burn(
-            burn_onasset_context,
-            onusd_to_burn.mantissa().try_into().unwrap(),
-        )?;
-    }
-
-    // Send onasset reward from amm to user
-    onasset_reward = rescale_toward_zero(onasset_reward, DEVNET_TOKEN_SCALE);
-    if onasset_reward > Decimal::ZERO {
-        let cpi_accounts = Transfer {
-            from: ctx
-                .accounts
-                .amm_onasset_token_account
-                .to_account_info()
-                .clone(),
-            to: ctx
-                .accounts
-                .user_onasset_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.clone.to_account_info().clone(),
-        };
-        let transfer_onasset_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            cpi_accounts,
-            seeds,
-        );
-        token::transfer(
-            transfer_onasset_context,
-            onasset_reward.mantissa().try_into().unwrap(),
-        )?;
-    }
-
-    // Burn onasset from amm
-    onasset_to_burn = rescale_toward_zero(onasset_to_burn, DEVNET_TOKEN_SCALE);
-    if onasset_to_burn > Decimal::ZERO {
-        let burn_onasset_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            Burn {
-                mint: ctx.accounts.onasset_mint.to_account_info().clone(),
-                from: ctx
-                    .accounts
-                    .amm_onasset_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.clone.to_account_info().clone(),
-            },
-            seeds,
-        );
-        token::burn(
-            burn_onasset_context,
-            onasset_to_burn.mantissa().try_into().unwrap(),
-        )?;
-    }
-
-    // Burn LP tokens.
-    token::burn(
-        CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            Burn {
-                mint: ctx.accounts.liquidity_token_mint.to_account_info().clone(),
-                from: ctx
-                    .accounts
-                    .comet_liquidity_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.clone.to_account_info().clone(),
-            },
-            seeds,
-        ),
-        liquidity_token_value.mantissa().try_into().unwrap(),
-    )?;
-
-    // Remove lp tokens from user
-    let new_comet_liquidity_tokens = rescale_toward_zero(
-        comet_liquidity_tokens - liquidity_token_value,
-        DEVNET_TOKEN_SCALE,
-    );
-    comet.positions[comet_position_index as usize].liquidity_token_value =
-        RawDecimal::from(new_comet_liquidity_tokens);
-
-    // update pool data
-    ctx.accounts.amm_onasset_token_account.reload()?;
-    ctx.accounts.amm_onusd_token_account.reload()?;
-    ctx.accounts.liquidity_token_mint.reload()?;
-
-    token_data.pools[comet_position.pool_index as usize].onasset_amount = RawDecimal::new(
-        ctx.accounts
-            .amm_onasset_token_account
-            .amount
-            .try_into()
-            .unwrap(),
-        DEVNET_TOKEN_SCALE,
-    );
-    token_data.pools[comet_position.pool_index as usize].onusd_amount = RawDecimal::new(
-        ctx.accounts
-            .amm_onusd_token_account
-            .amount
-            .try_into()
-            .unwrap(),
-        DEVNET_TOKEN_SCALE,
-    );
-    token_data.pools[comet_position.pool_index as usize].liquidity_token_supply = RawDecimal::new(
-        ctx.accounts.liquidity_token_mint.supply.try_into().unwrap(),
-        DEVNET_TOKEN_SCALE,
-    );
+    ));
+    token_data.pools[pool_index as usize].committed_onusd_liquidity =
+        RawDecimal::from(rescale_toward_zero(
+            total_committed_onusd_liquidity - onusd_value_to_withdraw,
+            DEVNET_TOKEN_SCALE,
+        ));
+    // Update position values:
+    comet.positions[comet_position_index as usize].onasset_ild_rebate =
+        RawDecimal::from(rescale_toward_zero(
+            comet_position.onasset_ild_rebate.to_decimal() - onasset_ild_claim,
+            DEVNET_TOKEN_SCALE,
+        ));
+    comet.positions[comet_position_index as usize].onusd_ild_rebate =
+        RawDecimal::from(rescale_toward_zero(
+            comet_position.onusd_ild_rebate.to_decimal() - onusd_ild_claim,
+            DEVNET_TOKEN_SCALE,
+        ));
+    comet.positions[comet_position_index as usize].committed_onusd_liquidity =
+        RawDecimal::from(rescale_toward_zero(
+            comet_position.committed_onusd_liquidity.to_decimal() - onusd_value_to_withdraw,
+            DEVNET_TOKEN_SCALE,
+        ));
 
     emit!(LiquidityDelta {
-        event_id: ctx.accounts.clone.event_counter,
-        user: ctx.accounts.user.key(),
+        event_id: event_counter,
+        user_address: user,
         pool_index: pool_index.try_into().unwrap(),
-        is_concentrated: true,
-        lp_token_delta: -(liquidity_token_value.mantissa() as i64),
-        onusd_delta: -(onusd_to_burn.mantissa() as i64),
-        onasset_delta: -(onasset_to_burn.mantissa() as i64),
+        committed_onusd_delta: -(onusd_value_to_withdraw.mantissa() as i64),
+        onasset_ild_delta: -(onasset_ild_claim.mantissa() as i64),
+        onusd_ild_delta: -(onusd_ild_claim.mantissa() as i64)
     });
 
     let pool = token_data.pools[pool_index as usize];
     let oracle_price = rescale_toward_zero(pool.asset_info.price.to_decimal(), DEVNET_TOKEN_SCALE);
 
     emit!(PoolState {
-        event_id: ctx.accounts.clone.event_counter,
+        event_id: event_counter,
         pool_index: pool_index.try_into().unwrap(),
-        onasset: ctx.accounts.amm_onasset_token_account.amount,
-        onusd: ctx.accounts.amm_onusd_token_account.amount,
-        lp_tokens: pool
-            .liquidity_token_supply
+        onasset_ild: pool.onasset_ild.to_decimal().mantissa().try_into().unwrap(),
+        onusd_ild: pool.onusd_ild.to_decimal().mantissa().try_into().unwrap(),
+        committed_onusd_liquidity: pool
+            .committed_onusd_liquidity
             .to_decimal()
             .mantissa()
             .try_into()
             .unwrap(),
         oracle_price: oracle_price.mantissa().try_into().unwrap()
     });
+
+    Ok(())
+}
+
+pub fn execute(
+    ctx: Context<WithdrawLiquidityFromComet>,
+    comet_position_index: u8,
+    onusd_amount: u64,
+) -> Result<()> {
+    let token_data = &mut ctx.accounts.token_data.load_mut()?;
+    let comet = &mut ctx.accounts.comet.load_mut()?;
+    withdraw_liquidity(
+        token_data,
+        comet,
+        comet_position_index,
+        onusd_amount,
+        ctx.accounts.user.key(),
+        ctx.accounts.clone.event_counter,
+    )?;
     ctx.accounts.clone.event_counter += 1;
 
     Ok(())

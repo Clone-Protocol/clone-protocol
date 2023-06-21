@@ -106,22 +106,11 @@ pub fn execute(
 
     // append pool to list
     token_data.append_pool(Pool {
-        onasset_token_account: *ctx.accounts.onasset_token_account.to_account_info().key,
-        onusd_token_account: *ctx.accounts.onusd_token_account.to_account_info().key,
-        liquidity_token_mint: *ctx.accounts.liquidity_token_mint.to_account_info().key,
         underlying_asset_token_account: *ctx
             .accounts
             .underlying_asset_token_account
             .to_account_info()
             .key,
-        comet_liquidity_token_account: *ctx
-            .accounts
-            .comet_liquidity_token_account
-            .to_account_info()
-            .key,
-        onasset_amount: RawDecimal::default(),
-        onusd_amount: RawDecimal::default(),
-        liquidity_token_supply: RawDecimal::default(),
         treasury_trading_fee: RawDecimal::from_bps(treasury_trading_fee.into()),
         liquidity_trading_fee: RawDecimal::from_bps(liquidity_trading_fee.into()),
         total_minted_amount: RawDecimal::default(),
@@ -130,6 +119,9 @@ pub fn execute(
             ..Default::default()
         },
         deprecated: 0,
+        committed_onusd_liquidity: RawDecimal::default(),
+        onusd_ild: RawDecimal::default(),
+        onasset_ild: RawDecimal::default(),
     });
     let index = token_data.num_pools - 1;
     token_data.pools[index as usize].asset_info.onasset_mint =

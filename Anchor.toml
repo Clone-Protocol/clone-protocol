@@ -1,8 +1,7 @@
 [programs.localnet]
-clone = "DhBtzLq7kHxxEVB4hS1bYjqS171JvyuxybPxWzGw7o4a"
-pyth = "FnHDAQniuRT3tjr71M9dwLvzVMtPRcHeZYgHaxXKjERR"
-jupiter_agg_mock = "6Cfr7tR217PGkSgzDecqb6oeqaz5f32DD7xDzAvFq4Dm"
-clone_comet_manager = "CeWArdHkss47Qsk5b3ZCPuz11o65jH3oLhJQ5WTcJrr8"
+clone = "BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ"
+pyth = "H38XT5NKW9g9sZpmjwDQkp6S3nLTfg7tZ4WbAfgk7ZCG"
+jupiter_agg_mock = "J2shPGHLAPYe1i6PWuKBTXMzGFDSi1yYUzus5yxekH2a"
 
 [registry]
 url = "https://anchor.projectserum.com"

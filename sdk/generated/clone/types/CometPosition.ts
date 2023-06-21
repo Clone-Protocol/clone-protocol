@@ -9,14 +9,12 @@ import * as web3 from '@solana/web3.js'
 import * as beet from '@metaplex-foundation/beet'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
 import { RawDecimal, rawDecimalBeet } from './RawDecimal'
-import { CometLiquidation, cometLiquidationBeet } from './CometLiquidation'
 export type CometPosition = {
   authority: web3.PublicKey
   poolIndex: beet.bignum
-  borrowedOnusd: RawDecimal
-  borrowedOnasset: RawDecimal
-  liquidityTokenValue: RawDecimal
-  cometLiquidation: CometLiquidation
+  committedOnusdLiquidity: RawDecimal
+  onusdIldRebate: RawDecimal
+  onassetIldRebate: RawDecimal
 }
 
 /**
@@ -27,10 +25,9 @@ export const cometPositionBeet = new beet.BeetArgsStruct<CometPosition>(
   [
     ['authority', beetSolana.publicKey],
     ['poolIndex', beet.u64],
-    ['borrowedOnusd', rawDecimalBeet],
-    ['borrowedOnasset', rawDecimalBeet],
-    ['liquidityTokenValue', rawDecimalBeet],
-    ['cometLiquidation', cometLiquidationBeet],
+    ['committedOnusdLiquidity', rawDecimalBeet],
+    ['onusdIldRebate', rawDecimalBeet],
+    ['onassetIldRebate', rawDecimalBeet],
   ],
   'CometPosition'
 )

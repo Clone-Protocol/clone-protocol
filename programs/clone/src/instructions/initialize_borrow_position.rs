@@ -63,9 +63,8 @@ pub struct InitializeBorrowPosition<'info> {
 
 pub fn execute(
     ctx: Context<InitializeBorrowPosition>,
-
     pool_index: u8,
-    _collateral_index: u8,
+    collateral_index: u8,
     onasset_amount: u64,
     collateral_amount: u64,
 ) -> Result<()> {
@@ -73,11 +72,7 @@ pub fn execute(
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let pool = token_data.pools[pool_index as usize];
-
-    let (collateral, collateral_index) =
-        TokenData::get_collateral_tuple(&*token_data, *ctx.accounts.vault.to_account_info().key)
-            .unwrap();
-
+    let collateral = token_data.collaterals[collateral_index as usize];
     let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
 
     let collateral_amount_value =
@@ -149,7 +144,7 @@ pub fn execute(
         collateral_scale,
     );
     // add collateral amount to vault supply
-    token_data.collaterals[collateral_index].vault_mint_supply =
+    token_data.collaterals[collateral_index as usize].vault_mint_supply =
         RawDecimal::from(new_vault_mint_supply);
 
     // Update token data
@@ -178,7 +173,7 @@ pub fn execute(
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
-        user: ctx.accounts.user.key(),
+        user_address: ctx.accounts.user.key(),
         pool_index: pool_index.try_into().unwrap(),
         is_liquidation: false,
         collateral_supplied: collateral_amount_value.mantissa().try_into().unwrap(),

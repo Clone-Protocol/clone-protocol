@@ -25,7 +25,7 @@ pub struct DeprecatePool<'info> {
 pub fn execute(ctx: Context<DeprecatePool>, pool_index: u8) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let pool_index = pool_index as usize;
- 
+
     token_data.pools[pool_index].deprecated = 1;
 
     Ok(())

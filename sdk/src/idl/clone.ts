@@ -277,12 +277,7 @@ export type Clone = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "isSinglePool",
-          "type": "bool"
-        }
-      ]
+      "args": []
     },
     {
       "name": "addCollateral",
@@ -880,345 +875,6 @@ export type Clone = {
       ]
     },
     {
-      "name": "provideUnconcentratedLiquidity",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "liquidityPositionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "onassetAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "withdrawUnconcentratedLiquidity",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "liquidityPositionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "liquidityTokenAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "buyOnasset",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "treasuryOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u8"
-        },
-        {
-          "name": "amount",
-          "type": "u64"
-        },
-        {
-          "name": "onusdSpendThreshold",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "sellOnasset",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "treasuryOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u8"
-        },
-        {
-          "name": "amount",
-          "type": "u64"
-        },
-        {
-          "name": "onusdReceivedThreshold",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "initializeSinglePoolComet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "singlePoolComets",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u8"
-        },
-        {
-          "name": "collateralIndex",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "closeSinglePoolComet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "singlePoolComet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "cometIndex",
-          "type": "u8"
-        }
-      ]
-    },
-    {
       "name": "addCollateralToComet",
       "accounts": [
         {
@@ -1265,116 +921,6 @@ export type Clone = {
       "args": [
         {
           "name": "collateralIndex",
-          "type": "u8"
-        },
-        {
-          "name": "collateralAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "addCollateralToSinglePoolComet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "singlePoolComet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userCollateralTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "positionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "collateralAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "withdrawCollateralFromSinglePoolComet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userCollateralTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "positionIndex",
           "type": "u8"
         },
         {
@@ -1465,121 +1011,11 @@ export type Clone = {
           "name": "comet",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "onusdMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
         {
           "name": "poolIndex",
-          "type": "u8"
-        },
-        {
-          "name": "onusdAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "addLiquidityToSinglePoolComet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "singlePoolComet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onusdMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "positionIndex",
           "type": "u8"
         },
         {
@@ -1615,51 +1051,6 @@ export type Clone = {
           "name": "comet",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "onusdMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1669,47 +1060,6 @@ export type Clone = {
         },
         {
           "name": "liquidityTokenAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "mintOnusdDevnet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "clone",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onusdMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "amount",
           "type": "u64"
         }
       ]
@@ -1758,16 +1108,6 @@ export type Clone = {
           "isSigner": false
         },
         {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "liquidatorCollateralTokenAccount",
           "isMut": true,
           "isSigner": false
@@ -1786,6 +1126,67 @@ export type Clone = {
       "args": [
         {
           "name": "borrowIndex",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "collectLpRewards",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "clone",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "onusdMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "onassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userOnusdTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userOnassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "cometPositionIndex",
           "type": "u8"
         }
       ]
@@ -1835,16 +1236,6 @@ export type Clone = {
         },
         {
           "name": "userOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -2015,7 +1406,7 @@ export type Clone = {
       ]
     },
     {
-      "name": "liquidateCometIld",
+      "name": "liquidateCometPosition",
       "accounts": [
         {
           "name": "liquidator",
@@ -2064,16 +1455,6 @@ export type Clone = {
         },
         {
           "name": "liquidatorOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -2104,101 +1485,6 @@ export type Clone = {
       ]
     },
     {
-      "name": "liquidateCometBorrow",
-      "accounts": [
-        {
-          "name": "liquidator",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onusdMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidatorOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidatorOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onusdVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "cometPositionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "liquidityTokenAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
       "name": "closeCometAccount",
       "accounts": [
         {
@@ -2213,37 +1499,6 @@ export type Clone = {
         },
         {
           "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "destination",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "closeSinglePoolCometAccount",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "singlePoolComet",
           "isMut": true,
           "isSigner": false
         },
@@ -2498,6 +1753,83 @@ export type Clone = {
           "type": "u8"
         }
       ]
+    },
+    {
+      "name": "swap",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "clone",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userOnusdTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userOnassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "onassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "onusdMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "treasuryOnassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "treasuryOnusdTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "quantity",
+          "type": "u64"
+        },
+        {
+          "name": "quantityIsInput",
+          "type": "bool"
+        },
+        {
+          "name": "quantityIsOnusd",
+          "type": "bool"
+        },
+        {
+          "name": "resultThreshold",
+          "type": "u64"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -2603,10 +1935,6 @@ export type Clone = {
             "type": "publicKey"
           },
           {
-            "name": "singlePoolComets",
-            "type": "publicKey"
-          },
-          {
             "name": "borrowPositions",
             "type": "publicKey"
           },
@@ -2626,10 +1954,6 @@ export type Clone = {
       "type": {
         "kind": "struct",
         "fields": [
-          {
-            "name": "isSinglePool",
-            "type": "u64"
-          },
           {
             "name": "owner",
             "type": "publicKey"
@@ -2850,39 +2174,23 @@ export type Clone = {
         "kind": "struct",
         "fields": [
           {
-            "name": "onassetTokenAccount",
-            "type": "publicKey"
-          },
-          {
-            "name": "onusdTokenAccount",
-            "type": "publicKey"
-          },
-          {
-            "name": "liquidityTokenMint",
-            "type": "publicKey"
-          },
-          {
             "name": "underlyingAssetTokenAccount",
             "type": "publicKey"
           },
           {
-            "name": "cometLiquidityTokenAccount",
-            "type": "publicKey"
-          },
-          {
-            "name": "onassetAmount",
+            "name": "committedOnusdLiquidity",
             "type": {
               "defined": "RawDecimal"
             }
           },
           {
-            "name": "onusdAmount",
+            "name": "onusdIld",
             "type": {
               "defined": "RawDecimal"
             }
           },
           {
-            "name": "liquidityTokenSupply",
+            "name": "onassetIld",
             "type": {
               "defined": "RawDecimal"
             }
@@ -2986,27 +2294,21 @@ export type Clone = {
             "type": "u64"
           },
           {
-            "name": "borrowedOnusd",
+            "name": "committedOnusdLiquidity",
             "type": {
               "defined": "RawDecimal"
             }
           },
           {
-            "name": "borrowedOnasset",
+            "name": "onusdIldRebate",
             "type": {
               "defined": "RawDecimal"
             }
           },
           {
-            "name": "liquidityTokenValue",
+            "name": "onassetIldRebate",
             "type": {
               "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "cometLiquidation",
-            "type": {
-              "defined": "CometLiquidation"
             }
           }
         ]
@@ -3030,28 +2332,6 @@ export type Clone = {
           {
             "name": "collateralIndex",
             "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "CometLiquidation",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "status",
-            "type": "u64"
-          },
-          {
-            "name": "excessTokenTypeIsOnusd",
-            "type": "u64"
-          },
-          {
-            "name": "excessTokenAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
           }
         ]
       }
@@ -3293,7 +2573,7 @@ export type Clone = {
           "index": false
         },
         {
-          "name": "user",
+          "name": "userAddress",
           "type": "publicKey",
           "index": false
         },
@@ -3303,17 +2583,17 @@ export type Clone = {
           "index": false
         },
         {
-          "name": "isBuy",
+          "name": "inputIsOnusd",
           "type": "bool",
           "index": false
         },
         {
-          "name": "onasset",
+          "name": "input",
           "type": "u64",
           "index": false
         },
         {
-          "name": "onusd",
+          "name": "output",
           "type": "u64",
           "index": false
         },
@@ -3338,7 +2618,7 @@ export type Clone = {
           "index": false
         },
         {
-          "name": "user",
+          "name": "userAddress",
           "type": "publicKey",
           "index": false
         },
@@ -3348,22 +2628,17 @@ export type Clone = {
           "index": false
         },
         {
-          "name": "isConcentrated",
-          "type": "bool",
-          "index": false
-        },
-        {
-          "name": "onassetDelta",
+          "name": "committedOnusdDelta",
           "type": "i64",
           "index": false
         },
         {
-          "name": "onusdDelta",
+          "name": "onusdIldDelta",
           "type": "i64",
           "index": false
         },
         {
-          "name": "lpTokenDelta",
+          "name": "onassetIldDelta",
           "type": "i64",
           "index": false
         }
@@ -3383,17 +2658,17 @@ export type Clone = {
           "index": false
         },
         {
-          "name": "onasset",
-          "type": "u64",
+          "name": "onassetIld",
+          "type": "i64",
           "index": false
         },
         {
-          "name": "onusd",
-          "type": "u64",
+          "name": "onusdIld",
+          "type": "i64",
           "index": false
         },
         {
-          "name": "lpTokens",
+          "name": "committedOnusdLiquidity",
           "type": "u64",
           "index": false
         },
@@ -3418,7 +2693,7 @@ export type Clone = {
           "index": false
         },
         {
-          "name": "user",
+          "name": "userAddress",
           "type": "publicKey",
           "index": false
         },
@@ -3725,6 +3000,16 @@ export type Clone = {
       "code": 6053,
       "name": "PoolDeprecated",
       "msg": "Pool Deprecated"
+    },
+    {
+      "code": 6054,
+      "name": "PoolEmpty",
+      "msg": "Pool is empty"
+    },
+    {
+      "code": 6055,
+      "name": "NoLiquidityToWithdraw",
+      "msg": "No liquidity to withdraw"
     }
   ]
 };
@@ -4008,12 +3293,7 @@ export const IDL: Clone = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "isSinglePool",
-          "type": "bool"
-        }
-      ]
+      "args": []
     },
     {
       "name": "addCollateral",
@@ -4611,345 +3891,6 @@ export const IDL: Clone = {
       ]
     },
     {
-      "name": "provideUnconcentratedLiquidity",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "liquidityPositionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "onassetAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "withdrawUnconcentratedLiquidity",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "liquidityPositionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "liquidityTokenAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "buyOnasset",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "treasuryOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u8"
-        },
-        {
-          "name": "amount",
-          "type": "u64"
-        },
-        {
-          "name": "onusdSpendThreshold",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "sellOnasset",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "treasuryOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u8"
-        },
-        {
-          "name": "amount",
-          "type": "u64"
-        },
-        {
-          "name": "onusdReceivedThreshold",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "initializeSinglePoolComet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "singlePoolComets",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u8"
-        },
-        {
-          "name": "collateralIndex",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "closeSinglePoolComet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "singlePoolComet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "cometIndex",
-          "type": "u8"
-        }
-      ]
-    },
-    {
       "name": "addCollateralToComet",
       "accounts": [
         {
@@ -4996,116 +3937,6 @@ export const IDL: Clone = {
       "args": [
         {
           "name": "collateralIndex",
-          "type": "u8"
-        },
-        {
-          "name": "collateralAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "addCollateralToSinglePoolComet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "singlePoolComet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userCollateralTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "positionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "collateralAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "withdrawCollateralFromSinglePoolComet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userCollateralTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "positionIndex",
           "type": "u8"
         },
         {
@@ -5196,121 +4027,11 @@ export const IDL: Clone = {
           "name": "comet",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "onusdMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
         {
           "name": "poolIndex",
-          "type": "u8"
-        },
-        {
-          "name": "onusdAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "addLiquidityToSinglePoolComet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "singlePoolComet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onusdMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "positionIndex",
           "type": "u8"
         },
         {
@@ -5346,51 +4067,6 @@ export const IDL: Clone = {
           "name": "comet",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "onusdMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
         }
       ],
       "args": [
@@ -5400,47 +4076,6 @@ export const IDL: Clone = {
         },
         {
           "name": "liquidityTokenAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "mintOnusdDevnet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "clone",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onusdMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "amount",
           "type": "u64"
         }
       ]
@@ -5489,16 +4124,6 @@ export const IDL: Clone = {
           "isSigner": false
         },
         {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "liquidatorCollateralTokenAccount",
           "isMut": true,
           "isSigner": false
@@ -5517,6 +4142,67 @@ export const IDL: Clone = {
       "args": [
         {
           "name": "borrowIndex",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "collectLpRewards",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "clone",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "onusdMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "onassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userOnusdTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userOnassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "cometPositionIndex",
           "type": "u8"
         }
       ]
@@ -5566,16 +4252,6 @@ export const IDL: Clone = {
         },
         {
           "name": "userOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -5746,7 +4422,7 @@ export const IDL: Clone = {
       ]
     },
     {
-      "name": "liquidateCometIld",
+      "name": "liquidateCometPosition",
       "accounts": [
         {
           "name": "liquidator",
@@ -5795,16 +4471,6 @@ export const IDL: Clone = {
         },
         {
           "name": "liquidatorOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -5835,101 +4501,6 @@ export const IDL: Clone = {
       ]
     },
     {
-      "name": "liquidateCometBorrow",
-      "accounts": [
-        {
-          "name": "liquidator",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onusdMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onassetMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidityTokenMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "cometLiquidityTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidatorOnassetTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "liquidatorOnusdTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "onusdVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "cometPositionIndex",
-          "type": "u8"
-        },
-        {
-          "name": "liquidityTokenAmount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
       "name": "closeCometAccount",
       "accounts": [
         {
@@ -5944,37 +4515,6 @@ export const IDL: Clone = {
         },
         {
           "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "destination",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "closeSinglePoolCometAccount",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "singlePoolComet",
           "isMut": true,
           "isSigner": false
         },
@@ -6229,6 +4769,83 @@ export const IDL: Clone = {
           "type": "u8"
         }
       ]
+    },
+    {
+      "name": "swap",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "clone",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userOnusdTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userOnassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "onassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "onusdMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "treasuryOnassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "treasuryOnusdTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "poolIndex",
+          "type": "u8"
+        },
+        {
+          "name": "quantity",
+          "type": "u64"
+        },
+        {
+          "name": "quantityIsInput",
+          "type": "bool"
+        },
+        {
+          "name": "quantityIsOnusd",
+          "type": "bool"
+        },
+        {
+          "name": "resultThreshold",
+          "type": "u64"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -6334,10 +4951,6 @@ export const IDL: Clone = {
             "type": "publicKey"
           },
           {
-            "name": "singlePoolComets",
-            "type": "publicKey"
-          },
-          {
             "name": "borrowPositions",
             "type": "publicKey"
           },
@@ -6357,10 +4970,6 @@ export const IDL: Clone = {
       "type": {
         "kind": "struct",
         "fields": [
-          {
-            "name": "isSinglePool",
-            "type": "u64"
-          },
           {
             "name": "owner",
             "type": "publicKey"
@@ -6581,39 +5190,23 @@ export const IDL: Clone = {
         "kind": "struct",
         "fields": [
           {
-            "name": "onassetTokenAccount",
-            "type": "publicKey"
-          },
-          {
-            "name": "onusdTokenAccount",
-            "type": "publicKey"
-          },
-          {
-            "name": "liquidityTokenMint",
-            "type": "publicKey"
-          },
-          {
             "name": "underlyingAssetTokenAccount",
             "type": "publicKey"
           },
           {
-            "name": "cometLiquidityTokenAccount",
-            "type": "publicKey"
-          },
-          {
-            "name": "onassetAmount",
+            "name": "committedOnusdLiquidity",
             "type": {
               "defined": "RawDecimal"
             }
           },
           {
-            "name": "onusdAmount",
+            "name": "onusdIld",
             "type": {
               "defined": "RawDecimal"
             }
           },
           {
-            "name": "liquidityTokenSupply",
+            "name": "onassetIld",
             "type": {
               "defined": "RawDecimal"
             }
@@ -6717,27 +5310,21 @@ export const IDL: Clone = {
             "type": "u64"
           },
           {
-            "name": "borrowedOnusd",
+            "name": "committedOnusdLiquidity",
             "type": {
               "defined": "RawDecimal"
             }
           },
           {
-            "name": "borrowedOnasset",
+            "name": "onusdIldRebate",
             "type": {
               "defined": "RawDecimal"
             }
           },
           {
-            "name": "liquidityTokenValue",
+            "name": "onassetIldRebate",
             "type": {
               "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "cometLiquidation",
-            "type": {
-              "defined": "CometLiquidation"
             }
           }
         ]
@@ -6761,28 +5348,6 @@ export const IDL: Clone = {
           {
             "name": "collateralIndex",
             "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "CometLiquidation",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "status",
-            "type": "u64"
-          },
-          {
-            "name": "excessTokenTypeIsOnusd",
-            "type": "u64"
-          },
-          {
-            "name": "excessTokenAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
           }
         ]
       }
@@ -7024,7 +5589,7 @@ export const IDL: Clone = {
           "index": false
         },
         {
-          "name": "user",
+          "name": "userAddress",
           "type": "publicKey",
           "index": false
         },
@@ -7034,17 +5599,17 @@ export const IDL: Clone = {
           "index": false
         },
         {
-          "name": "isBuy",
+          "name": "inputIsOnusd",
           "type": "bool",
           "index": false
         },
         {
-          "name": "onasset",
+          "name": "input",
           "type": "u64",
           "index": false
         },
         {
-          "name": "onusd",
+          "name": "output",
           "type": "u64",
           "index": false
         },
@@ -7069,7 +5634,7 @@ export const IDL: Clone = {
           "index": false
         },
         {
-          "name": "user",
+          "name": "userAddress",
           "type": "publicKey",
           "index": false
         },
@@ -7079,22 +5644,17 @@ export const IDL: Clone = {
           "index": false
         },
         {
-          "name": "isConcentrated",
-          "type": "bool",
-          "index": false
-        },
-        {
-          "name": "onassetDelta",
+          "name": "committedOnusdDelta",
           "type": "i64",
           "index": false
         },
         {
-          "name": "onusdDelta",
+          "name": "onusdIldDelta",
           "type": "i64",
           "index": false
         },
         {
-          "name": "lpTokenDelta",
+          "name": "onassetIldDelta",
           "type": "i64",
           "index": false
         }
@@ -7114,17 +5674,17 @@ export const IDL: Clone = {
           "index": false
         },
         {
-          "name": "onasset",
-          "type": "u64",
+          "name": "onassetIld",
+          "type": "i64",
           "index": false
         },
         {
-          "name": "onusd",
-          "type": "u64",
+          "name": "onusdIld",
+          "type": "i64",
           "index": false
         },
         {
-          "name": "lpTokens",
+          "name": "committedOnusdLiquidity",
           "type": "u64",
           "index": false
         },
@@ -7149,7 +5709,7 @@ export const IDL: Clone = {
           "index": false
         },
         {
-          "name": "user",
+          "name": "userAddress",
           "type": "publicKey",
           "index": false
         },
@@ -7456,6 +6016,16 @@ export const IDL: Clone = {
       "code": 6053,
       "name": "PoolDeprecated",
       "msg": "Pool Deprecated"
+    },
+    {
+      "code": 6054,
+      "name": "PoolEmpty",
+      "msg": "Pool is empty"
+    },
+    {
+      "code": 6055,
+      "name": "NoLiquidityToWithdraw",
+      "msg": "No liquidity to withdraw"
     }
   ]
 };
