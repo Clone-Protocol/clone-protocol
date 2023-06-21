@@ -419,7 +419,6 @@ export class CloneClient {
   }
 
   public async withdrawCollateralFromBorrowInstruction(
-    user: PublicKey,
     borrowIndex: number,
     userCollateralTokenAccount: PublicKey,
     collateralAmount: BN
@@ -434,7 +433,7 @@ export class CloneClient {
     return await this.program.methods
       .withdrawCollateralFromBorrow(borrowIndex, collateralAmount)
       .accounts({
-        user: user,
+        user: this.provider.publicKey!,
         userAccount: userAddress.userPubkey,
         clone: this.cloneAddress[0],
         tokenData: this.clone!.tokenData,
