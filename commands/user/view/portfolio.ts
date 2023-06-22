@@ -1,12 +1,10 @@
 import { CloneClient } from "../../../sdk/src/clone";
-import { getFeedData } from "../../../sdk/src/oracle";
-import { getMantissa } from "../../../sdk/src/decimal";
+import { getPoolLiquidity } from "../../../sdk/src/utils";
 import {
   successLog,
   errorLog,
   anchorSetup,
   getCloneProgram,
-  getPythProgram,
   getOrCreateAssociatedTokenAccount,
   fromDevnetScale,
 } from "../../utils";
@@ -21,7 +19,6 @@ exports.handler = async function () {
     const setup = anchorSetup();
 
     const cloneProgram = getCloneProgram(setup.network, setup.provider);
-    const pythProgram = getPythProgram(setup.network, setup.provider);
 
     const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
     await cloneClient.loadClone();
@@ -40,12 +37,14 @@ exports.handler = async function () {
     const title = `Wallet Balances`;
     const underline = new Array(title.length).fill("-").join("");
 
+    let assetInfo = `${chalk.bold(title)}\n` + `${underline}\n`;
+
     let onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       setup.provider,
       cloneClient.clone!.onusdMint
     );
     const onusdBalance = fromDevnetScale(Number(onusdTokenAccountInfo.amount));
-    let assetInfo = `onUSD Balance: ${onusdBalance}\n\n`;
+    assetInfo += `onUSD Balance: ${onusdBalance}\n\n`;
     let totalBalance = onusdBalance;
 
     for (let i = 0; i < Number(tokenData.numPools); i++) {
@@ -56,14 +55,14 @@ exports.handler = async function () {
         pool.assetInfo.onassetMint
       );
 
-      const clonePrice =
-        getMantissa(pool.onusdAmount) / getMantissa(pool.onassetAmount);
+      let { poolOnusd, poolOnasset } = getPoolLiquidity(pool);
+      const quotePrice = poolOnusd / poolOnasset;
       const onassetBalance = fromDevnetScale(
         Number(onassetTokenAccountInfo.amount)
       );
 
-      assetInfo += `onAsset ${i} Balance: ${onassetBalance}\nClone Price: ${clonePrice}\n\n`;
-      totalBalance += onassetBalance * clonePrice;
+      assetInfo += `onAsset ${i} Balance: ${onassetBalance}\Quote Price: ${quotePrice}\n\n`;
+      totalBalance += onassetBalance * quotePrice;
     }
     assetInfo += `Total Balance: ${totalBalance}`;
     console.log(boxen(assetInfo, assetBoxenOptions));

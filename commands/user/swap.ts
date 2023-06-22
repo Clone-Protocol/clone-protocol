@@ -1,5 +1,6 @@
+import { Transaction } from "@solana/web3.js";
 import { CloneClient, toDevnetScale } from "../../sdk/src/clone";
-import { calculateExecutionThreshold } from "../../sdk/src/utils";
+import { calculateSwapExecution } from "../../sdk/src/utils";
 import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -16,16 +17,18 @@ import {
   getOrCreateAssociatedTokenAccount,
 } from "../utils";
 import { Argv } from "yargs";
+import { toNumber } from "../../sdk/src/decimal";
 
 interface CommandArguments extends Argv {
   poolIndex: number;
   amount: number;
-  onusdIsInput: boolean;
-  onusdIsDesignatedAmount: boolean;
+  quantityIsInput: boolean;
+  quantityIsOnusd: boolean;
   slippage: number;
 }
 
-exports.command = "swap <pool-index> <amount> <onusd-is-input> <onusd-is-designated-amount> [slippage]";
+exports.command =
+  "swap <pool-index> <amount> [quantity-is-input] [quantity-is-onusd] [slippage]";
 exports.desc = "Buys onAsset from a Clone pool";
 exports.builder = (yargs: CommandArguments) => {
   yargs
@@ -37,13 +40,15 @@ exports.builder = (yargs: CommandArguments) => {
       describe: "The amount of onAsset to buy",
       type: "number",
     })
-    .positional("onusd-is-input", {
-      describe: "The amount of onAsset to buy",
+    .positional("quantity-is-input", {
+      describe: "true if the amount is for the asset being sold",
       type: "boolean",
+      default: false,
     })
-    .positional("onusd-is-designated-amount", {
-      describe: "The amount of onAsset to buy",
+    .positional("quantity-is-onusd", {
+      describe: "true if the amount is for the onUSD",
       type: "boolean",
+      default: false,
     })
     .positional("slippage", {
       describe: "The slippage tolerance on the trade",
@@ -62,24 +67,28 @@ exports.handler = async function (yargs: CommandArguments) {
     const tokenData = await cloneClient.getTokenData();
     const pool = tokenData.pools[yargs.poolIndex];
 
-    //This will change
-    const executionEst = calculateExecutionThreshold(
-      yargs.onassetAmount,
-      true,
-      pool,
-      yargs.slippage
+    let executionEst = calculateSwapExecution(
+      yargs.amount,
+      yargs.quantityIsInput,
+      yargs.quantityIsOnusd,
+      toNumber(pool.onusdIld),
+      toNumber(pool.onassetIld),
+      toNumber(pool.committedOnusdLiquidity),
+      toNumber(pool.liquidityTradingFee),
+      toNumber(pool.treasuryTradingFee),
+      toNumber(pool.assetInfo.price)
     );
 
-    //need to check which of 4 potential swap types it is and handle each accordingly
     let onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       setup.provider,
       cloneClient.clone!.onusdMint
     );
     const initialOnusdBalance = Number(onusdTokenAccountInfo.amount);
-    const onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+    let onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       setup.provider,
       pool.assetInfo.onassetMint
     );
+    const initialOnassetBalance = Number(onassetTokenAccountInfo.amount);
 
     const treasuryOnassetAssociatedTokenAddress =
       await getAssociatedTokenAddress(
@@ -95,30 +104,95 @@ exports.handler = async function (yargs: CommandArguments) {
       "recent"
     );
 
-    const amount = new BN(`${toDevnetScale(yargs.onassetAmount)}`);
+    const treasuryOnusdAssociatedTokenAddress = await getAssociatedTokenAddress(
+      cloneClient.clone!.onusdMint,
+      cloneClient.clone!.treasuryAddress,
+      false,
+      TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+    const treasuryOnusdTokenAccount = await getAccount(
+      cloneClient.provider.connection,
+      treasuryOnusdAssociatedTokenAddress,
+      "recent"
+    );
 
-    await cloneClient.buyOnasset(
+    const amount = new BN(`${toDevnetScale(yargs.amount)}`);
+
+    const updatePricesIx = await cloneClient.updatePricesInstruction();
+
+    let ix = await cloneClient.swapInstruction(
+      yargs.poolIndex,
       amount,
+      yargs.quantityIsInput,
+      yargs.quantityIsOnusd,
+      toDevnetScale(executionEst.result * 1.005),
+      pool.assetInfo.onassetMint,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
-      yargs.poolIndex,
-      toDevnetScale(executionEst.onusdThresholdAmount),
+      treasuryOnusdTokenAccount.address,
       treasuryOnassetTokenAccount.address
     );
 
-    onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      setup.provider,
-      cloneClient.clone!.onusdMint
+    await setup.provider.sendAndConfirm(
+      new Transaction().add(updatePricesIx).add(ix)
     );
-    const newOnusdBalance = Number(onusdTokenAccountInfo.amount);
 
-    successLog(
-      `${yargs.onassetAmount} onAsset ${
-        yargs.poolIndex
-      } Bought!\nSpent ${fromDevnetScale(
-        initialOnusdBalance - newOnusdBalance
-      )} onUSD`
-    );
+
+    
+    if (yargs.quantityIsInput && yargs.quantityIsOnusd) {
+      onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+        setup.provider,
+        pool.assetInfo.onassetMint
+      );
+      const newOnassetBalance = Number(onassetTokenAccountInfo.amount);
+
+      successLog(
+        `${yargs.amount} onUSD Sold!\nBought ${fromDevnetScale(
+          newOnassetBalance - initialOnassetBalance
+        )} onAsset ${yargs.poolIndex}`
+      );
+    } else if (yargs.quantityIsInput && !yargs.quantityIsOnusd) {
+      onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+        setup.provider,
+        cloneClient.clone!.onusdMint
+      );
+      const newOnusdBalance = Number(onusdTokenAccountInfo.amount);
+
+      successLog(
+        `${yargs.amount} onAsset ${
+          yargs.poolIndex
+        } Sold!\nBought ${fromDevnetScale(
+          newOnusdBalance - initialOnusdBalance
+        )} onUSD`
+      );
+    } else if (!yargs.quantityIsInput && yargs.quantityIsOnusd) {
+      onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+        setup.provider,
+        pool.assetInfo.onassetMint
+      );
+      const newOnassetBalance = Number(onassetTokenAccountInfo.amount);
+
+      successLog(
+        `${yargs.amount} onUSD Bought!\nSold ${fromDevnetScale(
+          initialOnassetBalance - newOnassetBalance
+        )} onAsset ${yargs.poolIndex}`
+      );
+    } else if (!yargs.quantityIsInput && !yargs.quantityIsOnusd) {
+      onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+        setup.provider,
+        cloneClient.clone!.onusdMint
+      );
+      const newOnusdBalance = Number(onusdTokenAccountInfo.amount);
+
+      successLog(
+        `${yargs.amount} onAsset ${
+          yargs.poolIndex
+        } Bought!\nSold ${fromDevnetScale(
+          initialOnusdBalance - newOnusdBalance
+        )} onUSD`
+      );
+    }
   } catch (error: any) {
     errorLog(`Failed to buy:\n${error.message}`);
   }

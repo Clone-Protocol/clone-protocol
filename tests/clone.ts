@@ -671,7 +671,6 @@ describe("clone", async () => {
 
     const withdrawCollateralFromBorrowIx =
       await cloneClient.withdrawCollateralFromBorrowInstruction(
-        cloneClient.provider.publicKey!,
         borrowIndex,
         mockUSDCTokenAccountInfo.address,
         new BN(getMantissa(borrowPosition.collateralAmount))

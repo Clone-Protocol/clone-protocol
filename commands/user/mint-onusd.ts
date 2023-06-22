@@ -1,6 +1,6 @@
-import * as anchor from "@coral-xyz/anchor";
-import { CloneClient } from "../../sdk/src/clone";
 import { Transaction } from "@solana/web3.js";
+import { CloneClient, toDevnetScale } from "../../sdk/src/clone";
+import { BN } from "@coral-xyz/anchor";
 import {
   successLog,
   errorLog,
@@ -42,11 +42,13 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneClient.clone!.onusdMint
     );
 
-    await cloneClient.mintOnusd(
-      yargs.amount,
+    const amount = new BN(`${toDevnetScale(yargs.amount)}`);
+    let ix = await cloneClient.mintOnusdInstruction(
+      amount,
       onUSDTokenAccountInfo.address,
       usdcTokenAccountInfo.address
     );
+    await setup.provider.sendAndConfirm(new Transaction().add(ix));
 
     successLog(`${yargs.amount} onUSD Minted!`);
   } catch (error: any) {

@@ -11,20 +11,20 @@ import {
 import { Argv } from "yargs";
 
 interface CommandArguments extends Argv {
-  borrowIndex: number;
+  collateralIndex: number;
   amount: number;
 }
 
-exports.command = "add-collateral <borrow-index> <amount>";
+exports.command = "withdraw-collateral <collateral-index> <amount>";
 exports.desc = "Adds collateral to your borrow position";
 exports.builder = (yargs: CommandArguments) => {
   yargs
-    .positional("borrow-index", {
-      describe: "The index of the borrow position",
+    .positional("collateral-index", {
+      describe: "The index of the collateral you are withdrawing",
       type: "number",
     })
     .positional("amount", {
-      describe: "The amount of collateral to add to the borrow position",
+      describe: "The amount of collateral to withdraw from the comet position",
       type: "number",
     });
 };
@@ -37,10 +37,8 @@ exports.handler = async function (yargs: CommandArguments) {
     await cloneClient.loadClone();
 
     const tokenData = await cloneClient.getTokenData();
-    const borrowPosition = (await cloneClient.getBorrowPositions())
-      .borrowPositions[yargs.borrowIndex];
 
-    const collateral = tokenData.collaterals[borrowPosition.collateralIndex];
+    const collateral = tokenData.collaterals[yargs.collateralIndex];
 
     const collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       setup.provider,
@@ -49,15 +47,15 @@ exports.handler = async function (yargs: CommandArguments) {
 
     const amount = new BN(`${toDevnetScale(yargs.amount)}`);
 
-    let ix = await cloneClient.addCollateralToBorrowInstruction(
-      yargs.borrowIndex,
+    let ix = await cloneClient.withdrawCollateralFromCometInstruction(
       collateralTokenAccountInfo.address,
-      amount
+      amount,
+      yargs.collateralIndex
     );
     await setup.provider.sendAndConfirm(new Transaction().add(ix));
 
     successLog(`${yargs.amount} Collateral Added!`);
   } catch (error: any) {
-    errorLog(`Failed to add collateral to borrow position:\n${error.message}`);
+    errorLog(`Failed to withdraw collateral from comet position:\n${error.message}`);
   }
 };

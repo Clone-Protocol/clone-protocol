@@ -1,3 +1,4 @@
+import { Transaction } from "@solana/web3.js";
 import { CloneClient, toDevnetScale } from "../../../sdk/src/clone";
 import { BN } from "@coral-xyz/anchor";
 import {
@@ -48,18 +49,17 @@ exports.handler = async function (yargs: CommandArguments) {
 
     const amount = new BN(`${toDevnetScale(yargs.amount)}`);
 
-    // @ts-ignore
-    let signers: Array<Signer> = [setup.provider.wallet.payer];
-
-    await cloneClient.withdrawCollateralFromBorrow(
-      collateralTokenAccountInfo.address,
+    let ix = await cloneClient.withdrawCollateralFromBorrowInstruction(
       yargs.borrowIndex,
-      amount,
-      signers
+      collateralTokenAccountInfo.address,
+      amount
     );
+    await setup.provider.sendAndConfirm(new Transaction().add(ix));
 
     successLog(`${yargs.amount} Collateral Withdraw!`);
   } catch (error: any) {
-    errorLog(`Failed to withdraw collateral from borrow position:\n${error.message}`);
+    errorLog(
+      `Failed to withdraw collateral from borrow position:\n${error.message}`
+    );
   }
 };

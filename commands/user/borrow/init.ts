@@ -1,3 +1,4 @@
+import { Transaction } from "@solana/web3.js";
 import { CloneClient, toDevnetScale } from "../../../sdk/src/clone";
 import { BN } from "@coral-xyz/anchor";
 import {
@@ -62,18 +63,15 @@ exports.handler = async function (yargs: CommandArguments) {
     const borrowAmount = new BN(`${toDevnetScale(yargs.borrowAmount)}`);
     const collateralAmount = new BN(`${toDevnetScale(yargs.collateralAmount)}`);
 
-    // @ts-ignore
-    let signers: Array<Signer> = [setup.provider.wallet.payer];
-
-    await cloneClient.initializeBorrowPosition(
-      borrowAmount,
-      collateralAmount,
+    let ix = await cloneClient.initializeBorrowPositionInstruction(
       collateralTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
+      borrowAmount,
+      collateralAmount,
       yargs.poolIndex,
-      yargs.collateralIndex,
-      signers
+      yargs.collateralIndex
     );
+    await setup.provider.sendAndConfirm(new Transaction().add(ix));
 
     successLog(
       `Borrowed Initialized:\nPool Index: ${yargs.poolIndex}\nCollateral Index: ${yargs.collateralIndex}\nCollateral Amount: ${yargs.collateralAmount}\nBorrowed Amount: ${yargs.borrowAmount}`

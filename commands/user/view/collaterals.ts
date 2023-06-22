@@ -1,5 +1,5 @@
+import { Transaction } from "@solana/web3.js";
 import { CloneClient } from "../../../sdk/src/clone";
-import { getFeedData } from "../../../sdk/src/oracle";
 import { getMantissa } from "../../../sdk/src/decimal";
 import {
   successLog,
@@ -24,6 +24,9 @@ exports.handler = async function () {
     const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
     await cloneClient.loadClone();
 
+    let ix = await cloneClient.updatePricesInstruction();
+    await setup.provider.sendAndConfirm(new Transaction().add(ix));
+
     const tokenData = await cloneClient.getTokenData();
 
     for (let i = 0; i < Number(tokenData.numCollaterals); i++) {
@@ -35,9 +38,8 @@ exports.handler = async function () {
       let priceFeedString: string;
       if (stable === 0) {
         poolIndex = Number(collateral.poolIndex);
-        const priceFeed = tokenData.pools[poolIndex].assetInfo.pythAddress;
-        const feedData = await getFeedData(pythProgram, priceFeed);
-        oraclePrice = feedData.aggregate.price;
+        oraclePrice = getMantissa(tokenData.pools[poolIndex].assetInfo.price);
+        const priceFeed = tokenData.pools[poolIndex].assetInfo.price;
         priceFeedString = priceFeed.toString();
       } else {
         oraclePrice = 1;

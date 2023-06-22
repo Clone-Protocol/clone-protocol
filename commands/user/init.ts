@@ -24,22 +24,11 @@ exports.handler = async function () {
     );
 
     const cometAccountKeypair = anchor.web3.Keypair.generate();
-    tx.add(
-      await cloneClient.initializeCometInstruction(cometAccountKeypair, false)
-    );
-
-    const singlePoolCometAccountKeypair = anchor.web3.Keypair.generate();
-    tx.add(
-      await cloneClient.initializeCometInstruction(
-        singlePoolCometAccountKeypair,
-        true
-      )
-    );
+    tx.add(await cloneClient.initializeCometInstruction(cometAccountKeypair));
 
     await cloneClient.provider.sendAndConfirm!(tx, [
       borrowAccountKeypair,
       cometAccountKeypair,
-      singlePoolCometAccountKeypair,
     ]);
 
     successLog("User Account Initialized!");

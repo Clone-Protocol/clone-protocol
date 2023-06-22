@@ -1,5 +1,5 @@
+import { Transaction } from "@solana/web3.js";
 import { CloneClient } from "../../../sdk/src/clone";
-import { getFeedData } from "../../../sdk/src/oracle";
 import { getMantissa } from "../../../sdk/src/decimal";
 import {
   successLog,
@@ -14,7 +14,7 @@ import chalk from "chalk";
 import boxen from "boxen";
 
 exports.command = "borrow-positions";
-exports.desc = "Adds collateral to your borrow position";
+exports.desc = "View your borrow positions";
 exports.builder = {};
 exports.handler = async function () {
   try {
@@ -24,6 +24,9 @@ exports.handler = async function () {
 
     const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
     await cloneClient.loadClone();
+
+    let ix = await cloneClient.updatePricesInstruction();
+    await setup.provider.sendAndConfirm(new Transaction().add(ix));
 
     const tokenData = await cloneClient.getTokenData();
     const borrowPositions = await cloneClient.getBorrowPositions();
@@ -39,10 +42,10 @@ exports.handler = async function () {
       let minimumCollateralRatio: number;
       if (stable === 0) {
         const collateralPoolIndex = Number(collateral.poolIndex);
-        const priceFeed =
-          tokenData.pools[collateralPoolIndex].assetInfo.pythAddress;
-        const feedData = await getFeedData(pythProgram, priceFeed);
-        collateralPrice = feedData.aggregate.price;
+
+        collateralPrice = getMantissa(
+          tokenData.pools[collateralPoolIndex].assetInfo.price
+        );
         minimumCollateralRatio = getMantissa(
           pool.assetInfo.cryptoCollateralRatio
         );
@@ -52,9 +55,7 @@ exports.handler = async function () {
           pool.assetInfo.stableCollateralRatio
         );
       }
-      const priceFeed = pool.assetInfo.pythAddress;
-      const feedData = await getFeedData(pythProgram, priceFeed);
-      let onAssetPrice = feedData.aggregate.price;
+      let onAssetPrice = getMantissa(pool.assetInfo.price);
 
       const title = `Borrow Position ${i}`;
       const underline = new Array(title.length).fill("-").join("");
@@ -72,10 +73,10 @@ exports.handler = async function () {
         `${chalk.bold(title)}\n` +
         `${underline}\n` +
         `Collateral Amount: ${chalk.bold(
-          fromDevnetScale(getMantissa(borrowPosition.collateralAmount))
+          getMantissa(borrowPosition.collateralAmount)
         )}\n` +
         `Borrowed onAsset Amount: ${chalk.bold(
-          fromDevnetScale(getMantissa(borrowPosition.borrowedOnasset))
+          getMantissa(borrowPosition.borrowedOnasset)
         )}\n` +
         `Collateral Oracle Price: $${chalk.bold(collateralPrice)}\n` +
         `onAsset Oracle Price: $${chalk.bold(onAssetPrice)}\n` +
