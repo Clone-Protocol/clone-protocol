@@ -7,9 +7,9 @@ exports.createTable = async (db) => {
       event_id INTEGER NOT NULL,
       pool_index INTEGER NOT NULL,
       user_address VARCHAR(50) NOT NULL,
-      committed_onusd_delta BIGINT NOT NULL
+      committed_onusd_delta BIGINT NOT NULL,
       onusd_ild_delta BIGINT NOT NULL,
-      onasset_ild_delta BIGINT NOT NULL,
+      onasset_ild_delta BIGINT NOT NULL
     );
     
     CREATE INDEX IF NOT EXISTS liquidity_delta_block_time_idx ON liquidity_delta (block_time);
