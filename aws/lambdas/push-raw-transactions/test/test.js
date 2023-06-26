@@ -1,22 +1,21 @@
 const extract = require("../extract_values")
 
-
-
 describe("parsing data tests", () => {
 
-    it("parse update prices transaction", () => {
+    it("parse PayBorrowDebt transaction", () => {
         const event = require("./test0.json")
+        console.log(event)
         const result = extract.extract(event)
-        //console.log(result.events)
+        console.log(result.parsedEvents)
     })
 
-    it("parse buy synth transaction", () => {
+    it("parse Swap transaction", () => {
         const event = require("./test1.json")
         const result = extract.extract(event)
-        //console.log(result.events)
+        console.log(result.parsedEvents)
     })
 
-    it("parse add liquidity transaction", async () => {
+    it("parse AddLiquidityToComet transaction", async () => {
         const event = require("./test2.json")
         const result = extract.extract(event)
         console.log(result.parsedEvents)
@@ -71,6 +70,5 @@ describe("parsing data tests", () => {
     //     await poolStateCon.insertEvents(pgp, db, poolState)
 
     // })
-
 
 })

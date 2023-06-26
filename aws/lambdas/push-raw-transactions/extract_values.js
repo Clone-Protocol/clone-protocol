@@ -1,5 +1,5 @@
 const anchor = require("@coral-xyz/anchor")
-const inceptIDL = require("./incept.json")
+const cloneIDL = require("./clone.json")
 
 const parseEvent = (
   log,
@@ -18,10 +18,10 @@ const parseEvent = (
         slot,
         eventId,
         poolIndex: data.poolIndex,
-        isConcentrated: data.isConcentrated,
-        iassetDelta: data.iassetDelta.toString(),
-        usdiDelta: data.usdiDelta.toString(),
-        lpTokenDelta: data.lpTokenDelta.toString(),
+        userAddress: data.userAddress.toString(),
+        committedOnusdDelta: data.committedOnusdDelta.toString(),
+        onusdIldDelta: data.onusdIldDelta.toString(),
+        onassetIldDelta: data.onassetIldDelta.toString(),
       }
       break;
     case "PoolState":
@@ -30,9 +30,9 @@ const parseEvent = (
         slot,
         eventId,
         poolIndex: data.poolIndex,
-        iasset: data.iasset.toString(),
-        usdi: data.usdi.toString(),
-        lpTokens: data.lpTokens.toString(),
+        onassetIld: data.onassetIld.toString(),
+        onusdIld: data.onusdIld.toString(),
+        committedOnusdLiquidity: data.committedOnusdLiquidity.toString(),
         oraclePrice: data.oraclePrice.toString(),
       };
       break;
@@ -41,11 +41,11 @@ const parseEvent = (
         blockTime,
         slot,
         eventId,
-        userId: data.user.toString(),
+        userAddress: data.userAddress.toString(),
         poolIndex: data.poolIndex,
-        isBuy: data.isBuy,
-        iasset: data.iasset.toString(),
-        usdi: data.usdi.toString(),
+        inputIsOnusd: data.inputIsOnusd,
+        input: data.input.toString(),
+        output: data.output.toString(),
         tradingFee: data.tradingFee.toString(),
         treasuryFee: data.treasuryFee.toString(),
       };
@@ -56,7 +56,7 @@ const parseEvent = (
         slot,
         eventId,
         poolIndex: data.poolIndex,
-        userId: data.user.toString(),
+        userAddress: data.userAddress.toString(),
         isLiquidation: data.isLiquidation,
         collateralSupplied: data.collateralSupplied.toString(),
         collateralDelta: data.collateralDelta.toString(),
@@ -74,8 +74,8 @@ const parseEvent = (
 exports.extract = (raw) => {
 
     const connection = new anchor.web3.Connection(anchor.web3.clusterApiUrl("devnet"))
-    const programID = new anchor.web3.PublicKey(inceptIDL.metadata.address)
-    const program = new anchor.Program(inceptIDL, programID, { connection })
+    const programID = new anchor.web3.PublicKey(process.env.PROGRAM_ID)
+    const program = new anchor.Program(cloneIDL, programID, { connection })
     const parser = new anchor.EventParser(programID, program.coder);
 
     let parsedEvents = [];

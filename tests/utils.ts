@@ -11,12 +11,12 @@ import {
 } from "@solana/spl-token";
 import { sleep } from "../sdk/src/utils";
 import { Decimal, toNumber } from "../sdk/src/decimal";
-import { DEVNET_TOKEN_SCALE, InceptClient, toDevnetScale } from "../sdk/src/incept";
+import { DEVNET_TOKEN_SCALE, CloneClient, toDevnetScale } from "../sdk/src/clone";
 import { JupiterAggMock } from "../sdk/src/idl/jupiter_agg_mock";
 import { AnchorProvider } from "@coral-xyz/anchor";
 import { Comet, TokenData } from "../sdk/src/interfaces";
 
-export const INCEPT_EXCHANGE_SEED = Buffer.from("Incept");
+export const CLONE_EXCHANGE_SEED = Buffer.from("Clone");
 export const EXCHANGE_ADMIN = new Keypair();
 export const DEFAULT_PUBLIC_KEY = new PublicKey(0);
 

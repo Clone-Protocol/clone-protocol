@@ -1,70 +1,61 @@
 
-exports.fetchStats = async ({pool, interval}, db) => {
-    const query = getStatsQuery(pool, interval)
+exports.fetchStats = async ({interval, filter}, db) => {
+    const query = getStatsQuery(interval, filter)
     const result = await db.any(query)
     return result
 }
 
-const getStatsQuery = (pool, interval) => {
-  const token = pool === undefined ? ' ' : ` WHERE pool_index = ${pool} `
-  return `
-  WITH daily_latest AS (
-    SELECT
-      date_trunc('${interval}', to_timestamp(block_time)) AS date,
-      pool_index,
-      iasset,
-      usdi,
-      ROW_NUMBER() OVER (PARTITION BY date_trunc('${interval}', to_timestamp(block_time)), pool_index ORDER BY block_time DESC) AS row_number
-    FROM
-      pool_state
-  ),
-  
-  daily_liquidity AS (
-    SELECT
-      date,
-      pool_index,
-      2 * usdi AS liquidity
-    FROM
-      daily_latest
-    WHERE
-      row_number = 1
-  ),
-  
-  pool_trading_volume AS (
-    SELECT
-      date_trunc('${interval}', to_timestamp(block_time)) AS date,
-      pool_index,
-      SUM(2 * usdi) AS trading_volume,
-      SUM(trading_fee) AS total_trading_fees,
-      SUM(treasury_fee) AS total_treasury_fees
-    FROM
-      swap_event
-    GROUP BY
-      date,
-      pool_index
-  ),
-  
-  pool_liquidity AS (
-    SELECT
-      COALESCE(daily_liquidity.date, pool_trading_volume.date) AS datetime,
-      COALESCE(daily_liquidity.pool_index, pool_trading_volume.pool_index) AS pool_index,
-      COALESCE(daily_liquidity.liquidity, 0) AS total_liquidity,
-      COALESCE(pool_trading_volume.trading_volume, 0) AS trading_volume,
-      COALESCE(pool_trading_volume.total_trading_fees, 0) AS total_trading_fees,
-      COALESCE(pool_trading_volume.total_treasury_fees, 0) AS total_treasury_fees
-    FROM
-      daily_liquidity
-    FULL OUTER JOIN
-      pool_trading_volume
-    ON
-      daily_liquidity.date = pool_trading_volume.date
-      AND daily_liquidity.pool_index = pool_trading_volume.pool_index
-  ),
-  
-  latest_entries AS (
-    SELECT * FROM pool_liquidity ORDER BY datetime DESC LIMIT 1000
-  )
-  
-  SELECT * FROM latest_entries${token}ORDER BY datetime, pool_index;
-  `
+const getStatsQuery = (interval, filter) => {
+	return `
+		WITH trades AS (
+			SELECT
+				pool_index,
+				date_trunc('${interval}', to_timestamp(block_time)) AS time_interval,
+				(CASE WHEN input_is_onusd THEN input::numeric / output::numeric ELSE output::numeric/input::numeric END) AS price,
+				(CASE WHEN input_is_onusd THEN input::numeric * 2 ELSE output::numeric * 2 END) AS volume,
+				(CASE WHEN input_is_onusd THEN trading_fee::numeric * input::numeric / output::numeric ELSE trading_fee::numeric END) AS fees
+			FROM
+				swap_event
+			WHERE
+				block_time >= EXTRACT(EPOCH FROM now() - interval '1 ${filter}')
+		),
+		liquidity_query AS (
+			SELECT 
+				pool_index,
+				time_interval, 
+				SUM(committed_onusd_liquidity) as total_committed_onusd_liquidity
+			FROM 
+				(
+				SELECT 
+					pool_index,
+					date_trunc('${interval}', to_timestamp(block_time)) AS time_interval, 
+					committed_onusd_liquidity,
+					ROW_NUMBER() OVER (PARTITION BY pool_index, date_trunc('${interval}', to_timestamp(block_time)) ORDER BY block_time DESC) as row_number
+				FROM 
+					pool_state
+				WHERE 
+					block_time >= EXTRACT(EPOCH FROM (NOW() - interval '1 ${filter}'))
+				) AS subquery
+			WHERE 
+				row_number = 1
+			GROUP BY
+				pool_index, time_interval
+		)
+		SELECT
+			liquidity_query.pool_index,
+			COALESCE(liquidity_query.time_interval, trades.time_interval) AS time_interval,
+			liquidity_query.total_committed_onusd_liquidity,
+			COALESCE(SUM(volume), 0) AS volume,
+			COALESCE(SUM(fees), 0) AS trading_fees
+		FROM
+			trades
+			FULL JOIN liquidity_query ON liquidity_query.time_interval = trades.time_interval
+				AND liquidity_query.pool_index = trades.pool_index
+		GROUP BY
+			liquidity_query.pool_index,
+			COALESCE(liquidity_query.time_interval, trades.time_interval), 
+			total_committed_onusd_liquidity
+		ORDER BY
+			time_interval;
+		`
 }

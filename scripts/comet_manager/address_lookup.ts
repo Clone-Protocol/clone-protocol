@@ -10,14 +10,14 @@ import {
   AddressLookupTableProgram,
 } from "@solana/web3.js";
 import { getOrCreateAssociatedTokenAccount } from "../../tests/utils";
-import { Incept, User, TokenData } from "../../sdk/generated/incept/index";
+import { Clone, User, TokenData } from "../../sdk/generated/clone/index";
 import { Jupiter } from "../../sdk/generated/jupiter-agg-mock";
-import { ManagerInfo } from "../../sdk/generated/incept-comet-manager";
+import { ManagerInfo } from "../../sdk/generated/clone-comet-manager";
 
 export interface TokenAccountAddresses {
-  iassetToken: PublicKey[];
+  onassetToken: PublicKey[];
   underlyingToken?: PublicKey[];
-  usdiToken: PublicKey;
+  onusdToken: PublicKey;
   usdcToken: PublicKey;
 }
 
@@ -25,18 +25,18 @@ export const getManagerTokenAccountAddresses = async (
   provider: anchor.AnchorProvider,
   managerAddress: PublicKey,
   tokenData: TokenData,
-  usdiMint: PublicKey,
+  onusdMint: PublicKey,
   usdcMint: PublicKey,
   underlyingMints: PublicKey[]
 ): Promise<TokenAccountAddresses> => {
   const nPools = Number(tokenData.numPools!);
 
-  const iassetMints = tokenData.pools.slice(0, nPools).map((pool) => {
-    return pool.assetInfo.iassetMint;
+  const onassetMints = tokenData.pools.slice(0, nPools).map((pool) => {
+    return pool.assetInfo.onassetMint;
   });
 
-  let iassetToken: PublicKey[] = [];
-  for (const mint of iassetMints) {
+  let onassetToken: PublicKey[] = [];
+  for (const mint of onassetMints) {
     console.log("MANAGER IASSET MINT:", mint.toString());
     const associatedToken = await getAssociatedTokenAddress(
       mint,
@@ -45,7 +45,7 @@ export const getManagerTokenAccountAddresses = async (
       TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
-    iassetToken.push(associatedToken);
+    onassetToken.push(associatedToken);
   }
 
   let underlyingToken: PublicKey[] = [];
@@ -61,8 +61,8 @@ export const getManagerTokenAccountAddresses = async (
     underlyingToken.push(associatedToken);
   }
 
-  const usdiToken = await getAssociatedTokenAddress(
-    usdiMint,
+  const onusdToken = await getAssociatedTokenAddress(
+    onusdMint,
     managerAddress,
     true,
     TOKEN_PROGRAM_ID,
@@ -78,9 +78,9 @@ export const getManagerTokenAccountAddresses = async (
   );
 
   return {
-    iassetToken,
+    onassetToken,
     underlyingToken,
-    usdiToken,
+    onusdToken,
     usdcToken,
   };
 };
@@ -89,17 +89,17 @@ export const getTreasuryTokenAccountAddresses = async (
   provider: anchor.AnchorProvider,
   treasuryAddress: PublicKey,
   tokenData: TokenData,
-  usdiMint: PublicKey,
+  onusdMint: PublicKey,
   usdcMint: PublicKey
 ): Promise<TokenAccountAddresses> => {
   const nPools = Number(tokenData.numPools!);
 
-  const iassetMints = tokenData.pools.slice(0, nPools).map((pool) => {
-    return pool.assetInfo.iassetMint;
+  const onassetMints = tokenData.pools.slice(0, nPools).map((pool) => {
+    return pool.assetInfo.onassetMint;
   });
 
-  let iassetToken: PublicKey[] = [];
-  for (const mint of iassetMints) {
+  let onassetToken: PublicKey[] = [];
+  for (const mint of onassetMints) {
     console.log("TREASURY IASSET MINT:", mint.toString());
     const associatedToken = await getAssociatedTokenAddress(
       mint,
@@ -108,10 +108,10 @@ export const getTreasuryTokenAccountAddresses = async (
       TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
-    iassetToken.push(associatedToken);
+    onassetToken.push(associatedToken);
   }
-  const usdiToken = await getAssociatedTokenAddress(
-    usdiMint,
+  const onusdToken = await getAssociatedTokenAddress(
+    onusdMint,
     treasuryAddress,
     false,
     TOKEN_PROGRAM_ID,
@@ -127,20 +127,20 @@ export const getTreasuryTokenAccountAddresses = async (
   );
 
   return {
-    iassetToken,
-    usdiToken,
+    onassetToken,
+    onusdToken,
     usdcToken,
   };
 };
 
 export const setupAddressLookupTable = async (
   provider: anchor.AnchorProvider,
-  incept: Incept,
-  inceptAccountAddress: PublicKey,
+  clone: Clone,
+  cloneAccountAddress: PublicKey,
   managerInfo: ManagerInfo,
   managerAddresses: TokenAccountAddresses,
   managerInfoAddress: PublicKey,
-  managerInceptUser: User,
+  managerCloneUser: User,
   tokenData: TokenData,
   treasuryAddresses: TokenAccountAddresses,
   jupiter: Jupiter,
@@ -165,32 +165,32 @@ export const setupAddressLookupTable = async (
     userKey,
     anchor.web3.SystemProgram.programId,
     TOKEN_PROGRAM_ID,
-    inceptAccountAddress,
-    incept.tokenData,
-    incept.treasuryAddress,
-    incept.usdiMint,
+    cloneAccountAddress,
+    clone.tokenData,
+    clone.treasuryAddress,
+    clone.onusdMint,
     jupiterAddress,
     jupiterProgramId,
-    managerInfo.incept,
-    managerInfo.inceptProgram,
+    managerInfo.clone,
+    managerInfo.cloneProgram,
     managerInfo.userAccount,
     managerAddresses.usdcToken,
-    managerAddresses.usdiToken,
-    ...managerAddresses.iassetToken,
+    managerAddresses.onusdToken,
+    ...managerAddresses.onassetToken,
     ...managerAddresses.underlyingToken!,
     managerInfoAddress,
-    managerInceptUser.comet,
-    managerInceptUser.authority,
+    managerCloneUser.comet,
+    managerCloneUser.authority,
     tokenData.collaterals[0].vault,
     treasuryAddresses.usdcToken,
-    treasuryAddresses.usdiToken,
-    ...treasuryAddresses.iassetToken,
+    treasuryAddresses.onusdToken,
+    ...treasuryAddresses.onassetToken,
   ];
 
   tokenData.pools.slice(0, Number(tokenData.numPools)).forEach((pool) => {
-    addresses.push(pool.iassetTokenAccount);
-    addresses.push(pool.usdiTokenAccount);
-    addresses.push(pool.assetInfo.iassetMint);
+    addresses.push(pool.onassetTokenAccount);
+    addresses.push(pool.onusdTokenAccount);
+    addresses.push(pool.assetInfo.onassetMint);
     addresses.push(pool.liquidityTokenMint);
     addresses.push(pool.cometLiquidityTokenAccount);
     addresses.push(pool.underlyingAssetTokenAccount);

@@ -1,8 +1,7 @@
 [programs.localnet]
-incept = "6dXq5ocMBYHsVRsGHxckdPmhimip4nisLqR6rqZ8pwt9"
-pyth = "CGN35EiXnmofHy3RmjcVYeQ4Yn5PyGaQuGV8TfEZnLs7"
-jupiter_agg_mock = "6LHFDGiQtKZKdq1Gn8TnaQfxr4VYLTGHfJRxffQwVKpa"
-incept_comet_manager = "8whRvQqudRqsQpcUFwFfnP1WB67V4ApCDLgMT65pVpL6"
+clone = "BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ"
+pyth = "H38XT5NKW9g9sZpmjwDQkp6S3nLTfg7tZ4WbAfgk7ZCG"
+jupiter_agg_mock = "J2shPGHLAPYe1i6PWuKBTXMzGFDSi1yYUzus5yxekH2a"
 
 [registry]
 url = "https://anchor.projectserum.com"
@@ -12,5 +11,5 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/incept.ts"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/clone.ts"
 test_liquidation = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/liquidation.ts"

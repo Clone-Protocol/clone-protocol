@@ -1,6 +1,6 @@
 {
-  "name": "@incept/sdk",
+  "name": "@clone/sdk",
   "version": "0.0.0",
-  "description": "SDK for Incept Protocol",
+  "description": "SDK for Clone Protocol",
   "main": "src/index.ts"
 }

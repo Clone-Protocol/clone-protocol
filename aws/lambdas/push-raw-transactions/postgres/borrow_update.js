@@ -6,13 +6,13 @@ exports.createTable = async (db) => {
         slot BIGINT NOT NULL,
         event_id INTEGER NOT NULL,
         pool_index INTEGER NOT NULL,
-        user_id VARCHAR(50) NOT NULL,
+        user_address VARCHAR(50) NOT NULL,
         is_liquidation BOOLEAN NOT NULL,
         collateral_supplied BIGINT NOT NULL,
         collateral_delta BIGINT NOT NULL,
         collateral_index INTEGER NOT NULL,
         borrowed_amount BIGINT NOT NULL,
-        borrowed_delta BIGINT NOT NULL,
+        borrowed_delta BIGINT NOT NULL
       );
       
       CREATE INDEX IF NOT EXISTS borrow_update_block_time_idx ON borrow_update (block_time);
@@ -22,13 +22,13 @@ exports.createTable = async (db) => {
 
 exports.insertEvent = async (db, event) => {
   await db.none(
-    "INSERT INTO borrow_update (block_time, slot, event_id, pool_index, user_id, is_liquidation, collateral_supplied, collateral_delta, collateral_index, borrowed_amount, borrowed_delta) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+    "INSERT INTO borrow_update (block_time, slot, event_id, pool_index, user_address, is_liquidation, collateral_supplied, collateral_delta, collateral_index, borrowed_amount, borrowed_delta) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
     [
       event.blockTime,
       event.slot,
       event.eventId,
       event.poolIndex,
-      event.userId,
+      event.userAddress,
       event.isLiquidation,
       event.collateralSupplied,
       event.collateralDelta,
@@ -47,7 +47,7 @@ exports.insertEvents = async (pgp, db, events) => {
     "slot",
     "event_id",
     "pool_index",
-    "user_id",
+    "user_address",
     "is_liquidation",
     "collateral_supplied",
     "collateral_delta",

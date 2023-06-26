@@ -71,7 +71,7 @@ export const createAssetInstructionDiscriminator = [
 export function createCreateAssetInstruction(
   accounts: CreateAssetInstructionAccounts,
   args: CreateAssetInstructionArgs,
-  programId = new web3.PublicKey('6LHFDGiQtKZKdq1Gn8TnaQfxr4VYLTGHfJRxffQwVKpa')
+  programId = new web3.PublicKey('J2shPGHLAPYe1i6PWuKBTXMzGFDSi1yYUzus5yxekH2a')
 ) {
   const [data] = createAssetStruct.serialize({
     instructionDiscriminator: createAssetInstructionDiscriminator,

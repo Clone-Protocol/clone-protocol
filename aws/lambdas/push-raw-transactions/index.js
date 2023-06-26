@@ -13,10 +13,10 @@ exports.handler = async (event, context) => {
     // Push raw transaction
     await rawTransactions.createTable(db)
     await rawTransactions.insertEvent(db, {blockTime, slot, indexWithinBlock, raw})
-    console.log("PARSED EVENTS:", parsedEvents)
 
-    for (const parsedEvent of parsedEvents) {
-        await pg.pushEventsToPg(db, parsedEvent)
+    for (const pEvent of parsedEvents) {
+        console.log("PARSED EVENT:", pEvent)
+        await pg.pushEventsToPg(db, pEvent)
     }
 
     let body = "OK";

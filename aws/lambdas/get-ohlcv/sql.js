@@ -2,6 +2,7 @@
 
 exports.fetchOhlcv = async ({interval, filter, pool}, db) => {
     const query = getOhlcvQuery({interval, filter, pool})
+    console.log(query)
     const result = await db.any(query)
 
     return result
@@ -15,8 +16,8 @@ const getOhlcvQuery = ({interval, filter, pool}) => {
         SELECT
             pool_index,
             date_trunc('${interval}', to_timestamp(block_time)) AS time_interval,
-            usdi::numeric / iasset::numeric AS price,
-            usdi * 2 AS volume,
+            (CASE WHEN input_is_onusd THEN input::numeric / output::numeric ELSE output::numeric/input::numeric END) AS price,
+            (CASE WHEN input_is_onusd THEN input::numeric * 2 ELSE output::numeric * 2 END) AS volume,
             trading_fee + treasury_fee AS fees
         FROM
             swap_event
