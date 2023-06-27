@@ -21,9 +21,11 @@ const validateInputs = ({interval, filter, pool}) => {
         throw new Error(`Invalid filter: ${filter}. Must be one of ${validFilters.join(', ')}`);
     }
 
-    let num = Number(pool)
-    if (!(Number.isInteger(num) && num >= 0)) {
-        throw new Error(`Invalid pool: ${pool}. Must be a non-negative integer.`)
+    if (pool !== undefined) {
+        let num = Number(pool)
+        if (!(Number.isInteger(num) && num >= 0)) {
+            throw new Error(`Invalid pool: ${pool}. Must be a non-negative integer.`)
+        }   
     }
 }
 
@@ -63,7 +65,9 @@ exports.handler = async (event) => {
     let body;
 
     try {
-        const key = `${params.interval}:${params.filter}:${params.pool}`
+        const key = `ohlcv:${params.interval}:${params.filter}` + (
+            params.pool !== undefined ? `:${params.pool}`: ''
+        )
         // Try to get from cache
         console.log("CONNECTING REDIS")
         await redisClient.connect()
