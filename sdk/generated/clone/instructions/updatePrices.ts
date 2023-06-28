@@ -65,7 +65,7 @@ export const updatePricesInstructionDiscriminator = [
 export function createUpdatePricesInstruction(
   accounts: UpdatePricesInstructionAccounts,
   args: UpdatePricesInstructionArgs,
-  programId = new web3.PublicKey('BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ')
+  programId = new web3.PublicKey('C1oneKNEhzNayAu2xa4LAjUcQrjVRTrCmmqpYBFJi3yu')
 ) {
   const [data] = updatePricesStruct.serialize({
     instructionDiscriminator: updatePricesInstructionDiscriminator,
