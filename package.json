@@ -9,13 +9,11 @@
         "@solana/buffer-layout": "^4.0.0",
         "@solana/spl-token": "^0.2.0",
         "axios": "^1.4.0",
-        "google-spreadsheet": "^3.3.0",
         "toml": "^3.0.0"
     },
     "devDependencies": {
         "@metaplex-foundation/solita": "^0.19.4",
         "@types/chai": "^4.3.0",
-        "@types/google-spreadsheet": "^3.1.15",
         "@types/mocha": "^8.0.0",
         "@types/node": "^18.14.6",
         "chai": "^4.3.6",
