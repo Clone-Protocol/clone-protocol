@@ -74,7 +74,7 @@ exports.handler = async (event, context) => {
             // Run sql query and cache result
             console.log("QUERYING RESULT")
             const data = await sql.fetchBorrowStats(params, db)
-            await redisClient.set(key, JSON.stringify(data), {'EX': getExpiration(params.interval)})
+            await redisClient.set(key, JSON.stringify(data), {'EX': 15})
             body = data;
         }
     } catch (err) {
