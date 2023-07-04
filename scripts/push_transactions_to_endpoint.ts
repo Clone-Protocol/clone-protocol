@@ -21,7 +21,7 @@ const main = async () => {
     const data = fs.readFileSync(outfilePath, 'utf-8')
     const txns: VersionedTransactionResponse[] = JSON.parse(data)
 
-    for (const tx of txns) {
+    for (const tx of txns.reverse()) {
         pushTransaction(`[${JSON.stringify(tx)}]`, endpointURL, authorization)
         await sleep(500)
     }
