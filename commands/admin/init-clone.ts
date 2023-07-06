@@ -67,6 +67,8 @@ exports.handler = async function (yargs: CommandArguments) {
       usdc
     );
 
+    await cloneClient.loadClone();
+
     const treasuryOnusdAssociatedTokenAddress = await getAssociatedTokenAddress(
       cloneClient.clone!.onusdMint,
       treasuryAddress.publicKey,

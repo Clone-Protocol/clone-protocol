@@ -101,7 +101,7 @@ export class TokenData implements TokenDataArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      'BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ'
+      'C1oneKNEhzNayAu2xa4LAjUcQrjVRTrCmmqpYBFJi3yu'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, tokenDataBeet)

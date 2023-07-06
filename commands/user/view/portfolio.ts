@@ -61,7 +61,7 @@ exports.handler = async function () {
         Number(onassetTokenAccountInfo.amount)
       );
 
-      assetInfo += `onAsset ${i} Balance: ${onassetBalance}\Quote Price: ${quotePrice}\n\n`;
+      assetInfo += `onAsset ${i}\nBalance: ${onassetBalance}\nQuote Price: ${quotePrice}\n\n`;
       totalBalance += onassetBalance * quotePrice;
     }
     assetInfo += `Total Balance: ${totalBalance}`;

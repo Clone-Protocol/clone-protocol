@@ -10,7 +10,7 @@ pub mod states;
 
 use instructions::*;
 
-declare_id!("BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ");
+declare_id!("EubgXSMbWxv5XstbcsSy3DFnbc4D529qXUmoxnFWgsy5");
 
 #[program]
 pub mod clone {

@@ -87,7 +87,7 @@ export const initializeCloneInstructionDiscriminator = [
 export function createInitializeCloneInstruction(
   accounts: InitializeCloneInstructionAccounts,
   args: InitializeCloneInstructionArgs,
-  programId = new web3.PublicKey('BxUeKSA62ME4uZZH5gJ3p3co47D8RiZzdLwZSyNgs4sJ')
+  programId = new web3.PublicKey('C1oneKNEhzNayAu2xa4LAjUcQrjVRTrCmmqpYBFJi3yu')
 ) {
   const [data] = initializeCloneStruct.serialize({
     instructionDiscriminator: initializeCloneInstructionDiscriminator,

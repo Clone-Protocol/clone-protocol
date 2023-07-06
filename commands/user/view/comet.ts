@@ -1,7 +1,7 @@
 import { Transaction } from "@solana/web3.js";
 import { CloneClient } from "../../../sdk/src/clone";
-import { getPoolLiquidity } from "../../../sdk/src/utils";
-import { getMantissa } from "../../../sdk/src/decimal";
+import { toNumber } from "../../../sdk/src/decimal";
+import { getHealthScore, getILD } from "../../../sdk/src/healthscore";
 import {
   successLog,
   errorLog,
@@ -32,6 +32,15 @@ exports.handler = async function () {
     const tokenData = await cloneClient.getTokenData();
     const comet = await cloneClient.getComet();
 
+    const assetBoxenOptions: boxen.Options = {
+      padding: 1,
+      margin: 1,
+      // @ts-ignore
+      borderStyle: "double",
+      borderColor: "green",
+      backgroundColor: "#CCCCCC",
+    };
+
     for (let i = 0; i < Number(comet.numCollaterals); i++) {
       const collateralPosition = comet.collaterals[i];
 
@@ -43,7 +52,7 @@ exports.handler = async function () {
       if (stable === 0) {
         const collateralPoolIndex = Number(collateral.poolIndex);
 
-        collateralPrice = getMantissa(
+        collateralPrice = toNumber(
           tokenData.pools[collateralPoolIndex].assetInfo.price
         );
       } else {
@@ -53,29 +62,18 @@ exports.handler = async function () {
       const title = `Collateral Position ${i}`;
       const underline = new Array(title.length).fill("-").join("");
 
-      const assetBoxenOptions: boxen.Options = {
-        padding: 1,
-        margin: 1,
-        // @ts-ignore
-        borderStyle: "double",
-        borderColor: "green",
-        backgroundColor: "#CCCCCC",
-      };
-
       const assetInfo =
         `${chalk.bold(title)}\n` +
         `${underline}\n` +
         `Collateral Index: ${chalk.bold(
-          fromDevnetScale(collateralPosition.collateralIndex)
+          collateralPosition.collateralIndex
         )}\n` +
         `Collateral Amount: ${chalk.bold(
-          getMantissa(collateralPosition.collateralAmount)
+          toNumber(collateralPosition.collateralAmount)
         )}\n` +
-        `Collateral Oracle Price: ${chalk.bold(
-          fromDevnetScale(collateralPrice)
-        )}\n` +
+        `Collateral Oracle Price: ${chalk.bold(collateralPrice)}\n` +
         `Position Value: $${chalk.bold(
-          getMantissa(collateralPosition.collateralAmount) * collateralPrice
+          toNumber(collateralPosition.collateralAmount) * collateralPrice
         )}\n`;
 
       console.log(boxen(assetInfo, assetBoxenOptions));
@@ -87,34 +85,41 @@ exports.handler = async function () {
       const title = `Liquidity Position ${i}`;
       const underline = new Array(title.length).fill("-").join("");
 
-      const assetBoxenOptions: boxen.Options = {
-        padding: 1,
-        margin: 1,
-        // @ts-ignore
-        borderStyle: "double",
-        borderColor: "green",
-        backgroundColor: "#CCCCCC",
-      };
+      const ild = getILD(tokenData, comet)[i];
 
       const assetInfo =
         `${chalk.bold(title)}\n` +
         `${underline}\n` +
-        `onAsset Pool Index: ${chalk.bold(fromDevnetScale(position.poolIndex))}\n` +
+        `onAsset Pool Index: ${chalk.bold(
+          fromDevnetScale(position.poolIndex)
+        )}\n` +
         `onUSD Liquidity Committed: ${chalk.bold(
-          getMantissa(position.committedOnusdLiquidity)
+          toNumber(position.committedOnusdLiquidity)
         )}\n` +
-        `onUSD Impermanent Loss Debt: ${chalk.bold(
-          position.committedOnusdLiquidity
-        )}\n` +
-        `onAsset Impermanent Loss Debt: ${chalk.bold(
-          position.onassetIldRebate
-        )}\n`;
+        `onUSD Impermanent Loss Debt: ${chalk.bold(ild.onusdILD)}\n` +
+        `onAsset Impermanent Loss Debt: ${chalk.bold(ild.onAssetILD)}\n`;
 
       console.log(boxen(assetInfo, assetBoxenOptions));
     }
 
+    const healthScore = getHealthScore(tokenData, comet).healthScore;
+
+    const title = `Health Score`;
+    const underline = new Array(title.length).fill("-").join("");
+
+    const assetInfo =
+      `${chalk.bold(title)}\n` +
+      `${underline}\n` +
+      `${chalk.bold(healthScore)}`;
+
+    console.log(boxen(assetInfo, assetBoxenOptions));
+
     successLog(
-      `Viewing ${Number(comet.numCollaterals)} Collateral Positions and ${Number(comet.numPositions)} From Your Comet!`
+      `Viewing ${Number(
+        comet.numCollaterals
+      )} Collateral Positions and ${Number(
+        comet.numPositions
+      )} Liquidity Positions From Your Comet!`
     );
   } catch (error: any) {
     errorLog(`Failed to view comet:\n${error.message}`);

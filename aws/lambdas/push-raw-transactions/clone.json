@@ -3011,11 +3011,5 @@
       "name": "NoLiquidityToWithdraw",
       "msg": "No liquidity to withdraw"
     }
-  ],
-  "metadata": {
-    "address": "6xmjJPzcUQHb7Dhii4EfqvP8UxanxWYwRSpVY4yAUa2g",
-    "origin": "anchor",
-    "binaryVersion": "0.25.0",
-    "libVersion": "0.25.0"
-  }
+  ]
 }

@@ -8,19 +8,18 @@ const redisClient = redis.createClient({
   url: process.env.REDIS_URL,
 });
 
-const validateInputs = ({pool, interval}) => {
+const validateInputs = ({interval, filter}) => {
     // Validate interval and filter inputs
-    if (pool !== undefined) {
-        let num = Number(pool)
-        if (!(Number.isInteger(num) && num >= 0)) {
-            throw new Error(`Invalid pool: ${pool}. Must be a non-negative integer.`)
-        }   
-    }
 
     const validIntervals = ['day', 'hour']
     console.log("INTERVAL:", interval, validIntervals.includes(interval))
     if (!validIntervals.includes(interval)) {
         throw new Error(`Invalid interval: ${interval}. Must be one of ${validIntervals.join(', ')}`);
+    }
+    
+    const validFilters = ["day", "week", "month", "year"];
+    if (!validFilters.includes(filter)) {
+        throw new Error(`Invalid filter: ${filter}. Must be one of ${validFilters.join(', ')}`);
     }
 }
 
@@ -53,10 +52,7 @@ exports.handler = async (event, context) => {
     let body;
 
     try {
-        const key = 'stats'.concat(
-            params.pool === undefined ? '' : `:${params.pool}`,
-            `:${params.interval}`
-        )
+        const key = `stats:${params.interval}:${params.filter}`
         // Try to get from cache
         console.log("CONNECTING REDIS")
         await redisClient.connect()
@@ -73,7 +69,6 @@ exports.handler = async (event, context) => {
             await redisClient.set(key, JSON.stringify(data), {'EX': getExpiration(params.interval)})
             body = data;
         }
-
     } catch (err) {
         console.log("ERROR:", err)
         statusCode = 500,

@@ -47,6 +47,8 @@ exports.handler = async function (yargs: CommandArguments) {
       pool.assetInfo.onassetMint
     );
 
+    let upgradePricesIx = await cloneClient.updatePricesInstruction();
+
     const amount = new BN(`${toDevnetScale(yargs.amount)}`);
 
     let ix = await cloneClient.borrowMoreInstruction(
@@ -54,7 +56,9 @@ exports.handler = async function (yargs: CommandArguments) {
       amount,
       yargs.borrowIndex
     );
-    await setup.provider.sendAndConfirm(new Transaction().add(ix));
+    await setup.provider.sendAndConfirm(
+      new Transaction().add(upgradePricesIx).add(ix)
+    );
 
     successLog(`${yargs.amount} onAsset Borrowed!`);
   } catch (error: any) {

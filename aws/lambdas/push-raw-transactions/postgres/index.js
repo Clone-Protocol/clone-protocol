@@ -20,7 +20,8 @@ exports.pushEventsToPg = async (db, { type, event }) => {
     case "BorrowUpdate":
       await borrowUpdate.createTable(db);
       await borrowUpdate.insertEvent(db, event);
+      break;
     default:
-      throw new Error("Unknown type: ", type);
+      throw new Error(`Unknown type: ${type}`);
   }
 };

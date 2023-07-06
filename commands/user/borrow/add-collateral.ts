@@ -1,5 +1,6 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient, toDevnetScale } from "../../../sdk/src/clone";
+import { CloneClient, toScale } from "../../../sdk/src/clone";
+import { toDecimal } from "../../../sdk/src/decimal";
 import { BN } from "@coral-xyz/anchor";
 import {
   successLog,
@@ -47,7 +48,7 @@ exports.handler = async function (yargs: CommandArguments) {
       collateral.mint
     );
 
-    const amount = new BN(`${toDevnetScale(yargs.amount)}`);
+    const amount = new BN(`${toScale(yargs.amount, Number(toDecimal(collateral.vaultMintSupply).scale()))}`);
 
     let ix = await cloneClient.addCollateralToBorrowInstruction(
       yargs.borrowIndex,

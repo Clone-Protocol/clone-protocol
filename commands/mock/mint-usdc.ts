@@ -11,7 +11,7 @@ import {
   getUSDC,
   getOrCreateAssociatedTokenAccount,
 } from "../utils";
-import { CloneClient, toDevnetScale } from "../../sdk/src/clone";
+import { CloneClient, toScale } from "../../sdk/src/clone";
 import { Argv } from "yargs";
 
 interface CommandArguments extends Argv {
@@ -45,7 +45,7 @@ exports.handler = async function (yargs: CommandArguments) {
 
     const mockUSDCMint = await getUSDC(setup.network, setup.provider);
 
-    const usdcMintAmount = new BN(`${toDevnetScale(yargs.amount)}`);
+    const usdcMintAmount = new BN(`${toScale(yargs.amount, 7)}`);
     const mockUSDCTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
       mockUSDCMint

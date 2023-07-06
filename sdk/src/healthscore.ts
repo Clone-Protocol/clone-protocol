@@ -16,7 +16,7 @@ export const getEffectiveUSDCollateralValue = (
   comet.collaterals
     .slice(0, Number(comet.numCollaterals))
     .forEach((cometCollateral) => {
-      const collateral = tokenData.collaterals[cometCollateral.collateralIndex];
+      const collateral = tokenData.collaterals[Number(cometCollateral.collateralIndex)];
       if (Number(collateral.stable) === 1) {
         effectiveUSDCollateral += toNumber(cometCollateral.collateralAmount);
       } else {
@@ -79,8 +79,8 @@ export const getHealthScore = (
 };
 
 export const getILD = (
-  tokenData: TokenData,
-  comet: Comet
+  tokenData: TokenData | SolitaTokenData,
+  comet: Comet | SolitaComet
 ): {
   onAssetILD: number;
   onusdILD: number;
@@ -95,7 +95,7 @@ export const getILD = (
   }[] = [];
 
   comet.positions.slice(0, Number(comet.numPositions)).forEach((position) => {
-    const pool = tokenData.pools[position.poolIndex];
+    const pool = tokenData.pools[Number(position.poolIndex)];
     const poolCommittedOnusd = toNumber(pool.committedOnusdLiquidity);
 
     const L =
@@ -111,7 +111,7 @@ export const getILD = (
       onAssetILD,
       onusdILD,
       oraclePrice,
-      poolIndex: position.poolIndex,
+      poolIndex: Number(position.poolIndex),
     });
   });
 

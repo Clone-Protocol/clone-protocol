@@ -17,7 +17,7 @@ exports.builder = {
     default: undefined,
   },
 };
-exports.handler = async function (argv: CommandArguments) {
+exports.handler = async function (yargs: CommandArguments) {
   try {
     const setup = anchorSetup();
     const cloneProgram = getCloneProgram(setup.network, setup.provider);
@@ -25,7 +25,12 @@ exports.handler = async function (argv: CommandArguments) {
     let cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
     await cloneClient.loadClone();
 
-    let ix = await cloneClient.updatePricesInstruction();
+    let ix;
+    if (yargs.indices != undefined) {
+      ix = await cloneClient.updatePricesInstruction(yargs.indices);
+    } else {
+      ix = await cloneClient.updatePricesInstruction();
+    }
     await setup.provider.sendAndConfirm(new Transaction().add(ix));
 
     successLog("Prices Updated!");

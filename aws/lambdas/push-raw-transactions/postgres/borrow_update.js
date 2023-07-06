@@ -12,7 +12,7 @@ exports.createTable = async (db) => {
         collateral_delta BIGINT NOT NULL,
         collateral_index INTEGER NOT NULL,
         borrowed_amount BIGINT NOT NULL,
-        borrowed_delta BIGINT NOT NULL,
+        borrowed_delta BIGINT NOT NULL
       );
       
       CREATE INDEX IF NOT EXISTS borrow_update_block_time_idx ON borrow_update (block_time);

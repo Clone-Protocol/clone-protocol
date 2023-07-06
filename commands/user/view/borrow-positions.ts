@@ -1,13 +1,11 @@
 import { Transaction } from "@solana/web3.js";
 import { CloneClient } from "../../../sdk/src/clone";
-import { getMantissa } from "../../../sdk/src/decimal";
+import { getMantissa, toNumber } from "../../../sdk/src/decimal";
 import {
   successLog,
   errorLog,
-  fromDevnetScale,
   anchorSetup,
   getCloneProgram,
-  getPythProgram,
 } from "../../utils";
 
 import chalk from "chalk";
@@ -20,7 +18,6 @@ exports.handler = async function () {
   try {
     const setup = anchorSetup();
     const cloneProgram = getCloneProgram(setup.network, setup.provider);
-    const pythProgram = getPythProgram(setup.network, setup.provider);
 
     const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
     await cloneClient.loadClone();
@@ -55,7 +52,7 @@ exports.handler = async function () {
           pool.assetInfo.stableCollateralRatio
         );
       }
-      let onAssetPrice = getMantissa(pool.assetInfo.price);
+      let onAssetPrice = toNumber(pool.assetInfo.price);
 
       const title = `Borrow Position ${i}`;
       const underline = new Array(title.length).fill("-").join("");
@@ -72,18 +69,20 @@ exports.handler = async function () {
       const assetInfo =
         `${chalk.bold(title)}\n` +
         `${underline}\n` +
+        `Collateral Mint: ${chalk.bold(collateral.mint)}\n` +
+        `onAsset Mint: ${chalk.bold(pool.assetInfo.onassetMint)}\n` +
         `Collateral Amount: ${chalk.bold(
-          getMantissa(borrowPosition.collateralAmount)
+          toNumber(borrowPosition.collateralAmount)
         )}\n` +
         `Borrowed onAsset Amount: ${chalk.bold(
-          getMantissa(borrowPosition.borrowedOnasset)
+          toNumber(borrowPosition.borrowedOnasset)
         )}\n` +
         `Collateral Oracle Price: $${chalk.bold(collateralPrice)}\n` +
         `onAsset Oracle Price: $${chalk.bold(onAssetPrice)}\n` +
         `Current Collateral Ratio: %${chalk.bold(
           100 *
-            ((getMantissa(borrowPosition.collateralAmount) * collateralPrice) /
-              (getMantissa(borrowPosition.borrowedOnasset) * onAssetPrice))
+            ((toNumber(borrowPosition.collateralAmount) * collateralPrice) /
+              (toNumber(borrowPosition.borrowedOnasset) * onAssetPrice))
         )}\n` +
         `Minimum Collateral Ratio: %${chalk.bold(minimumCollateralRatio)}\n`;
 

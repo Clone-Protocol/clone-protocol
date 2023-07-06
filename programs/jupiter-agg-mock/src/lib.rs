@@ -6,7 +6,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 
-declare_id!("J2shPGHLAPYe1i6PWuKBTXMzGFDSi1yYUzus5yxekH2a");
+declare_id!("C3N88bfH6LpGTWQUDyTCyfoxfvaBTAGWerrELWYvdeAA");
 
 const DEVNET_TOKEN_SCALE: u32 = 8;
 const USDC_TOKEN_SCALE: u8 = 7;

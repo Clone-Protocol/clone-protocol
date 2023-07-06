@@ -1,7 +1,7 @@
 import { Transaction } from "@solana/web3.js";
 import { CloneClient } from "../../../sdk/src/clone";
 import { getPoolLiquidity } from "../../../sdk/src/utils";
-import { getMantissa } from "../../../sdk/src/decimal";
+import { toNumber } from "../../../sdk/src/decimal";
 import {
   successLog,
   errorLog,
@@ -54,13 +54,13 @@ exports.handler = async function () {
         //this will change to called quotePrice function on sdk/utils
         `Quote Price: $${chalk.bold(poolOnusd / poolOnasset)}\n` +
         `onUSD Pool Balance: ${chalk.bold(poolOnusd)}\n` +
-        `onAsset ILD: ${chalk.bold(pool.onassetIld)}\n` +
-        `onUSD ILD: ${chalk.bold(pool.onusdIld)}\n` +
-        `Liquidity Trading Fee: ${chalk.bold(getMantissa(pool.liquidityTradingFee))}\n` +
-        `Treasury Trading Fee: ${chalk.bold(getMantissa(pool.treasuryTradingFee))}\n` +
-        `Oracle Price: $${chalk.bold(getMantissa(pool.assetInfo.price))}\n` +
+        `onAsset ILD: ${chalk.bold(toNumber(pool.onassetIld))}\n` +
+        `onUSD ILD: ${chalk.bold(toNumber(pool.onusdIld))}\n` +
+        `Liquidity Trading Fee: %${chalk.bold(toNumber(pool.liquidityTradingFee))}\n` +
+        `Treasury Trading Fee: %${chalk.bold(toNumber(pool.treasuryTradingFee))}\n` +
+        `Oracle Price: $${chalk.bold(toNumber(pool.assetInfo.price))}\n` +
         `Pyth Address: ${chalk.bold(pool.assetInfo.pythAddress)}\n` +
-        `Underlying Token Address: ${chalk.bold(pool.treasuryTradingFee)}\n` +
+        `Underlying Token Address: ${chalk.bold(pool.assetInfo.onassetMint)}\n` +
         `Deprecated: ${chalk.bold(pool.deprecated)}\n`;
       console.log(boxen(assetInfo, assetBoxenOptions));
     }

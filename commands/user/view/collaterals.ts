@@ -1,6 +1,6 @@
 import { Transaction } from "@solana/web3.js";
 import { CloneClient } from "../../../sdk/src/clone";
-import { getMantissa } from "../../../sdk/src/decimal";
+import { toNumber } from "../../../sdk/src/decimal";
 import {
   successLog,
   errorLog,
@@ -38,7 +38,7 @@ exports.handler = async function () {
       let priceFeedString: string;
       if (stable === 0) {
         poolIndex = Number(collateral.poolIndex);
-        oraclePrice = getMantissa(tokenData.pools[poolIndex].assetInfo.price);
+        oraclePrice = toNumber(tokenData.pools[poolIndex].assetInfo.price);
         const priceFeed = tokenData.pools[poolIndex].assetInfo.price;
         priceFeedString = priceFeed.toString();
       } else {
@@ -65,13 +65,13 @@ exports.handler = async function () {
         `Mint: ${chalk.bold(collateral.mint)}\n` +
         `Vault: ${chalk.bold(collateral.vault)}\n` +
         `Vault Comet Supply: ${chalk.bold(
-          getMantissa(collateral.vaultCometSupply)
+          toNumber(collateral.vaultCometSupply)
         )}\n` +
         `Vault Borrow Supply: ${chalk.bold(
-          getMantissa(collateral.vaultMintSupply)
+          toNumber(collateral.vaultMintSupply)
         )}\n` +
         `Vault OnUSD Supply: ${chalk.bold(
-          getMantissa(collateral.vaultOnusdSupply)
+          toNumber(collateral.vaultOnusdSupply)
         )}\n` +
         `Stable: ${chalk.bold(stable)}\n` +
         `Oracle Price: $${chalk.bold(oraclePrice)}\n` +

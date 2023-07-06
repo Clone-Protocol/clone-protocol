@@ -1,5 +1,6 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient, toDevnetScale } from "../../../sdk/src/clone";
+import { CloneClient, toScale } from "../../../sdk/src/clone";
+import { toDecimal } from "../../../sdk/src/decimal";
 import { BN } from "@coral-xyz/anchor";
 import {
   successLog,
@@ -16,7 +17,7 @@ interface CommandArguments extends Argv {
 }
 
 exports.command = "withdraw-collateral <collateral-index> <amount>";
-exports.desc = "Adds collateral to your borrow position";
+exports.desc = "Withdraws collateral from your borrow position";
 exports.builder = (yargs: CommandArguments) => {
   yargs
     .positional("collateral-index", {
@@ -45,7 +46,7 @@ exports.handler = async function (yargs: CommandArguments) {
       collateral.mint
     );
 
-    const amount = new BN(`${toDevnetScale(yargs.amount)}`);
+    const amount = new BN(`${toScale(yargs.amount, Number(toDecimal(collateral.vaultMintSupply).scale()))}`);
 
     let ix = await cloneClient.withdrawCollateralFromCometInstruction(
       collateralTokenAccountInfo.address,
@@ -54,7 +55,7 @@ exports.handler = async function (yargs: CommandArguments) {
     );
     await setup.provider.sendAndConfirm(new Transaction().add(ix));
 
-    successLog(`${yargs.amount} Collateral Added!`);
+    successLog(`${yargs.amount} Collateral Withdrawn!`);
   } catch (error: any) {
     errorLog(`Failed to withdraw collateral from comet position:\n${error.message}`);
   }

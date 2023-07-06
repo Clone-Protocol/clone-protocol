@@ -16,7 +16,7 @@ interface CommandArguments extends Argv {
 }
 
 exports.command = "add-liquidity <pool-index> <amount>";
-exports.desc = "Adds collateral to your borrow position";
+exports.desc = "Adds liquidity to your comet";
 exports.builder = (yargs: CommandArguments) => {
   yargs
     .positional("pool-index", {

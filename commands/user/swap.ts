@@ -53,7 +53,7 @@ exports.builder = (yargs: CommandArguments) => {
     .positional("slippage", {
       describe: "The slippage tolerance on the trade",
       type: "number",
-      default: 0.0001,
+      default: 1,
     });
 };
 exports.handler = async function (yargs: CommandArguments) {
@@ -117,16 +117,17 @@ exports.handler = async function (yargs: CommandArguments) {
       "recent"
     );
 
-    const amount = new BN(`${toDevnetScale(yargs.amount)}`);
-
     const updatePricesIx = await cloneClient.updatePricesInstruction();
+
+    const amount = new BN(`${toDevnetScale(yargs.amount)}`);
+    const difference = (yargs.quantityIsInput ? -1 : 1) * yargs.slippage;
 
     let ix = await cloneClient.swapInstruction(
       yargs.poolIndex,
       amount,
       yargs.quantityIsInput,
       yargs.quantityIsOnusd,
-      toDevnetScale(executionEst.result * 1.005),
+      toDevnetScale(executionEst.result * (1 + difference)),
       pool.assetInfo.onassetMint,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
@@ -194,6 +195,6 @@ exports.handler = async function (yargs: CommandArguments) {
       );
     }
   } catch (error: any) {
-    errorLog(`Failed to buy:\n${error.message}`);
+    errorLog(`Failed to swap:\n${error.message}`);
   }
 };

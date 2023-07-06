@@ -18,7 +18,7 @@ const parseEvent = (
         slot,
         eventId,
         poolIndex: data.poolIndex,
-        userAddress: data.userAddress,
+        userAddress: data.userAddress.toString(),
         committedOnusdDelta: data.committedOnusdDelta.toString(),
         onusdIldDelta: data.onusdIldDelta.toString(),
         onassetIldDelta: data.onassetIldDelta.toString(),
@@ -74,7 +74,7 @@ const parseEvent = (
 exports.extract = (raw) => {
 
     const connection = new anchor.web3.Connection(anchor.web3.clusterApiUrl("devnet"))
-    const programID = new anchor.web3.PublicKey(cloneIDL.metadata.address)
+    const programID = new anchor.web3.PublicKey(process.env.PROGRAM_ID)
     const program = new anchor.Program(cloneIDL, programID, { connection })
     const parser = new anchor.EventParser(programID, program.coder);
 

@@ -133,7 +133,7 @@ pub fn execute(
             .unwrap(),
         is_liquidation: false,
         collateral_supplied: new_collateral_amount.mantissa().try_into().unwrap(),
-        collateral_delta: amount_value.mantissa().try_into().unwrap(),
+        collateral_delta: -(amount_value.mantissa() as i64),
         collateral_index: borrow_positions.borrow_positions[borrow_index as usize]
             .collateral_index
             .try_into()
