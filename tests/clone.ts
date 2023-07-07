@@ -1612,21 +1612,9 @@ describe("clone", async () => {
     );
 
     // Collect rewards and pay down ILD
-    let collectRewardIx = await cloneClient.program.methods
-      .collectLpRewards(cometPositionIndex)
-      .accounts({
-        user: provider.publicKey!,
-        userAccount: userAddress.userPubkey,
-        clone: cloneClient.cloneAddress[0],
-        tokenData: cloneClient.clone!.tokenData,
-        comet: userAccount.comet,
-        onusdMint: cloneClient.clone!.onusdMint,
-        onassetMint: pool.assetInfo.onassetMint,
-        userOnusdTokenAccount: onusdTokenAccountInfo.address,
-        userOnassetTokenAccount: onassetTokenAccountInfo.address,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
+    let collectRewardIx = await cloneClient.claimLpRewardsInstruction(
+      onusdTokenAccountInfo.address, onassetTokenAccountInfo.address, cometPositionIndex
+    )
 
     let updatePricesIx = await cloneClient.updatePricesInstruction();
 

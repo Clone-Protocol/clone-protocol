@@ -789,4 +789,33 @@ export class CloneClient {
       })
       .instruction();
   }
+
+  public async claimLpRewardsInstruction(
+    userOnusdTokenAccount: PublicKey,
+    onassetTokenAccountInfo: PublicKey,
+    cometPositionIndex: number
+  ): Promise<TransactionInstruction> {
+    const { userPubkey } = await this.getUserAddress();
+    const userAccount = await this.getUserAccount();
+    const userComet = await this.getComet();
+    const tokenData = await this.getTokenData();
+    const poolIndex = Number(userComet.positions[cometPositionIndex].poolIndex)
+    const pool = tokenData.pools[poolIndex]
+
+    return await this.program.methods
+    .collectLpRewards(cometPositionIndex)
+    .accounts({
+      user: this.provider.publicKey!,
+      userAccount: userPubkey,
+      clone: this.cloneAddress[0],
+      tokenData: this.clone!.tokenData,
+      comet: userAccount.comet,
+      onusdMint: this.clone!.onusdMint,
+      onassetMint: pool.assetInfo.onassetMint,
+      userOnusdTokenAccount: userOnusdTokenAccount,
+      userOnassetTokenAccount: onassetTokenAccountInfo,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .instruction();
+  }
 }
