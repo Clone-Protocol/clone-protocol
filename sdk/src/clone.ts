@@ -26,11 +26,25 @@ export const DEVNET_TOKEN_SCALE = 8;
 export const MAX_PRICE_SIZE = 128;
 
 export const toScale = (x: number, scale: number): BN => {
-  const multiplier = new BN(`1${"0".repeat(scale)}`);
-  const hi = new BN(x).mul(multiplier);
-  const low = new BN((x % 1) * Math.pow(10, scale));
-  return hi.add(low);
-};
+  let stringDigits = []
+  let stringX = String(x)
+  let foundDecimal = false
+  let digitsAfterDecimal = scale
+
+  for (const digit of stringX) {
+    if (digitsAfterDecimal === 0)
+      break
+    if (digit === '.') {
+      foundDecimal = true
+      continue
+    }
+    stringDigits.push(digit)
+    if (foundDecimal) {
+      digitsAfterDecimal -= 1
+    }
+  }
+  return new BN(stringDigits.join('').concat('0'.repeat(digitsAfterDecimal)))
+}
 
 export const toDevnetScale = (x: number): BN => {
   return toScale(x, DEVNET_TOKEN_SCALE);
@@ -788,5 +802,34 @@ export class CloneClient {
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
+  }
+
+  public async claimLpRewardsInstruction(
+    userOnusdTokenAccount: PublicKey,
+    onassetTokenAccountInfo: PublicKey,
+    cometPositionIndex: number
+  ): Promise<TransactionInstruction> {
+    const { userPubkey } = await this.getUserAddress();
+    const userAccount = await this.getUserAccount();
+    const userComet = await this.getComet();
+    const tokenData = await this.getTokenData();
+    const poolIndex = Number(userComet.positions[cometPositionIndex].poolIndex)
+    const pool = tokenData.pools[poolIndex]
+
+    return await this.program.methods
+    .collectLpRewards(cometPositionIndex)
+    .accounts({
+      user: this.provider.publicKey!,
+      userAccount: userPubkey,
+      clone: this.cloneAddress[0],
+      tokenData: this.clone!.tokenData,
+      comet: userAccount.comet,
+      onusdMint: this.clone!.onusdMint,
+      onassetMint: pool.assetInfo.onassetMint,
+      userOnusdTokenAccount: userOnusdTokenAccount,
+      userOnassetTokenAccount: onassetTokenAccountInfo,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .instruction();
   }
 }
