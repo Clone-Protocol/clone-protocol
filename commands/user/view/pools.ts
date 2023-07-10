@@ -7,7 +7,6 @@ import {
   errorLog,
   anchorSetup,
   getCloneProgram,
-  getPythProgram,
 } from "../../utils";
 import chalk from "chalk";
 import boxen from "boxen";
@@ -20,7 +19,6 @@ exports.handler = async function () {
     const setup = anchorSetup();
 
     const cloneProgram = getCloneProgram(setup.network, setup.provider);
-    const pythProgram = getPythProgram(setup.network, setup.provider);
 
     const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
     await cloneClient.loadClone();
