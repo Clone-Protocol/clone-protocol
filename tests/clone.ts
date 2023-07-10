@@ -79,6 +79,15 @@ describe("clone", async () => {
     jupiterProgram.programId
   );
 
+  it("to scale test", () => {
+    assert.isTrue(toDevnetScale(28.15561224).toString() === '2815561224')
+    assert.isTrue(toDevnetScale(28.15561224999).toString() === '2815561224')
+    assert.isTrue(toDevnetScale(28.1556).toString() === '2815560000')
+    assert.isTrue(toDevnetScale(2815561224).toString() === '281556122400000000')
+    assert.isTrue(toDevnetScale(0.2815561224).toString() === '28155612')
+    assert.isTrue(toDevnetScale(28.05561224).toString() === '2805561224')
+  })
+
   it("mock jupiter agg initialized + mock usdc initialized + mock asset initialized!", async () => {
     await jupiterProgram.methods
       .initialize()
