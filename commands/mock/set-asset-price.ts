@@ -29,7 +29,7 @@ exports.builder = (yargs: CommandArguments) => {
 exports.handler = async function (yargs: CommandArguments) {
   try {
     const setup = anchorSetup();
-    const pythProgram = getPythProgram(setup.network, setup.provider);
+    const pythProgram = getPythProgram(setup.provider);
 
     const priceFeed = await getMockAssetPriceFeed(
       setup.network,

@@ -1,7 +1,7 @@
 [programs.localnet]
-clone = "EubgXSMbWxv5XstbcsSy3DFnbc4D529qXUmoxnFWgsy5"
-pyth = "Gqbnnw7UFacXCcfkMxKH6VvLtJWBdm2TqdRLm1Mi4sFv"
-jupiter_agg_mock = "C3N88bfH6LpGTWQUDyTCyfoxfvaBTAGWerrELWYvdeAA"
+clone = "GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA"
+pyth = "B527xTykF5Ab5ZDg49TgdJk7dszXvjne3gGrFH3qtLir"
+jupiter_agg_mock = "G9fZ4yPY66oqrCGtCzrdbSyqBw8xFjSWAe5quV61cb75"
 
 [registry]
 url = "https://anchor.projectserum.com"

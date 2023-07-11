@@ -6,7 +6,7 @@ import {
   successLog,
   errorLog,
   anchorSetup,
-  getJupiterProgram,
+  getMockJupiterProgram,
   getCloneProgram,
   getUSDC,
   getOrCreateAssociatedTokenAccount,
@@ -33,27 +33,27 @@ exports.handler = async function (yargs: CommandArguments) {
       throw Error("Mock instruction must be run on localnet");
     }
 
-    const jupiterProgram = getJupiterProgram(setup.network, setup.provider);
+    const jupiterProgram = getMockJupiterProgram(setup.provider);
     let [jupiterAddress, jupiterNonce] = await PublicKey.findProgramAddress(
       [anchor.utils.bytes.utf8.encode("jupiter")],
       jupiterProgram.programId
     );
 
-    const cloneProgram = getCloneProgram(setup.network, setup.provider);
+    const cloneProgram = getCloneProgram(setup.provider);
 
     const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
 
-    const mockUSDCMint = await getUSDC(setup.network, setup.provider);
+    const usdcMint = await getUSDC();
 
     const usdcMintAmount = new BN(`${toScale(yargs.amount, 7)}`);
     const mockUSDCTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
-      mockUSDCMint
+      usdcMint
     );
     await jupiterProgram.methods
       .mintUsdc(jupiterNonce, usdcMintAmount)
       .accounts({
-        usdcMint: mockUSDCMint,
+        usdcMint: usdcMint,
         usdcTokenAccount: mockUSDCTokenAccountInfo.address,
         jupiterAccount: jupiterAddress,
         tokenProgram: TOKEN_PROGRAM_ID,

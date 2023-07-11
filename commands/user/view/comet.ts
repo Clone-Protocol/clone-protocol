@@ -20,8 +20,7 @@ exports.builder = {};
 exports.handler = async function () {
   try {
     const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.network, setup.provider);
-    const pythProgram = getPythProgram(setup.network, setup.provider);
+    const cloneProgram = getCloneProgram(setup.provider);
 
     const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
     await cloneClient.loadClone();

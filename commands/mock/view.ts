@@ -6,7 +6,7 @@ import {
   successLog,
   errorLog,
   anchorSetup,
-  getJupiterProgram,
+  getMockJupiterProgram,
   getPythProgram,
   getMockAssetPriceFeed,
 } from "../utils";
@@ -21,8 +21,8 @@ exports.handler = async function () {
   try {
     const setup = anchorSetup();
 
-    const jupiterProgram = getJupiterProgram(setup.network, setup.provider);
-    const pythProgram = getPythProgram(setup.network, setup.provider);
+    const jupiterProgram = getMockJupiterProgram(setup.provider);
+    const pythProgram = getPythProgram(setup.provider);
 
     let [jupiterAddress, _] = await PublicKey.findProgramAddress(
       [anchor.utils.bytes.utf8.encode("jupiter")],

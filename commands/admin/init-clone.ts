@@ -51,8 +51,8 @@ exports.builder = (yargs: CommandArguments) => {
 exports.handler = async function (yargs: CommandArguments) {
   try {
     const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.network, setup.provider);
-    const usdc = await getUSDC(setup.network, setup.provider);
+    const cloneProgram = getCloneProgram(setup.provider);
+    const usdc = await getUSDC();
 
     let cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
 

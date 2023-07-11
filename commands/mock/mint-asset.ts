@@ -6,7 +6,7 @@ import {
   successLog,
   errorLog,
   anchorSetup,
-  getJupiterProgram,
+  getMockJupiterProgram,
   getCloneProgram,
   getOrCreateAssociatedTokenAccount,
   getMockAssetMint,
@@ -36,21 +36,17 @@ exports.handler = async function (yargs: CommandArguments) {
   try {
     const setup = anchorSetup();
 
-    const jupiterProgram = getJupiterProgram(setup.network, setup.provider);
+    const jupiterProgram = getMockJupiterProgram(setup.provider);
     let [jupiterAddress, jupiterNonce] = await PublicKey.findProgramAddress(
       [anchor.utils.bytes.utf8.encode("jupiter")],
       jupiterProgram.programId
     );
 
-    const cloneProgram = getCloneProgram(setup.network, setup.provider);
+    const cloneProgram = getCloneProgram(setup.provider);
 
     const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
 
-    const mockAssetMint = await getMockAssetMint(
-      setup.network,
-      setup.provider,
-      yargs.index
-    );
+    const mockAssetMint = await getMockAssetMint(setup.provider, yargs.index);
 
     const mockAssetMintAmount = new BN(`${toDevnetScale(yargs.amount)}`);
     const mockAssetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(

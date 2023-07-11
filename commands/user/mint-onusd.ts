@@ -26,12 +26,12 @@ exports.builder = (yargs: CommandArguments) => {
 exports.handler = async function (yargs: CommandArguments) {
   try {
     const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.network, setup.provider);
+    const cloneProgram = getCloneProgram(setup.provider);
 
     const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
     await cloneClient.loadClone();
 
-    const usdcMint = await getUSDC(setup.network, setup.provider);
+    const usdcMint = await getUSDC();
 
     const usdcTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,

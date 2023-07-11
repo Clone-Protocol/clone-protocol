@@ -32,8 +32,7 @@ export function anchorSetup() {
   let wallet = config.wallet;
   let provider: anchor.AnchorProvider;
 
-  // Parse Anchor.toml
-  if (network === "localnet" && !wallet) {
+  if (!wallet) {
     const anchorConfig = toml.parse(fs.readFileSync("./Anchor.toml", "utf-8"));
     const homeDir = os.homedir();
     wallet = anchorConfig.provider.wallet.replace("~", homeDir);
@@ -42,30 +41,15 @@ export function anchorSetup() {
 
     provider = anchor.AnchorProvider.local();
   } else {
-    // Read the wallet file to get the exported private key
     const walletKeyPair = JSON.parse(fs.readFileSync(wallet, "utf8"));
 
-    // Create a new anchor.Wallet instance using the exported private key
     const walletInstance = new anchor.Wallet(walletKeyPair);
 
-    switch (network) {
-      case "devnet":
-        provider = new anchor.AnchorProvider(
-          new anchor.web3.Connection("https://api.devnet.solana.com"),
-          walletInstance,
-          anchor.AnchorProvider.defaultOptions()
-        );
-        break;
-      case "mainnet":
-        provider = new anchor.AnchorProvider(
-          new anchor.web3.Connection("https://api.mainnet-beta.solana.com"),
-          walletInstance,
-          anchor.AnchorProvider.defaultOptions()
-        );
-        break;
-      default:
-        throw Error("invalid network");
-    }
+    provider = new anchor.AnchorProvider(
+      new anchor.web3.Connection(network),
+      walletInstance,
+      anchor.AnchorProvider.defaultOptions()
+    );
   }
 
   anchor.setProvider(provider);
@@ -73,166 +57,58 @@ export function anchorSetup() {
   return { network: network, provider: provider };
 }
 
-export function getCloneProgram(
-  network: string,
-  provider: anchor.AnchorProvider
-) {
-  let cloneProgramId: PublicKey;
+export function getCloneProgram(provider: anchor.AnchorProvider) {
+  const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
-  switch (network) {
-    case "localnet":
-      const anchorConfig = toml.parse(
-        fs.readFileSync("./Anchor.toml", "utf-8")
-      );
-      const localnetProgramId: string = anchorConfig.programs.localnet.clone;
-      cloneProgramId = new PublicKey(localnetProgramId);
-      break;
-    case "devnet":
-      // Use the manually provided program id for devnet
-      cloneProgramId = new PublicKey("YOUR_DEVNET_PROGRAM_ID");
-      throw Error("invalid network");
-    case "mainnet":
-      errorLog(`Mainnet not implemented for this command`);
-      throw Error("invalid network");
-    default:
-      throw Error("invalid network");
-  }
+  const cloneProgramId = new PublicKey(config.clone);
 
   return new Program<Clone>(cloneIDL, cloneProgramId, provider);
 }
 
-export function getJupiterProgram(
-  network: string,
-  provider: anchor.AnchorProvider
-) {
-  let mockJupProgramId: PublicKey;
+export function getMockJupiterProgram(provider: anchor.AnchorProvider) {
+  const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
-  switch (network) {
-    case "localnet":
-      const anchorConfig = toml.parse(
-        fs.readFileSync("./Anchor.toml", "utf-8")
-      );
-      const localnetProgramId: string =
-        anchorConfig.programs.localnet.jupiter_agg_mock;
-      mockJupProgramId = new PublicKey(localnetProgramId);
-      break;
-    case "devnet":
-      // Use the manually provided program id for devnet
-      mockJupProgramId = new PublicKey("YOUR_DEVNET_PROGRAM_ID");
-      errorLog(`Devnet not implemented for this command`);
-      throw Error("invalid network");
-    case "mainnet":
-      errorLog(`Mainnet not implemented for this command`);
-      throw Error("invalid network");
-    default:
-      throw Error("invalid network");
-  }
+  const mockJupProgramId = new PublicKey(config.jup);
+
   return new Program<JupiterAggMock>(mockJupIDL, mockJupProgramId, provider);
 }
 
-export function getPythProgram(
-  network: string,
-  provider: anchor.AnchorProvider
-) {
-  let pythProgramId: PublicKey;
+export function getPythProgram(provider: anchor.AnchorProvider) {
+  const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
-  switch (network) {
-    case "localnet":
-      const anchorConfig = toml.parse(
-        fs.readFileSync("./Anchor.toml", "utf-8")
-      );
-      const localnetProgramId: string = anchorConfig.programs.localnet.pyth;
-      pythProgramId = new PublicKey(localnetProgramId);
-      break;
-    case "devnet":
-      // Use the manually provided program id for devnet
-      pythProgramId = new PublicKey("YOUR_DEVNET_PROGRAM_ID");
-      errorLog(`Devnet not implemented for this command`);
-      throw Error("invalid network");
-    case "mainnet":
-      errorLog(`Mainnet not implemented for this command`);
-      throw Error("invalid network");
-    default:
-      throw Error("invalid network");
-  }
+  const pythProgramId = new PublicKey(config.pyth);
+
   return new Program<Pyth>(pythIDL, pythProgramId, provider);
 }
 
-export async function getUSDC(
-  network: string,
-  provider: anchor.AnchorProvider
-) {
-  let usdc: PublicKey;
+export async function getUSDC() {
+  const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
-  switch (network) {
-    case "localnet":
-      const jupiterProgram = getJupiterProgram(network, provider);
-      let [jupiterAddress, _] = await PublicKey.findProgramAddress(
-        [anchor.utils.bytes.utf8.encode("jupiter")],
-        jupiterProgram.programId
-      );
-      usdc = (await jupiterProgram.account.jupiter.fetch(jupiterAddress))
-        .usdcMint;
-      break;
-    case "devnet":
-      errorLog(`Devnet not implemented for this command`);
-      throw Error("invalid network");
-    case "mainnet":
-      errorLog(`Mainnet not implemented for this command`);
-      throw Error("invalid network");
-    default:
-      throw Error("invalid network");
-  }
-
-  return usdc;
+  return new PublicKey(config.usdc);
 }
 
 export async function getMockAssetMint(
-  network: string,
   provider: anchor.AnchorProvider,
   index: number
 ) {
-  let assetMint: PublicKey;
-
-  switch (network) {
-    case "localnet":
-      const jupiterProgram = getJupiterProgram(network, provider);
-      let [jupiterAddress, _] = await PublicKey.findProgramAddress(
-        [anchor.utils.bytes.utf8.encode("jupiter")],
-        jupiterProgram.programId
-      );
-      assetMint = (await jupiterProgram.account.jupiter.fetch(jupiterAddress))
-        .assetMints[index];
-      break;
-    default:
-      throw Error("invalid network");
-  }
+  const jupiterProgram = getMockJupiterProgram(provider);
+  let [jupiterAddress, _] = await PublicKey.findProgramAddress(
+    [anchor.utils.bytes.utf8.encode("jupiter")],
+    jupiterProgram.programId
+  );
+  const assetMint = (await jupiterProgram.account.jupiter.fetch(jupiterAddress))
+    .assetMints[index];
 
   return assetMint;
 }
 
 export async function getAssetPriceFeed(
-  network: string,
   provider: anchor.AnchorProvider,
   index: number
 ) {
-  let priceFeed: PublicKey;
+  //not yet implemented
 
-  switch (network) {
-    case "localnet":
-      priceFeed = await getMockAssetPriceFeed(network, provider, index);
-      break;
-    case "devnet":
-      errorLog(`Devnet not implemented for this command`);
-      throw Error("invalid network");
-    case "mainnet":
-      errorLog(`Mainnet not implemented for this command`);
-      throw Error("invalid network");
-    default:
-      throw Error("invalid network");
-  }
-
-  return priceFeed;
+  return "";
 }
 
 export async function getMockAssetPriceFeed(
@@ -240,21 +116,13 @@ export async function getMockAssetPriceFeed(
   provider: anchor.AnchorProvider,
   index: number
 ) {
-  let priceFeed: PublicKey;
-
-  switch (network) {
-    case "localnet":
-      const jupiterProgram = getJupiterProgram(network, provider);
-      let [jupiterAddress, _] = await PublicKey.findProgramAddress(
-        [anchor.utils.bytes.utf8.encode("jupiter")],
-        jupiterProgram.programId
-      );
-      priceFeed = (await jupiterProgram.account.jupiter.fetch(jupiterAddress))
-        .oracles[index];
-      break;
-    default:
-      throw Error("invalid network");
-  }
+  const jupiterProgram = getMockJupiterProgram(provider);
+  let [jupiterAddress, _] = await PublicKey.findProgramAddress(
+    [anchor.utils.bytes.utf8.encode("jupiter")],
+    jupiterProgram.programId
+  );
+  const priceFeed = (await jupiterProgram.account.jupiter.fetch(jupiterAddress))
+    .oracles[index];
 
   return priceFeed;
 }

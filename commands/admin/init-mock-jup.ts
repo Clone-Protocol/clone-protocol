@@ -1,7 +1,12 @@
 import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { successLog, errorLog, anchorSetup, getJupiterProgram } from "../utils";
+import {
+  successLog,
+  errorLog,
+  anchorSetup,
+  getMockJupiterProgram,
+} from "../utils";
 
 exports.command = "init-mock-jup";
 exports.desc = "Initializes the Mock Jupiter program";
@@ -9,12 +14,8 @@ exports.builder = {};
 exports.handler = async function () {
   try {
     const setup = anchorSetup();
-    if (setup.network != "localnet") {
-      throw Error(
-        `Can only inititialize Mock Jupiter Program if network is set to localnet`
-      );
-    }
-    const jupiterProgram = getJupiterProgram(setup.network, setup.provider);
+
+    const jupiterProgram = getMockJupiterProgram(setup.provider);
 
     let [jupiterAddress, _] = await PublicKey.findProgramAddress(
       [anchor.utils.bytes.utf8.encode("jupiter")],

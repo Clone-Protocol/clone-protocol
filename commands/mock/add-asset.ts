@@ -7,7 +7,7 @@ import {
   successLog,
   errorLog,
   anchorSetup,
-  getJupiterProgram,
+  getMockJupiterProgram,
   getPythProgram,
 } from "../utils";import { Argv } from "yargs";
 
@@ -37,8 +37,8 @@ exports.handler = async function (yargs: CommandArguments) {
     if (setup.network != "localnet") {
       throw Error("Mock instruction must be run on localnet")
     }
-    const jupiterProgram = getJupiterProgram(setup.network, setup.provider);
-    const pythProgram = getPythProgram(setup.network, setup.provider);
+    const jupiterProgram = getMockJupiterProgram(setup.provider);
+    const pythProgram = getPythProgram(setup.provider);
 
     let [jupiterAddress, _] = await PublicKey.findProgramAddress(
       [anchor.utils.bytes.utf8.encode("jupiter")],

@@ -3,7 +3,7 @@ pub mod pc;
 use pc::Price;
 
 
-declare_id!("Gqbnnw7UFacXCcfkMxKH6VvLtJWBdm2TqdRLm1Mi4sFv");
+declare_id!("B527xTykF5Ab5ZDg49TgdJk7dszXvjne3gGrFH3qtLir");
 
 #[program]
 pub mod pyth {
