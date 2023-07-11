@@ -29,7 +29,7 @@ interface CommandArguments extends Argv {
 
 exports.command =
   "swap <pool-index> <amount> [quantity-is-input] [quantity-is-onusd] [slippage]";
-exports.desc = "Buys onAsset from a Clone pool";
+exports.desc = "Swaps onAsset/onUSD from a Clone pool";
 exports.builder = (yargs: CommandArguments) => {
   yargs
     .positional("pool-index", {
@@ -37,7 +37,7 @@ exports.builder = (yargs: CommandArguments) => {
       type: "number",
     })
     .positional("amount", {
-      describe: "The amount of onAsset to buy",
+      describe: "The amount you would like to buy/sell",
       type: "number",
     })
     .positional("quantity-is-input", {
