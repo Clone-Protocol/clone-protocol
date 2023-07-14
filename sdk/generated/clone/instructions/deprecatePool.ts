@@ -66,7 +66,7 @@ export const deprecatePoolInstructionDiscriminator = [
 export function createDeprecatePoolInstruction(
   accounts: DeprecatePoolInstructionAccounts,
   args: DeprecatePoolInstructionArgs,
-  programId = new web3.PublicKey('C1oneKNEhzNayAu2xa4LAjUcQrjVRTrCmmqpYBFJi3yu')
+  programId = new web3.PublicKey('GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA')
 ) {
   const [data] = deprecatePoolStruct.serialize({
     instructionDiscriminator: deprecatePoolInstructionDiscriminator,

@@ -6,7 +6,7 @@ const moduleFromEnv = () => {
   const homedir = require('os').homedir();
   const programDirectory = process.env.PROGRAM_DIR
 
-  const programDir = path.join(__dirname, '..', 'incept-protocol', 'programs', programDirectory);
+  const programDir = path.join(__dirname, '..', 'clone-protocol', 'programs', programDirectory);
   const idlDir = path.join(__dirname, 'target', 'idl');
   const sdkDir = path.join(__dirname, 'sdk', 'generated', programDirectory);
   const binaryInstallDir = `${homedir}/.cargo`;

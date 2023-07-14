@@ -38,128 +38,13 @@ createErrorFromNameLookup.set(
 )
 
 /**
- * InvalidCometCollateralRatio: 'Invalid Comet Collateral Ratio'
- *
- * @category Errors
- * @category generated
- */
-export class InvalidCometCollateralRatioError extends Error {
-  readonly code: number = 0x1771
-  readonly name: string = 'InvalidCometCollateralRatio'
-  constructor() {
-    super('Invalid Comet Collateral Ratio')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, InvalidCometCollateralRatioError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(
-  0x1771,
-  () => new InvalidCometCollateralRatioError()
-)
-createErrorFromNameLookup.set(
-  'InvalidCometCollateralRatio',
-  () => new InvalidCometCollateralRatioError()
-)
-
-/**
- * DifferentScale: 'Different Scale'
- *
- * @category Errors
- * @category generated
- */
-export class DifferentScaleError extends Error {
-  readonly code: number = 0x1772
-  readonly name: string = 'DifferentScale'
-  constructor() {
-    super('Different Scale')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, DifferentScaleError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x1772, () => new DifferentScaleError())
-createErrorFromNameLookup.set('DifferentScale', () => new DifferentScaleError())
-
-/**
- * MathError: 'Math Error'
- *
- * @category Errors
- * @category generated
- */
-export class MathErrorError extends Error {
-  readonly code: number = 0x1773
-  readonly name: string = 'MathError'
-  constructor() {
-    super('Math Error')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, MathErrorError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x1773, () => new MathErrorError())
-createErrorFromNameLookup.set('MathError', () => new MathErrorError())
-
-/**
- * OracleConfidenceOutOfRange: 'Oracle Confidence Out Of Range'
- *
- * @category Errors
- * @category generated
- */
-export class OracleConfidenceOutOfRangeError extends Error {
-  readonly code: number = 0x1774
-  readonly name: string = 'OracleConfidenceOutOfRange'
-  constructor() {
-    super('Oracle Confidence Out Of Range')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, OracleConfidenceOutOfRangeError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(
-  0x1774,
-  () => new OracleConfidenceOutOfRangeError()
-)
-createErrorFromNameLookup.set(
-  'OracleConfidenceOutOfRange',
-  () => new OracleConfidenceOutOfRangeError()
-)
-
-/**
- * AssetInfoNotFound: 'Asset Info Not Found'
- *
- * @category Errors
- * @category generated
- */
-export class AssetInfoNotFoundError extends Error {
-  readonly code: number = 0x1775
-  readonly name: string = 'AssetInfoNotFound'
-  constructor() {
-    super('Asset Info Not Found')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, AssetInfoNotFoundError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x1775, () => new AssetInfoNotFoundError())
-createErrorFromNameLookup.set(
-  'AssetInfoNotFound',
-  () => new AssetInfoNotFoundError()
-)
-
-/**
  * CollateralNotFound: 'Collateral Not Found'
  *
  * @category Errors
  * @category generated
  */
 export class CollateralNotFoundError extends Error {
-  readonly code: number = 0x1776
+  readonly code: number = 0x1771
   readonly name: string = 'CollateralNotFound'
   constructor() {
     super('Collateral Not Found')
@@ -169,7 +54,7 @@ export class CollateralNotFoundError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1776, () => new CollateralNotFoundError())
+createErrorFromCodeLookup.set(0x1771, () => new CollateralNotFoundError())
 createErrorFromNameLookup.set(
   'CollateralNotFound',
   () => new CollateralNotFoundError()
@@ -182,7 +67,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class PoolNotFoundError extends Error {
-  readonly code: number = 0x1777
+  readonly code: number = 0x1772
   readonly name: string = 'PoolNotFound'
   constructor() {
     super('Pool Not Found')
@@ -192,7 +77,7 @@ export class PoolNotFoundError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1777, () => new PoolNotFoundError())
+createErrorFromCodeLookup.set(0x1772, () => new PoolNotFoundError())
 createErrorFromNameLookup.set('PoolNotFound', () => new PoolNotFoundError())
 
 /**
@@ -202,7 +87,7 @@ createErrorFromNameLookup.set('PoolNotFound', () => new PoolNotFoundError())
  * @category generated
  */
 export class InvalidCollateralTypeError extends Error {
-  readonly code: number = 0x1778
+  readonly code: number = 0x1773
   readonly name: string = 'InvalidCollateralType'
   constructor() {
     super('Invalid Collateral Type')
@@ -212,7 +97,7 @@ export class InvalidCollateralTypeError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1778, () => new InvalidCollateralTypeError())
+createErrorFromCodeLookup.set(0x1773, () => new InvalidCollateralTypeError())
 createErrorFromNameLookup.set(
   'InvalidCollateralType',
   () => new InvalidCollateralTypeError()
@@ -225,7 +110,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidTokenAmountError extends Error {
-  readonly code: number = 0x1779
+  readonly code: number = 0x1774
   readonly name: string = 'InvalidTokenAmount'
   constructor() {
     super('Invalid Token Amount')
@@ -235,7 +120,7 @@ export class InvalidTokenAmountError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1779, () => new InvalidTokenAmountError())
+createErrorFromCodeLookup.set(0x1774, () => new InvalidTokenAmountError())
 createErrorFromNameLookup.set(
   'InvalidTokenAmount',
   () => new InvalidTokenAmountError()
@@ -248,7 +133,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidBoolError extends Error {
-  readonly code: number = 0x177a
+  readonly code: number = 0x1775
   readonly name: string = 'InvalidBool'
   constructor() {
     super('Invalid Bool')
@@ -258,54 +143,8 @@ export class InvalidBoolError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x177a, () => new InvalidBoolError())
+createErrorFromCodeLookup.set(0x1775, () => new InvalidBoolError())
 createErrorFromNameLookup.set('InvalidBool', () => new InvalidBoolError())
-
-/**
- * InsufficientCollateral: 'Insufficient Collateral'
- *
- * @category Errors
- * @category generated
- */
-export class InsufficientCollateralError extends Error {
-  readonly code: number = 0x177b
-  readonly name: string = 'InsufficientCollateral'
-  constructor() {
-    super('Insufficient Collateral')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, InsufficientCollateralError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x177b, () => new InsufficientCollateralError())
-createErrorFromNameLookup.set(
-  'InsufficientCollateral',
-  () => new InsufficientCollateralError()
-)
-
-/**
- * NoPriceDeviationDetected: 'No Price Deviation Detected'
- *
- * @category Errors
- * @category generated
- */
-export class NoPriceDeviationDetectedError extends Error {
-  readonly code: number = 0x177c
-  readonly name: string = 'NoPriceDeviationDetected'
-  constructor() {
-    super('No Price Deviation Detected')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, NoPriceDeviationDetectedError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x177c, () => new NoPriceDeviationDetectedError())
-createErrorFromNameLookup.set(
-  'NoPriceDeviationDetected',
-  () => new NoPriceDeviationDetectedError()
-)
 
 /**
  * OutdatedOracle: 'Outdated Oracle'
@@ -314,7 +153,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class OutdatedOracleError extends Error {
-  readonly code: number = 0x177d
+  readonly code: number = 0x1776
   readonly name: string = 'OutdatedOracle'
   constructor() {
     super('Outdated Oracle')
@@ -324,77 +163,8 @@ export class OutdatedOracleError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x177d, () => new OutdatedOracleError())
+createErrorFromCodeLookup.set(0x1776, () => new OutdatedOracleError())
 createErrorFromNameLookup.set('OutdatedOracle', () => new OutdatedOracleError())
-
-/**
- * CometAlreadyLiquidated: 'Comet Already Liquidated'
- *
- * @category Errors
- * @category generated
- */
-export class CometAlreadyLiquidatedError extends Error {
-  readonly code: number = 0x177e
-  readonly name: string = 'CometAlreadyLiquidated'
-  constructor() {
-    super('Comet Already Liquidated')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, CometAlreadyLiquidatedError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x177e, () => new CometAlreadyLiquidatedError())
-createErrorFromNameLookup.set(
-  'CometAlreadyLiquidated',
-  () => new CometAlreadyLiquidatedError()
-)
-
-/**
- * CometNotYetLiquidated: 'Comet Not Yet Liquidated'
- *
- * @category Errors
- * @category generated
- */
-export class CometNotYetLiquidatedError extends Error {
-  readonly code: number = 0x177f
-  readonly name: string = 'CometNotYetLiquidated'
-  constructor() {
-    super('Comet Not Yet Liquidated')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, CometNotYetLiquidatedError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x177f, () => new CometNotYetLiquidatedError())
-createErrorFromNameLookup.set(
-  'CometNotYetLiquidated',
-  () => new CometNotYetLiquidatedError()
-)
-
-/**
- * CometUnableToLiquidate: 'Comet Unable to Liquidate'
- *
- * @category Errors
- * @category generated
- */
-export class CometUnableToLiquidateError extends Error {
-  readonly code: number = 0x1780
-  readonly name: string = 'CometUnableToLiquidate'
-  constructor() {
-    super('Comet Unable to Liquidate')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, CometUnableToLiquidateError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x1780, () => new CometUnableToLiquidateError())
-createErrorFromNameLookup.set(
-  'CometUnableToLiquidate',
-  () => new CometUnableToLiquidateError()
-)
 
 /**
  * NonStablesNotSupported: 'Non-stables Not Supported'
@@ -403,7 +173,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class NonStablesNotSupportedError extends Error {
-  readonly code: number = 0x1781
+  readonly code: number = 0x1777
   readonly name: string = 'NonStablesNotSupported'
   constructor() {
     super('Non-stables Not Supported')
@@ -413,7 +183,7 @@ export class NonStablesNotSupportedError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1781, () => new NonStablesNotSupportedError())
+createErrorFromCodeLookup.set(0x1777, () => new NonStablesNotSupportedError())
 createErrorFromNameLookup.set(
   'NonStablesNotSupported',
   () => new NonStablesNotSupportedError()
@@ -426,7 +196,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class MintPositionUnableToLiquidateError extends Error {
-  readonly code: number = 0x1782
+  readonly code: number = 0x1778
   readonly name: string = 'MintPositionUnableToLiquidate'
   constructor() {
     super('Mint Position Unable to Liquidate')
@@ -437,87 +207,12 @@ export class MintPositionUnableToLiquidateError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x1782,
+  0x1778,
   () => new MintPositionUnableToLiquidateError()
 )
 createErrorFromNameLookup.set(
   'MintPositionUnableToLiquidate',
   () => new MintPositionUnableToLiquidateError()
-)
-
-/**
- * NoSuchCollateralPosition: 'No Such Collateral Position'
- *
- * @category Errors
- * @category generated
- */
-export class NoSuchCollateralPositionError extends Error {
-  readonly code: number = 0x1783
-  readonly name: string = 'NoSuchCollateralPosition'
-  constructor() {
-    super('No Such Collateral Position')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, NoSuchCollateralPositionError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x1783, () => new NoSuchCollateralPositionError())
-createErrorFromNameLookup.set(
-  'NoSuchCollateralPosition',
-  () => new NoSuchCollateralPositionError()
-)
-
-/**
- * InvalidHealthScoreCoefficient: 'Invalid Health Score Coefficient'
- *
- * @category Errors
- * @category generated
- */
-export class InvalidHealthScoreCoefficientError extends Error {
-  readonly code: number = 0x1784
-  readonly name: string = 'InvalidHealthScoreCoefficient'
-  constructor() {
-    super('Invalid Health Score Coefficient')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, InvalidHealthScoreCoefficientError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(
-  0x1784,
-  () => new InvalidHealthScoreCoefficientError()
-)
-createErrorFromNameLookup.set(
-  'InvalidHealthScoreCoefficient',
-  () => new InvalidHealthScoreCoefficientError()
-)
-
-/**
- * FailedImpermanentLossCalculation: 'Failed Impermanent Loss Calculation'
- *
- * @category Errors
- * @category generated
- */
-export class FailedImpermanentLossCalculationError extends Error {
-  readonly code: number = 0x1785
-  readonly name: string = 'FailedImpermanentLossCalculation'
-  constructor() {
-    super('Failed Impermanent Loss Calculation')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, FailedImpermanentLossCalculationError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(
-  0x1785,
-  () => new FailedImpermanentLossCalculationError()
-)
-createErrorFromNameLookup.set(
-  'FailedImpermanentLossCalculation',
-  () => new FailedImpermanentLossCalculationError()
 )
 
 /**
@@ -527,7 +222,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class HealthScoreTooLowError extends Error {
-  readonly code: number = 0x1786
+  readonly code: number = 0x1779
   readonly name: string = 'HealthScoreTooLow'
   constructor() {
     super('Health Score Too Low')
@@ -537,114 +232,10 @@ export class HealthScoreTooLowError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1786, () => new HealthScoreTooLowError())
+createErrorFromCodeLookup.set(0x1779, () => new HealthScoreTooLowError())
 createErrorFromNameLookup.set(
   'HealthScoreTooLow',
   () => new HealthScoreTooLowError()
-)
-
-/**
- * InsufficientonUSDCollateral: 'Insufficient onUSD Collateral'
- *
- * @category Errors
- * @category generated
- */
-export class InsufficientonUSDCollateralError extends Error {
-  readonly code: number = 0x1787
-  readonly name: string = 'InsufficientonUSDCollateral'
-  constructor() {
-    super('Insufficient onUSD Collateral')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, InsufficientonUSDCollateralError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(
-  0x1787,
-  () => new InsufficientonUSDCollateralError()
-)
-createErrorFromNameLookup.set(
-  'InsufficientonUSDCollateral',
-  () => new InsufficientonUSDCollateralError()
-)
-
-/**
- * AttemptedToAddNewPoolToSingleComet: 'Attempted To Add New Pool To Single Comet'
- *
- * @category Errors
- * @category generated
- */
-export class AttemptedToAddNewPoolToSingleCometError extends Error {
-  readonly code: number = 0x1788
-  readonly name: string = 'AttemptedToAddNewPoolToSingleComet'
-  constructor() {
-    super('Attempted To Add New Pool To Single Comet')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, AttemptedToAddNewPoolToSingleCometError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(
-  0x1788,
-  () => new AttemptedToAddNewPoolToSingleCometError()
-)
-createErrorFromNameLookup.set(
-  'AttemptedToAddNewPoolToSingleComet',
-  () => new AttemptedToAddNewPoolToSingleCometError()
-)
-
-/**
- * AttemptedToAddNewCollateralToSingleComet: 'Attempted To Add New Collateral To Single Comet'
- *
- * @category Errors
- * @category generated
- */
-export class AttemptedToAddNewCollateralToSingleCometError extends Error {
-  readonly code: number = 0x1789
-  readonly name: string = 'AttemptedToAddNewCollateralToSingleComet'
-  constructor() {
-    super('Attempted To Add New Collateral To Single Comet')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(
-        this,
-        AttemptedToAddNewCollateralToSingleCometError
-      )
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(
-  0x1789,
-  () => new AttemptedToAddNewCollateralToSingleCometError()
-)
-createErrorFromNameLookup.set(
-  'AttemptedToAddNewCollateralToSingleComet',
-  () => new AttemptedToAddNewCollateralToSingleCometError()
-)
-
-/**
- * InvalidInputMintAccount: 'Invalid input mint account'
- *
- * @category Errors
- * @category generated
- */
-export class InvalidInputMintAccountError extends Error {
-  readonly code: number = 0x178a
-  readonly name: string = 'InvalidInputMintAccount'
-  constructor() {
-    super('Invalid input mint account')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, InvalidInputMintAccountError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x178a, () => new InvalidInputMintAccountError())
-createErrorFromNameLookup.set(
-  'InvalidInputMintAccount',
-  () => new InvalidInputMintAccountError()
 )
 
 /**
@@ -654,7 +245,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidInputCollateralAccountError extends Error {
-  readonly code: number = 0x178b
+  readonly code: number = 0x177a
   readonly name: string = 'InvalidInputCollateralAccount'
   constructor() {
     super('Invalid input collateral account')
@@ -665,7 +256,7 @@ export class InvalidInputCollateralAccountError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x178b,
+  0x177a,
   () => new InvalidInputCollateralAccountError()
 )
 createErrorFromNameLookup.set(
@@ -680,7 +271,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidAccountLoaderOwnerError extends Error {
-  readonly code: number = 0x178c
+  readonly code: number = 0x177b
   readonly name: string = 'InvalidAccountLoaderOwner'
   constructor() {
     super('Invalid Account loader owner')
@@ -691,7 +282,7 @@ export class InvalidAccountLoaderOwnerError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x178c,
+  0x177b,
   () => new InvalidAccountLoaderOwnerError()
 )
 createErrorFromNameLookup.set(
@@ -706,7 +297,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidInputPositionIndexError extends Error {
-  readonly code: number = 0x178d
+  readonly code: number = 0x177c
   readonly name: string = 'InvalidInputPositionIndex'
   constructor() {
     super('Invalid input position index')
@@ -717,7 +308,7 @@ export class InvalidInputPositionIndexError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x178d,
+  0x177c,
   () => new InvalidInputPositionIndexError()
 )
 createErrorFromNameLookup.set(
@@ -732,7 +323,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidTokenAccountBalanceError extends Error {
-  readonly code: number = 0x178e
+  readonly code: number = 0x177d
   readonly name: string = 'InvalidTokenAccountBalance'
   constructor() {
     super('Invalid token account balance')
@@ -743,7 +334,7 @@ export class InvalidTokenAccountBalanceError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x178e,
+  0x177d,
   () => new InvalidTokenAccountBalanceError()
 )
 createErrorFromNameLookup.set(
@@ -758,7 +349,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InequalityComparisonViolatedError extends Error {
-  readonly code: number = 0x178f
+  readonly code: number = 0x177e
   readonly name: string = 'InequalityComparisonViolated'
   constructor() {
     super('Inequality comparison violated')
@@ -769,7 +360,7 @@ export class InequalityComparisonViolatedError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x178f,
+  0x177e,
   () => new InequalityComparisonViolatedError()
 )
 createErrorFromNameLookup.set(
@@ -778,33 +369,13 @@ createErrorFromNameLookup.set(
 )
 
 /**
- * WrongCometType: 'Wrong Comet Type'
- *
- * @category Errors
- * @category generated
- */
-export class WrongCometTypeError extends Error {
-  readonly code: number = 0x1790
-  readonly name: string = 'WrongCometType'
-  constructor() {
-    super('Wrong Comet Type')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, WrongCometTypeError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x1790, () => new WrongCometTypeError())
-createErrorFromNameLookup.set('WrongCometType', () => new WrongCometTypeError())
-
-/**
  * CometNotEmpty: 'Comet Not Empty'
  *
  * @category Errors
  * @category generated
  */
 export class CometNotEmptyError extends Error {
-  readonly code: number = 0x1791
+  readonly code: number = 0x177f
   readonly name: string = 'CometNotEmpty'
   constructor() {
     super('Comet Not Empty')
@@ -814,31 +385,8 @@ export class CometNotEmptyError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1791, () => new CometNotEmptyError())
+createErrorFromCodeLookup.set(0x177f, () => new CometNotEmptyError())
 createErrorFromNameLookup.set('CometNotEmpty', () => new CometNotEmptyError())
-
-/**
- * LiquidityNotWithdrawn: 'Liquidity Not Withdrawn'
- *
- * @category Errors
- * @category generated
- */
-export class LiquidityNotWithdrawnError extends Error {
-  readonly code: number = 0x1792
-  readonly name: string = 'LiquidityNotWithdrawn'
-  constructor() {
-    super('Liquidity Not Withdrawn')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, LiquidityNotWithdrawnError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x1792, () => new LiquidityNotWithdrawnError())
-createErrorFromNameLookup.set(
-  'LiquidityNotWithdrawn',
-  () => new LiquidityNotWithdrawnError()
-)
 
 /**
  * NotSubjectToLiquidation: 'Not Subject to Liquidation'
@@ -847,7 +395,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class NotSubjectToLiquidationError extends Error {
-  readonly code: number = 0x1793
+  readonly code: number = 0x1780
   readonly name: string = 'NotSubjectToLiquidation'
   constructor() {
     super('Not Subject to Liquidation')
@@ -857,36 +405,10 @@ export class NotSubjectToLiquidationError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1793, () => new NotSubjectToLiquidationError())
+createErrorFromCodeLookup.set(0x1780, () => new NotSubjectToLiquidationError())
 createErrorFromNameLookup.set(
   'NotSubjectToLiquidation',
   () => new NotSubjectToLiquidationError()
-)
-
-/**
- * NotSubjectToILLiquidation: 'Not Subject to IL liquidation'
- *
- * @category Errors
- * @category generated
- */
-export class NotSubjectToILLiquidationError extends Error {
-  readonly code: number = 0x1794
-  readonly name: string = 'NotSubjectToILLiquidation'
-  constructor() {
-    super('Not Subject to IL liquidation')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, NotSubjectToILLiquidationError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(
-  0x1794,
-  () => new NotSubjectToILLiquidationError()
-)
-createErrorFromNameLookup.set(
-  'NotSubjectToILLiquidation',
-  () => new NotSubjectToILLiquidationError()
 )
 
 /**
@@ -896,7 +418,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class LiquidationAmountTooLargeError extends Error {
-  readonly code: number = 0x1795
+  readonly code: number = 0x1781
   readonly name: string = 'LiquidationAmountTooLarge'
   constructor() {
     super('Liquidation amount too large')
@@ -907,7 +429,7 @@ export class LiquidationAmountTooLargeError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x1795,
+  0x1781,
   () => new LiquidationAmountTooLargeError()
 )
 createErrorFromNameLookup.set(
@@ -922,7 +444,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class NoRemainingAccountsSuppliedError extends Error {
-  readonly code: number = 0x1796
+  readonly code: number = 0x1782
   readonly name: string = 'NoRemainingAccountsSupplied'
   constructor() {
     super('No remaining accounts supplied')
@@ -933,35 +455,12 @@ export class NoRemainingAccountsSuppliedError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x1796,
+  0x1782,
   () => new NoRemainingAccountsSuppliedError()
 )
 createErrorFromNameLookup.set(
   'NoRemainingAccountsSupplied',
   () => new NoRemainingAccountsSuppliedError()
-)
-
-/**
- * InvalidRecenter: 'Invalid Recenter'
- *
- * @category Errors
- * @category generated
- */
-export class InvalidRecenterError extends Error {
-  readonly code: number = 0x1797
-  readonly name: string = 'InvalidRecenter'
-  constructor() {
-    super('Invalid Recenter')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, InvalidRecenterError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x1797, () => new InvalidRecenterError())
-createErrorFromNameLookup.set(
-  'InvalidRecenter',
-  () => new InvalidRecenterError()
 )
 
 /**
@@ -971,7 +470,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class NonZeroCollateralizationRatioRequiredError extends Error {
-  readonly code: number = 0x1798
+  readonly code: number = 0x1783
   readonly name: string = 'NonZeroCollateralizationRatioRequired'
   constructor() {
     super('Non-zero collateralization ratio required')
@@ -982,7 +481,7 @@ export class NonZeroCollateralizationRatioRequiredError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x1798,
+  0x1783,
   () => new NonZeroCollateralizationRatioRequiredError()
 )
 createErrorFromNameLookup.set(
@@ -997,7 +496,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class IncorrectOracleAddressError extends Error {
-  readonly code: number = 0x1799
+  readonly code: number = 0x1784
   readonly name: string = 'IncorrectOracleAddress'
   constructor() {
     super('Incorrect oracle address provided')
@@ -1007,56 +506,10 @@ export class IncorrectOracleAddressError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1799, () => new IncorrectOracleAddressError())
+createErrorFromCodeLookup.set(0x1784, () => new IncorrectOracleAddressError())
 createErrorFromNameLookup.set(
   'IncorrectOracleAddress',
   () => new IncorrectOracleAddressError()
-)
-
-/**
- * CenteredCometRequired: 'Comet must be centered'
- *
- * @category Errors
- * @category generated
- */
-export class CenteredCometRequiredError extends Error {
-  readonly code: number = 0x179a
-  readonly name: string = 'CenteredCometRequired'
-  constructor() {
-    super('Comet must be centered')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, CenteredCometRequiredError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x179a, () => new CenteredCometRequiredError())
-createErrorFromNameLookup.set(
-  'CenteredCometRequired',
-  () => new CenteredCometRequiredError()
-)
-
-/**
- * InvalidResultingComet: 'Comet is in an invalid state after action'
- *
- * @category Errors
- * @category generated
- */
-export class InvalidResultingCometError extends Error {
-  readonly code: number = 0x179b
-  readonly name: string = 'InvalidResultingComet'
-  constructor() {
-    super('Comet is in an invalid state after action')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, InvalidResultingCometError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x179b, () => new InvalidResultingCometError())
-createErrorFromNameLookup.set(
-  'InvalidResultingComet',
-  () => new InvalidResultingCometError()
 )
 
 /**
@@ -1066,7 +519,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidValueRangeError extends Error {
-  readonly code: number = 0x179c
+  readonly code: number = 0x1785
   readonly name: string = 'InvalidValueRange'
   constructor() {
     super('Value is in an incorrect range')
@@ -1076,7 +529,7 @@ export class InvalidValueRangeError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x179c, () => new InvalidValueRangeError())
+createErrorFromCodeLookup.set(0x1785, () => new InvalidValueRangeError())
 createErrorFromNameLookup.set(
   'InvalidValueRange',
   () => new InvalidValueRangeError()
@@ -1089,7 +542,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidAssetStabilityError extends Error {
-  readonly code: number = 0x179d
+  readonly code: number = 0x1786
   readonly name: string = 'InvalidAssetStability'
   constructor() {
     super('Asset stable requirement violated')
@@ -1099,7 +552,7 @@ export class InvalidAssetStabilityError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x179d, () => new InvalidAssetStabilityError())
+createErrorFromCodeLookup.set(0x1786, () => new InvalidAssetStabilityError())
 createErrorFromNameLookup.set(
   'InvalidAssetStability',
   () => new InvalidAssetStabilityError()
@@ -1112,7 +565,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class SlippageToleranceExceededError extends Error {
-  readonly code: number = 0x179e
+  readonly code: number = 0x1787
   readonly name: string = 'SlippageToleranceExceeded'
   constructor() {
     super('Slippage tolerance exceeded')
@@ -1123,35 +576,12 @@ export class SlippageToleranceExceededError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x179e,
+  0x1787,
   () => new SlippageToleranceExceededError()
 )
 createErrorFromNameLookup.set(
   'SlippageToleranceExceeded',
   () => new SlippageToleranceExceededError()
-)
-
-/**
- * PositionMustBeEmpty: 'Position must be empty'
- *
- * @category Errors
- * @category generated
- */
-export class PositionMustBeEmptyError extends Error {
-  readonly code: number = 0x179f
-  readonly name: string = 'PositionMustBeEmpty'
-  constructor() {
-    super('Position must be empty')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, PositionMustBeEmptyError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x179f, () => new PositionMustBeEmptyError())
-createErrorFromNameLookup.set(
-  'PositionMustBeEmpty',
-  () => new PositionMustBeEmptyError()
 )
 
 /**
@@ -1161,7 +591,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class RequireOnlyonUSDCollateralError extends Error {
-  readonly code: number = 0x17a0
+  readonly code: number = 0x1788
   readonly name: string = 'RequireOnlyonUSDCollateral'
   constructor() {
     super('Collateral must be all in onUSD')
@@ -1172,38 +602,12 @@ export class RequireOnlyonUSDCollateralError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x17a0,
+  0x1788,
   () => new RequireOnlyonUSDCollateralError()
 )
 createErrorFromNameLookup.set(
   'RequireOnlyonUSDCollateral',
   () => new RequireOnlyonUSDCollateralError()
-)
-
-/**
- * RequireLargestILDPositionFirst: 'Require largest ILD position first'
- *
- * @category Errors
- * @category generated
- */
-export class RequireLargestILDPositionFirstError extends Error {
-  readonly code: number = 0x17a1
-  readonly name: string = 'RequireLargestILDPositionFirst'
-  constructor() {
-    super('Require largest ILD position first')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, RequireLargestILDPositionFirstError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(
-  0x17a1,
-  () => new RequireLargestILDPositionFirstError()
-)
-createErrorFromNameLookup.set(
-  'RequireLargestILDPositionFirst',
-  () => new RequireLargestILDPositionFirstError()
 )
 
 /**
@@ -1213,7 +617,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class RequireAllPositionsClosedError extends Error {
-  readonly code: number = 0x17a2
+  readonly code: number = 0x1789
   readonly name: string = 'RequireAllPositionsClosed'
   constructor() {
     super('Positions must be all closed')
@@ -1224,35 +628,12 @@ export class RequireAllPositionsClosedError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x17a2,
+  0x1789,
   () => new RequireAllPositionsClosedError()
 )
 createErrorFromNameLookup.set(
   'RequireAllPositionsClosed',
   () => new RequireAllPositionsClosedError()
-)
-
-/**
- * MaxPoolOwnershipExceeded: 'Pool ownership exceeding max limit'
- *
- * @category Errors
- * @category generated
- */
-export class MaxPoolOwnershipExceededError extends Error {
-  readonly code: number = 0x17a3
-  readonly name: string = 'MaxPoolOwnershipExceeded'
-  constructor() {
-    super('Pool ownership exceeding max limit')
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, MaxPoolOwnershipExceededError)
-    }
-  }
-}
-
-createErrorFromCodeLookup.set(0x17a3, () => new MaxPoolOwnershipExceededError())
-createErrorFromNameLookup.set(
-  'MaxPoolOwnershipExceeded',
-  () => new MaxPoolOwnershipExceededError()
 )
 
 /**
@@ -1262,7 +643,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class FailedToLoadPythError extends Error {
-  readonly code: number = 0x17a4
+  readonly code: number = 0x178a
   readonly name: string = 'FailedToLoadPyth'
   constructor() {
     super('Failed to Load Pyth Price Feed')
@@ -1272,7 +653,7 @@ export class FailedToLoadPythError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x17a4, () => new FailedToLoadPythError())
+createErrorFromCodeLookup.set(0x178a, () => new FailedToLoadPythError())
 createErrorFromNameLookup.set(
   'FailedToLoadPyth',
   () => new FailedToLoadPythError()
@@ -1285,7 +666,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class PoolDeprecatedError extends Error {
-  readonly code: number = 0x17a5
+  readonly code: number = 0x178b
   readonly name: string = 'PoolDeprecated'
   constructor() {
     super('Pool Deprecated')
@@ -1295,7 +676,7 @@ export class PoolDeprecatedError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x17a5, () => new PoolDeprecatedError())
+createErrorFromCodeLookup.set(0x178b, () => new PoolDeprecatedError())
 createErrorFromNameLookup.set('PoolDeprecated', () => new PoolDeprecatedError())
 
 /**
@@ -1305,7 +686,7 @@ createErrorFromNameLookup.set('PoolDeprecated', () => new PoolDeprecatedError())
  * @category generated
  */
 export class PoolEmptyError extends Error {
-  readonly code: number = 0x17a6
+  readonly code: number = 0x178c
   readonly name: string = 'PoolEmpty'
   constructor() {
     super('Pool is empty')
@@ -1315,7 +696,7 @@ export class PoolEmptyError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x17a6, () => new PoolEmptyError())
+createErrorFromCodeLookup.set(0x178c, () => new PoolEmptyError())
 createErrorFromNameLookup.set('PoolEmpty', () => new PoolEmptyError())
 
 /**
@@ -1325,7 +706,7 @@ createErrorFromNameLookup.set('PoolEmpty', () => new PoolEmptyError())
  * @category generated
  */
 export class NoLiquidityToWithdrawError extends Error {
-  readonly code: number = 0x17a7
+  readonly code: number = 0x178d
   readonly name: string = 'NoLiquidityToWithdraw'
   constructor() {
     super('No liquidity to withdraw')
@@ -1335,7 +716,7 @@ export class NoLiquidityToWithdrawError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x17a7, () => new NoLiquidityToWithdrawError())
+createErrorFromCodeLookup.set(0x178d, () => new NoLiquidityToWithdrawError())
 createErrorFromNameLookup.set(
   'NoLiquidityToWithdraw',
   () => new NoLiquidityToWithdrawError()
