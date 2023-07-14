@@ -8,7 +8,8 @@
     "esModuleInterop": true,
     "outDir": "./lib",
     "strict": true,
-    "downlevelIteration": true
+    "downlevelIteration": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": ["sdk"],
   "exclude": ["node_modules", "tests"]
