@@ -88,7 +88,7 @@ export const swapInstructionDiscriminator = [
 export function createSwapInstruction(
   accounts: SwapInstructionAccounts,
   args: SwapInstructionArgs,
-  programId = new web3.PublicKey('C1oneKNEhzNayAu2xa4LAjUcQrjVRTrCmmqpYBFJi3yu')
+  programId = new web3.PublicKey('GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA')
 ) {
   const [data] = swapStruct.serialize({
     instructionDiscriminator: swapInstructionDiscriminator,

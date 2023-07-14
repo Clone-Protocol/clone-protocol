@@ -102,7 +102,7 @@ export const initializePoolInstructionDiscriminator = [
 export function createInitializePoolInstruction(
   accounts: InitializePoolInstructionAccounts,
   args: InitializePoolInstructionArgs,
-  programId = new web3.PublicKey('C1oneKNEhzNayAu2xa4LAjUcQrjVRTrCmmqpYBFJi3yu')
+  programId = new web3.PublicKey('GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA')
 ) {
   const [data] = initializePoolStruct.serialize({
     instructionDiscriminator: initializePoolInstructionDiscriminator,

@@ -84,7 +84,7 @@ export const payImpermanentLossDebtInstructionDiscriminator = [
 export function createPayImpermanentLossDebtInstruction(
   accounts: PayImpermanentLossDebtInstructionAccounts,
   args: PayImpermanentLossDebtInstructionArgs,
-  programId = new web3.PublicKey('C1oneKNEhzNayAu2xa4LAjUcQrjVRTrCmmqpYBFJi3yu')
+  programId = new web3.PublicKey('GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA')
 ) {
   const [data] = payImpermanentLossDebtStruct.serialize({
     instructionDiscriminator: payImpermanentLossDebtInstructionDiscriminator,

@@ -102,7 +102,7 @@ export class Clone implements CloneArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      'C1oneKNEhzNayAu2xa4LAjUcQrjVRTrCmmqpYBFJi3yu'
+      'GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, cloneBeet)

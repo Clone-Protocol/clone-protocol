@@ -69,7 +69,7 @@ export const initializeUserInstructionDiscriminator = [
 export function createInitializeUserInstruction(
   accounts: InitializeUserInstructionAccounts,
   args: InitializeUserInstructionArgs,
-  programId = new web3.PublicKey('C1oneKNEhzNayAu2xa4LAjUcQrjVRTrCmmqpYBFJi3yu')
+  programId = new web3.PublicKey('GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA')
 ) {
   const [data] = initializeUserStruct.serialize({
     instructionDiscriminator: initializeUserInstructionDiscriminator,
