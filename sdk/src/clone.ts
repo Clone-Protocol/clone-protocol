@@ -22,7 +22,7 @@ import {
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
-export const DEVNET_TOKEN_SCALE = 8;
+export const CLONE_TOKEN_SCALE = 8;
 export const MAX_PRICE_SIZE = 128;
 
 export const toScale = (x: number, scale: number): BN => {
@@ -47,7 +47,7 @@ export const toScale = (x: number, scale: number): BN => {
 }
 
 export const toDevnetScale = (x: number): BN => {
-  return toScale(x, DEVNET_TOKEN_SCALE);
+  return toScale(x, CLONE_TOKEN_SCALE);
 };
 
 export class CloneClient {

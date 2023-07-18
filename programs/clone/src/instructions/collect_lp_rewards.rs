@@ -74,7 +74,7 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
 
         // Update rebate amount such that the ild_share is now zero.
         comet.positions[comet_position_index as usize].onusd_ild_rebate = RawDecimal::from(
-            rescale_toward_zero(onusd_ild_rebate - onusd_reward, DEVNET_TOKEN_SCALE),
+            rescale_toward_zero(onusd_ild_rebate - onusd_reward, CLONE_TOKEN_SCALE),
         );
 
         // Mint reward amount to user
@@ -102,7 +102,7 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
 
         // Update rebate amount such that the ild_share is now zero.
         comet.positions[comet_position_index as usize].onasset_ild_rebate = RawDecimal::from(
-            rescale_toward_zero(onasset_ild_rebate - onasset_reward, DEVNET_TOKEN_SCALE),
+            rescale_toward_zero(onasset_ild_rebate - onasset_reward, CLONE_TOKEN_SCALE),
         );
 
         // Mint reward amount to user

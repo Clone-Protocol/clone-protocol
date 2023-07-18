@@ -72,12 +72,13 @@ pub fn execute(
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let pool = token_data.pools[pool_index as usize];
+    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral = token_data.collaterals[collateral_index as usize];
     let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
 
     let collateral_amount_value =
         Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale);
-    let onasset_amount_value = Decimal::new(onasset_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let onasset_amount_value = Decimal::new(onasset_amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
 
     // check to see if collateral is stable
     return_error_if_false!(collateral.stable == 1, CloneError::InvalidCollateralType);
@@ -87,7 +88,7 @@ pub fn execute(
     // ensure position sufficiently over collateralized and oracle prices are up to date
     let slot = Clock::get()?.slot;
     check_mint_collateral_sufficient(
-        pool.asset_info,
+        oracle,
         onasset_amount_value,
         collateral_ratio,
         collateral_amount_value,
@@ -153,7 +154,7 @@ pub fn execute(
             .total_minted_amount
             .to_decimal()
             + onasset_amount_value,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     token_data.pools[pool_index as usize].total_minted_amount =
         RawDecimal::from(total_minted_amount);
@@ -163,7 +164,7 @@ pub fn execute(
             .supplied_mint_collateral_amount
             .to_decimal()
             + collateral_amount_value,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     token_data.pools[pool_index as usize].supplied_mint_collateral_amount =
         RawDecimal::from(supplied_collateral);

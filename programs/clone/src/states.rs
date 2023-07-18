@@ -4,12 +4,15 @@ use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
-pub const DEVNET_TOKEN_SCALE: u32 = 8;
+pub const CLONE_TOKEN_SCALE: u32 = 8;
 pub const ONUSD_COLLATERAL_INDEX: usize = 0;
 #[allow(dead_code)]
 pub const USDC_COLLATERAL_INDEX: usize = 1;
 pub const PERCENT_SCALE: u8 = 2;
 pub const BPS_SCALE: u32 = 4;
+pub const NUM_POOLS: usize = 64;
+pub const NUM_COLLATERALS: usize = 16;
+pub const NUM_ORACLES: usize = 80;
 
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
@@ -83,8 +86,9 @@ pub struct TokenData {
     pub clone: Pubkey,                         // 32
     pub num_pools: u64,                        // 8
     pub num_collaterals: u64,                  // 8
-    pub pools: [Pool; 255],                    // 255 * 504 = 128,520
-    pub collaterals: [Collateral; 255],        // 255 * 144 = 36,720
+    pub pools: [Pool; NUM_POOLS],              // 255 * 504 = 128,520
+    pub collaterals: [Collateral; NUM_COLLATERALS], // 16 * 144 = 36,720
+    pub oracles: [OracleInfo; NUM_ORACLES], 
     pub il_health_score_cutoff: RawDecimal,    // 16
     pub il_liquidation_reward_pct: RawDecimal, // 16
 }
@@ -95,8 +99,9 @@ impl Default for TokenData {
             clone: Pubkey::default(),
             num_pools: 0,
             num_collaterals: 0,
-            pools: [Pool::default(); 255],
-            collaterals: [Collateral::default(); 255],
+            pools: [Pool::default(); NUM_POOLS],
+            collaterals: [Collateral::default(); NUM_COLLATERALS],
+            oracles: [OracleInfo::default(); NUM_ORACLES],
             il_health_score_cutoff: RawDecimal::default(),
             il_liquidation_reward_pct: RawDecimal::default(),
         }
@@ -121,24 +126,6 @@ impl TokenData {
         }
         Err(CloneError::CollateralNotFound.into())
     }
-    pub fn get_pool_tuple_from_onasset_mint(&self, onasset_mint: Pubkey) -> Result<(Pool, usize)> {
-        for i in 0..self.num_pools {
-            let temp_pool = self.pools[i as usize];
-            if temp_pool.asset_info.onasset_mint == onasset_mint {
-                return Ok((temp_pool, i as usize));
-            }
-        }
-        Err(CloneError::PoolNotFound.into())
-    }
-    pub fn get_pool_tuple_from_oracle(&self, pyth_address: &Pubkey) -> Result<(Pool, usize)> {
-        for i in 0..self.num_pools {
-            let temp_pool = self.pools[i as usize];
-            if temp_pool.asset_info.pyth_address == *pyth_address {
-                return Ok((temp_pool, i as usize));
-            }
-        }
-        Err(CloneError::PoolNotFound.into())
-    }
 }
 
 #[zero_copy]
@@ -146,18 +133,22 @@ impl TokenData {
 pub struct AssetInfo {
     // 208
     pub onasset_mint: Pubkey,                          // 32
-    pub pyth_address: Pubkey,                          // 32
-    pub price: RawDecimal,                             // 16
-    pub twap: RawDecimal,                              // 16
-    pub confidence: RawDecimal,                        // 16
-    pub status: u64,                                   // 8
-    pub last_update: u64,                              // 8
+    pub oracle_info_index: u64,                        // 8
     pub stable_collateral_ratio: RawDecimal,           // 16
     pub crypto_collateral_ratio: RawDecimal,           // 16
     pub il_health_score_coefficient: RawDecimal,       // 16
     pub position_health_score_coefficient: RawDecimal, // 16
     pub liquidation_discount_rate: RawDecimal,         // 16
-    pub max_ownership_pct: RawDecimal,                 // 16
+}
+
+#[zero_copy]
+#[derive(PartialEq, Eq, Default, Debug)]
+pub struct OracleInfo {
+    // 64
+    pub pyth_address: Pubkey,                          // 32
+    pub price: RawDecimal,                             // 16
+    pub status: u64,                                   // 8
+    pub last_update_slot: u64,                         // 8
 }
 
 #[zero_copy]
@@ -188,27 +179,27 @@ impl Pool {
         self.liquidity_trading_fee.to_decimal() + self.treasury_trading_fee.to_decimal()
     }
 
-    pub fn calculate_jit_pool(&self) -> (Decimal, Decimal) {
-        let oracle_price = self.asset_info.price.to_decimal();
+    pub fn calculate_jit_pool(&self, oracle_price: Decimal) -> (Decimal, Decimal) {
         let pool_onusd = rescale_toward_zero(
             self.committed_onusd_liquidity.to_decimal() - self.onusd_ild.to_decimal(),
-            DEVNET_TOKEN_SCALE,
+            CLONE_TOKEN_SCALE,
         );
         let pool_onasset = rescale_toward_zero(
             self.committed_onusd_liquidity.to_decimal() / oracle_price
                 - self.onasset_ild.to_decimal(),
-            DEVNET_TOKEN_SCALE,
+            CLONE_TOKEN_SCALE,
         );
         (pool_onusd, pool_onasset)
     }
 
     pub fn calculate_swap(
         &self,
+        oracle_price: Decimal,
         quantity: Decimal,
         quantity_is_input: bool,
         quantity_is_onusd: bool,
     ) -> SwapSummary {
-        let (pool_onusd, pool_onasset) = self.calculate_jit_pool();
+        let (pool_onusd, pool_onasset) = self.calculate_jit_pool(oracle_price);
         let invariant = pool_onasset * pool_onusd;
         let liquidity_trading_fee = self.liquidity_trading_fee.to_decimal();
         let treasury_trading_fee = self.treasury_trading_fee.to_decimal();
@@ -220,18 +211,18 @@ impl Pool {
                 (pool_onasset, pool_onusd)
             };
             let output_before_fees =
-                rescale_toward_zero(o_pool - invariant / (i_pool + quantity), DEVNET_TOKEN_SCALE);
+                rescale_toward_zero(o_pool - invariant / (i_pool + quantity), CLONE_TOKEN_SCALE);
             let liquidity_fees_paid = rescale_toward_zero(
                 output_before_fees * liquidity_trading_fee,
-                DEVNET_TOKEN_SCALE,
+                CLONE_TOKEN_SCALE,
             );
             let treasury_fees_paid = rescale_toward_zero(
                 output_before_fees * treasury_trading_fee,
-                DEVNET_TOKEN_SCALE,
+                CLONE_TOKEN_SCALE,
             );
             let result = rescale_toward_zero(
                 output_before_fees - liquidity_fees_paid - treasury_fees_paid,
-                DEVNET_TOKEN_SCALE,
+                CLONE_TOKEN_SCALE,
             );
             SwapSummary {
                 result,
@@ -246,19 +237,19 @@ impl Pool {
             };
             let output_before_fees = rescale_toward_zero(
                 quantity / (Decimal::ONE - liquidity_trading_fee - treasury_trading_fee),
-                DEVNET_TOKEN_SCALE,
+                CLONE_TOKEN_SCALE,
             );
             let result = rescale_toward_zero(
                 invariant / (o_pool - output_before_fees) - i_pool,
-                DEVNET_TOKEN_SCALE,
+                CLONE_TOKEN_SCALE,
             );
             let liquidity_fees_paid = rescale_toward_zero(
                 output_before_fees * liquidity_trading_fee,
-                DEVNET_TOKEN_SCALE,
+                CLONE_TOKEN_SCALE,
             );
             let treasury_fees_paid = rescale_toward_zero(
                 output_before_fees * treasury_trading_fee,
-                DEVNET_TOKEN_SCALE,
+                CLONE_TOKEN_SCALE,
             );
             SwapSummary {
                 result,
@@ -268,8 +259,8 @@ impl Pool {
         }
     }
 
-    pub fn calculate_usd_to_buy(&self, amount: Decimal) -> SwapSummary {
-        let (pool_onusd, pool_onasset) = self.calculate_jit_pool();
+    pub fn calculate_usd_to_buy(&self, amount: Decimal, oracle_price: Decimal) -> SwapSummary {
+        let (pool_onusd, pool_onasset) = self.calculate_jit_pool(oracle_price);
         let invariant = pool_onasset * pool_onusd;
         let liquidity_trading_fee = self.liquidity_trading_fee.to_decimal();
         let treasury_trading_fee = self.treasury_trading_fee.to_decimal();
@@ -278,15 +269,15 @@ impl Pool {
         let output_before_fees = amount / fee_adjustment;
         let result = rescale_toward_zero(
             invariant / (pool_onasset - output_before_fees) - pool_onusd,
-            DEVNET_TOKEN_SCALE,
+            CLONE_TOKEN_SCALE,
         );
         let total_fees_paid = output_before_fees - amount;
         let liquidity_fees_paid = rescale_toward_zero(
             total_fees_paid * liquidity_trading_fee / total_trading_fee,
-            DEVNET_TOKEN_SCALE,
+            CLONE_TOKEN_SCALE,
         );
         let treasury_fees_paid =
-            rescale_toward_zero(total_fees_paid - liquidity_fees_paid, DEVNET_TOKEN_SCALE);
+            rescale_toward_zero(total_fees_paid - liquidity_fees_paid, CLONE_TOKEN_SCALE);
 
         SwapSummary {
             result,
@@ -295,22 +286,22 @@ impl Pool {
         }
     }
 
-    pub fn calculate_usd_from_sell(&self, amount: Decimal) -> SwapSummary {
-        let (pool_onusd, pool_onasset) = self.calculate_jit_pool();
+    pub fn calculate_usd_from_sell(&self, amount: Decimal, oracle_price: Decimal) -> SwapSummary {
+        let (pool_onusd, pool_onasset) = self.calculate_jit_pool(oracle_price);
         let invariant = pool_onasset * pool_onusd;
         let liquidity_trading_fee = self.liquidity_trading_fee.to_decimal();
         let treasury_trading_fee = self.treasury_trading_fee.to_decimal();
         let total_trading_fee = liquidity_trading_fee + treasury_trading_fee;
         let fee_adjustment = Decimal::ONE - total_trading_fee;
         let output_before_fees = pool_onusd - invariant / (pool_onasset + amount);
-        let result = rescale_toward_zero(output_before_fees * fee_adjustment, DEVNET_TOKEN_SCALE);
+        let result = rescale_toward_zero(output_before_fees * fee_adjustment, CLONE_TOKEN_SCALE);
         let total_fees_paid = output_before_fees - result;
         let liquidity_fees_paid = rescale_toward_zero(
             total_fees_paid * liquidity_trading_fee / total_trading_fee,
-            DEVNET_TOKEN_SCALE,
+            CLONE_TOKEN_SCALE,
         );
         let treasury_fees_paid =
-            rescale_toward_zero(total_fees_paid - liquidity_fees_paid, DEVNET_TOKEN_SCALE);
+            rescale_toward_zero(total_fees_paid - liquidity_fees_paid, CLONE_TOKEN_SCALE);
 
         SwapSummary {
             result,
@@ -330,7 +321,7 @@ impl Pool {
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct Collateral {
     // 144
-    pub pool_index: u64,                     // 8
+    pub oracle_info_index: u64,              // 8
     pub mint: Pubkey,                        // 32
     pub vault: Pubkey,                       // 32
     pub vault_onusd_supply: RawDecimal,      // 16
@@ -338,6 +329,7 @@ pub struct Collateral {
     pub vault_comet_supply: RawDecimal,      // 16
     pub stable: u64,                         // 8
     pub collateralization_ratio: RawDecimal, // 16
+    pub liquidation_discount: RawDecimal, // 16
 }
 
 #[account]
@@ -356,8 +348,8 @@ pub struct Comet {
     pub owner: Pubkey,                       // 32
     pub num_positions: u64,                  // 8
     pub num_collaterals: u64,                // 8
-    pub positions: [CometPosition; 255],     // 255 * 120 = 30,600
-    pub collaterals: [CometCollateral; 255], // 255 * 64 = 16,320
+    pub positions: [CometPosition; NUM_POOLS],     // 255 * 120 = 30,600
+    pub collaterals: [CometCollateral; NUM_COLLATERALS], // 255 * 64 = 16,320
 }
 
 impl Default for Comet {
@@ -366,8 +358,8 @@ impl Default for Comet {
             owner: Pubkey::default(),
             num_positions: 0,
             num_collaterals: 0,
-            positions: [CometPosition::default(); 255],
-            collaterals: [CometCollateral::default(); 255],
+            positions: [CometPosition::default(); NUM_POOLS],
+            collaterals: [CometCollateral::default(); NUM_COLLATERALS],
         }
     }
 }
@@ -411,7 +403,7 @@ impl Comet {
     }
     // TODO: update to work with nonstables
     pub fn get_total_collateral_amount(&self) -> Decimal {
-        let mut sum = Decimal::new(0, DEVNET_TOKEN_SCALE);
+        let mut sum = Decimal::new(0, CLONE_TOKEN_SCALE);
         for i in 0..self.num_collaterals {
             sum += self.collaterals[i as usize].collateral_amount.to_decimal();
         }
@@ -427,7 +419,7 @@ impl Comet {
     }
 
     pub fn calculate_effective_collateral_value(&self, token_data: &TokenData) -> Decimal {
-        let mut total_value = Decimal::new(0, DEVNET_TOKEN_SCALE);
+        let mut total_value = Decimal::new(0, CLONE_TOKEN_SCALE);
 
         self.collaterals[0..(self.num_collaterals as usize)]
             .iter()
@@ -437,9 +429,9 @@ impl Comet {
                 let collateral_value = if collateral.stable == 1 {
                     comet_collateral.collateral_amount.to_decimal()
                 } else {
-                    let pool = token_data.pools[collateral.pool_index as usize];
+                    let oracle = token_data.oracles[collateral.oracle_info_index as usize];
                     comet_collateral.collateral_amount.to_decimal()
-                        * pool.asset_info.price.to_decimal()
+                        * oracle.price.to_decimal()
                         / collateral.collateralization_ratio.to_decimal()
                 };
                 total_value += collateral_value;

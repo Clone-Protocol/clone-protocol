@@ -1,5 +1,5 @@
 import { toNumber } from "./decimal";
-import { DEVNET_TOKEN_SCALE } from "./clone";
+import { CLONE_TOKEN_SCALE } from "./clone";
 import { Pool } from "./interfaces";
 import {
   PublicKey,
@@ -38,12 +38,12 @@ export const floorToScale = (x: number, scale: number) => {
 };
 
 export const floorToDevnetScale = (x: number) => {
-  return floorToScale(x, DEVNET_TOKEN_SCALE);
+  return floorToScale(x, CLONE_TOKEN_SCALE);
 };
 
 export const calculateMantissa = (
   x: number,
-  scale: number = DEVNET_TOKEN_SCALE
+  scale: number = CLONE_TOKEN_SCALE
 ) => {
   return Math.floor(x * Math.pow(10, scale));
 };

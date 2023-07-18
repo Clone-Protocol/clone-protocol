@@ -63,8 +63,8 @@ pub fn execute(ctx: Context<MintONUSD>, amount: u64) -> Result<()> {
     );
 
     let onusd_value = rescale_toward_zero(
-        Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE).min(user_usdc_amount),
-        DEVNET_TOKEN_SCALE,
+        Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE).min(user_usdc_amount),
+        CLONE_TOKEN_SCALE,
     );
 
     // check to see if the collateral used to mint onusd is stable

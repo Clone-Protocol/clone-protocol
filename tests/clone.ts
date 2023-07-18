@@ -18,7 +18,7 @@ import {
 } from "@solana/web3.js";
 import { assert } from "chai";
 import {
-  DEVNET_TOKEN_SCALE,
+  CLONE_TOKEN_SCALE,
   CloneClient,
   toDevnetScale,
   toScale,
@@ -38,7 +38,7 @@ import {
 } from "./utils";
 import { getHealthScore, getILD } from "../sdk/src/healthscore";
 
-const DEVNET_SCALE_CONVERSION = Math.pow(10, -DEVNET_TOKEN_SCALE);
+const DEVNET_SCALE_CONVERSION = Math.pow(10, -CLONE_TOKEN_SCALE);
 const USDC_SCALE_CONVERSION = Math.pow(10, -7);
 
 describe("clone", async () => {

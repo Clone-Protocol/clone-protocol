@@ -5,13 +5,12 @@ use anchor_lang::prelude::*;
 pub enum PoolParameters {
     TreasuryTradingFee { value: RawDecimal },
     LiquidityTradingFee { value: RawDecimal },
-    PythAddress { address: Pubkey },
+    OracleInfoIndex { value: u64 },
     StableCollateralRatio { value: RawDecimal },
     CryptoCollateralRatio { value: RawDecimal },
     IlHealthScoreCoefficient { value: RawDecimal },
     PositionHealthScoreCoefficient { value: RawDecimal },
     LiquidationDiscountRate { value: RawDecimal },
-    MaxOwnershipPct { value: RawDecimal },
 }
 
 #[derive(Accounts)]
@@ -53,8 +52,8 @@ pub fn execute(
         PoolParameters::LiquidityTradingFee { value } => {
             pool.liquidity_trading_fee = value;
         }
-        PoolParameters::PythAddress { address } => {
-            pool.asset_info.pyth_address = address;
+        PoolParameters::OracleInfoIndex { value } => {
+            pool.asset_info.oracle_info_index = value;
         }
         PoolParameters::StableCollateralRatio { value } => {
             pool.asset_info.stable_collateral_ratio = value;
@@ -70,9 +69,6 @@ pub fn execute(
         }
         PoolParameters::LiquidationDiscountRate { value } => {
             pool.asset_info.liquidation_discount_rate = value;
-        }
-        PoolParameters::MaxOwnershipPct { value } => {
-            pool.asset_info.max_ownership_pct = value;
         }
     }
     Ok(())

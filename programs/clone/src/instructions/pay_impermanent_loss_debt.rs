@@ -66,7 +66,7 @@ pub fn execute(
     pay_onusd_debt: bool,
 ) -> Result<()> {
     return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
-    let authorized_amount = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let authorized_amount = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
     let token_data = ctx.accounts.token_data.load()?;
     let mut comet = ctx.accounts.comet.load_mut()?;
 
@@ -84,7 +84,7 @@ pub fn execute(
     let (cpi_accounts, burn_amount) = if pay_onusd_debt {
         let burn_amount = ild_share.onusd_ild_share.min(authorized_amount);
         comet.positions[comet_position_index as usize].onusd_ild_rebate = RawDecimal::from(
-            rescale_toward_zero(onusd_ild_rebate + burn_amount, DEVNET_TOKEN_SCALE),
+            rescale_toward_zero(onusd_ild_rebate + burn_amount, CLONE_TOKEN_SCALE),
         );
 
         (
@@ -102,7 +102,7 @@ pub fn execute(
     } else {
         let burn_amount = ild_share.onasset_ild_share.min(authorized_amount);
         comet.positions[comet_position_index as usize].onasset_ild_rebate = RawDecimal::from(
-            rescale_toward_zero(onasset_ild_rebate + burn_amount, DEVNET_TOKEN_SCALE),
+            rescale_toward_zero(onasset_ild_rebate + burn_amount, CLONE_TOKEN_SCALE),
         );
         (
             Burn {

@@ -100,10 +100,11 @@ pub fn execute(
     }
 
     let comet_position = comet.positions[comet_position_index as usize];
-    let authorized_amount = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let authorized_amount = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
     let ild_share = calculate_ild_share(&comet_position, &token_data);
     let pool_index = comet_position.pool_index as usize;
     let pool = token_data.pools[pool_index];
+    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     let onusd_ild_rebate = comet_position.onusd_ild_rebate.to_decimal();
     let onasset_ild_rebate = comet_position.onasset_ild_rebate.to_decimal();
 
@@ -114,7 +115,7 @@ pub fn execute(
         let (cpi_accounts, burn_amount) = if pay_onusd_debt {
             let burn_amount = ild_share.onusd_ild_share.min(authorized_amount);
             comet.positions[comet_position_index as usize].onusd_ild_rebate = RawDecimal::from(
-                rescale_toward_zero(onusd_ild_rebate + burn_amount, DEVNET_TOKEN_SCALE),
+                rescale_toward_zero(onusd_ild_rebate + burn_amount, CLONE_TOKEN_SCALE),
             );
             (
                 Burn {
@@ -131,7 +132,7 @@ pub fn execute(
         } else {
             let burn_amount = ild_share.onasset_ild_share.min(authorized_amount);
             comet.positions[comet_position_index as usize].onasset_ild_rebate = RawDecimal::from(
-                rescale_toward_zero(onasset_ild_rebate + burn_amount, DEVNET_TOKEN_SCALE),
+                rescale_toward_zero(onasset_ild_rebate + burn_amount, CLONE_TOKEN_SCALE),
             );
             (
                 Burn {
@@ -164,9 +165,9 @@ pub fn execute(
                     * if pay_onusd_debt {
                         burn_amount
                     } else {
-                        burn_amount * pool.asset_info.price.to_decimal()
+                        burn_amount * oracle.price.to_decimal()
                     },
-            DEVNET_TOKEN_SCALE,
+            CLONE_TOKEN_SCALE,
         );
 
         // Mint onusd to liquidator
@@ -191,7 +192,7 @@ pub fn execute(
                 .collateral_amount
                 .to_decimal()
                 - onusd_reward,
-            DEVNET_TOKEN_SCALE,
+            CLONE_TOKEN_SCALE,
         );
         comet.collaterals[ONUSD_COLLATERAL_INDEX].collateral_amount =
             RawDecimal::from(new_collateral_onusd);
