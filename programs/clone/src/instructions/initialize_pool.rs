@@ -93,7 +93,7 @@ pub fn execute(
     il_health_score_coefficient: u64,
     position_health_score_coefficient: u64,
     liquidation_discount_rate: u64,
-    oracle_info_index: u64,
+    oracle_info_index: u8,
 ) -> Result<()> {
     // ensure valid health score coefficient
     return_error_if_false!(

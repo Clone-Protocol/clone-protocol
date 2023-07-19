@@ -121,6 +121,10 @@ pub enum CloneError {
     /// 29. No liquidity to withdraw
     #[msg("No liquidity to withdraw")]
     NoLiquidityToWithdraw,
+
+    /// 30. Invalid oracle index
+    #[msg("Invalid oracle index")]
+    InvalidOracleIndex,
 }
 
 impl From<CloneError> for ProgramError {

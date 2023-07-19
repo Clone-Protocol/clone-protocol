@@ -26,25 +26,24 @@ export const CLONE_TOKEN_SCALE = 8;
 export const MAX_PRICE_SIZE = 128;
 
 export const toScale = (x: number, scale: number): BN => {
-  let stringDigits = []
-  let stringX = String(x)
-  let foundDecimal = false
-  let digitsAfterDecimal = scale
+  let stringDigits = [];
+  let stringX = String(x);
+  let foundDecimal = false;
+  let digitsAfterDecimal = scale;
 
   for (const digit of stringX) {
-    if (digitsAfterDecimal === 0)
-      break
-    if (digit === '.') {
-      foundDecimal = true
-      continue
+    if (digitsAfterDecimal === 0) break;
+    if (digit === ".") {
+      foundDecimal = true;
+      continue;
     }
-    stringDigits.push(digit)
+    stringDigits.push(digit);
     if (foundDecimal) {
-      digitsAfterDecimal -= 1
+      digitsAfterDecimal -= 1;
     }
   }
-  return new BN(stringDigits.join('').concat('0'.repeat(digitsAfterDecimal)))
-}
+  return new BN(stringDigits.join("").concat("0".repeat(digitsAfterDecimal)));
+};
 
 export const toDevnetScale = (x: number): BN => {
   return toScale(x, CLONE_TOKEN_SCALE);
@@ -72,8 +71,6 @@ export class CloneClient {
     this.program = new Program<CloneProgram>(IDL, this.programId, provider);
   }
   public async initializeClone(
-    ilHealthScoreCutoff: number,
-    ilLiquidationRewardPct: number,
     maxHealthLiquidation: number,
     liquidatorFee: number,
     treasuryAddress: PublicKey,
@@ -87,8 +84,6 @@ export class CloneClient {
 
     await this.program.methods
       .initializeClone(
-        toDevnetScale(ilHealthScoreCutoff),
-        toDevnetScale(ilLiquidationRewardPct),
         new BN(maxHealthLiquidation),
         new BN(liquidatorFee),
         treasuryAddress
@@ -136,8 +131,9 @@ export class CloneClient {
     scale: number,
     stable: boolean,
     collateral_mint: PublicKey,
-    collateralization_ratio: number = 0,
-    poolIndex?: number
+    oracleIndex: number,
+    liquidationDiscount: number,
+    collateralization_ratio: number = 0
   ) {
     const vaultAccount = anchor.web3.Keypair.generate();
 
@@ -145,8 +141,9 @@ export class CloneClient {
       .addCollateral(
         scale,
         stable,
-        toDevnetScale(collateralization_ratio),
-        poolIndex !== undefined ? poolIndex : 255
+        collateralization_ratio,
+        oracleIndex,
+        liquidationDiscount
       )
       .accounts({
         admin: admin,
@@ -168,11 +165,10 @@ export class CloneClient {
     cryptoCollateralRatio: number,
     liquidityTradingFee: number,
     treasuryTradingFee: number,
-    pythOracle: PublicKey,
     ilHealthScoreCoefficient: number,
     positionHealthScoreCoefficient: number,
     liquidationDiscountRate: number,
-    maxOwnershipPct: number,
+    oracleIndex: number,
     underlyingAssetMint: PublicKey
   ) {
     const onusdTokenAccount = anchor.web3.Keypair.generate();
@@ -200,7 +196,7 @@ export class CloneClient {
         toDevnetScale(ilHealthScoreCoefficient),
         toDevnetScale(positionHealthScoreCoefficient),
         new BN(liquidationDiscountRate),
-        new BN(maxOwnershipPct)
+        oracleIndex
       )
       .accounts({
         admin: admin,
@@ -214,7 +210,6 @@ export class CloneClient {
         underlyingAssetTokenAccount: underlyingAssetTokenAccount.publicKey,
         liquidityTokenMint: liquidityTokenMintAccount.publicKey,
         cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
-        pythOracle: pythOracle,
         rent: RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SYSTEM_PROGRAM_ID,
@@ -226,7 +221,7 @@ export class CloneClient {
   public async updatePricesInstruction(poolIndices?: number[]) {
     const tokenData = await this.getTokenData();
     let arr = [];
-    for (let i = 0; i < tokenData.numPools.toNumber(); i++) {
+    for (let i = 0; i < tokenData.numOracles.toNumber(); i++) {
       arr.push(i);
     }
     let indices = poolIndices ? poolIndices : arr;
@@ -239,7 +234,7 @@ export class CloneClient {
 
     indices.forEach((index) => {
       priceFeeds.push({
-        pubkey: tokenData.pools[index].assetInfo.pythAddress,
+        pubkey: tokenData.oracles[index].pythAddress,
         isWritable: false,
         isSigner: false,
       });
@@ -661,8 +656,8 @@ export class CloneClient {
     cometPositionIndex: number,
     authorizedAmount: BN,
     payOnusdDebt: boolean,
-    userOnassetTokenAccount: PublicKey,
-    userOnusdTokenAccount: PublicKey
+    payerOnassetTokenAccount: PublicKey,
+    payerOnusdTokenAccount: PublicKey
   ) {
     let tokenData = await this.getTokenData();
     let userAccount = await this.getUserAccount();
@@ -673,12 +668,13 @@ export class CloneClient {
 
     return await this.program.methods
       .payImpermanentLossDebt(
+        this.provider.publicKey!,
         cometPositionIndex,
         authorizedAmount,
         payOnusdDebt
       )
       .accounts({
-        user: this.provider.publicKey!,
+        payer: this.provider.publicKey!,
         userAccount: userAddress.userPubkey,
         clone: this.cloneAddress[0],
         tokenData: this.clone!.tokenData,
@@ -687,8 +683,8 @@ export class CloneClient {
           tokenData.pools[cometPosition.poolIndex].assetInfo.onassetMint,
         comet: cometAddress,
         tokenProgram: TOKEN_PROGRAM_ID,
-        userOnassetTokenAccount: userOnassetTokenAccount,
-        userOnusdTokenAccount: userOnusdTokenAccount,
+        payerOnassetTokenAccount: payerOnassetTokenAccount,
+        payerOnusdTokenAccount: payerOnusdTokenAccount,
       })
       .instruction();
   }
@@ -727,83 +723,6 @@ export class CloneClient {
       .instruction();
   }
 
-  public async liquidateCometNonstableCollateralInstruction(
-    user: PublicKey,
-    userAccountAddress: { userPubKey: PublicKey; bump: number },
-    userAccount: User,
-    userComet: Comet,
-    tokenData: TokenData,
-    amount: BN,
-    cometNonStableCollateralIndex: number,
-    cometStableCollateralIndex: number,
-    liquidatorStableCollateralAccount: PublicKey,
-    liquidatorNonstableCollateralAccount: PublicKey
-  ): Promise<TransactionInstruction> {
-    const nonstableCollateral =
-      tokenData.collaterals[
-        userComet.collaterals[cometNonStableCollateralIndex].collateralIndex
-      ];
-    const stableCollateral =
-      tokenData.collaterals[
-        userComet.collaterals[cometStableCollateralIndex].collateralIndex
-      ];
-
-    return await this.program.methods
-      .liquidateCometNonstableCollateral(
-        amount,
-        cometNonStableCollateralIndex,
-        cometStableCollateralIndex
-      )
-      .accounts({
-        liquidator: this.provider.publicKey!,
-        clone: this.cloneAddress[0],
-        tokenData: this.clone!.tokenData,
-        user: user,
-        userAccount: userAccountAddress.userPubKey,
-        comet: userAccount.comet,
-        stableCollateralMint: stableCollateral.mint,
-        stableCollateralVault: stableCollateral.vault,
-        liquidatorStableCollateralTokenAccount:
-          liquidatorStableCollateralAccount,
-        nonstableCollateralMint: nonstableCollateral.mint,
-        nonstableCollateralVault: nonstableCollateral.vault,
-        liquidatorNonstableCollateralTokenAccount:
-          liquidatorNonstableCollateralAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
-  }
-
-  public async liquidateStableCollateralInstruction(
-    user: PublicKey,
-    userAccountAddress: { userPubKey: PublicKey; bump: number },
-    userAccount: User,
-    userComet: Comet,
-    tokenData: TokenData,
-    cometCollateralIndex: number
-  ): Promise<TransactionInstruction> {
-    const cometCollateral =
-      tokenData.collaterals[
-        userComet.collaterals[cometCollateralIndex].collateralIndex
-      ];
-
-    return await this.program.methods
-      .liquidateCometStableCollateral(cometCollateralIndex)
-      .accounts({
-        liquidator: this.provider.publicKey!,
-        clone: this.cloneAddress[0],
-        tokenData: this.clone!.tokenData,
-        user: user,
-        userAccount: userAccountAddress.userPubKey,
-        comet: userAccount.comet,
-        onusdMint: this.clone!.onusdMint,
-        vault: cometCollateral.vault,
-        onusdVault: tokenData.collaterals[0].vault,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
-  }
-
   public async claimLpRewardsInstruction(
     userOnusdTokenAccount: PublicKey,
     onassetTokenAccountInfo: PublicKey,
@@ -813,23 +732,23 @@ export class CloneClient {
     const userAccount = await this.getUserAccount();
     const userComet = await this.getComet();
     const tokenData = await this.getTokenData();
-    const poolIndex = Number(userComet.positions[cometPositionIndex].poolIndex)
-    const pool = tokenData.pools[poolIndex]
+    const poolIndex = Number(userComet.positions[cometPositionIndex].poolIndex);
+    const pool = tokenData.pools[poolIndex];
 
     return await this.program.methods
-    .collectLpRewards(cometPositionIndex)
-    .accounts({
-      user: this.provider.publicKey!,
-      userAccount: userPubkey,
-      clone: this.cloneAddress[0],
-      tokenData: this.clone!.tokenData,
-      comet: userAccount.comet,
-      onusdMint: this.clone!.onusdMint,
-      onassetMint: pool.assetInfo.onassetMint,
-      userOnusdTokenAccount: userOnusdTokenAccount,
-      userOnassetTokenAccount: onassetTokenAccountInfo,
-      tokenProgram: TOKEN_PROGRAM_ID,
-    })
-    .instruction();
+      .collectLpRewards(cometPositionIndex)
+      .accounts({
+        user: this.provider.publicKey!,
+        userAccount: userPubkey,
+        clone: this.cloneAddress[0],
+        tokenData: this.clone!.tokenData,
+        comet: userAccount.comet,
+        onusdMint: this.clone!.onusdMint,
+        onassetMint: pool.assetInfo.onassetMint,
+        userOnusdTokenAccount: userOnusdTokenAccount,
+        userOnassetTokenAccount: onassetTokenAccountInfo,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .instruction();
   }
 }

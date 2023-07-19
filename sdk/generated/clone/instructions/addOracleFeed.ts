@@ -5,73 +5,80 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
-import { OracleIndices, oracleIndicesBeet } from '../types/OracleIndices'
+import * as beetSolana from '@metaplex-foundation/beet-solana'
+import * as beet from '@metaplex-foundation/beet'
 
 /**
  * @category Instructions
- * @category UpdatePrices
+ * @category AddOracleFeed
  * @category generated
  */
-export type UpdatePricesInstructionArgs = {
-  indices: OracleIndices
+export type AddOracleFeedInstructionArgs = {
+  pythAddress: web3.PublicKey
 }
 /**
  * @category Instructions
- * @category UpdatePrices
+ * @category AddOracleFeed
  * @category generated
  */
-export const updatePricesStruct = new beet.BeetArgsStruct<
-  UpdatePricesInstructionArgs & {
+export const addOracleFeedStruct = new beet.BeetArgsStruct<
+  AddOracleFeedInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['indices', oracleIndicesBeet],
+    ['pythAddress', beetSolana.publicKey],
   ],
-  'UpdatePricesInstructionArgs'
+  'AddOracleFeedInstructionArgs'
 )
 /**
- * Accounts required by the _updatePrices_ instruction
+ * Accounts required by the _addOracleFeed_ instruction
  *
+ * @property [**signer**] admin
  * @property [] clone
  * @property [_writable_] tokenData
  * @category Instructions
- * @category UpdatePrices
+ * @category AddOracleFeed
  * @category generated
  */
-export type UpdatePricesInstructionAccounts = {
+export type AddOracleFeedInstructionAccounts = {
+  admin: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const updatePricesInstructionDiscriminator = [
-  62, 161, 234, 136, 106, 26, 18, 160,
+export const addOracleFeedInstructionDiscriminator = [
+  14, 65, 33, 73, 114, 220, 190, 77,
 ]
 
 /**
- * Creates a _UpdatePrices_ instruction.
+ * Creates a _AddOracleFeed_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category UpdatePrices
+ * @category AddOracleFeed
  * @category generated
  */
-export function createUpdatePricesInstruction(
-  accounts: UpdatePricesInstructionAccounts,
-  args: UpdatePricesInstructionArgs,
+export function createAddOracleFeedInstruction(
+  accounts: AddOracleFeedInstructionAccounts,
+  args: AddOracleFeedInstructionArgs,
   programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
-  const [data] = updatePricesStruct.serialize({
-    instructionDiscriminator: updatePricesInstructionDiscriminator,
+  const [data] = addOracleFeedStruct.serialize({
+    instructionDiscriminator: addOracleFeedInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
+    {
+      pubkey: accounts.admin,
+      isWritable: false,
+      isSigner: true,
+    },
     {
       pubkey: accounts.clone,
       isWritable: false,

@@ -5,8 +5,7 @@ use pyth_sdk_solana::Price;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
-
-declare_id!("DtqxkRMJQkKRuQ3y5ykysgANgFQy24bsb6TCkdeRQgKN");
+declare_id!("CS52uHyHj6yod3TCQsrhPS8SqqnvoEHNjtTLoUio5kWB");
 
 const CLONE_TOKEN_SCALE: u32 = 8;
 const USDC_TOKEN_SCALE: u8 = 7;

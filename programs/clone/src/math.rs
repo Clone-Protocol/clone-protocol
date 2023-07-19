@@ -36,9 +36,7 @@ pub fn check_mint_collateral_sufficient(
     if check_feed_update(oracle, slot).is_err() {
         return Err(error!(CloneError::OutdatedOracle));
     }
-    if (oracle.price.to_decimal() * asset_amount_borrowed * collateral_ratio)
-        > collateral_amount
-    {
+    if (oracle.price.to_decimal() * asset_amount_borrowed * collateral_ratio) > collateral_amount {
         return Err(error!(CloneError::InvalidMintCollateralRatio));
     }
     Ok(())

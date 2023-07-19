@@ -1,4 +1,3 @@
-use crate::error::*;
 use crate::math::*;
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
@@ -6,21 +5,12 @@ use std::convert::TryInto;
 
 pub const CLONE_TOKEN_SCALE: u32 = 8;
 pub const ONUSD_COLLATERAL_INDEX: usize = 0;
-#[allow(dead_code)]
 pub const USDC_COLLATERAL_INDEX: usize = 1;
 pub const PERCENT_SCALE: u8 = 2;
 pub const BPS_SCALE: u32 = 4;
 pub const NUM_POOLS: usize = 64;
 pub const NUM_COLLATERALS: usize = 16;
 pub const NUM_ORACLES: usize = 80;
-
-#[zero_copy]
-#[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
-pub struct Value {
-    // 24
-    pub val: u128,  // 16
-    pub scale: u64, // 8
-}
 
 #[zero_copy]
 #[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
@@ -82,15 +72,14 @@ pub struct LiquidationConfig {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 165,320
-    pub clone: Pubkey,                         // 32
-    pub num_pools: u64,                        // 8
-    pub num_collaterals: u64,                  // 8
-    pub pools: [Pool; NUM_POOLS],              // 255 * 504 = 128,520
-    pub collaterals: [Collateral; NUM_COLLATERALS], // 16 * 144 = 36,720
-    pub oracles: [OracleInfo; NUM_ORACLES], 
-    pub il_health_score_cutoff: RawDecimal,    // 16
-    pub il_liquidation_reward_pct: RawDecimal, // 16
+    // 25176
+    pub clone: Pubkey,                              // 32
+    pub num_pools: u64,                             // 8
+    pub num_collaterals: u64,                       // 8
+    pub num_oracles: u64,                           // 8
+    pub pools: [Pool; NUM_POOLS],                   // 64 * 504 = 17,408
+    pub collaterals: [Collateral; NUM_COLLATERALS], // 16 * 144 = 2,560
+    pub oracles: [OracleInfo; NUM_ORACLES],         // 80 * 64 = 5,120
 }
 
 impl Default for TokenData {
@@ -99,11 +88,10 @@ impl Default for TokenData {
             clone: Pubkey::default(),
             num_pools: 0,
             num_collaterals: 0,
+            num_oracles: 0,
             pools: [Pool::default(); NUM_POOLS],
             collaterals: [Collateral::default(); NUM_COLLATERALS],
             oracles: [OracleInfo::default(); NUM_ORACLES],
-            il_health_score_cutoff: RawDecimal::default(),
-            il_liquidation_reward_pct: RawDecimal::default(),
         }
     }
 }
@@ -117,21 +105,16 @@ impl TokenData {
         self.collaterals[(self.num_collaterals) as usize] = new_collateral;
         self.num_collaterals += 1;
     }
-    pub fn get_collateral_tuple(&self, collateral_vault: Pubkey) -> Result<(Collateral, usize)> {
-        for i in 0..self.num_collaterals {
-            let temp_collateral = self.collaterals[i as usize];
-            if temp_collateral.vault == collateral_vault {
-                return Ok((temp_collateral, i as usize));
-            }
-        }
-        Err(CloneError::CollateralNotFound.into())
+    pub fn append_oracle_info(&mut self, oracle_info: OracleInfo) {
+        self.oracles[(self.num_oracles) as usize] = oracle_info;
+        self.num_oracles += 1;
     }
 }
 
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct AssetInfo {
-    // 208
+    // 120
     pub onasset_mint: Pubkey,                          // 32
     pub oracle_info_index: u64,                        // 8
     pub stable_collateral_ratio: RawDecimal,           // 16
@@ -145,16 +128,16 @@ pub struct AssetInfo {
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct OracleInfo {
     // 64
-    pub pyth_address: Pubkey,                          // 32
-    pub price: RawDecimal,                             // 16
-    pub status: u64,                                   // 8
-    pub last_update_slot: u64,                         // 8
+    pub pyth_address: Pubkey,  // 32
+    pub price: RawDecimal,     // 16
+    pub status: u64,           // 8
+    pub last_update_slot: u64, // 8
 }
 
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct Pool {
-    // 504
+    // 272
     pub underlying_asset_token_account: Pubkey,      // 32
     pub committed_onusd_liquidity: RawDecimal,       // 16
     pub onusd_ild: RawDecimal,                       // 16
@@ -163,7 +146,7 @@ pub struct Pool {
     pub liquidity_trading_fee: RawDecimal,           // 16
     pub total_minted_amount: RawDecimal,             // 16
     pub supplied_mint_collateral_amount: RawDecimal, // 16
-    pub asset_info: AssetInfo,                       // 224
+    pub asset_info: AssetInfo,                       // 120
     pub deprecated: u64,                             // 8
 }
 
@@ -216,10 +199,8 @@ impl Pool {
                 output_before_fees * liquidity_trading_fee,
                 CLONE_TOKEN_SCALE,
             );
-            let treasury_fees_paid = rescale_toward_zero(
-                output_before_fees * treasury_trading_fee,
-                CLONE_TOKEN_SCALE,
-            );
+            let treasury_fees_paid =
+                rescale_toward_zero(output_before_fees * treasury_trading_fee, CLONE_TOKEN_SCALE);
             let result = rescale_toward_zero(
                 output_before_fees - liquidity_fees_paid - treasury_fees_paid,
                 CLONE_TOKEN_SCALE,
@@ -247,10 +228,8 @@ impl Pool {
                 output_before_fees * liquidity_trading_fee,
                 CLONE_TOKEN_SCALE,
             );
-            let treasury_fees_paid = rescale_toward_zero(
-                output_before_fees * treasury_trading_fee,
-                CLONE_TOKEN_SCALE,
-            );
+            let treasury_fees_paid =
+                rescale_toward_zero(output_before_fees * treasury_trading_fee, CLONE_TOKEN_SCALE);
             SwapSummary {
                 result,
                 liquidity_fees_paid,
@@ -329,13 +308,13 @@ pub struct Collateral {
     pub vault_comet_supply: RawDecimal,      // 16
     pub stable: u64,                         // 8
     pub collateralization_ratio: RawDecimal, // 16
-    pub liquidation_discount: RawDecimal, // 16
+    pub liquidation_discount: RawDecimal,    // 16
 }
 
 #[account]
 #[derive(Default)]
 pub struct User {
-    // 129
+    // 97
     pub authority: Pubkey,        // 32
     pub borrow_positions: Pubkey, // 32
     pub comet: Pubkey,            // 32
@@ -345,10 +324,10 @@ pub struct User {
 #[account(zero_copy)]
 pub struct Comet {
     // 46,976
-    pub owner: Pubkey,                       // 32
-    pub num_positions: u64,                  // 8
-    pub num_collaterals: u64,                // 8
-    pub positions: [CometPosition; NUM_POOLS],     // 255 * 120 = 30,600
+    pub owner: Pubkey,                                   // 32
+    pub num_positions: u64,                              // 8
+    pub num_collaterals: u64,                            // 8
+    pub positions: [CometPosition; NUM_POOLS],           // 255 * 120 = 30,600
     pub collaterals: [CometCollateral; NUM_COLLATERALS], // 255 * 64 = 16,320
 }
 
@@ -379,36 +358,6 @@ impl Comet {
         };
         self.num_collaterals -= 1;
     }
-    pub fn get_collateral_index(&self, collateral_index: u8) -> usize {
-        let mut index: usize = usize::MAX;
-        for i in 0..self.num_collaterals {
-            let temp_collateral = self.collaterals[i as usize];
-            if temp_collateral.collateral_index == collateral_index as u64 {
-                index = i as usize;
-                break;
-            }
-        }
-        index
-    }
-    pub fn get_pool_index(&self, pool_index: u8) -> usize {
-        let mut index: usize = usize::MAX;
-        for i in 0..self.num_positions {
-            let temp_position = self.positions[i as usize];
-            if temp_position.pool_index == pool_index as u64 {
-                index = i as usize;
-                break;
-            }
-        }
-        index
-    }
-    // TODO: update to work with nonstables
-    pub fn get_total_collateral_amount(&self) -> Decimal {
-        let mut sum = Decimal::new(0, CLONE_TOKEN_SCALE);
-        for i in 0..self.num_collaterals {
-            sum += self.collaterals[i as usize].collateral_amount.to_decimal();
-        }
-        sum
-    }
     pub fn add_collateral(&mut self, new_collateral: CometCollateral) {
         self.collaterals[(self.num_collaterals) as usize] = new_collateral;
         self.num_collaterals += 1;
@@ -417,7 +366,6 @@ impl Comet {
         self.positions[(self.num_positions) as usize] = new_pool;
         self.num_positions += 1;
     }
-
     pub fn calculate_effective_collateral_value(&self, token_data: &TokenData) -> Decimal {
         let mut total_value = Decimal::new(0, CLONE_TOKEN_SCALE);
 
@@ -432,11 +380,10 @@ impl Comet {
                     let oracle = token_data.oracles[collateral.oracle_info_index as usize];
                     comet_collateral.collateral_amount.to_decimal()
                         * oracle.price.to_decimal()
-                        / collateral.collateralization_ratio.to_decimal()
+                        * collateral.collateralization_ratio.to_decimal()
                 };
                 total_value += collateral_value;
             });
-
         total_value
     }
 }

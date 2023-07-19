@@ -8,12 +8,11 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(comet_position_index: u8, amount: u64, pay_onusd_debt: bool)]
+#[instruction(user: Pubkey, comet_position_index: u8, amount: u64, pay_onusd_debt: bool)]
 pub struct PayImpermanentLossDebt<'info> {
-    #[account(address = comet.load()?.owner)]
-    pub user: Signer<'info>,
+    pub payer: Signer<'info>,
     #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
+        seeds = [b"user".as_ref(), user.as_ref()],
         bump = user_account.bump,
     )]
     pub user_account: Account<'info, User>,
@@ -30,7 +29,8 @@ pub struct PayImpermanentLossDebt<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        constraint = comet.to_account_info().key() == user_account.comet @ CloneError::InvalidAccountLoaderOwner,
+        address = user_account.comet,
+        constraint = comet.load()?.owner == user @ CloneError::InvalidAccountLoaderOwner,
         constraint = comet.load()?.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
     )]
     pub comet: AccountLoader<'info, Comet>,
@@ -46,21 +46,22 @@ pub struct PayImpermanentLossDebt<'info> {
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        associated_token::authority = user,
+        associated_token::authority = payer,
         associated_token::mint = onusd_mint,
     )]
-    pub user_onusd_token_account: Box<Account<'info, TokenAccount>>,
+    pub payer_onusd_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        associated_token::authority = user,
+        associated_token::authority = payer,
         associated_token::mint = onasset_mint,
     )]
-    pub user_onasset_token_account: Box<Account<'info, TokenAccount>>,
+    pub payer_onasset_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 
 pub fn execute(
     ctx: Context<PayImpermanentLossDebt>,
+    _user: Pubkey,
     comet_position_index: u8,
     amount: u64,
     pay_onusd_debt: bool,
@@ -92,10 +93,10 @@ pub fn execute(
                 mint: ctx.accounts.onusd_mint.to_account_info().clone(),
                 from: ctx
                     .accounts
-                    .user_onusd_token_account
+                    .payer_onusd_token_account
                     .to_account_info()
                     .clone(),
-                authority: ctx.accounts.user.to_account_info().clone(),
+                authority: ctx.accounts.payer.to_account_info().clone(),
             },
             burn_amount,
         )
@@ -109,10 +110,10 @@ pub fn execute(
                 mint: ctx.accounts.onasset_mint.to_account_info().clone(),
                 from: ctx
                     .accounts
-                    .user_onasset_token_account
+                    .payer_onasset_token_account
                     .to_account_info()
                     .clone(),
-                authority: ctx.accounts.user.to_account_info().clone(),
+                authority: ctx.accounts.payer.to_account_info().clone(),
             },
             burn_amount,
         )

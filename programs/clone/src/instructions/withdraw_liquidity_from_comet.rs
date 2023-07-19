@@ -60,9 +60,8 @@ pub fn withdraw_liquidity(
         CloneError::PoolEmpty
     );
 
-    let onusd_value_to_withdraw =
-        Decimal::new(onusd_amount.try_into().unwrap(), CLONE_TOKEN_SCALE)
-            .min(position_committed_onusd);
+    let onusd_value_to_withdraw = Decimal::new(onusd_amount.try_into().unwrap(), CLONE_TOKEN_SCALE)
+        .min(position_committed_onusd);
 
     let proportional_value = onusd_value_to_withdraw / total_committed_onusd_liquidity;
 

@@ -16,15 +16,16 @@ export const getEffectiveUSDCollateralValue = (
   comet.collaterals
     .slice(0, Number(comet.numCollaterals))
     .forEach((cometCollateral) => {
-      const collateral = tokenData.collaterals[Number(cometCollateral.collateralIndex)];
+      const collateral =
+        tokenData.collaterals[Number(cometCollateral.collateralIndex)];
       if (Number(collateral.stable) === 1) {
         effectiveUSDCollateral += toNumber(cometCollateral.collateralAmount);
       } else {
-        const pool = tokenData.pools[Number(collateral.poolIndex)];
-        const oraclePrice = toNumber(pool.assetInfo.price);
+        const oracle = tokenData.oracles[Number(collateral.oracleInfoIndex)];
+        const oraclePrice = toNumber(oracle.price);
         effectiveUSDCollateral +=
           (oraclePrice * toNumber(cometCollateral.collateralAmount)) /
-          toNumber(pool.assetInfo.cryptoCollateralRatio);
+          toNumber(collateral.collateralizationRatio);
       }
     });
 
@@ -33,7 +34,8 @@ export const getEffectiveUSDCollateralValue = (
 
 export const getHealthScore = (
   tokenData: TokenData | SolitaTokenData,
-  comet: Comet | SolitaComet
+  comet: Comet | SolitaComet,
+  oraclePrices?: number[]
 ): {
   healthScore: number;
   ildHealthImpact: number;
@@ -42,7 +44,7 @@ export const getHealthScore = (
     tokenData,
     comet
   );
-  const positionILD = getILD(tokenData, comet);
+  const positionILD = getILD(tokenData, comet, oraclePrices);
   let totalIldHealthImpact = 0;
 
   const loss =
@@ -80,7 +82,8 @@ export const getHealthScore = (
 
 export const getILD = (
   tokenData: TokenData | SolitaTokenData,
-  comet: Comet | SolitaComet
+  comet: Comet | SolitaComet,
+  oraclePrices?: number[]
 ): {
   onAssetILD: number;
   onusdILD: number;
@@ -97,6 +100,7 @@ export const getILD = (
   comet.positions.slice(0, Number(comet.numPositions)).forEach((position) => {
     const pool = tokenData.pools[Number(position.poolIndex)];
     const poolCommittedOnusd = toNumber(pool.committedOnusdLiquidity);
+    const oracle = tokenData.oracles[pool.assetInfo.oracleInfoIndex];
 
     const L =
       poolCommittedOnusd > 0
@@ -106,11 +110,12 @@ export const getILD = (
       L * toNumber(pool.onusdIld) - toNumber(position.onusdIldRebate);
     const onAssetILD =
       L * toNumber(pool.onassetIld) - toNumber(position.onassetIldRebate);
-    const oraclePrice = toNumber(pool.assetInfo.price);
     results.push({
       onAssetILD,
       onusdILD,
-      oraclePrice,
+      oraclePrice: oraclePrices
+        ? oraclePrices[pool.assetInfo.oracleInfoIndex]
+        : toNumber(oracle.price),
       poolIndex: Number(position.poolIndex),
     });
   });

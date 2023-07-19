@@ -22,7 +22,7 @@ export type InitializePoolInstructionArgs = {
   ilHealthScoreCoefficient: beet.bignum
   positionHealthScoreCoefficient: beet.bignum
   liquidationDiscountRate: beet.bignum
-  maxOwnershipPct: beet.bignum
+  oracleInfoIndex: number
 }
 /**
  * @category Instructions
@@ -43,7 +43,7 @@ export const initializePoolStruct = new beet.BeetArgsStruct<
     ['ilHealthScoreCoefficient', beet.u64],
     ['positionHealthScoreCoefficient', beet.u64],
     ['liquidationDiscountRate', beet.u64],
-    ['maxOwnershipPct', beet.u64],
+    ['oracleInfoIndex', beet.u8],
   ],
   'InitializePoolInstructionArgs'
 )
@@ -61,7 +61,6 @@ export const initializePoolStruct = new beet.BeetArgsStruct<
  * @property [_writable_, **signer**] underlyingAssetTokenAccount
  * @property [_writable_, **signer**] liquidityTokenMint
  * @property [_writable_, **signer**] cometLiquidityTokenAccount
- * @property [] pythOracle
  * @category Instructions
  * @category InitializePool
  * @category generated
@@ -78,7 +77,6 @@ export type InitializePoolInstructionAccounts = {
   underlyingAssetTokenAccount: web3.PublicKey
   liquidityTokenMint: web3.PublicKey
   cometLiquidityTokenAccount: web3.PublicKey
-  pythOracle: web3.PublicKey
   rent?: web3.PublicKey
   tokenProgram?: web3.PublicKey
   systemProgram?: web3.PublicKey
@@ -102,7 +100,7 @@ export const initializePoolInstructionDiscriminator = [
 export function createInitializePoolInstruction(
   accounts: InitializePoolInstructionAccounts,
   args: InitializePoolInstructionArgs,
-  programId = new web3.PublicKey('GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA')
+  programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
   const [data] = initializePoolStruct.serialize({
     instructionDiscriminator: initializePoolInstructionDiscriminator,
@@ -163,11 +161,6 @@ export function createInitializePoolInstruction(
       pubkey: accounts.cometLiquidityTokenAccount,
       isWritable: true,
       isSigner: true,
-    },
-    {
-      pubkey: accounts.pythOracle,
-      isWritable: false,
-      isSigner: false,
     },
     {
       pubkey: accounts.rent ?? web3.SYSVAR_RENT_PUBKEY,

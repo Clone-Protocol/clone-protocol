@@ -8,8 +8,6 @@ use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(
-    il_health_score_cutoff: u64,
-    il_liquidation_reward_pct: u64,
     max_health_liquidation: u64,
     liquidator_fee: u64,
     treasury_address: Pubkey,
@@ -58,8 +56,6 @@ pub struct InitializeClone<'info> {
 #[allow(clippy::too_many_arguments)]
 pub fn execute(
     ctx: Context<InitializeClone>,
-    il_health_score_cutoff: u64,
-    il_liquidation_reward_pct: u64,
     max_health_liquidation: u64,
     liquidator_fee: u64,
     treasury_address: Pubkey,
@@ -90,7 +86,7 @@ pub fn execute(
         vault_comet_supply: RawDecimal::new(0, CLONE_TOKEN_SCALE),
         collateralization_ratio: RawDecimal::from(Decimal::one()),
         stable: 1,
-        liquidation_discount: RawDecimal::new(0, CLONE_TOKEN_SCALE)
+        liquidation_discount: RawDecimal::new(0, CLONE_TOKEN_SCALE),
     });
     // add usdc as second collateral type
     let usdc_scale = ctx.accounts.usdc_mint.decimals;
@@ -103,19 +99,11 @@ pub fn execute(
         vault_comet_supply: RawDecimal::new(0, usdc_scale.into()),
         collateralization_ratio: RawDecimal::from(Decimal::one()),
         stable: 1,
-        liquidation_discount: RawDecimal::new(0, usdc_scale.into())
+        liquidation_discount: RawDecimal::new(0, usdc_scale.into()),
     });
 
     // set token data
     token_data.clone = *ctx.accounts.clone.to_account_info().key;
-    token_data.il_health_score_cutoff = RawDecimal::new(
-        il_health_score_cutoff.try_into().unwrap(),
-        CLONE_TOKEN_SCALE,
-    );
-    token_data.il_liquidation_reward_pct = RawDecimal::new(
-        il_liquidation_reward_pct.try_into().unwrap(),
-        CLONE_TOKEN_SCALE,
-    );
 
     Ok(())
 }

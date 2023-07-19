@@ -60,19 +60,20 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, onusd_amount: 
     );
 
     // find the index of the position within the comet position
-    let comet_position_index = comet.get_pool_index(pool_index);
+    let mut comet_position_index: Option<usize> = None;
+    for (i, pos) in comet.positions[..comet.num_positions as usize]
+        .iter()
+        .enumerate()
+    {
+        if pos.pool_index == (pool_index as u64) {
+            comet_position_index = Some(i);
+            break;
+        }
+    }
 
     // check to see if a new position must be added to the position
-    if comet_position_index == usize::MAX {
-        comet.add_position(CometPosition {
-            authority: *ctx.accounts.user.to_account_info().key,
-            pool_index: pool_index as u64,
-            committed_onusd_liquidity: RawDecimal::from(onusd_liquidity_value),
-            onusd_ild_rebate: RawDecimal::from(onusd_ild),
-            onasset_ild_rebate: RawDecimal::from(onasset_ild),
-        });
-    } else {
-        let position = comet.positions[comet_position_index];
+    if let Some(position_index) = comet_position_index {
+        let position = comet.positions[position_index];
         let committed_onusd_liquidity = rescale_toward_zero(
             position.committed_onusd_liquidity.to_decimal() + onusd_liquidity_value,
             CLONE_TOKEN_SCALE,
@@ -86,11 +87,18 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, onusd_amount: 
             CLONE_TOKEN_SCALE,
         );
         // update comet position data
-        comet.positions[comet_position_index].committed_onusd_liquidity =
+        comet.positions[position_index].committed_onusd_liquidity =
             RawDecimal::from(committed_onusd_liquidity);
-        comet.positions[comet_position_index].onusd_ild_rebate = RawDecimal::from(onusd_ild_rebate);
-        comet.positions[comet_position_index].onasset_ild_rebate =
-            RawDecimal::from(onasset_ild_rebate);
+        comet.positions[position_index].onusd_ild_rebate = RawDecimal::from(onusd_ild_rebate);
+        comet.positions[position_index].onasset_ild_rebate = RawDecimal::from(onasset_ild_rebate);
+    } else {
+        comet.add_position(CometPosition {
+            authority: *ctx.accounts.user.to_account_info().key,
+            pool_index: pool_index as u64,
+            committed_onusd_liquidity: RawDecimal::from(onusd_liquidity_value),
+            onusd_ild_rebate: RawDecimal::from(onusd_ild),
+            onasset_ild_rebate: RawDecimal::from(onasset_ild),
+        });
     }
 
     // Update pool

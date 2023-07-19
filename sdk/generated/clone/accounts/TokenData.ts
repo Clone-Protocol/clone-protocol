@@ -10,7 +10,7 @@ import * as beet from '@metaplex-foundation/beet'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
 import { Pool, poolBeet } from '../types/Pool'
 import { Collateral, collateralBeet } from '../types/Collateral'
-import { RawDecimal, rawDecimalBeet } from '../types/RawDecimal'
+import { OracleInfo, oracleInfoBeet } from '../types/OracleInfo'
 
 /**
  * Arguments used to create {@link TokenData}
@@ -21,10 +21,10 @@ export type TokenDataArgs = {
   clone: web3.PublicKey
   numPools: beet.bignum
   numCollaterals: beet.bignum
-  pools: Pool[] /* size: 255 */
-  collaterals: Collateral[] /* size: 255 */
-  ilHealthScoreCutoff: RawDecimal
-  ilLiquidationRewardPct: RawDecimal
+  numOracles: beet.bignum
+  pools: Pool[] /* size: 64 */
+  collaterals: Collateral[] /* size: 16 */
+  oracles: OracleInfo[] /* size: 80 */
 }
 
 export const tokenDataDiscriminator = [10, 136, 199, 13, 59, 103, 129, 70]
@@ -40,10 +40,10 @@ export class TokenData implements TokenDataArgs {
     readonly clone: web3.PublicKey,
     readonly numPools: beet.bignum,
     readonly numCollaterals: beet.bignum,
-    readonly pools: Pool[] /* size: 255 */,
-    readonly collaterals: Collateral[] /* size: 255 */,
-    readonly ilHealthScoreCutoff: RawDecimal,
-    readonly ilLiquidationRewardPct: RawDecimal
+    readonly numOracles: beet.bignum,
+    readonly pools: Pool[] /* size: 64 */,
+    readonly collaterals: Collateral[] /* size: 16 */,
+    readonly oracles: OracleInfo[] /* size: 80 */
   ) {}
 
   /**
@@ -54,10 +54,10 @@ export class TokenData implements TokenDataArgs {
       args.clone,
       args.numPools,
       args.numCollaterals,
+      args.numOracles,
       args.pools,
       args.collaterals,
-      args.ilHealthScoreCutoff,
-      args.ilLiquidationRewardPct
+      args.oracles
     )
   }
 
@@ -101,7 +101,7 @@ export class TokenData implements TokenDataArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      'GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA'
+      'F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, tokenDataBeet)
@@ -187,10 +187,20 @@ export class TokenData implements TokenDataArgs {
         }
         return x
       })(),
+      numOracles: (() => {
+        const x = <{ toNumber: () => number }>this.numOracles
+        if (typeof x.toNumber === 'function') {
+          try {
+            return x.toNumber()
+          } catch (_) {
+            return x
+          }
+        }
+        return x
+      })(),
       pools: this.pools,
       collaterals: this.collaterals,
-      ilHealthScoreCutoff: this.ilHealthScoreCutoff,
-      ilLiquidationRewardPct: this.ilLiquidationRewardPct,
+      oracles: this.oracles,
     }
   }
 }
@@ -210,10 +220,10 @@ export const tokenDataBeet = new beet.BeetStruct<
     ['clone', beetSolana.publicKey],
     ['numPools', beet.u64],
     ['numCollaterals', beet.u64],
-    ['pools', beet.uniformFixedSizeArray(poolBeet, 255)],
-    ['collaterals', beet.uniformFixedSizeArray(collateralBeet, 255)],
-    ['ilHealthScoreCutoff', rawDecimalBeet],
-    ['ilLiquidationRewardPct', rawDecimalBeet],
+    ['numOracles', beet.u64],
+    ['pools', beet.uniformFixedSizeArray(poolBeet, 64)],
+    ['collaterals', beet.uniformFixedSizeArray(collateralBeet, 16)],
+    ['oracles', beet.uniformFixedSizeArray(oracleInfoBeet, 80)],
   ],
   TokenData.fromArgs,
   'TokenData'

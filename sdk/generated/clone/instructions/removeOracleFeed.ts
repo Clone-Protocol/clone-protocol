@@ -7,71 +7,77 @@
 
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
-import { OracleIndices, oracleIndicesBeet } from '../types/OracleIndices'
 
 /**
  * @category Instructions
- * @category UpdatePrices
+ * @category RemoveOracleFeed
  * @category generated
  */
-export type UpdatePricesInstructionArgs = {
-  indices: OracleIndices
+export type RemoveOracleFeedInstructionArgs = {
+  index: number
 }
 /**
  * @category Instructions
- * @category UpdatePrices
+ * @category RemoveOracleFeed
  * @category generated
  */
-export const updatePricesStruct = new beet.BeetArgsStruct<
-  UpdatePricesInstructionArgs & {
+export const removeOracleFeedStruct = new beet.BeetArgsStruct<
+  RemoveOracleFeedInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['indices', oracleIndicesBeet],
+    ['index', beet.u8],
   ],
-  'UpdatePricesInstructionArgs'
+  'RemoveOracleFeedInstructionArgs'
 )
 /**
- * Accounts required by the _updatePrices_ instruction
+ * Accounts required by the _removeOracleFeed_ instruction
  *
+ * @property [**signer**] admin
  * @property [] clone
  * @property [_writable_] tokenData
  * @category Instructions
- * @category UpdatePrices
+ * @category RemoveOracleFeed
  * @category generated
  */
-export type UpdatePricesInstructionAccounts = {
+export type RemoveOracleFeedInstructionAccounts = {
+  admin: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const updatePricesInstructionDiscriminator = [
-  62, 161, 234, 136, 106, 26, 18, 160,
+export const removeOracleFeedInstructionDiscriminator = [
+  251, 233, 30, 162, 136, 146, 120, 56,
 ]
 
 /**
- * Creates a _UpdatePrices_ instruction.
+ * Creates a _RemoveOracleFeed_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category UpdatePrices
+ * @category RemoveOracleFeed
  * @category generated
  */
-export function createUpdatePricesInstruction(
-  accounts: UpdatePricesInstructionAccounts,
-  args: UpdatePricesInstructionArgs,
+export function createRemoveOracleFeedInstruction(
+  accounts: RemoveOracleFeedInstructionAccounts,
+  args: RemoveOracleFeedInstructionArgs,
   programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
-  const [data] = updatePricesStruct.serialize({
-    instructionDiscriminator: updatePricesInstructionDiscriminator,
+  const [data] = removeOracleFeedStruct.serialize({
+    instructionDiscriminator: removeOracleFeedInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
+    {
+      pubkey: accounts.admin,
+      isWritable: false,
+      isSigner: true,
+    },
     {
       pubkey: accounts.clone,
       isWritable: false,
