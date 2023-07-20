@@ -70,6 +70,7 @@ pub fn execute(
             collateralization_ratio.try_into().unwrap(),
             DEVNET_TOKEN_SCALE,
         ),
+        status: 0
     });
 
     Ok(())

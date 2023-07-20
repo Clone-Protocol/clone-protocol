@@ -118,7 +118,7 @@ pub fn execute(
         asset_info: AssetInfo {
             ..Default::default()
         },
-        deprecated: 0,
+        status: 0,
         committed_onusd_liquidity: RawDecimal::default(),
         onusd_ild: RawDecimal::default(),
         onasset_ild: RawDecimal::default(),

@@ -26,6 +26,7 @@ pub struct BorrowMore<'info> {
     #[account(
         mut,
         has_one = clone,
+        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].status == Status::Active as u8 @ CloneError::PoolStatusPreventsAction,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -37,8 +38,7 @@ pub struct BorrowMore<'info> {
     #[account(
         mut,
         address = user_account.borrow_positions,
-        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ CloneError::InvalidInputPositionIndex,
-        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].deprecated == 0 @ CloneError::PoolDeprecated
+        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ CloneError::InvalidInputPositionIndex
     )]
     pub borrow_positions: AccountLoader<'info, BorrowPositions>,
     #[account(

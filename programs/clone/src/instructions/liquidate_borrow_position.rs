@@ -18,7 +18,8 @@ pub struct LiquidateBorrowPosition<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone
+        has_one = clone,
+        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u8 @ CloneError::PoolStatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     /// CHECK: Only used for address validation.
@@ -40,8 +41,7 @@ pub struct LiquidateBorrowPosition<'info> {
     #[account(
         mut,
         owner = *user_account.to_account_info().owner,
-        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ CloneError::InvalidInputPositionIndex,
-        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].deprecated == 0 @ CloneError::PoolDeprecated
+        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ CloneError::InvalidInputPositionIndex
     )]
     pub borrow_positions: AccountLoader<'info, BorrowPositions>,
     #[account(
@@ -86,17 +86,19 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Resul
     let borrowed_onasset = mint_position.borrowed_onasset.to_decimal();
     let collateral_amount_value = mint_position.collateral_amount.to_decimal();
 
-    // Should fail here.
-    if check_mint_collateral_sufficient(
-        pool.asset_info,
-        borrowed_onasset,
-        pool.asset_info.stable_collateral_ratio.to_decimal(),
-        collateral_amount_value,
-        slot,
-    )
-    .is_ok()
-    {
-        return Err(CloneError::MintPositionUnableToLiquidate.into());
+
+    if !(token_data.pools[mint_position.pool_index as usize].status == Status::Liquidation as u8) {
+        if check_mint_collateral_sufficient(
+            pool.asset_info,
+            borrowed_onasset,
+            pool.asset_info.stable_collateral_ratio.to_decimal(),
+            collateral_amount_value,
+            slot,
+        )
+        .is_ok()
+        {
+            return Err(CloneError::BorrowPositionUnableToLiquidate.into());
+        }
     }
 
     // Burn the onAsset from the liquidator

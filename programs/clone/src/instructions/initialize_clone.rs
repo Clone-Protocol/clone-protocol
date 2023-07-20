@@ -90,6 +90,7 @@ pub fn execute(
         vault_comet_supply: RawDecimal::new(0, DEVNET_TOKEN_SCALE),
         collateralization_ratio: RawDecimal::from(Decimal::one()),
         stable: 1,
+        status: 0,
     });
     // add usdc as second collateral type
     let usdc_scale = ctx.accounts.usdc_mint.decimals;
@@ -102,6 +103,7 @@ pub fn execute(
         vault_comet_supply: RawDecimal::new(0, usdc_scale.into()),
         collateralization_ratio: RawDecimal::from(Decimal::one()),
         stable: 1,
+        status: 0,
     });
 
     // set token data

@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum PoolParameters {
+    Status { value: u8 },
     TreasuryTradingFee { value: RawDecimal },
     LiquidityTradingFee { value: RawDecimal },
     PythAddress { address: Pubkey },
@@ -20,8 +21,7 @@ pub enum PoolParameters {
     params: PoolParameters
 )]
 pub struct UpdatePoolParameters<'info> {
-    #[account(address = clone.admin)]
-    pub admin: Signer<'info>,
+    pub auth: Signer<'info>,
     #[account(
         mut,
         seeds = [b"clone".as_ref()],
@@ -46,7 +46,32 @@ pub fn execute(
 
     let pool = &mut token_data.pools[index as usize];
 
+    let is_admin = *ctx.accounts.auth.key == ctx.accounts.clone.admin;
+    let is_auth = ctx
+        .accounts
+        .clone
+        .auth
+        .iter()
+        .any(|auth| *auth == *ctx.accounts.auth.key);
+
+    if !is_admin && !is_auth {
+        return Err(error!(CloneError::Unauthorized));
+    }
+
     match params {
+        PoolParameters::Status { value } => {
+            // Only allow auth users to change the status to 'Frozen'
+            if !is_admin && value != Status::Frozen as u8 {
+                return Err(error!(CloneError::Unauthorized));
+            }
+            if value > Status::Deprecation as u8 {
+                return Err(error!(CloneError::InvalidStatus));
+            }
+            pool.status = value;
+            if !is_admin {
+                return Ok(());
+            }
+        }
         PoolParameters::TreasuryTradingFee { value } => {
             pool.treasury_trading_fee = value;
         }

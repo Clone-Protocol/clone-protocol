@@ -26,7 +26,8 @@ pub struct AddCollateralToComet<'info> {
     #[account(
         mut,
         has_one = clone,
-        constraint = (collateral_index as u64) < token_data.load()?.num_collaterals @ CloneError::InvalidInputPositionIndex
+        constraint = (collateral_index as u64) < token_data.load()?.num_collaterals @ CloneError::InvalidInputPositionIndex,
+        constraint = token_data.load()?.collaterals[collateral_index as usize].status == Status::Active as u8 @ CloneError::PoolStatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(

@@ -26,7 +26,8 @@ pub struct PayBorrowDebt<'info> {
     pub clone: Account<'info, Clone>,
     #[account(
         mut,
-        has_one = clone
+        has_one = clone,
+        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u8 @ CloneError::PoolStatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(

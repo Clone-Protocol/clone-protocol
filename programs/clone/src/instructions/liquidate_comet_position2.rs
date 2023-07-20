@@ -9,7 +9,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(comet_position_index: u8, amount: u64, pay_onusd_debt: bool)]
+#[instruction(comet_position_index: u8, comet_collateral_index: u8, amount: u64, pay_onusd_debt: bool)]
 pub struct LiquidateCometPosition<'info> {
     pub liquidator: Signer<'info>,
     /// CHECK: Only used for address validation.
@@ -30,14 +30,15 @@ pub struct LiquidateCometPosition<'info> {
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
-        has_one = clone
+        has_one = clone,
+        constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Liquidation as u8 @ CloneError::PoolStatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
         constraint = comet.to_account_info().key() == user_account.comet @ CloneError::InvalidAccountLoaderOwner,
         constraint = comet.load()?.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex,
-        constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].deprecated == 0 @ CloneError::PoolDeprecated
+        constraint =  comet.load()?.num_collaterals > comet_collateral_index.into() @ CloneError::InvalidInputPositionIndex
     )]
     pub comet: AccountLoader<'info, Comet>,
     #[account(
@@ -64,15 +65,22 @@ pub struct LiquidateCometPosition<'info> {
     pub liquidator_onasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.collaterals[ONUSD_COLLATERAL_INDEX].vault,
+        associated_token::authority = liquidator,
+        associated_token::mint = vault.mint,
+    )]
+    pub liquidator_collateral_token_account: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
+        address = token_data.load()?.collaterals[comet.load()?.collaterals[comet_collateral_index as usize].collateral_index as usize].vault,
    )]
-    pub onusd_vault: Box<Account<'info, TokenAccount>>,
+    pub vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 
 pub fn execute(
     ctx: Context<LiquidateCometPosition>,
     comet_position_index: u8,
+    comet_collateral_index: u8,
     amount: u64,
     pay_onusd_debt: bool,
 ) -> Result<()> {
@@ -81,38 +89,63 @@ pub fn execute(
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let comet = &mut ctx.accounts.comet.load_mut()?;
 
-    let starting_health_score = calculate_health_score(&comet, &token_data)?;
-
-    return_error_if_false!(
-        !starting_health_score.is_healthy(),
-        CloneError::NotSubjectToLiquidation
-    );
-
-    // Check that they only have onUSD collateral.
-    for i in 1..comet.num_collaterals as usize {
-        return_error_if_false!(
-            comet.collaterals[i]
-                .collateral_amount
-                .to_decimal()
-                .is_zero(),
-            CloneError::RequireOnlyonUSDCollateral
-        );
-    }
-
     let comet_position = comet.positions[comet_position_index as usize];
+    let comet_collateral = comet.collaterals[comet_collateral_index as usize];
     let authorized_amount = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
     let ild_share = calculate_ild_share(&comet_position, &token_data);
     let pool_index = comet_position.pool_index as usize;
     let pool = token_data.pools[pool_index];
+    let collateral_index = comet_collateral.collateral_index as usize;
+    let collateral = token_data.collaterals[collateral_index];
+    let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
     let onusd_ild_rebate = comet_position.onusd_ild_rebate.to_decimal();
     let onasset_ild_rebate = comet_position.onasset_ild_rebate.to_decimal();
 
-    // Calculate how much ILD to pay off
+    return_error_if_false!(
+        check_feed_update(pool.asset_info, Clock::get()?.slot).is_ok(),
+        CloneError::OutdatedOracle
+    );
+
+    let mut burn_amount = ild_share.onusd_ild_share.min(authorized_amount);
+
+    // calculate reward for liquidator
+    let collateral_reward = rescale_toward_zero(
+        Decimal::one()
+            + ctx
+                .accounts
+                .clone
+                .liquidation_config
+                .liquidator_fee
+                .to_decimal()
+                * if pay_onusd_debt {
+                    burn_amount
+                } else {
+                    burn_amount * pool.asset_info.price.to_decimal()
+                }
+                / collateral.PRICE,
+        collateral_scale,
+    );
+
+    if collateral_reward > comet_collateral.collateral_amount.to_decimal() {
+        burn_amount = comet_collateral.collateral_amount.to_decimal()
+            * ctx
+                .accounts
+                .clone
+                .liquidation_config
+                .liquidator_fee
+                .to_decimal()
+            / if pay_onusd_debt {
+                Decimal::one()
+            } else {
+                pool.asset_info.price.to_decimal()
+            }
+            * collateral.PRICE;
+    }
+
     if (pay_onusd_debt && ild_share.onusd_ild_share > Decimal::ZERO)
         || (!pay_onusd_debt && ild_share.onasset_ild_share > Decimal::ZERO)
     {
         let (cpi_accounts, burn_amount) = if pay_onusd_debt {
-            let burn_amount = ild_share.onusd_ild_share.min(authorized_amount);
             comet.positions[comet_position_index as usize].onusd_ild_rebate = RawDecimal::from(
                 rescale_toward_zero(onusd_ild_rebate + burn_amount, DEVNET_TOKEN_SCALE),
             );
@@ -129,7 +162,18 @@ pub fn execute(
                 burn_amount,
             )
         } else {
-            let burn_amount = ild_share.onasset_ild_share.min(authorized_amount);
+            if collateral_reward > comet_collateral.collateral_amount.to_decimal() {
+                burn_amount = (comet_collateral.collateral_amount.to_decimal()
+                    / (Decimal::one()
+                        + ctx
+                            .accounts
+                            .clone
+                            .liquidation_config
+                            .liquidator_fee
+                            .to_decimal()))
+                    * collateral.PRICE;
+            }
+
             comet.positions[comet_position_index as usize].onasset_ild_rebate = RawDecimal::from(
                 rescale_toward_zero(onasset_ild_rebate + burn_amount, DEVNET_TOKEN_SCALE),
             );
@@ -152,63 +196,40 @@ pub fn execute(
             burn_amount.mantissa().try_into().unwrap(),
         )?;
 
-        // Reward liquidator
-        let onusd_reward = rescale_toward_zero(
-            Decimal::one()
-                + ctx
-                    .accounts
-                    .clone
-                    .liquidation_config
-                    .liquidator_fee
-                    .to_decimal()
-                    * if pay_onusd_debt {
-                        burn_amount
-                    } else {
-                        burn_amount * pool.asset_info.price.to_decimal()
-                    },
-            DEVNET_TOKEN_SCALE,
+        // subtract collateral amount from vault supply
+        let vault_comet_supply = rescale_toward_zero(
+            collateral.vault_comet_supply.to_decimal() - collateral_reward,
+            collateral_scale,
         );
+        token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
+            RawDecimal::from(vault_comet_supply);
 
-        // Mint onusd to liquidator
-        let cpi_accounts = MintTo {
-            mint: ctx.accounts.onusd_mint.to_account_info().clone(),
+        // Transfer collateral to liquidator
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.vault.to_account_info().clone(),
             to: ctx
                 .accounts
-                .liquidator_onusd_token_account
+                .liquidator_collateral_token_account
                 .to_account_info()
                 .clone(),
             authority: ctx.accounts.clone.to_account_info().clone(),
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();
-        token::mint_to(
+        token::transfer(
             CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
-            onusd_reward.mantissa().try_into().unwrap(),
+            collateral_reward.mantissa().try_into().unwrap(),
         )?;
 
         // Remove equivalent onusd reward from user's collateral
-        let new_collateral_onusd = rescale_toward_zero(
-            comet.collaterals[ONUSD_COLLATERAL_INDEX]
+        let new_collateral_amount = rescale_toward_zero(
+            comet.collaterals[collateral_index]
                 .collateral_amount
                 .to_decimal()
-                - onusd_reward,
-            DEVNET_TOKEN_SCALE,
+                - collateral_reward,
+            collateral_scale,
         );
         comet.collaterals[ONUSD_COLLATERAL_INDEX].collateral_amount =
-            RawDecimal::from(new_collateral_onusd);
-
-        // Check final health score.
-        let post_liquidation_health_score = calculate_health_score(&comet, &token_data)?;
-
-        return_error_if_false!(
-            post_liquidation_health_score.score
-                <= ctx
-                    .accounts
-                    .clone
-                    .liquidation_config
-                    .max_health_liquidation
-                    .to_decimal(),
-            CloneError::LiquidationAmountTooLarge
-        );
+            RawDecimal::from(new_collateral_amount);
     }
 
     // Withdraw liquidity position

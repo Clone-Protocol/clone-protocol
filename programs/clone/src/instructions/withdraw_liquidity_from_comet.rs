@@ -27,6 +27,7 @@ pub struct WithdrawLiquidityFromComet<'info> {
     #[account(
         mut,
         has_one = clone,
+        constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen as u8 @ CloneError::PoolStatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(

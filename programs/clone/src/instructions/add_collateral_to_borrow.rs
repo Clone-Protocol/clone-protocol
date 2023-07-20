@@ -25,7 +25,8 @@ pub struct AddCollateralToBorrow<'info> {
     pub clone: Account<'info, Clone>,
     #[account(
         mut,
-        has_one = clone
+        has_one = clone,
+        constraint = token_data.load()?.collaterals[borrow_positions.load()?.borrow_positions[borrow_index as usize].collateral_index as usize].status == Status::Active as u8 @ CloneError::PoolStatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(

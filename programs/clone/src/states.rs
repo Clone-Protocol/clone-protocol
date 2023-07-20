@@ -11,6 +11,16 @@ pub const USDC_COLLATERAL_INDEX: usize = 1;
 pub const PERCENT_SCALE: u8 = 2;
 pub const BPS_SCALE: u32 = 4;
 
+#[repr(u8)]
+#[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
+pub enum Status {
+    Active = 0,
+    Frozen = 1,
+    Extraction = 2,
+    Liquidation = 3,
+    Deprecation = 4,
+}
+
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct Value {
@@ -63,6 +73,7 @@ pub struct Clone {
     pub onusd_mint: Pubkey,                    // 32
     pub token_data: Pubkey,                    // 32
     pub admin: Pubkey,                         // 32
+    pub auth: [Pubkey; 10],                    // 32
     pub bump: u8,                              // 1
     pub liquidation_config: LiquidationConfig, // 48
     pub treasury_address: Pubkey,              // 32
@@ -79,12 +90,12 @@ pub struct LiquidationConfig {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 165,320
+    // 163,790
     pub clone: Pubkey,                         // 32
     pub num_pools: u64,                        // 8
     pub num_collaterals: u64,                  // 8
-    pub pools: [Pool; 255],                    // 255 * 504 = 128,520
-    pub collaterals: [Collateral; 255],        // 255 * 144 = 36,720
+    pub pools: [Pool; 255],                    // 255 * 497 = 126,735
+    pub collaterals: [Collateral; 255],        // 255 * 145 = 36,975
     pub il_health_score_cutoff: RawDecimal,    // 16
     pub il_liquidation_reward_pct: RawDecimal, // 16
 }
@@ -163,7 +174,7 @@ pub struct AssetInfo {
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct Pool {
-    // 504
+    // 497
     pub underlying_asset_token_account: Pubkey,      // 32
     pub committed_onusd_liquidity: RawDecimal,       // 16
     pub onusd_ild: RawDecimal,                       // 16
@@ -173,7 +184,7 @@ pub struct Pool {
     pub total_minted_amount: RawDecimal,             // 16
     pub supplied_mint_collateral_amount: RawDecimal, // 16
     pub asset_info: AssetInfo,                       // 224
-    pub deprecated: u64,                             // 8
+    pub status: u8,                                  // 1
 }
 
 #[derive(Default, Debug)]
@@ -329,7 +340,7 @@ impl Pool {
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct Collateral {
-    // 144
+    // 145
     pub pool_index: u64,                     // 8
     pub mint: Pubkey,                        // 32
     pub vault: Pubkey,                       // 32
@@ -338,6 +349,7 @@ pub struct Collateral {
     pub vault_comet_supply: RawDecimal,      // 16
     pub stable: u64,                         // 8
     pub collateralization_ratio: RawDecimal, // 16
+    pub status: u8,                          // 1
 }
 
 #[account]
