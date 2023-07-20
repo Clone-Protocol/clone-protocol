@@ -18,7 +18,7 @@ import { BorrowPosition, borrowPositionBeet } from '../types/BorrowPosition'
 export type BorrowPositionsArgs = {
   owner: web3.PublicKey
   numPositions: beet.bignum
-  borrowPositions: BorrowPosition[] /* size: 255 */
+  borrowPositions: BorrowPosition[] /* size: 24 */
 }
 
 export const borrowPositionsDiscriminator = [
@@ -35,7 +35,7 @@ export class BorrowPositions implements BorrowPositionsArgs {
   private constructor(
     readonly owner: web3.PublicKey,
     readonly numPositions: beet.bignum,
-    readonly borrowPositions: BorrowPosition[] /* size: 255 */
+    readonly borrowPositions: BorrowPosition[] /* size: 24 */
   ) {}
 
   /**
@@ -183,7 +183,7 @@ export const borrowPositionsBeet = new beet.BeetStruct<
     ['accountDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['owner', beetSolana.publicKey],
     ['numPositions', beet.u64],
-    ['borrowPositions', beet.uniformFixedSizeArray(borrowPositionBeet, 255)],
+    ['borrowPositions', beet.uniformFixedSizeArray(borrowPositionBeet, 24)],
   ],
   BorrowPositions.fromArgs,
   'BorrowPositions'

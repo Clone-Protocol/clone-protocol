@@ -1832,7 +1832,7 @@ export type Clone = {
                 {
                   "defined": "BorrowPosition"
                 },
-                255
+                24
               ]
             }
           }
@@ -4495,7 +4495,7 @@ export const IDL: Clone = {
                 {
                   "defined": "BorrowPosition"
                 },
-                255
+                24
               ]
             }
           }

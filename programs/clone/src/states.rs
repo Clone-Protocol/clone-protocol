@@ -11,6 +11,7 @@ pub const BPS_SCALE: u32 = 4;
 pub const NUM_POOLS: usize = 64;
 pub const NUM_COLLATERALS: usize = 16;
 pub const NUM_ORACLES: usize = 80;
+pub const NUM_BORROW_POSITIONS: usize = 24;
 
 #[zero_copy]
 #[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
@@ -437,9 +438,9 @@ impl Default for CometCollateral {
 #[account(zero_copy)]
 pub struct BorrowPositions {
     // 20,440
-    pub owner: Pubkey,                           // 32
-    pub num_positions: u64,                      // 8
-    pub borrow_positions: [BorrowPosition; 255], // 255 * 80 = 20,400
+    pub owner: Pubkey,                                            // 32
+    pub num_positions: u64,                                       // 8
+    pub borrow_positions: [BorrowPosition; NUM_BORROW_POSITIONS], // 255 * 80 = 20,400
 }
 
 impl Default for BorrowPositions {
@@ -447,7 +448,7 @@ impl Default for BorrowPositions {
         Self {
             owner: Pubkey::default(),
             num_positions: 0,
-            borrow_positions: [BorrowPosition::default(); 255],
+            borrow_positions: [BorrowPosition::default(); NUM_BORROW_POSITIONS],
         }
     }
 }
