@@ -105,7 +105,7 @@ describe("clone", async () => {
       .rpc();
   });
 
-  it("manager initialized!", async () => {
+  it("clone initialized!", async () => {
     await cloneClient.initializeClone(
       maxHealthLiquidation,
       liquidatorFee,
@@ -1006,7 +1006,7 @@ describe("clone", async () => {
         },
       })
       .accounts({
-        admin: cloneClient.clone!.admin,
+        auth: cloneClient.clone!.admin,
         clone: cloneClient.cloneAddress[0],
         tokenData: cloneClient.clone!.tokenData,
       })
@@ -1019,7 +1019,7 @@ describe("clone", async () => {
         },
       })
       .accounts({
-        admin: cloneClient.clone!.admin,
+        auth: cloneClient.clone!.admin,
         clone: cloneClient.cloneAddress[0],
         tokenData: cloneClient.clone!.tokenData,
       })
@@ -1552,7 +1552,7 @@ describe("clone", async () => {
         },
       })
       .accounts({
-        admin: cloneClient.clone!.admin,
+        auth: cloneClient.clone!.admin,
         clone: cloneClient.cloneAddress[0],
         tokenData: cloneClient.clone!.tokenData,
       })
@@ -1565,7 +1565,7 @@ describe("clone", async () => {
         },
       })
       .accounts({
-        admin: cloneClient.clone!.admin,
+        auth: cloneClient.clone!.admin,
         clone: cloneClient.cloneAddress[0],
         tokenData: cloneClient.clone!.tokenData,
       })
@@ -1731,19 +1731,5 @@ describe("clone", async () => {
       Number(onassetAssociatedTokenAccount.amount),
       startingOnassetBalance
     );
-  });
-
-  it("deprecate pool", async () => {
-    await cloneProgram.methods
-      .deprecatePool(1)
-      .accounts({
-        admin: cloneClient.clone!.admin,
-        clone: cloneClient.cloneAddress[0],
-        tokenData: cloneClient.clone!.tokenData,
-      })
-      .rpc();
-
-    let tokenData = await cloneClient.getTokenData();
-    assert.equal(tokenData.pools[1].deprecated, 1);
   });
 });

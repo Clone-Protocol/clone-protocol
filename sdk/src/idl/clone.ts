@@ -72,6 +72,48 @@ export type Clone = {
       ]
     },
     {
+      "name": "addAuth",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "clone",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "auth",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "removeAuth",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "clone",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "auth",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
       "name": "updateCloneParameters",
       "accounts": [
         {
@@ -98,7 +140,7 @@ export type Clone = {
       "name": "updatePoolParameters",
       "accounts": [
         {
-          "name": "admin",
+          "name": "auth",
           "isMut": false,
           "isSigner": true
         },
@@ -1339,32 +1381,6 @@ export type Clone = {
       "args": []
     },
     {
-      "name": "deprecatePool",
-      "accounts": [
-        {
-          "name": "admin",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "clone",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u8"
-        }
-      ]
-    },
-    {
       "name": "wrapAsset",
       "accounts": [
         {
@@ -1667,6 +1683,15 @@ export type Clone = {
           {
             "name": "admin",
             "type": "publicKey"
+          },
+          {
+            "name": "auth",
+            "type": {
+              "array": [
+                "publicKey",
+                10
+              ]
+            }
           },
           {
             "name": "bump",
@@ -2025,8 +2050,8 @@ export type Clone = {
             }
           },
           {
-            "name": "deprecated",
-            "type": "u64"
+            "name": "status",
+            "type": "u8"
           }
         ]
       }
@@ -2081,6 +2106,10 @@ export type Clone = {
             "type": {
               "defined": "RawDecimal"
             }
+          },
+          {
+            "name": "status",
+            "type": "u8"
           }
         ]
       }
@@ -2218,6 +2247,15 @@ export type Clone = {
         "kind": "enum",
         "variants": [
           {
+            "name": "Status",
+            "fields": [
+              {
+                "name": "status",
+                "type": "u8"
+              }
+            ]
+          },
+          {
             "name": "OracleInfoIndex",
             "fields": [
               {
@@ -2245,6 +2283,15 @@ export type Clone = {
       "type": {
         "kind": "enum",
         "variants": [
+          {
+            "name": "Status",
+            "fields": [
+              {
+                "name": "value",
+                "type": "u8"
+              }
+            ]
+          },
           {
             "name": "TreasuryTradingFee",
             "fields": [
@@ -2330,6 +2377,29 @@ export type Clone = {
                 }
               }
             ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Status",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Frozen"
+          },
+          {
+            "name": "Extraction"
+          },
+          {
+            "name": "Liquidation"
+          },
+          {
+            "name": "Deprecation"
           }
         ]
       }
@@ -2505,160 +2575,183 @@ export type Clone = {
   "errors": [
     {
       "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6001,
       "name": "InvalidMintCollateralRatio",
       "msg": "Invalid Mint Collateral Ratio"
     },
     {
-      "code": 6001,
+      "code": 6002,
       "name": "CollateralNotFound",
       "msg": "Collateral Not Found"
     },
     {
-      "code": 6002,
+      "code": 6003,
       "name": "PoolNotFound",
       "msg": "Pool Not Found"
     },
     {
-      "code": 6003,
+      "code": 6004,
       "name": "InvalidCollateralType",
       "msg": "Invalid Collateral Type"
     },
     {
-      "code": 6004,
+      "code": 6005,
       "name": "InvalidTokenAmount",
       "msg": "Invalid Token Amount"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "InvalidBool",
       "msg": "Invalid Bool"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "OutdatedOracle",
       "msg": "Outdated Oracle"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "NonStablesNotSupported",
       "msg": "Non-stables Not Supported"
     },
     {
-      "code": 6008,
-      "name": "MintPositionUnableToLiquidate",
+      "code": 6009,
+      "name": "BorrowPositionUnableToLiquidate",
       "msg": "Mint Position Unable to Liquidate"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "HealthScoreTooLow",
       "msg": "Health Score Too Low"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "InvalidInputCollateralAccount",
       "msg": "Invalid input collateral account"
     },
     {
-      "code": 6011,
+      "code": 6012,
       "name": "InvalidAccountLoaderOwner",
       "msg": "Invalid Account loader owner"
     },
     {
-      "code": 6012,
+      "code": 6013,
       "name": "InvalidInputPositionIndex",
       "msg": "Invalid input position index"
     },
     {
-      "code": 6013,
+      "code": 6014,
       "name": "InvalidTokenAccountBalance",
       "msg": "Invalid token account balance"
     },
     {
-      "code": 6014,
+      "code": 6015,
       "name": "InequalityComparisonViolated",
       "msg": "Inequality comparison violated"
     },
     {
-      "code": 6015,
+      "code": 6016,
       "name": "CometNotEmpty",
       "msg": "Comet Not Empty"
     },
     {
-      "code": 6016,
+      "code": 6017,
       "name": "NotSubjectToLiquidation",
       "msg": "Not Subject to Liquidation"
     },
     {
-      "code": 6017,
+      "code": 6018,
       "name": "LiquidationAmountTooLarge",
       "msg": "Liquidation amount too large"
     },
     {
-      "code": 6018,
+      "code": 6019,
       "name": "NoRemainingAccountsSupplied",
       "msg": "No remaining accounts supplied"
     },
     {
-      "code": 6019,
+      "code": 6020,
       "name": "NonZeroCollateralizationRatioRequired",
       "msg": "Non-zero collateralization ratio required"
     },
     {
-      "code": 6020,
+      "code": 6021,
       "name": "IncorrectOracleAddress",
       "msg": "Incorrect oracle address provided"
     },
     {
-      "code": 6021,
+      "code": 6022,
       "name": "InvalidValueRange",
       "msg": "Value is in an incorrect range"
     },
     {
-      "code": 6022,
+      "code": 6023,
       "name": "InvalidAssetStability",
       "msg": "Asset stable requirement violated"
     },
     {
-      "code": 6023,
+      "code": 6024,
       "name": "SlippageToleranceExceeded",
       "msg": "Slippage tolerance exceeded"
     },
     {
-      "code": 6024,
+      "code": 6025,
       "name": "RequireOnlyonUSDCollateral",
       "msg": "Collateral must be all in onUSD"
     },
     {
-      "code": 6025,
+      "code": 6026,
       "name": "RequireAllPositionsClosed",
       "msg": "Positions must be all closed"
     },
     {
-      "code": 6026,
+      "code": 6027,
       "name": "FailedToLoadPyth",
       "msg": "Failed to Load Pyth Price Feed"
     },
     {
-      "code": 6027,
-      "name": "PoolDeprecated",
-      "msg": "Pool Deprecated"
+      "code": 6028,
+      "name": "PoolStatusPreventsAction",
+      "msg": "Pool Status Prevents Action"
     },
     {
-      "code": 6028,
+      "code": 6029,
       "name": "PoolEmpty",
       "msg": "Pool is empty"
     },
     {
-      "code": 6029,
+      "code": 6030,
       "name": "NoLiquidityToWithdraw",
       "msg": "No liquidity to withdraw"
     },
     {
-      "code": 6030,
+      "code": 6031,
+      "name": "InvalidStatus",
+      "msg": "Invalid Status"
+    },
+    {
+      "code": 6032,
+      "name": "AuthArrayFull",
+      "msg": "Auth Array Full"
+    },
+    {
+      "code": 6033,
+      "name": "AuthNotFound",
+      "msg": "Auth Not Found"
+    },
+    {
+      "code": 6034,
       "name": "InvalidOracleIndex",
       "msg": "Invalid oracle index"
     }
-  ]
+  ],
+  "metadata": {
+    "address": "F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v"
+  }
 };
 
 export const IDL: Clone = {
@@ -2735,6 +2828,48 @@ export const IDL: Clone = {
       ]
     },
     {
+      "name": "addAuth",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "clone",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "auth",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "removeAuth",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "clone",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "auth",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
       "name": "updateCloneParameters",
       "accounts": [
         {
@@ -2761,7 +2896,7 @@ export const IDL: Clone = {
       "name": "updatePoolParameters",
       "accounts": [
         {
-          "name": "admin",
+          "name": "auth",
           "isMut": false,
           "isSigner": true
         },
@@ -4002,32 +4137,6 @@ export const IDL: Clone = {
       "args": []
     },
     {
-      "name": "deprecatePool",
-      "accounts": [
-        {
-          "name": "admin",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "clone",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u8"
-        }
-      ]
-    },
-    {
       "name": "wrapAsset",
       "accounts": [
         {
@@ -4330,6 +4439,15 @@ export const IDL: Clone = {
           {
             "name": "admin",
             "type": "publicKey"
+          },
+          {
+            "name": "auth",
+            "type": {
+              "array": [
+                "publicKey",
+                10
+              ]
+            }
           },
           {
             "name": "bump",
@@ -4688,8 +4806,8 @@ export const IDL: Clone = {
             }
           },
           {
-            "name": "deprecated",
-            "type": "u64"
+            "name": "status",
+            "type": "u8"
           }
         ]
       }
@@ -4744,6 +4862,10 @@ export const IDL: Clone = {
             "type": {
               "defined": "RawDecimal"
             }
+          },
+          {
+            "name": "status",
+            "type": "u8"
           }
         ]
       }
@@ -4881,6 +5003,15 @@ export const IDL: Clone = {
         "kind": "enum",
         "variants": [
           {
+            "name": "Status",
+            "fields": [
+              {
+                "name": "status",
+                "type": "u8"
+              }
+            ]
+          },
+          {
             "name": "OracleInfoIndex",
             "fields": [
               {
@@ -4908,6 +5039,15 @@ export const IDL: Clone = {
       "type": {
         "kind": "enum",
         "variants": [
+          {
+            "name": "Status",
+            "fields": [
+              {
+                "name": "value",
+                "type": "u8"
+              }
+            ]
+          },
           {
             "name": "TreasuryTradingFee",
             "fields": [
@@ -4993,6 +5133,29 @@ export const IDL: Clone = {
                 }
               }
             ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Status",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Frozen"
+          },
+          {
+            "name": "Extraction"
+          },
+          {
+            "name": "Liquidation"
+          },
+          {
+            "name": "Deprecation"
           }
         ]
       }
@@ -5168,158 +5331,181 @@ export const IDL: Clone = {
   "errors": [
     {
       "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6001,
       "name": "InvalidMintCollateralRatio",
       "msg": "Invalid Mint Collateral Ratio"
     },
     {
-      "code": 6001,
+      "code": 6002,
       "name": "CollateralNotFound",
       "msg": "Collateral Not Found"
     },
     {
-      "code": 6002,
+      "code": 6003,
       "name": "PoolNotFound",
       "msg": "Pool Not Found"
     },
     {
-      "code": 6003,
+      "code": 6004,
       "name": "InvalidCollateralType",
       "msg": "Invalid Collateral Type"
     },
     {
-      "code": 6004,
+      "code": 6005,
       "name": "InvalidTokenAmount",
       "msg": "Invalid Token Amount"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "InvalidBool",
       "msg": "Invalid Bool"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "OutdatedOracle",
       "msg": "Outdated Oracle"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "NonStablesNotSupported",
       "msg": "Non-stables Not Supported"
     },
     {
-      "code": 6008,
-      "name": "MintPositionUnableToLiquidate",
+      "code": 6009,
+      "name": "BorrowPositionUnableToLiquidate",
       "msg": "Mint Position Unable to Liquidate"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "HealthScoreTooLow",
       "msg": "Health Score Too Low"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "InvalidInputCollateralAccount",
       "msg": "Invalid input collateral account"
     },
     {
-      "code": 6011,
+      "code": 6012,
       "name": "InvalidAccountLoaderOwner",
       "msg": "Invalid Account loader owner"
     },
     {
-      "code": 6012,
+      "code": 6013,
       "name": "InvalidInputPositionIndex",
       "msg": "Invalid input position index"
     },
     {
-      "code": 6013,
+      "code": 6014,
       "name": "InvalidTokenAccountBalance",
       "msg": "Invalid token account balance"
     },
     {
-      "code": 6014,
+      "code": 6015,
       "name": "InequalityComparisonViolated",
       "msg": "Inequality comparison violated"
     },
     {
-      "code": 6015,
+      "code": 6016,
       "name": "CometNotEmpty",
       "msg": "Comet Not Empty"
     },
     {
-      "code": 6016,
+      "code": 6017,
       "name": "NotSubjectToLiquidation",
       "msg": "Not Subject to Liquidation"
     },
     {
-      "code": 6017,
+      "code": 6018,
       "name": "LiquidationAmountTooLarge",
       "msg": "Liquidation amount too large"
     },
     {
-      "code": 6018,
+      "code": 6019,
       "name": "NoRemainingAccountsSupplied",
       "msg": "No remaining accounts supplied"
     },
     {
-      "code": 6019,
+      "code": 6020,
       "name": "NonZeroCollateralizationRatioRequired",
       "msg": "Non-zero collateralization ratio required"
     },
     {
-      "code": 6020,
+      "code": 6021,
       "name": "IncorrectOracleAddress",
       "msg": "Incorrect oracle address provided"
     },
     {
-      "code": 6021,
+      "code": 6022,
       "name": "InvalidValueRange",
       "msg": "Value is in an incorrect range"
     },
     {
-      "code": 6022,
+      "code": 6023,
       "name": "InvalidAssetStability",
       "msg": "Asset stable requirement violated"
     },
     {
-      "code": 6023,
+      "code": 6024,
       "name": "SlippageToleranceExceeded",
       "msg": "Slippage tolerance exceeded"
     },
     {
-      "code": 6024,
+      "code": 6025,
       "name": "RequireOnlyonUSDCollateral",
       "msg": "Collateral must be all in onUSD"
     },
     {
-      "code": 6025,
+      "code": 6026,
       "name": "RequireAllPositionsClosed",
       "msg": "Positions must be all closed"
     },
     {
-      "code": 6026,
+      "code": 6027,
       "name": "FailedToLoadPyth",
       "msg": "Failed to Load Pyth Price Feed"
     },
     {
-      "code": 6027,
-      "name": "PoolDeprecated",
-      "msg": "Pool Deprecated"
+      "code": 6028,
+      "name": "PoolStatusPreventsAction",
+      "msg": "Pool Status Prevents Action"
     },
     {
-      "code": 6028,
+      "code": 6029,
       "name": "PoolEmpty",
       "msg": "Pool is empty"
     },
     {
-      "code": 6029,
+      "code": 6030,
       "name": "NoLiquidityToWithdraw",
       "msg": "No liquidity to withdraw"
     },
     {
-      "code": 6030,
+      "code": 6031,
+      "name": "InvalidStatus",
+      "msg": "Invalid Status"
+    },
+    {
+      "code": 6032,
+      "name": "AuthArrayFull",
+      "msg": "Auth Array Full"
+    },
+    {
+      "code": 6033,
+      "name": "AuthNotFound",
+      "msg": "Auth Not Found"
+    },
+    {
+      "code": 6034,
       "name": "InvalidOracleIndex",
       "msg": "Invalid oracle index"
     }
-  ]
+  ],
+  "metadata": {
+    "address": "F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v"
+  }
 };
