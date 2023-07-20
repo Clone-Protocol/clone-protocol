@@ -75,6 +75,7 @@ pub struct Clone {
     pub event_counter: u64,                    // 8
 }
 
+
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct LiquidationConfig {

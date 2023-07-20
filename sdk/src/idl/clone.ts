@@ -2051,7 +2051,7 @@ export type Clone = {
           },
           {
             "name": "status",
-            "type": "u8"
+            "type": "u64"
           }
         ]
       }
@@ -2109,7 +2109,7 @@ export type Clone = {
           },
           {
             "name": "status",
-            "type": "u8"
+            "type": "u64"
           }
         ]
       }
@@ -2251,7 +2251,7 @@ export type Clone = {
             "fields": [
               {
                 "name": "status",
-                "type": "u8"
+                "type": "u64"
               }
             ]
           },
@@ -2288,7 +2288,7 @@ export type Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": "u8"
+                "type": "u64"
               }
             ]
           },
@@ -4807,7 +4807,7 @@ export const IDL: Clone = {
           },
           {
             "name": "status",
-            "type": "u8"
+            "type": "u64"
           }
         ]
       }
@@ -4865,7 +4865,7 @@ export const IDL: Clone = {
           },
           {
             "name": "status",
-            "type": "u8"
+            "type": "u64"
           }
         ]
       }
@@ -5007,7 +5007,7 @@ export const IDL: Clone = {
             "fields": [
               {
                 "name": "status",
-                "type": "u8"
+                "type": "u64"
               }
             ]
           },
@@ -5044,7 +5044,7 @@ export const IDL: Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": "u8"
+                "type": "u64"
               }
             ]
           },
