@@ -20,8 +20,8 @@ export type CometArgs = {
   owner: web3.PublicKey
   numPositions: beet.bignum
   numCollaterals: beet.bignum
-  positions: CometPosition[] /* size: 255 */
-  collaterals: CometCollateral[] /* size: 255 */
+  positions: CometPosition[] /* size: 64 */
+  collaterals: CometCollateral[] /* size: 16 */
 }
 
 export const cometDiscriminator = [162, 250, 25, 138, 55, 105, 60, 199]
@@ -37,8 +37,8 @@ export class Comet implements CometArgs {
     readonly owner: web3.PublicKey,
     readonly numPositions: beet.bignum,
     readonly numCollaterals: beet.bignum,
-    readonly positions: CometPosition[] /* size: 255 */,
-    readonly collaterals: CometCollateral[] /* size: 255 */
+    readonly positions: CometPosition[] /* size: 64 */,
+    readonly collaterals: CometCollateral[] /* size: 16 */
   ) {}
 
   /**
@@ -94,7 +94,7 @@ export class Comet implements CometArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      'GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA'
+      'F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, cometBeet)
@@ -201,8 +201,8 @@ export const cometBeet = new beet.BeetStruct<
     ['owner', beetSolana.publicKey],
     ['numPositions', beet.u64],
     ['numCollaterals', beet.u64],
-    ['positions', beet.uniformFixedSizeArray(cometPositionBeet, 255)],
-    ['collaterals', beet.uniformFixedSizeArray(cometCollateralBeet, 255)],
+    ['positions', beet.uniformFixedSizeArray(cometPositionBeet, 64)],
+    ['collaterals', beet.uniformFixedSizeArray(cometCollateralBeet, 16)],
   ],
   Comet.fromArgs,
   'Comet'

@@ -23,13 +23,21 @@ export interface User {
   comet: PublicKey;
   bump: number;
 }
-
 export interface TokenData {
   clone: PublicKey;
   numPools: BN;
   numCollaterals: BN;
+  numOracles: BN;
   pools: Array<Pool>;
   collaterals: Array<Collateral>;
+  oracles: Array<OracleInfo>;
+}
+
+export interface OracleInfo {
+  pythAddress: PublicKey;
+  price: RawDecimal;
+  status: BN;
+  lastUpdateSlot: BN;
 }
 
 export interface BorrowPositions {
@@ -70,16 +78,12 @@ export interface CometCollateral {
 
 export interface AssetInfo {
   onassetMint: PublicKey;
-  pythAddress: PublicKey;
-  price: RawDecimal;
-  twap: RawDecimal;
-  confidence: RawDecimal;
-  status: number;
-  lastUpdate: number;
+  oracleInfoIndex: BN;
   stableCollateralRatio: RawDecimal;
   cryptoCollateralRatio: RawDecimal;
   ilHealthScoreCoefficient: RawDecimal;
   positionHealthScoreCoefficient: RawDecimal;
+  liquidationDiscountRate: RawDecimal;
 }
 
 export interface Pool {
@@ -92,15 +96,17 @@ export interface Pool {
   totalMintedAmount: RawDecimal;
   suppliedMintCollateralAmount: RawDecimal;
   assetInfo: AssetInfo;
-  deprecated: number;
+  deprecated: BN;
 }
 
 export interface Collateral {
-  poolIndex: BN;
+  oracleInfoIndex: BN;
   mint: PublicKey;
   vault: PublicKey;
   vaultOnusdSupply: RawDecimal;
   vaultMintSupply: RawDecimal;
   vaultCometSupply: RawDecimal;
   stable: BN;
+  collateralizationRatio: RawDecimal;
+  liquidationDiscount: RawDecimal;
 }

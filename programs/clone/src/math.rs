@@ -1,8 +1,8 @@
 use crate::states::*;
 use crate::*;
 
-pub fn check_feed_update(asset_info: AssetInfo, slot: u64) -> Result<()> {
-    if asset_info.last_update < slot {
+pub fn check_feed_update(oracle_info: OracleInfo, slot: u64) -> Result<()> {
+    if oracle_info.last_update_slot < slot {
         return Err(CloneError::OutdatedOracle.into());
     }
     Ok(())
@@ -27,18 +27,16 @@ pub fn calculate_liquidity_proportion_from_onusd(
 }
 
 pub fn check_mint_collateral_sufficient(
-    asset_info: AssetInfo,
+    oracle: OracleInfo,
     asset_amount_borrowed: Decimal,
     collateral_ratio: Decimal,
     collateral_amount: Decimal,
-    slot: u64,
 ) -> Result<()> {
-    if check_feed_update(asset_info, slot).is_err() {
+    let slot = Clock::get().expect("Failed to get slot.").slot;
+    if check_feed_update(oracle, slot).is_err() {
         return Err(error!(CloneError::OutdatedOracle));
     }
-    if (asset_info.price.to_decimal() * asset_amount_borrowed * collateral_ratio)
-        > collateral_amount
-    {
+    if (oracle.price.to_decimal() * asset_amount_borrowed * collateral_ratio) > collateral_amount {
         return Err(error!(CloneError::InvalidMintCollateralRatio));
     }
     Ok(())
@@ -63,6 +61,7 @@ pub fn calculate_comet_position_loss(
     comet_position: &CometPosition,
 ) -> Result<(Decimal, Decimal)> {
     let pool = token_data.pools[comet_position.pool_index as usize];
+    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     let position_committed_onusd_liquidity = comet_position.committed_onusd_liquidity.to_decimal();
     let total_committed_onusd_liquidity = pool.committed_onusd_liquidity.to_decimal();
 
@@ -75,16 +74,16 @@ pub fn calculate_comet_position_loss(
     let onusd_ild_share = rescale_toward_zero(
         pool.onusd_ild.to_decimal() * proportional_value
             - comet_position.onusd_ild_rebate.to_decimal(),
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     let onasset_ild_share = rescale_toward_zero(
         pool.onasset_ild.to_decimal() * proportional_value
             - comet_position.onasset_ild_rebate.to_decimal(),
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
 
     let impermanent_loss = onusd_ild_share.max(Decimal::ZERO)
-        + pool.asset_info.price.to_decimal() * onasset_ild_share.max(Decimal::ZERO);
+        + oracle.price.to_decimal() * onasset_ild_share.max(Decimal::ZERO);
 
     let impermanent_loss_term =
         impermanent_loss * pool.asset_info.il_health_score_coefficient.to_decimal();
@@ -106,8 +105,9 @@ pub fn calculate_health_score(comet: &Comet, token_data: &TokenData) -> Result<H
     for index in 0..(comet.num_positions as usize) {
         let comet_position = comet.positions[index];
         let pool = token_data.pools[comet_position.pool_index as usize];
+        let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
 
-        if check_feed_update(pool.asset_info, slot).is_err() {
+        if check_feed_update(oracle, slot).is_err() {
             return Err(error!(CloneError::OutdatedOracle));
         }
         let (impermanent_loss_term, position_term) =
@@ -160,20 +160,20 @@ pub fn calculate_ild_share(comet_position: &CometPosition, token_data: &TokenDat
 
     let onusd_ild_claim = rescale_toward_zero(
         pool.onusd_ild.to_decimal() * claimable_ratio,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     let onasset_ild_claim = rescale_toward_zero(
         pool.onasset_ild.to_decimal() * claimable_ratio,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
 
     let onusd_ild_share = rescale_toward_zero(
         onusd_ild_claim - comet_position.onusd_ild_rebate.to_decimal(),
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     let onasset_ild_share = rescale_toward_zero(
         onasset_ild_claim - comet_position.onasset_ild_rebate.to_decimal(),
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
 
     ILDShare {

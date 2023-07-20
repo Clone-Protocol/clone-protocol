@@ -29,7 +29,7 @@ pub fn execute(ctx: Context<InitializeComet>) -> Result<()> {
     // Initialize with onUSD as collateral for multipool.
     comet.add_collateral(CometCollateral {
         authority: *ctx.accounts.user.to_account_info().key,
-        collateral_amount: RawDecimal::from(Decimal::new(0, DEVNET_TOKEN_SCALE)),
+        collateral_amount: RawDecimal::from(Decimal::new(0, CLONE_TOKEN_SCALE)),
         collateral_index: ONUSD_COLLATERAL_INDEX as u64,
     });
 

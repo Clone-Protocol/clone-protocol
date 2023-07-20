@@ -31,7 +31,8 @@ pub struct LiquidateCometPosition<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         has_one = clone,
-        constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Liquidation as u8 @ CloneError::PoolStatusPreventsAction
+        constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Active as u8 || 
+        token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Liquidation as u8 @ CloneError::PoolStatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -89,22 +90,44 @@ pub fn execute(
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let comet = &mut ctx.accounts.comet.load_mut()?;
 
+    
+    
+
     let comet_position = comet.positions[comet_position_index as usize];
     let comet_collateral = comet.collaterals[comet_collateral_index as usize];
-    let authorized_amount = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let authorized_amount = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
     let ild_share = calculate_ild_share(&comet_position, &token_data);
     let pool_index = comet_position.pool_index as usize;
     let pool = token_data.pools[pool_index];
+    let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral_index = comet_collateral.collateral_index as usize;
     let collateral = token_data.collaterals[collateral_index];
+    let mut collateral_price = Decimal::one();
+    if collateral.oracle_info_index != u64::MAX {
+        let collateral_oracle = token_data.oracles[collateral.oracle_info_index as usize];
+        return_error_if_false!(
+            check_feed_update(collateral_oracle, Clock::get()?.slot).is_ok(),
+            CloneError::OutdatedOracle
+        );
+        collateral_price = collateral_oracle.price.to_decimal();
+    }
     let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
     let onusd_ild_rebate = comet_position.onusd_ild_rebate.to_decimal();
     let onasset_ild_rebate = comet_position.onasset_ild_rebate.to_decimal();
 
-    return_error_if_false!(
-        check_feed_update(pool.asset_info, Clock::get()?.slot).is_ok(),
-        CloneError::OutdatedOracle
-    );
+    if pool.status != Status::Liquidation as u8 {
+        let starting_health_score = calculate_health_score(&comet, &token_data)?;
+
+        return_error_if_false!(
+            !starting_health_score.is_healthy(),
+            CloneError::NotSubjectToLiquidation
+        );
+    } else {
+        return_error_if_false!(
+            check_feed_update(pool_oracle, Clock::get()?.slot).is_ok(),
+            CloneError::OutdatedOracle
+        );
+    }
 
     let mut burn_amount = ild_share.onusd_ild_share.min(authorized_amount);
 
@@ -120,9 +143,9 @@ pub fn execute(
                 * if pay_onusd_debt {
                     burn_amount
                 } else {
-                    burn_amount * pool.asset_info.price.to_decimal()
+                    burn_amount * pool_oracle.price.to_decimal()
                 }
-                / collateral.PRICE,
+                / collateral_price,
         collateral_scale,
     );
 
@@ -137,9 +160,9 @@ pub fn execute(
             / if pay_onusd_debt {
                 Decimal::one()
             } else {
-                pool.asset_info.price.to_decimal()
+                pool_oracle.price.to_decimal()
             }
-            * collateral.PRICE;
+            * collateral_price;
     }
 
     if (pay_onusd_debt && ild_share.onusd_ild_share > Decimal::ZERO)
@@ -147,7 +170,7 @@ pub fn execute(
     {
         let (cpi_accounts, burn_amount) = if pay_onusd_debt {
             comet.positions[comet_position_index as usize].onusd_ild_rebate = RawDecimal::from(
-                rescale_toward_zero(onusd_ild_rebate + burn_amount, DEVNET_TOKEN_SCALE),
+                rescale_toward_zero(onusd_ild_rebate + burn_amount, CLONE_TOKEN_SCALE),
             );
             (
                 Burn {
@@ -171,11 +194,11 @@ pub fn execute(
                             .liquidation_config
                             .liquidator_fee
                             .to_decimal()))
-                    * collateral.PRICE;
+                    * collateral_price;
             }
 
             comet.positions[comet_position_index as usize].onasset_ild_rebate = RawDecimal::from(
-                rescale_toward_zero(onasset_ild_rebate + burn_amount, DEVNET_TOKEN_SCALE),
+                rescale_toward_zero(onasset_ild_rebate + burn_amount, CLONE_TOKEN_SCALE),
             );
             (
                 Burn {

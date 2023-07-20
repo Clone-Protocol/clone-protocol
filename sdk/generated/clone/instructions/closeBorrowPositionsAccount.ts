@@ -53,7 +53,7 @@ export const closeBorrowPositionsAccountInstructionDiscriminator = [
  */
 export function createCloseBorrowPositionsAccountInstruction(
   accounts: CloseBorrowPositionsAccountInstructionAccounts,
-  programId = new web3.PublicKey('GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA')
+  programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
   const [data] = closeBorrowPositionsAccountStruct.serialize({
     instructionDiscriminator:

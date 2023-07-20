@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum CollateralParameters {
     Status { status: u8 },
-    PoolIndex { index: u64 },
+    OracleInfoIndex { value: u64 },
     CollateralizationRatio { value: RawDecimal },
 }
 
@@ -37,7 +37,6 @@ pub fn execute(
     params: CollateralParameters,
 ) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
-
     let collateral = &mut token_data.collaterals[index as usize];
 
     match params {
@@ -47,8 +46,8 @@ pub fn execute(
             }
             collateral.status = value;
         }
-        CollateralParameters::PoolIndex { index: new_index } => {
-            collateral.pool_index = new_index;
+        CollateralParameters::OracleInfoIndex { value } => {
+            collateral.oracle_info_index = value;
         }
         CollateralParameters::CollateralizationRatio { value } => {
             collateral.collateralization_ratio = value;

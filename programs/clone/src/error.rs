@@ -137,6 +137,10 @@ pub enum CloneError {
     /// 33. Auth Not Found
     #[msg("Auth Not Found")]
     AuthNotFound,
+
+    /// 34. Invalid oracle index
+    #[msg("Invalid oracle index")]
+    InvalidOracleIndex,
 }
 
 impl From<CloneError> for ProgramError {

@@ -38,7 +38,6 @@ export const updateCloneParametersStruct = new beet.FixableBeetArgsStruct<
  *
  * @property [**signer**] admin
  * @property [_writable_] clone
- * @property [_writable_] tokenData
  * @category Instructions
  * @category UpdateCloneParameters
  * @category generated
@@ -46,7 +45,6 @@ export const updateCloneParametersStruct = new beet.FixableBeetArgsStruct<
 export type UpdateCloneParametersInstructionAccounts = {
   admin: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
@@ -67,7 +65,7 @@ export const updateCloneParametersInstructionDiscriminator = [
 export function createUpdateCloneParametersInstruction(
   accounts: UpdateCloneParametersInstructionAccounts,
   args: UpdateCloneParametersInstructionArgs,
-  programId = new web3.PublicKey('GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA')
+  programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
   const [data] = updateCloneParametersStruct.serialize({
     instructionDiscriminator: updateCloneParametersInstructionDiscriminator,
@@ -81,11 +79,6 @@ export function createUpdateCloneParametersInstruction(
     },
     {
       pubkey: accounts.clone,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.tokenData,
       isWritable: true,
       isSigner: false,
     },

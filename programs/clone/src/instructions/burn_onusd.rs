@@ -59,10 +59,10 @@ pub fn execute(ctx: Context<BurnONUSD>, amount: u64) -> Result<()> {
             .amount
             .try_into()
             .unwrap(),
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     let onusd_value =
-        Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE).min(user_onusd_amount);
+        Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE).min(user_onusd_amount);
     let collateral_value = rescale_toward_zero(onusd_value, collateral_scale);
     // subtract collateral amount to vault supply
     let current_vault_onusd_supply = collateral.vault_onusd_supply.to_decimal();

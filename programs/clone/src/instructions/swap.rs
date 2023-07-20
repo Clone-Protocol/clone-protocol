@@ -80,9 +80,10 @@ pub fn execute(
     let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let pool = token_data.pools[pool_index as usize];
+    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
 
     return_error_if_false!(
-        check_feed_update(pool.asset_info, Clock::get()?.slot).is_ok(),
+        check_feed_update(oracle, Clock::get()?.slot).is_ok(),
         CloneError::OutdatedOracle
     );
 
@@ -91,8 +92,10 @@ pub fn execute(
         CloneError::PoolEmpty
     );
 
-    let user_specified_quantity = Decimal::new(quantity.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let user_specified_quantity = Decimal::new(quantity.try_into().unwrap(), CLONE_TOKEN_SCALE);
+    let oracle_price = oracle.price.to_decimal();
     let swap_summary = pool.calculate_swap(
+        oracle_price,
         user_specified_quantity,
         quantity_is_input,
         quantity_is_onusd,
@@ -106,7 +109,7 @@ pub fn execute(
         CloneError::InvalidTokenAmount
     );
 
-    let threshold = Decimal::new(result_threshold.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let threshold = Decimal::new(result_threshold.try_into().unwrap(), CLONE_TOKEN_SCALE);
 
     let (
         input_is_onusd,
@@ -127,7 +130,7 @@ pub fn execute(
         let ild_delta_input = -user_specified_quantity;
         let ild_delta_output = rescale_toward_zero(
             swap_summary.result + swap_summary.treasury_fees_paid,
-            DEVNET_TOKEN_SCALE,
+            CLONE_TOKEN_SCALE,
         );
         if quantity_is_onusd {
             // User specifies input, input (onusd), output (onasset)
@@ -184,7 +187,7 @@ pub fn execute(
         let ild_delta_input = -swap_summary.result;
         let ild_delta_output = rescale_toward_zero(
             user_specified_quantity + swap_summary.treasury_fees_paid,
-            DEVNET_TOKEN_SCALE,
+            CLONE_TOKEN_SCALE,
         );
         if quantity_is_onusd {
             // User specifies output, input (onasset), output (onusd)
@@ -285,12 +288,12 @@ pub fn execute(
             .onasset_ild
             .to_decimal()
             + onasset_ild_delta,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     token_data.pools[pool_index as usize].onasset_ild = RawDecimal::from(onasset_ild);
     let onusd_ild = rescale_toward_zero(
         token_data.pools[pool_index as usize].onusd_ild.to_decimal() + onusd_ild_delta,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     token_data.pools[pool_index as usize].onusd_ild = RawDecimal::from(onusd_ild);
 
@@ -314,7 +317,7 @@ pub fn execute(
     });
 
     let pool = token_data.pools[pool_index as usize];
-    let oracle_price = rescale_toward_zero(pool.asset_info.price.to_decimal(), DEVNET_TOKEN_SCALE);
+    let oracle_price = rescale_toward_zero(oracle_price, CLONE_TOKEN_SCALE);
 
     emit!(PoolState {
         event_id: ctx.accounts.clone.event_counter,

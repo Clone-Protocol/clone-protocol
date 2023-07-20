@@ -66,7 +66,7 @@ impl<'a, 'b, 'c, 'info> From<&PayBorrowDebt<'info>> for CpiContext<'a, 'b, 'c, '
 }
 
 pub fn execute(ctx: Context<PayBorrowDebt>, borrow_index: u8, amount: u64) -> Result<()> {
-    let mut amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let mut amount_value = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
 
@@ -94,7 +94,7 @@ pub fn execute(ctx: Context<PayBorrowDebt>, borrow_index: u8, amount: u64) -> Re
     // update total amount of borrowed onasset
     let updated_borrowed_onasset = rescale_toward_zero(
         mint_position.borrowed_onasset.to_decimal() - amount_value,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     borrow_positions.borrow_positions[borrow_index as usize].borrowed_onasset =
         RawDecimal::from(updated_borrowed_onasset);
@@ -104,7 +104,7 @@ pub fn execute(ctx: Context<PayBorrowDebt>, borrow_index: u8, amount: u64) -> Re
             .total_minted_amount
             .to_decimal()
             - amount_value,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     token_data.pools[mint_position.pool_index as usize].total_minted_amount =
         RawDecimal::from(new_minted_amount);

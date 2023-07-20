@@ -61,6 +61,7 @@ pub fn execute(
 
     let pool_index = borrow_positions.borrow_positions[borrow_index as usize].pool_index;
     let pool = token_data.pools[pool_index as usize];
+    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral_ratio = pool.asset_info.stable_collateral_ratio;
     let collateral = token_data.collaterals
         [borrow_positions.borrow_positions[borrow_index as usize].collateral_index as usize];
@@ -84,28 +85,26 @@ pub fn execute(
     // subtract collateral amount from mint data
     let new_collateral_amount = rescale_toward_zero(
         mint_position.collateral_amount.to_decimal() - amount_value,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     borrow_positions.borrow_positions[borrow_index as usize].collateral_amount =
         RawDecimal::from(new_collateral_amount);
-    let slot = Clock::get()?.slot;
 
     let new_supplied_collateral = rescale_toward_zero(
         pool.supplied_mint_collateral_amount.to_decimal() - amount_value,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     token_data.pools[mint_position.pool_index as usize].supplied_mint_collateral_amount =
         RawDecimal::from(new_supplied_collateral);
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
-        pool.asset_info,
+        oracle,
         mint_position.borrowed_onasset.to_decimal(),
         collateral_ratio.to_decimal(),
         borrow_positions.borrow_positions[borrow_index as usize]
             .collateral_amount
             .to_decimal(),
-        slot,
     )
     .unwrap();
 

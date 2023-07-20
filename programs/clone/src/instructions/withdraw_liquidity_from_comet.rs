@@ -61,50 +61,49 @@ pub fn withdraw_liquidity(
         CloneError::PoolEmpty
     );
 
-    let onusd_value_to_withdraw =
-        Decimal::new(onusd_amount.try_into().unwrap(), DEVNET_TOKEN_SCALE)
-            .min(position_committed_onusd);
+    let onusd_value_to_withdraw = Decimal::new(onusd_amount.try_into().unwrap(), CLONE_TOKEN_SCALE)
+        .min(position_committed_onusd);
 
     let proportional_value = onusd_value_to_withdraw / total_committed_onusd_liquidity;
 
     let onusd_ild_claim = rescale_toward_zero(
         pool.onusd_ild.to_decimal() * proportional_value,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     let onasset_ild_claim = rescale_toward_zero(
         pool.onasset_ild.to_decimal() * proportional_value,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
 
     // Update pool values:
     token_data.pools[pool_index as usize].onasset_ild = RawDecimal::from(rescale_toward_zero(
         pool.onasset_ild.to_decimal() - onasset_ild_claim,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     ));
     token_data.pools[pool_index as usize].onusd_ild = RawDecimal::from(rescale_toward_zero(
         pool.onusd_ild.to_decimal() - onusd_ild_claim,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     ));
     token_data.pools[pool_index as usize].committed_onusd_liquidity =
         RawDecimal::from(rescale_toward_zero(
             total_committed_onusd_liquidity - onusd_value_to_withdraw,
-            DEVNET_TOKEN_SCALE,
+            CLONE_TOKEN_SCALE,
         ));
     // Update position values:
     comet.positions[comet_position_index as usize].onasset_ild_rebate =
         RawDecimal::from(rescale_toward_zero(
             comet_position.onasset_ild_rebate.to_decimal() - onasset_ild_claim,
-            DEVNET_TOKEN_SCALE,
+            CLONE_TOKEN_SCALE,
         ));
     comet.positions[comet_position_index as usize].onusd_ild_rebate =
         RawDecimal::from(rescale_toward_zero(
             comet_position.onusd_ild_rebate.to_decimal() - onusd_ild_claim,
-            DEVNET_TOKEN_SCALE,
+            CLONE_TOKEN_SCALE,
         ));
     comet.positions[comet_position_index as usize].committed_onusd_liquidity =
         RawDecimal::from(rescale_toward_zero(
             comet_position.committed_onusd_liquidity.to_decimal() - onusd_value_to_withdraw,
-            DEVNET_TOKEN_SCALE,
+            CLONE_TOKEN_SCALE,
         ));
 
     emit!(LiquidityDelta {
@@ -117,7 +116,8 @@ pub fn withdraw_liquidity(
     });
 
     let pool = token_data.pools[pool_index as usize];
-    let oracle_price = rescale_toward_zero(pool.asset_info.price.to_decimal(), DEVNET_TOKEN_SCALE);
+    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
+    let oracle_price = rescale_toward_zero(oracle.price.to_decimal(), CLONE_TOKEN_SCALE);
 
     emit!(PoolState {
         event_id: event_counter,

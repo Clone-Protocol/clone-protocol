@@ -6,7 +6,7 @@ use anchor_spl::token::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(scale: u8, stable: bool, collateralization_ratio: u64, pool_index: u8)]
+#[instruction(scale: u8, stable: bool, collateralization_ratio: u8, oracle_info_index: u8)]
 pub struct AddCollateral<'info> {
     #[account(mut, address = clone.admin)]
     pub admin: Signer<'info>,
@@ -39,8 +39,9 @@ pub fn execute(
     ctx: Context<AddCollateral>,
     scale: u8,
     stable: bool,
-    collateralization_ratio: u64,
-    pool_index: u8,
+    collateralization_ratio: u8,
+    oracle_info_index: u8,
+    liquidation_discount: u8,
 ) -> Result<()> {
     return_error_if_false!(
         if !stable {
@@ -55,21 +56,17 @@ pub fn execute(
 
     // append collateral to list
     token_data.append_collateral(Collateral {
-        pool_index: if stable {
-            u8::MAX.try_into().unwrap()
-        } else {
-            pool_index.try_into().unwrap()
-        },
+        oracle_info_index: oracle_info_index.into(),
         mint: *ctx.accounts.collateral_mint.to_account_info().key,
         vault: *ctx.accounts.vault.to_account_info().key,
         vault_onusd_supply: RawDecimal::new(0, scale.into()),
         vault_mint_supply: RawDecimal::new(0, scale.into()),
         vault_comet_supply: RawDecimal::new(0, scale.into()),
         stable: stable as u64,
-        collateralization_ratio: RawDecimal::new(
+        collateralization_ratio: RawDecimal::from_percent(
             collateralization_ratio.try_into().unwrap(),
-            DEVNET_TOKEN_SCALE,
         ),
+        liquidation_discount: RawDecimal::from_percent(liquidation_discount.try_into().unwrap()),
         status: 0
     });
 

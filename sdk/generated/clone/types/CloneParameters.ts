@@ -22,8 +22,6 @@ export type CloneParametersRecord = {
   LiquidationFee: { value: RawDecimal }
   MaxHealthLiquidation: { value: RawDecimal }
   TreasuryAddress: { address: web3.PublicKey }
-  IlHealthScoreCutoff: { value: RawDecimal }
-  IlLiquidationRewardPct: { value: RawDecimal }
 }
 
 /**
@@ -51,14 +49,6 @@ export const isCloneParametersTreasuryAddress = (
   x: CloneParameters
 ): x is CloneParameters & { __kind: 'TreasuryAddress' } =>
   x.__kind === 'TreasuryAddress'
-export const isCloneParametersIlHealthScoreCutoff = (
-  x: CloneParameters
-): x is CloneParameters & { __kind: 'IlHealthScoreCutoff' } =>
-  x.__kind === 'IlHealthScoreCutoff'
-export const isCloneParametersIlLiquidationRewardPct = (
-  x: CloneParameters
-): x is CloneParameters & { __kind: 'IlLiquidationRewardPct' } =>
-  x.__kind === 'IlLiquidationRewardPct'
 
 /**
  * @category userTypes
@@ -86,22 +76,6 @@ export const cloneParametersBeet = beet.dataEnum<CloneParametersRecord>([
     new beet.BeetArgsStruct<CloneParametersRecord['TreasuryAddress']>(
       [['address', beetSolana.publicKey]],
       'CloneParametersRecord["TreasuryAddress"]'
-    ),
-  ],
-
-  [
-    'IlHealthScoreCutoff',
-    new beet.BeetArgsStruct<CloneParametersRecord['IlHealthScoreCutoff']>(
-      [['value', rawDecimalBeet]],
-      'CloneParametersRecord["IlHealthScoreCutoff"]'
-    ),
-  ],
-
-  [
-    'IlLiquidationRewardPct',
-    new beet.BeetArgsStruct<CloneParametersRecord['IlLiquidationRewardPct']>(
-      [['value', rawDecimalBeet]],
-      'CloneParametersRecord["IlLiquidationRewardPct"]'
     ),
   ],
 ]) as beet.FixableBeet<CloneParameters, CloneParameters>

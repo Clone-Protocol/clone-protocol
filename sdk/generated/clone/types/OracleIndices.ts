@@ -6,19 +6,15 @@
  */
 
 import * as beet from '@metaplex-foundation/beet'
-export type Value = {
-  val: beet.bignum
-  scale: beet.bignum
+export type OracleIndices = {
+  indices: number[] /* size: 128 */
 }
 
 /**
  * @category userTypes
  * @category generated
  */
-export const valueBeet = new beet.BeetArgsStruct<Value>(
-  [
-    ['val', beet.u128],
-    ['scale', beet.u64],
-  ],
-  'Value'
+export const oracleIndicesBeet = new beet.BeetArgsStruct<OracleIndices>(
+  [['indices', beet.uniformFixedSizeArray(beet.u8, 128)]],
+  'OracleIndices'
 )

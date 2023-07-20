@@ -55,39 +55,37 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
     let mut token_data = ctx.accounts.token_data.load_mut()?;
     let borrow_positions = &mut ctx.accounts.borrow_positions.load_mut()?;
 
-    let amount_value = Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+    let amount_value = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
 
     let pool_index = borrow_positions.borrow_positions[borrow_index as usize].pool_index;
     let pool = token_data.pools[pool_index as usize];
+    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     let mint_position = borrow_positions.borrow_positions[borrow_index as usize];
     let collateral_ratio = pool.asset_info.stable_collateral_ratio.to_decimal();
 
     // update total amount of borrowed onasset
     let new_minted_amount = rescale_toward_zero(
         mint_position.borrowed_onasset.to_decimal() + amount_value,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     borrow_positions.borrow_positions[borrow_index as usize].borrowed_onasset =
         RawDecimal::from(new_minted_amount);
 
-    let slot = Clock::get()?.slot;
-
     // Update protocol-wide total
     let total_minted = rescale_toward_zero(
         pool.total_minted_amount.to_decimal() + amount_value,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     token_data.pools[pool_index as usize].total_minted_amount = RawDecimal::from(total_minted);
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
-        pool.asset_info,
+        oracle,
         borrow_positions.borrow_positions[borrow_index as usize]
             .borrowed_onasset
             .to_decimal(),
         collateral_ratio,
         mint_position.collateral_amount.to_decimal(),
-        slot,
     )
     .unwrap();
 

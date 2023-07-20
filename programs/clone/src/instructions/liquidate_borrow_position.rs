@@ -1,6 +1,7 @@
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -74,31 +75,31 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Resul
 
     let collateral = token_data.collaterals[mint_position.collateral_index as usize];
     let pool = token_data.pools[mint_position.pool_index as usize];
+    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     // Check if this position is valid for liquidation
     if collateral.stable == 0 {
         return Err(CloneError::NonStablesNotSupported.into());
     }
 
-    // ensure price data is up to date
-    let slot = Clock::get()?.slot;
-    check_feed_update(pool.asset_info, slot).unwrap();
-
     let borrowed_onasset = mint_position.borrowed_onasset.to_decimal();
     let collateral_amount_value = mint_position.collateral_amount.to_decimal();
 
-
-    if !(token_data.pools[mint_position.pool_index as usize].status == Status::Liquidation as u8) {
+    if pool.status != Status::Liquidation as u8 {
         if check_mint_collateral_sufficient(
-            pool.asset_info,
+            oracle,
             borrowed_onasset,
             pool.asset_info.stable_collateral_ratio.to_decimal(),
             collateral_amount_value,
-            slot,
         )
         .is_ok()
         {
             return Err(CloneError::BorrowPositionUnableToLiquidate.into());
         }
+    } else {
+        return_error_if_false!(
+            check_feed_update(oracle, Clock::get()?.slot).is_ok(),
+            CloneError::OutdatedOracle
+        );
     }
 
     // Burn the onAsset from the liquidator
@@ -136,14 +137,14 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Resul
             .clone(),
         authority: ctx.accounts.clone.to_account_info().clone(),
     };
-    let send_usdc_context = CpiContext::new_with_signer(
+    let send_collateral_context = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info().clone(),
         cpi_accounts,
         seeds,
     );
 
     token::transfer(
-        send_usdc_context,
+        send_collateral_context,
         mint_position
             .collateral_amount
             .to_decimal()
@@ -155,7 +156,7 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Resul
     // Update data
     let new_minted_amount = rescale_toward_zero(
         pool.total_minted_amount.to_decimal() - borrowed_onasset,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     token_data.pools[mint_position.pool_index as usize].total_minted_amount =
         RawDecimal::from(new_minted_amount);
@@ -163,7 +164,7 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Resul
     let new_supplied_collateral = rescale_toward_zero(
         pool.supplied_mint_collateral_amount.to_decimal()
             - mint_position.collateral_amount.to_decimal(),
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     token_data.pools[mint_position.pool_index as usize].supplied_mint_collateral_amount =
         RawDecimal::from(new_supplied_collateral);
