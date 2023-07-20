@@ -27,7 +27,7 @@ pub struct InitializeBorrowPosition<'info> {
     #[account(
         mut,
         has_one = clone,
-        constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u8 @ CloneError::PoolStatusPreventsAction
+        constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u64 @ CloneError::PoolStatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(

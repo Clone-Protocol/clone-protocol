@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum CollateralParameters {
-    Status { status: u8 },
+    Status { status: u64 },
     OracleInfoIndex { value: u64 },
     CollateralizationRatio { value: RawDecimal },
 }
@@ -41,7 +41,7 @@ pub fn execute(
 
     match params {
         CollateralParameters::Status { status: value } => {
-            if value > Status::Frozen as u8 {
+            if value > Status::Frozen as u64 {
                 return Err(error!(CloneError::InvalidStatus));
             }
             collateral.status = value;

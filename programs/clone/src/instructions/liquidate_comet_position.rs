@@ -31,8 +31,8 @@ pub struct LiquidateCometPosition<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         has_one = clone,
-        constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Active as u8 || 
-        token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Liquidation as u8 @ CloneError::PoolStatusPreventsAction
+        constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Active as u64 || 
+        token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Liquidation as u64 @ CloneError::PoolStatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -115,7 +115,7 @@ pub fn execute(
     let onusd_ild_rebate = comet_position.onusd_ild_rebate.to_decimal();
     let onasset_ild_rebate = comet_position.onasset_ild_rebate.to_decimal();
 
-    if pool.status != Status::Liquidation as u8 {
+    if pool.status != Status::Liquidation as u64 {
         let starting_health_score = calculate_health_score(&comet, &token_data)?;
 
         return_error_if_false!(

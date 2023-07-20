@@ -20,7 +20,7 @@ pub struct LiquidateBorrowPosition<'info> {
     #[account(
         mut,
         has_one = clone,
-        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u8 @ CloneError::PoolStatusPreventsAction
+        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::PoolStatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     /// CHECK: Only used for address validation.
@@ -84,7 +84,7 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Resul
     let borrowed_onasset = mint_position.borrowed_onasset.to_decimal();
     let collateral_amount_value = mint_position.collateral_amount.to_decimal();
 
-    if pool.status != Status::Liquidation as u8 {
+    if pool.status != Status::Liquidation as u64 {
         if check_mint_collateral_sufficient(
             oracle,
             borrowed_onasset,

@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum PoolParameters {
-    Status { value: u8 },
+    Status { value: u64 },
     TreasuryTradingFee { value: RawDecimal },
     LiquidityTradingFee { value: RawDecimal },
     OracleInfoIndex { value: u64 },
@@ -60,10 +60,10 @@ pub fn execute(
     match params {
         PoolParameters::Status { value } => {
             // Only allow auth users to change the status to 'Frozen'
-            if !is_admin && value != Status::Frozen as u8 {
+            if !is_admin && value != Status::Frozen as u64 {
                 return Err(error!(CloneError::Unauthorized));
             }
-            if value > Status::Deprecation as u8 {
+            if value > Status::Deprecation as u64 {
                 return Err(error!(CloneError::InvalidStatus));
             }
             pool.status = value;

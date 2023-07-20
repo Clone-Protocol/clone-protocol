@@ -26,7 +26,7 @@ pub struct WithdrawCollateralFromBorrow<'info> {
     #[account(
         mut,
         has_one = clone,
-        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u8 @ CloneError::PoolStatusPreventsAction
+        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::PoolStatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(

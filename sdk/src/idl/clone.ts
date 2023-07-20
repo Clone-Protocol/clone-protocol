@@ -1689,7 +1689,7 @@ export type Clone = {
             "type": {
               "array": [
                 "publicKey",
-                10
+                2
               ]
             }
           },
@@ -4445,7 +4445,7 @@ export const IDL: Clone = {
             "type": {
               "array": [
                 "publicKey",
-                10
+                2
               ]
             }
           },

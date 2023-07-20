@@ -17,7 +17,7 @@ pub struct InitializeClone<'info> {
     pub admin: Signer<'info>,
     #[account(
         init,
-        space = 8 + 496,
+        space = 8 + 233,
         seeds = [b"clone"],
         bump,
         payer = admin

@@ -16,8 +16,8 @@ pub struct UnwrapOnAsset<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         has_one = clone,
-        constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u8 ||
-         token_data.load()?.pools[pool_index as usize].status == Status::Deprecation as u8 @ CloneError::PoolStatusPreventsAction,
+        constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u64 ||
+        token_data.load()?.pools[pool_index as usize].status == Status::Deprecation as u64 @ CloneError::PoolStatusPreventsAction,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
