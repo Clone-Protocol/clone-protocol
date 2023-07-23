@@ -53,6 +53,9 @@ export const swapStruct = new beet.BeetArgsStruct<
  * @property [_writable_] onusdMint
  * @property [_writable_] treasuryOnassetTokenAccount
  * @property [_writable_] treasuryOnusdTokenAccount
+ * @property [] cloneStaking (optional)
+ * @property [] userStakingAccount (optional)
+ * @property [] cloneStakingProgram (optional)
  * @category Instructions
  * @category Swap
  * @category generated
@@ -68,6 +71,9 @@ export type SwapInstructionAccounts = {
   treasuryOnassetTokenAccount: web3.PublicKey
   treasuryOnusdTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
+  cloneStaking?: web3.PublicKey
+  userStakingAccount?: web3.PublicKey
+  cloneStakingProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
@@ -77,6 +83,11 @@ export const swapInstructionDiscriminator = [
 
 /**
  * Creates a _Swap_ instruction.
+ *
+ * Optional accounts that are not provided will be omitted from the accounts
+ * array passed with the instruction.
+ * An optional account that is set cannot follow an optional account that is unset.
+ * Otherwise an Error is raised.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
@@ -146,6 +157,38 @@ export function createSwapInstruction(
       isSigner: false,
     },
   ]
+
+  if (accounts.cloneStaking != null) {
+    keys.push({
+      pubkey: accounts.cloneStaking,
+      isWritable: false,
+      isSigner: false,
+    })
+  }
+  if (accounts.userStakingAccount != null) {
+    if (accounts.cloneStaking == null) {
+      throw new Error(
+        "When providing 'userStakingAccount' then 'accounts.cloneStaking' need(s) to be provided as well."
+      )
+    }
+    keys.push({
+      pubkey: accounts.userStakingAccount,
+      isWritable: false,
+      isSigner: false,
+    })
+  }
+  if (accounts.cloneStakingProgram != null) {
+    if (accounts.cloneStaking == null || accounts.userStakingAccount == null) {
+      throw new Error(
+        "When providing 'cloneStakingProgram' then 'accounts.cloneStaking', 'accounts.userStakingAccount' need(s) to be provided as well."
+      )
+    }
+    keys.push({
+      pubkey: accounts.cloneStakingProgram,
+      isWritable: false,
+      isSigner: false,
+    })
+  }
 
   if (accounts.anchorRemainingAccounts != null) {
     for (const acc of accounts.anchorRemainingAccounts) {

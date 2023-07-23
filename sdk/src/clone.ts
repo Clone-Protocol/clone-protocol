@@ -516,7 +516,11 @@ export class CloneClient {
     userOnusdTokenAddress: PublicKey,
     userOnassetTokenAddress: PublicKey,
     treasuryOnusdTokenAddress: PublicKey,
-    treasuryOnassetTokenAddress: PublicKey
+    treasuryOnassetTokenAddress: PublicKey,
+    cloneStakingProgram?: PublicKey,
+    cloneStaking?: PublicKey,
+    userStakingAccount?: PublicKey,
+
   ) {
     return await this.program.methods
       .swap(poolIndex, quantity, quantityIsInput, quantityIsOnusd, threshold)
@@ -531,6 +535,9 @@ export class CloneClient {
         onusdMint: this.clone!.onusdMint,
         onassetMint: onassetMint,
         tokenProgram: TOKEN_PROGRAM_ID,
+        cloneStaking: cloneStaking ?? this.programId,
+        cloneStakingProgram: cloneStakingProgram ?? this.programId,
+        userStakingAccount: userStakingAccount ?? this.programId,
       })
       .instruction();
   }

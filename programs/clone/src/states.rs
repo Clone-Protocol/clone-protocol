@@ -182,11 +182,15 @@ impl Pool {
         quantity: Decimal,
         quantity_is_input: bool,
         quantity_is_onusd: bool,
+        override_liquidity_trading_fee: Option<Decimal>,
+        override_treasury_trading_fee: Option<Decimal>,
     ) -> SwapSummary {
         let (pool_onusd, pool_onasset) = self.calculate_jit_pool(oracle_price);
         let invariant = pool_onasset * pool_onusd;
-        let liquidity_trading_fee = self.liquidity_trading_fee.to_decimal();
-        let treasury_trading_fee = self.treasury_trading_fee.to_decimal();
+        let liquidity_trading_fee =
+            override_liquidity_trading_fee.unwrap_or(self.liquidity_trading_fee.to_decimal());
+        let treasury_trading_fee =
+            override_treasury_trading_fee.unwrap_or(self.treasury_trading_fee.to_decimal());
 
         if quantity_is_input {
             let (i_pool, o_pool) = if quantity_is_onusd {
