@@ -64,11 +64,11 @@ impl Default for RawDecimal {
 #[account]
 #[derive(Default)]
 pub struct Clone {
-    // 233
+    // 489
     pub onusd_mint: Pubkey,                    // 32
     pub token_data: Pubkey,                    // 32
     pub admin: Pubkey,                         // 32
-    pub auth: [Pubkey; 2],                    // 64
+    pub auth: [Pubkey; 10],                    // 320
     pub bump: u8,                              // 1
     pub liquidation_config: LiquidationConfig, // 32
     pub treasury_address: Pubkey,              // 32

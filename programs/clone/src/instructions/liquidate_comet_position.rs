@@ -20,6 +20,7 @@ pub struct LiquidateCometPosition<'info> {
     #[account(
         seeds = [b"user".as_ref(), user.key.as_ref()],
         bump = user_account.bump,
+        has_one = comet
     )]
     pub user_account: Account<'info, User>,
     #[account(
@@ -32,7 +33,7 @@ pub struct LiquidateCometPosition<'info> {
     #[account(
         has_one = clone,
         constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Active as u64 || 
-        token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Liquidation as u64 @ CloneError::PoolStatusPreventsAction
+        token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Liquidation as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -90,9 +91,6 @@ pub fn execute(
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let comet = &mut ctx.accounts.comet.load_mut()?;
 
-    
-    
-
     let comet_position = comet.positions[comet_position_index as usize];
     let comet_collateral = comet.collaterals[comet_collateral_index as usize];
     let authorized_amount = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
@@ -129,7 +127,12 @@ pub fn execute(
         );
     }
 
-    let mut burn_amount = ild_share.onusd_ild_share.min(authorized_amount);
+    let mut burn_amount = if pay_onusd_debt {
+        ild_share.onusd_ild_share.min(authorized_amount)
+    } else {
+        ild_share.onasset_ild_share.min(authorized_amount)
+    };
+    
 
     // calculate reward for liquidator
     let collateral_reward = rescale_toward_zero(
@@ -200,6 +203,7 @@ pub fn execute(
             comet.positions[comet_position_index as usize].onasset_ild_rebate = RawDecimal::from(
                 rescale_toward_zero(onasset_ild_rebate + burn_amount, CLONE_TOKEN_SCALE),
             );
+            msg!(&burn_amount.to_string());
             (
                 Burn {
                     mint: ctx.accounts.onasset_mint.to_account_info().clone(),
@@ -251,7 +255,7 @@ pub fn execute(
                 - collateral_reward,
             collateral_scale,
         );
-        comet.collaterals[ONUSD_COLLATERAL_INDEX].collateral_amount =
+        comet.collaterals[collateral_index].collateral_amount =
             RawDecimal::from(new_collateral_amount);
     }
 
@@ -271,6 +275,10 @@ pub fn execute(
         )?;
     };
     ctx.accounts.clone.event_counter += 1;
+
+    if comet.positions[comet_position_index as usize].onusd_ild_rebate.to_decimal() == Decimal::ZERO && comet.positions[comet_position_index as usize].onasset_ild_rebate.to_decimal() == Decimal::ZERO {
+        comet.remove_position(comet_position_index as usize);
+    }
 
     Ok(())
 }

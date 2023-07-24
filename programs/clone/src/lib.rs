@@ -222,6 +222,16 @@ pub mod clone {
         )
     }
 
+    pub fn liquidate_comet_position(
+        ctx: Context<LiquidateCometPosition>,
+        comet_position_index: u8,
+        comet_collateral_index: u8,
+        amount: u64,
+        pay_onusd_debt: bool,
+    ) -> Result<()> {
+        instructions::liquidate_comet_position::execute(ctx, comet_position_index, comet_collateral_index, amount, pay_onusd_debt)
+    }
+
     pub fn liquidate_borrow_position(
         ctx: Context<LiquidateBorrowPosition>,
         borrow_index: u8,

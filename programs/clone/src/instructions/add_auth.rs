@@ -12,7 +12,7 @@ pub struct AddAuth<'info> {
         seeds = [b"clone".as_ref()],
         bump = clone.bump
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
 }
 
 pub fn execute(ctx: Context<AddAuth>, auth: Pubkey) -> Result<()> {

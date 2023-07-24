@@ -1093,6 +1093,94 @@ export type Clone = {
       ]
     },
     {
+      "name": "liquidateCometPosition",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "clone",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "onusdMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "onassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorOnusdTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorOnassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorCollateralTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "cometPositionIndex",
+          "type": "u8"
+        },
+        {
+          "name": "cometCollateralIndex",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "payOnusdDebt",
+          "type": "bool"
+        }
+      ]
+    },
+    {
       "name": "liquidateBorrowPosition",
       "accounts": [
         {
@@ -1689,7 +1777,7 @@ export type Clone = {
             "type": {
               "array": [
                 "publicKey",
-                2
+                10
               ]
             }
           },
@@ -2715,8 +2803,8 @@ export type Clone = {
     },
     {
       "code": 6028,
-      "name": "PoolStatusPreventsAction",
-      "msg": "Pool Status Prevents Action"
+      "name": "StatusPreventsAction",
+      "msg": "Status Prevents Action"
     },
     {
       "code": 6029,
@@ -2748,10 +2836,7 @@ export type Clone = {
       "name": "InvalidOracleIndex",
       "msg": "Invalid oracle index"
     }
-  ],
-  "metadata": {
-    "address": "F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v"
-  }
+  ]
 };
 
 export const IDL: Clone = {
@@ -3849,6 +3934,94 @@ export const IDL: Clone = {
       ]
     },
     {
+      "name": "liquidateCometPosition",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "clone",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "comet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "onusdMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "onassetMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorOnusdTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorOnassetTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidatorCollateralTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "cometPositionIndex",
+          "type": "u8"
+        },
+        {
+          "name": "cometCollateralIndex",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "payOnusdDebt",
+          "type": "bool"
+        }
+      ]
+    },
+    {
       "name": "liquidateBorrowPosition",
       "accounts": [
         {
@@ -4445,7 +4618,7 @@ export const IDL: Clone = {
             "type": {
               "array": [
                 "publicKey",
-                2
+                10
               ]
             }
           },
@@ -5471,8 +5644,8 @@ export const IDL: Clone = {
     },
     {
       "code": 6028,
-      "name": "PoolStatusPreventsAction",
-      "msg": "Pool Status Prevents Action"
+      "name": "StatusPreventsAction",
+      "msg": "Status Prevents Action"
     },
     {
       "code": 6029,
@@ -5504,8 +5677,5 @@ export const IDL: Clone = {
       "name": "InvalidOracleIndex",
       "msg": "Invalid oracle index"
     }
-  ],
-  "metadata": {
-    "address": "F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v"
-  }
+  ]
 };

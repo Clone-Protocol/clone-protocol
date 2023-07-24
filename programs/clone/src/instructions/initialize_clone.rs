@@ -17,12 +17,12 @@ pub struct InitializeClone<'info> {
     pub admin: Signer<'info>,
     #[account(
         init,
-        space = 255,
+        space = 8 + 489,
         seeds = [b"clone"],
         bump,
         payer = admin
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         init,
         mint::decimals = 8,

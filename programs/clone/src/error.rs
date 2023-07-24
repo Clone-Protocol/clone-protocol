@@ -114,9 +114,9 @@ pub enum CloneError {
     #[msg("Failed to Load Pyth Price Feed")]
     FailedToLoadPyth,
 
-    /// 28. Pool Status Prevents Action
-    #[msg("Pool Status Prevents Action")]
-    PoolStatusPreventsAction,
+    /// 28. Status Prevents Action
+    #[msg("Status Prevents Action")]
+    StatusPreventsAction,
 
     /// 29. Pool is empty
     #[msg("Pool is empty")]
