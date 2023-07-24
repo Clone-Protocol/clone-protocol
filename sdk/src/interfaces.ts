@@ -6,6 +6,7 @@ export interface Clone {
   onusdMint: PublicKey;
   tokenData: PublicKey;
   admin: PublicKey;
+  auth: Array<PublicKey>;
   bump: number;
   liquidationConfig: LiquidationConfig;
   treasuryAddress: PublicKey;
@@ -96,7 +97,7 @@ export interface Pool {
   totalMintedAmount: RawDecimal;
   suppliedMintCollateralAmount: RawDecimal;
   assetInfo: AssetInfo;
-  deprecated: BN;
+  status: number;
 }
 
 export interface Collateral {
@@ -109,4 +110,5 @@ export interface Collateral {
   stable: BN;
   collateralizationRatio: RawDecimal;
   liquidationDiscount: RawDecimal;
+  status: number;
 }

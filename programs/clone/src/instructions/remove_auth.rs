@@ -1,5 +1,6 @@
 use crate::error::*;
 use crate::states::*;
+use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]

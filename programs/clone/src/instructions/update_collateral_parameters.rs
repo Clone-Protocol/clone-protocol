@@ -1,9 +1,10 @@
+use crate::CLONE_PROGRAM_SEED;
 use crate::{error::CloneError, states::*};
 use anchor_lang::prelude::*;
-use crate::CLONE_PROGRAM_SEED;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum CollateralParameters {
+    Status { status: u64 },
     OracleInfoIndex { value: u64 },
     CollateralizationRatio { value: RawDecimal },
 }
@@ -22,7 +23,7 @@ pub struct UpdateCollateralParameters<'info> {
         bump = clone.bump,
         has_one = token_data
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
         has_one = clone,
@@ -40,6 +41,12 @@ pub fn execute(
     let collateral = &mut token_data.collaterals[index as usize];
 
     match params {
+        CollateralParameters::Status { status: value } => {
+            if value > Status::Frozen as u64 {
+                return Err(error!(CloneError::InvalidStatus));
+            }
+            collateral.status = value;
+        }
         CollateralParameters::OracleInfoIndex { value } => {
             collateral.oracle_info_index = value;
         }

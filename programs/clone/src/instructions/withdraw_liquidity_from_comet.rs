@@ -3,10 +3,10 @@ use crate::events::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 
 #[derive(Accounts)]
 #[instruction(comet_position_index: u8, liquidity_token_amount: u64)]
@@ -25,10 +25,11 @@ pub struct WithdrawLiquidityFromComet<'info> {
         bump = clone.bump,
         has_one = token_data,
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
         has_one = clone,
+        constraint = token_data.load()?.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
 }

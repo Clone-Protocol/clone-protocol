@@ -3,11 +3,10 @@ use crate::events::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-use crate::{USER_SEED, CLONE_PROGRAM_SEED};
-
 
 #[derive(Accounts)]
 #[instruction(pool_index: u8, onusd_amount: u64)]
@@ -24,12 +23,12 @@ pub struct AddLiquidityToComet<'info> {
         bump = clone.bump,
         has_one = token_data,
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
         has_one = clone,
-        constraint = token_data.load()?.pools[pool_index as usize].deprecated == 0 @ CloneError::PoolDeprecated,
-        constraint = (pool_index as u64) < token_data.load()?.num_pools @ CloneError::InvalidInputPositionIndex
+        constraint = (pool_index as u64) < token_data.load()?.num_pools @ CloneError::InvalidInputPositionIndex,
+        constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
 }

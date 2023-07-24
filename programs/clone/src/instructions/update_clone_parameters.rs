@@ -1,6 +1,6 @@
 use crate::states::*;
-use anchor_lang::prelude::*;
 use crate::CLONE_PROGRAM_SEED;
+use anchor_lang::prelude::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum CloneParameters {
@@ -20,7 +20,7 @@ pub struct UpdateCloneParameters<'info> {
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
 }
 
 pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> Result<()> {

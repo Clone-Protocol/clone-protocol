@@ -696,13 +696,59 @@ export class CloneClient {
       .instruction();
   }
 
+  public async liquidateCometPositionInstruction(
+    liquidateAccount: PublicKey,
+    cometPositionIndex: number,
+    cometCollateralIndex: number,
+    amount: BN,
+    payOnusdDebt: boolean,
+    liquidatorOnusdTokenAccount: PublicKey,
+    liquidatorOnassetTokenAccount: PublicKey,
+    liquidatorCollateralTokenAccount: PublicKey
+  ) {
+    let tokenData = await this.getTokenData();
+    const { userPubkey, bump } = await this.getUserAddress(liquidateAccount);
+    const userAccount = await this.getUserAccount(userPubkey);
+
+    const cometPosition = (await this.getComet()).positions[cometPositionIndex];
+    const cometCollateral = (await this.getComet()).collaterals[
+      cometCollateralIndex
+    ];
+    const pool = tokenData.pools[cometPosition.poolIndex];
+    const collateral = tokenData.collaterals[cometCollateral.collateralIndex];
+
+    return this.program.methods
+      .liquidateCometPosition(
+        cometPositionIndex,
+        cometCollateralIndex,
+        amount,
+        payOnusdDebt
+      )
+      .accounts({
+        liquidator: this.provider.publicKey!,
+        user: userAccount.authority,
+        userAccount: userPubkey,
+        clone: this.cloneAddress[0],
+        tokenData: this.clone!.tokenData,
+        comet: userAccount.comet,
+        onusdMint: this.clone!.onusdMint,
+        onassetMint: pool.assetInfo.onassetMint,
+        liquidatorOnusdTokenAccount: liquidatorOnusdTokenAccount,
+        liquidatorOnassetTokenAccount: liquidatorOnassetTokenAccount,
+        liquidatorCollateralTokenAccount: liquidatorCollateralTokenAccount,
+        vault: collateral.vault,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+  }
+
   public async liquidateBorrowPositionInstruction(
     liquidateAccount: PublicKey,
     borrowIndex: number,
     liquidatorCollateralTokenAccount: PublicKey,
-    liquidatorOnassetTokenAccount: PublicKey,
-    tokenData: TokenData
+    liquidatorOnassetTokenAccount: PublicKey
   ) {
+    let tokenData = await this.getTokenData();
     const { userPubkey, bump } = await this.getUserAddress(liquidateAccount);
     const userAccount = await this.getUserAccount(userPubkey);
 

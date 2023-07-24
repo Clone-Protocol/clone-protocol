@@ -31,8 +31,8 @@ pub fn check_mint_collateral_sufficient(
     asset_amount_borrowed: Decimal,
     collateral_ratio: Decimal,
     collateral_amount: Decimal,
-    slot: u64,
 ) -> Result<()> {
+    let slot = Clock::get().expect("Failed to get slot.").slot;
     if check_feed_update(oracle, slot).is_err() {
         return Err(error!(CloneError::OutdatedOracle));
     }

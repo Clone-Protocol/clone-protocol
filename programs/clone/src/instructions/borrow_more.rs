@@ -2,12 +2,11 @@ use crate::error::*;
 use crate::events::*;
 use crate::math::*;
 use crate::states::*;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-use crate::{USER_SEED, CLONE_PROGRAM_SEED};
-
 
 #[derive(Accounts)]
 #[instruction( borrow_index: u8, amount: u64)]
@@ -17,7 +16,6 @@ pub struct BorrowMore<'info> {
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
         constraint = (borrow_index as u64) < user_account.borrows.num_positions @ CloneError::InvalidInputPositionIndex,
-        constraint = token_data.load()?.pools[user_account.borrows.positions[borrow_index as usize].pool_index as usize].deprecated == 0 @ CloneError::PoolDeprecated
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
@@ -25,10 +23,11 @@ pub struct BorrowMore<'info> {
         bump = clone.bump,
         has_one = token_data,
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
         has_one = clone,
+        constraint = token_data.load()?.pools[user_account.borrows.positions[borrow_index as usize].pool_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -46,7 +45,10 @@ pub struct BorrowMore<'info> {
 }
 
 pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Result<()> {
-    let seeds = &[&[CLONE_PROGRAM_SEED.as_ref(), bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[
+        CLONE_PROGRAM_SEED.as_ref(),
+        bytemuck::bytes_of(&ctx.accounts.clone.bump),
+    ][..]];
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
     let borrows = &mut ctx.accounts.user_account.borrows;
@@ -64,10 +66,7 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
         mint_position.borrowed_onasset.to_decimal() + amount_value,
         CLONE_TOKEN_SCALE,
     );
-    borrows.positions[borrow_index as usize].borrowed_onasset =
-        RawDecimal::from(new_minted_amount);
-
-    let slot = Clock::get()?.slot;
+    borrows.positions[borrow_index as usize].borrowed_onasset = RawDecimal::from(new_minted_amount);
 
     // Update protocol-wide total
     let total_minted = rescale_toward_zero(
@@ -84,7 +83,6 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
             .to_decimal(),
         collateral_ratio,
         mint_position.collateral_amount.to_decimal(),
-        slot,
     )
     .unwrap();
 

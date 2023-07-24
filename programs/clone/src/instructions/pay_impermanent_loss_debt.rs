@@ -2,11 +2,11 @@ use crate::error::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-use crate::{USER_SEED, CLONE_PROGRAM_SEED};
 
 #[derive(Accounts)]
 #[instruction(user: Pubkey, comet_position_index: u8, amount: u64, pay_onusd_debt: bool)]
@@ -27,7 +27,8 @@ pub struct PayImpermanentLossDebt<'info> {
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
-        has_one = clone
+        has_one = clone,
+        constraint = token_data.load()?.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(

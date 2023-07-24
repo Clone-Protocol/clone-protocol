@@ -1,10 +1,10 @@
 use crate::error::*;
 use crate::return_error_if_false;
 use crate::states::*;
+use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 use pyth_sdk_solana::Price;
 use std::convert::TryInto;
-use crate::CLONE_PROGRAM_SEED;
 
 pub const MAX_SIZE: usize = 128;
 
@@ -48,7 +48,7 @@ pub struct UpdatePrices<'info> {
         bump = clone.bump,
         has_one = token_data
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
         has_one = clone

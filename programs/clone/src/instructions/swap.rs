@@ -3,6 +3,7 @@ use crate::events::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
+use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use clone_staking::{
@@ -12,8 +13,6 @@ use clone_staking::{
 };
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-use crate::CLONE_PROGRAM_SEED;
-
 
 #[derive(Accounts)]
 #[instruction(
@@ -36,7 +35,7 @@ pub struct Swap<'info> {
         mut,
         has_one = clone,
         constraint = (pool_index as u64) < token_data.load()?.num_pools @ CloneError::InvalidInputPositionIndex,
-        constraint = token_data.load()?.pools[pool_index as usize].deprecated == 0 @ CloneError::PoolDeprecated
+        constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -97,7 +96,10 @@ pub fn execute(
     quantity_is_onusd: bool,
     result_threshold: u64,
 ) -> Result<()> {
-    let seeds = &[&[CLONE_PROGRAM_SEED.as_ref(), bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[
+        CLONE_PROGRAM_SEED.as_ref(),
+        bytemuck::bytes_of(&ctx.accounts.clone.bump),
+    ][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let pool = token_data.pools[pool_index as usize];
     let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];

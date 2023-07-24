@@ -1,12 +1,12 @@
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use std::convert::TryInto;
-use crate::{USER_SEED, CLONE_PROGRAM_SEED};
-
 
 #[derive(Accounts)]
 #[instruction(borrow_index: u8)]
@@ -20,14 +20,17 @@ pub struct LiquidateBorrowPosition<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone
+        has_one = clone,
+        constraint = token_data.load()?.pools[user_account.borrows.positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     /// CHECK: Only used for address validation.
     pub user: AccountInfo<'info>,
     #[account(
+        mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
+        constraint = (borrow_index as u64) < user_account.borrows.num_positions @ CloneError::InvalidInputPositionIndex
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
@@ -38,7 +41,6 @@ pub struct LiquidateBorrowPosition<'info> {
     #[account(
         mut,
         address = token_data.load()?.collaterals[user_account.borrows.positions[borrow_index as usize].collateral_index as usize].vault,
-        constraint = vault.mint == token_data.load()?.collaterals[user_account.borrows.positions[borrow_index as usize].collateral_index as usize].mint
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -57,7 +59,10 @@ pub struct LiquidateBorrowPosition<'info> {
 }
 
 pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Result<()> {
-    let seeds = &[&[CLONE_PROGRAM_SEED.as_ref(), bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[
+        CLONE_PROGRAM_SEED.as_ref(),
+        bytemuck::bytes_of(&ctx.accounts.clone.bump),
+    ][..]];
 
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let borrows = &mut ctx.accounts.user_account.borrows;
@@ -78,17 +83,22 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Resul
     let borrowed_onasset = borrow_position.borrowed_onasset.to_decimal();
     let collateral_amount_value = borrow_position.collateral_amount.to_decimal();
 
-    // Should fail here.
-    if check_mint_collateral_sufficient(
-        oracle,
-        borrowed_onasset,
-        pool.asset_info.stable_collateral_ratio.to_decimal(),
-        collateral_amount_value,
-        slot,
-    )
-    .is_ok()
-    {
-        return Err(CloneError::MintPositionUnableToLiquidate.into());
+    if pool.status != Status::Liquidation as u64 {
+        if check_mint_collateral_sufficient(
+            oracle,
+            borrowed_onasset,
+            pool.asset_info.stable_collateral_ratio.to_decimal(),
+            collateral_amount_value,
+        )
+        .is_ok()
+        {
+            return Err(CloneError::BorrowPositionUnableToLiquidate.into());
+        }
+    } else {
+        return_error_if_false!(
+            check_feed_update(oracle, Clock::get()?.slot).is_ok(),
+            CloneError::OutdatedOracle
+        );
     }
 
     // Burn the onAsset from the liquidator
@@ -126,14 +136,14 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Resul
             .clone(),
         authority: ctx.accounts.clone.to_account_info().clone(),
     };
-    let send_usdc_context = CpiContext::new_with_signer(
+    let send_collateral_context = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info().clone(),
         cpi_accounts,
         seeds,
     );
 
     token::transfer(
-        send_usdc_context,
+        send_collateral_context,
         borrow_position
             .collateral_amount
             .to_decimal()

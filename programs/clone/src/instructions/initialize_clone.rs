@@ -1,4 +1,3 @@
-
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
@@ -17,12 +16,12 @@ pub struct InitializeClone<'info> {
     pub admin: Signer<'info>,
     #[account(
         init,
-        space = 8 + 200,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
+        space = 8 + 489,
         bump,
         payer = admin
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         init,
         mint::decimals = 8,
@@ -81,6 +80,7 @@ pub fn execute(
         collateralization_ratio: RawDecimal::from(Decimal::one()),
         stable: 1,
         liquidation_discount: RawDecimal::new(0, CLONE_TOKEN_SCALE),
+        status: 0,
     });
     // add usdc as second collateral type
     let usdc_scale = ctx.accounts.usdc_mint.decimals;
@@ -94,6 +94,7 @@ pub fn execute(
         collateralization_ratio: RawDecimal::from(Decimal::one()),
         stable: 1,
         liquidation_discount: RawDecimal::new(0, usdc_scale.into()),
+        status: 0,
     });
 
     // set token data

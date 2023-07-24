@@ -2,127 +2,143 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum CloneError {
-    /// 0. Invalid Mint Collateral Ratio
+    /// 0. Unauthorized
+    #[msg("Unauthorized")]
+    Unauthorized,
+
+    /// 1. Invalid Mint Collateral Ratio
     #[msg("Invalid Mint Collateral Ratio")]
     InvalidMintCollateralRatio,
 
-    /// 1. Collateral Not Found
+    /// 2. Collateral Not Found
     #[msg("Collateral Not Found")]
     CollateralNotFound,
 
-    /// 2. Pool Not Found
+    /// 3. Pool Not Found
     #[msg("Pool Not Found")]
     PoolNotFound,
 
-    /// 3. Invalid Collateral Type
+    /// 4. Invalid Collateral Type
     #[msg("Invalid Collateral Type")]
     InvalidCollateralType,
 
-    /// 4. Invalid Token Amount
+    /// 5. Invalid Token Amount
     #[msg("Invalid Token Amount")]
     InvalidTokenAmount,
 
-    /// 5. Invalid Bool
+    /// 6. Invalid Bool
     #[msg("Invalid Bool")]
     InvalidBool,
 
-    /// 6. Outdated Oracle
+    /// 7. Outdated Oracle
     #[msg("Outdated Oracle")]
     OutdatedOracle,
 
-    /// 7. Non Stables not Supported
+    /// 8. Non Stables not Supported
     #[msg("Non-stables Not Supported")]
     NonStablesNotSupported,
 
-    /// 8. Mint Position Unable To Liquidate
+    /// 9. Mint Position Unable To Liquidate
     #[msg("Mint Position Unable to Liquidate")]
-    MintPositionUnableToLiquidate,
+    BorrowPositionUnableToLiquidate,
 
-    /// 9. Health Score Too Low
+    /// 10. Health Score Too Low
     #[msg("Health Score Too Low")]
     HealthScoreTooLow,
 
-    /// 10. Invalid Input Collateral Account
+    /// 11. Invalid Input Collateral Account
     #[msg("Invalid input collateral account")]
     InvalidInputCollateralAccount,
 
-    /// 11. Invalid Account Loader Owner
+    /// 12. Invalid Account Loader Owner
     #[msg("Invalid Account loader owner")]
     InvalidAccountLoaderOwner,
 
-    /// 12. Invalid position index
+    /// 13. Invalid position index
     #[msg("Invalid input position index")]
     InvalidInputPositionIndex,
 
-    /// 13. Invalid token account balance
+    /// 14. Invalid token account balance
     #[msg("Invalid token account balance")]
     InvalidTokenAccountBalance,
 
-    /// 14. Inequality comparison violated
+    /// 15. Inequality comparison violated
     #[msg("Inequality comparison violated")]
     InequalityComparisonViolated,
 
-    /// 15. Comet Not Empty
+    /// 16. Comet Not Empty
     #[msg("Comet Not Empty")]
     CometNotEmpty,
 
-    /// 16. Not subject to liquidation
+    /// 17. Not subject to liquidation
     #[msg("Not Subject to Liquidation")]
     NotSubjectToLiquidation,
 
-    /// 17. Liquidation amount too large
+    /// 18. Liquidation amount too large
     #[msg("Liquidation amount too large")]
     LiquidationAmountTooLarge,
 
-    /// 18. No remaining account supplied
+    /// 19. No remaining account supplied
     #[msg("No remaining accounts supplied")]
     NoRemainingAccountsSupplied,
 
-    /// 19. Non-zero collateralization ratio required
+    /// 20. Non-zero collateralization ratio required
     #[msg("Non-zero collateralization ratio required")]
     NonZeroCollateralizationRatioRequired,
 
-    /// 20. Incorrect Oracle Address
+    /// 21. Incorrect Oracle Address
     #[msg("Incorrect oracle address provided")]
     IncorrectOracleAddress,
 
-    /// 21. Invalid value range
+    /// 22. Invalid value range
     #[msg("Value is in an incorrect range")]
     InvalidValueRange,
 
-    /// 22. Invalid asset stability
+    /// 23. Invalid asset stability
     #[msg("Asset stable requirement violated")]
     InvalidAssetStability,
 
-    /// 23. Trade exceeds desired slippage
+    /// 24. Trade exceeds desired slippage
     #[msg("Slippage tolerance exceeded")]
     SlippageToleranceExceeded,
 
-    /// 24. Collateral must be all in onUSD
+    /// 25. Collateral must be all in onUSD
     #[msg("Collateral must be all in onUSD")]
     RequireOnlyonUSDCollateral,
 
-    /// 25. Require largest ILD position first
+    /// 26. Require largest ILD position first
     #[msg("Positions must be all closed")]
     RequireAllPositionsClosed,
 
-    /// 26. Failed to Load Pyth Price Feed
+    /// 27. Failed to Load Pyth Price Feed
     #[msg("Failed to Load Pyth Price Feed")]
     FailedToLoadPyth,
 
-    /// 27. Pool Deprecated
-    #[msg("Pool Deprecated")]
-    PoolDeprecated,
+    /// 28. Status Prevents Action
+    #[msg("Status Prevents Action")]
+    StatusPreventsAction,
 
-    /// 28. Pool is empty
+    /// 29. Pool is empty
     #[msg("Pool is empty")]
     PoolEmpty,
 
-    /// 29. No liquidity to withdraw
+    /// 30. No liquidity to withdraw
     #[msg("No liquidity to withdraw")]
     NoLiquidityToWithdraw,
 
-    /// 30. Invalid oracle index
+    /// 31. Invalid Status
+    #[msg("Invalid Status")]
+    InvalidStatus,
+
+    /// 32. Auth Array Full
+    #[msg("Auth Array Full")]
+    AuthArrayFull,
+
+    /// 33. Auth Not Found
+    #[msg("Auth Not Found")]
+    AuthNotFound,
+
+    /// 34. Invalid oracle index
     #[msg("Invalid oracle index")]
     InvalidOracleIndex,
 }

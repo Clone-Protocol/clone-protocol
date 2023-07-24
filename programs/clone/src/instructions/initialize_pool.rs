@@ -1,11 +1,10 @@
 use crate::error::CloneError;
 use crate::return_error_if_false;
 use crate::states::*;
+use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use std::convert::TryInto;
-use crate::CLONE_PROGRAM_SEED;
-
 
 #[derive(Accounts)]
 #[instruction(
@@ -118,7 +117,7 @@ pub fn execute(
         asset_info: AssetInfo {
             ..Default::default()
         },
-        deprecated: 0,
+        status: 0,
         committed_onusd_liquidity: RawDecimal::default(),
         onusd_ild: RawDecimal::default(),
         onasset_ild: RawDecimal::default(),

@@ -1,11 +1,11 @@
 use crate::error::*;
 use crate::math::*;
 use crate::states::*;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-use crate::{USER_SEED, CLONE_PROGRAM_SEED};
 
 #[derive(Accounts)]
 #[instruction(comet_position_index: u8)]
@@ -26,7 +26,8 @@ pub struct CollectLpRewards<'info> {
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
-        has_one = clone
+        has_one = clone,
+        constraint = token_data.load()?.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -55,7 +56,10 @@ pub struct CollectLpRewards<'info> {
 }
 
 pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Result<()> {
-    let seeds = &[&[CLONE_PROGRAM_SEED.as_ref(), bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[
+        CLONE_PROGRAM_SEED.as_ref(),
+        bytemuck::bytes_of(&ctx.accounts.clone.bump),
+    ][..]];
     let token_data = ctx.accounts.token_data.load()?;
     let comet = &mut ctx.accounts.user_account.comet;
 

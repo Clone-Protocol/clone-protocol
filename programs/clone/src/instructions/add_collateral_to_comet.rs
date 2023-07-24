@@ -2,11 +2,11 @@ use crate::error::CloneError;
 //use crate::instructions::AddCollateralToComet;
 use crate::math::*;
 use crate::states::*;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-use crate::{USER_SEED, CLONE_PROGRAM_SEED};
 
 #[derive(Accounts)]
 #[instruction(collateral_index: u8, collateral_amount: u64)]
@@ -22,11 +22,12 @@ pub struct AddCollateralToComet<'info> {
         bump = clone.bump,
         has_one = token_data,
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
         has_one = clone,
-        constraint = (collateral_index as u64) < token_data.load()?.num_collaterals @ CloneError::InvalidInputPositionIndex
+        constraint = (collateral_index as u64) < token_data.load()?.num_collaterals @ CloneError::InvalidInputPositionIndex,
+        constraint = token_data.load()?.collaterals[collateral_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(

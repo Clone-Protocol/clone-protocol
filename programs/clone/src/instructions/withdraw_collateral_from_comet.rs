@@ -2,11 +2,11 @@ use crate::error::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 
 #[derive(Accounts)]
 #[instruction(comet_collateral_index: u8, collateral_amount: u64)]
@@ -24,7 +24,7 @@ pub struct WithdrawCollateralFromComet<'info> {
         bump = clone.bump,
         has_one = token_data,
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
         has_one = clone,
@@ -49,7 +49,10 @@ pub fn execute(
     comet_collateral_index: u8,
     collateral_amount: u64,
 ) -> Result<()> {
-    let seeds = &[&[CLONE_PROGRAM_SEED.as_ref(), bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[
+        CLONE_PROGRAM_SEED.as_ref(),
+        bytemuck::bytes_of(&ctx.accounts.clone.bump),
+    ][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let comet_collateral_index = comet_collateral_index as usize;

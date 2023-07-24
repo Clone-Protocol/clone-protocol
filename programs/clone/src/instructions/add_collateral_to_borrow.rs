@@ -2,11 +2,11 @@ use crate::error::*;
 use crate::events::*;
 use crate::math::*;
 use crate::states::*;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-use crate::{USER_SEED, CLONE_PROGRAM_SEED};
 
 #[derive(Accounts)]
 #[instruction(borrow_index: u8, amount: u64)]
@@ -24,10 +24,11 @@ pub struct AddCollateralToBorrow<'info> {
         bump = clone.bump,
         has_one = token_data,
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone
+        has_one = clone,
+        constraint = token_data.load()?.collaterals[user_account.borrows.positions[borrow_index as usize].collateral_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -49,8 +50,8 @@ pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u6
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let borrows = &mut ctx.accounts.user_account.borrows;
 
-    let collateral = token_data.collaterals
-        [borrows.positions[borrow_index as usize].collateral_index as usize];
+    let collateral =
+        token_data.collaterals[borrows.positions[borrow_index as usize].collateral_index as usize];
     let mint_position = borrows.positions[borrow_index as usize];
 
     let amount_value = Decimal::new(
@@ -65,8 +66,7 @@ pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u6
         current_vault_mint_supply.scale(),
     );
 
-    token_data.collaterals
-        [borrows.positions[borrow_index as usize].collateral_index as usize]
+    token_data.collaterals[borrows.positions[borrow_index as usize].collateral_index as usize]
         .vault_mint_supply = RawDecimal::from(new_vault_mint_supply);
 
     // add collateral amount to mint data

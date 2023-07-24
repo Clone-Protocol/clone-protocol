@@ -3,12 +3,11 @@ use crate::events::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-use crate::{USER_SEED, CLONE_PROGRAM_SEED};
-
 
 #[derive(Accounts)]
 #[instruction(pool_index: u8, collateral_index: u8, onasset_amount: u64, collateral_amount: u64)]
@@ -28,7 +27,7 @@ pub struct InitializeBorrowPosition<'info> {
     #[account(
         mut,
         has_one = clone,
-        constraint = token_data.load()?.pools[pool_index as usize].deprecated == 0 @ CloneError::PoolDeprecated
+        constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -64,7 +63,10 @@ pub fn execute(
     onasset_amount: u64,
     collateral_amount: u64,
 ) -> Result<()> {
-    let seeds = &[&[CLONE_PROGRAM_SEED.as_ref(), bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[
+        CLONE_PROGRAM_SEED.as_ref(),
+        bytemuck::bytes_of(&ctx.accounts.clone.bump),
+    ][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let pool = token_data.pools[pool_index as usize];
@@ -82,13 +84,11 @@ pub fn execute(
     let collateral_ratio = pool.asset_info.stable_collateral_ratio.to_decimal();
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
-    let slot = Clock::get()?.slot;
     check_mint_collateral_sufficient(
         oracle,
         onasset_amount_value,
         collateral_ratio,
         collateral_amount_value,
-        slot,
     )?;
 
     // lock user collateral in vault

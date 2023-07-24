@@ -8,6 +8,17 @@ pub const ONUSD_COLLATERAL_INDEX: usize = 0;
 pub const USDC_COLLATERAL_INDEX: usize = 1;
 pub const PERCENT_SCALE: u8 = 2;
 pub const BPS_SCALE: u32 = 4;
+
+#[repr(u64)]
+#[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
+pub enum Status {
+    Active = 0,
+    Frozen = 1,
+    Extraction = 2,
+    Liquidation = 3,
+    Deprecation = 4,
+}
+
 pub const NUM_POOLS: usize = 64;
 pub const NUM_COLLATERALS: usize = 16;
 pub const NUM_ORACLES: usize = 80;
@@ -53,25 +64,26 @@ impl Default for RawDecimal {
 #[account]
 #[derive(Default)]
 pub struct Clone {
-    // 185
-    pub onusd_mint: Pubkey,                    // 32
-    pub token_data: Pubkey,                    // 32
-    pub admin: Pubkey,                         // 32
-    pub bump: u8,                              // 1
-    pub liquidator_fee_bps: u16,               // 16,
-    pub treasury_address: Pubkey,              // 32
-    pub event_counter: u64,                    // 8
+    // 489
+    pub onusd_mint: Pubkey,       // 32
+    pub token_data: Pubkey,       // 32
+    pub admin: Pubkey,            // 32
+    pub auth: [Pubkey; 10],       // 320
+    pub bump: u8,                 // 1
+    pub liquidator_fee_bps: u16,  // 16,
+    pub treasury_address: Pubkey, // 32
+    pub event_counter: u64,       // 8
 }
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 25176
+    // 25,264
     pub clone: Pubkey,                              // 32
     pub num_pools: u64,                             // 8
     pub num_collaterals: u64,                       // 8
     pub num_oracles: u64,                           // 8
-    pub pools: [Pool; NUM_POOLS],                   // 64 * 504 = 17,408
-    pub collaterals: [Collateral; NUM_COLLATERALS], // 16 * 144 = 2,560
+    pub pools: [Pool; NUM_POOLS],                   // 64 * 272 = 17,408
+    pub collaterals: [Collateral; NUM_COLLATERALS], // 16 * 144 = 2,688
     pub oracles: [OracleInfo; NUM_ORACLES],         // 80 * 64 = 5,120
 }
 
@@ -140,7 +152,7 @@ pub struct Pool {
     pub total_minted_amount: RawDecimal,             // 16
     pub supplied_mint_collateral_amount: RawDecimal, // 16
     pub asset_info: AssetInfo,                       // 120
-    pub deprecated: u64,                             // 8
+    pub status: u64,                                 // 8
 }
 
 #[derive(Default, Debug)]
@@ -296,7 +308,7 @@ impl Pool {
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct Collateral {
-    // 144
+    // 168
     pub oracle_info_index: u64,              // 8
     pub mint: Pubkey,                        // 32
     pub vault: Pubkey,                       // 32
@@ -306,6 +318,7 @@ pub struct Collateral {
     pub stable: u64,                         // 8
     pub collateralization_ratio: RawDecimal, // 16
     pub liquidation_discount: RawDecimal,    // 16
+    pub status: u64,                         // 8
 }
 
 #[account]
@@ -429,7 +442,7 @@ impl Default for CometCollateral {
 #[derive(AnchorSerialize, AnchorDeserialize, Copy, Clone, PartialEq, Eq)]
 pub struct BorrowPositions {
     // 20,440
-    pub num_positions: u64,                                       // 8
+    pub num_positions: u64,                                // 8
     pub positions: [BorrowPosition; NUM_BORROW_POSITIONS], // 255 * 80 = 20,400
 }
 

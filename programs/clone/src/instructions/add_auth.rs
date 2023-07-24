@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::states::*;
+use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
-use crate::{CLONE_PROGRAM_SEED};
 
 #[derive(Accounts)]
 #[instruction(auth: Pubkey)]

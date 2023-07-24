@@ -1,6 +1,6 @@
+use crate::CLONE_PROGRAM_SEED;
 use crate::{error::*, return_error_if_false, states::*};
 use anchor_lang::prelude::*;
-use crate::CLONE_PROGRAM_SEED;
 
 #[derive(Accounts)]
 #[instruction(index: u8)]
@@ -13,7 +13,7 @@ pub struct RemoveOracleFeed<'info> {
         has_one = token_data,
         has_one = admin
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
         has_one = clone

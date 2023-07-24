@@ -1,8 +1,7 @@
 use crate::states::*;
+use crate::USER_SEED;
 use anchor_lang::prelude::*;
 use anchor_lang::AccountsClose;
-use crate::USER_SEED;
-
 
 #[derive(Accounts)]
 pub struct CloseUserAccount<'info> {
@@ -22,10 +21,7 @@ pub struct CloseUserAccount<'info> {
 pub fn execute(ctx: Context<CloseUserAccount>) -> Result<()> {
     // remove single pool comet
     let user_account = ctx.accounts.user_account.clone();
-    assert!(
-        user_account.comet.is_empty()
-            && user_account.borrows.is_empty()
-    );
+    assert!(user_account.comet.is_empty() && user_account.borrows.is_empty());
 
     ctx.accounts
         .user_account

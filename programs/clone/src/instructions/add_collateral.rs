@@ -1,10 +1,10 @@
 use crate::error::CloneError;
 use crate::return_error_if_false;
 use crate::states::*;
+use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use std::convert::TryInto;
-use crate::CLONE_PROGRAM_SEED;
 
 #[derive(Accounts)]
 #[instruction(scale: u8, stable: bool, collateralization_ratio: u8, oracle_info_index: u8)]
@@ -17,7 +17,7 @@ pub struct AddCollateral<'info> {
         has_one = token_data,
         has_one = admin
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
         has_one = clone
@@ -68,6 +68,7 @@ pub fn execute(
             collateralization_ratio.try_into().unwrap(),
         ),
         liquidation_discount: RawDecimal::from_percent(liquidation_discount.try_into().unwrap()),
+        status: 0,
     });
 
     Ok(())

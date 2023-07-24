@@ -2,12 +2,11 @@ use crate::error::*;
 use crate::events::*;
 use crate::math::*;
 use crate::states::*;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-use crate::{CLONE_PROGRAM_SEED, USER_SEED};
-
 
 #[derive(Accounts)]
 #[instruction(borrow_index: u8, amount: u64)]
@@ -25,10 +24,11 @@ pub struct WithdrawCollateralFromBorrow<'info> {
         bump = clone.bump,
         has_one = token_data,
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone
+        has_one = clone,
+        constraint = token_data.load()?.pools[user_account.borrows.positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -51,7 +51,10 @@ pub fn execute(
     borrow_index: u8,
     amount: u64,
 ) -> Result<()> {
-    let seeds = &[&[CLONE_PROGRAM_SEED.as_ref(), bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[
+        CLONE_PROGRAM_SEED.as_ref(),
+        bytemuck::bytes_of(&ctx.accounts.clone.bump),
+    ][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let borrows = &mut ctx.accounts.user_account.borrows;
 
@@ -59,8 +62,8 @@ pub fn execute(
     let pool = token_data.pools[pool_index as usize];
     let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral_ratio = pool.asset_info.stable_collateral_ratio;
-    let collateral = token_data.collaterals
-        [borrows.positions[borrow_index as usize].collateral_index as usize];
+    let collateral =
+        token_data.collaterals[borrows.positions[borrow_index as usize].collateral_index as usize];
     let borrow_position = borrows.positions[borrow_index as usize];
 
     let amount_value = Decimal::new(
@@ -74,8 +77,7 @@ pub fn execute(
         current_vault_mint_supply - amount_value,
         current_vault_mint_supply.scale(),
     );
-    token_data.collaterals
-        [borrows.positions[borrow_index as usize].collateral_index as usize]
+    token_data.collaterals[borrows.positions[borrow_index as usize].collateral_index as usize]
         .vault_mint_supply = RawDecimal::from(new_vault_mint_supply);
 
     // subtract collateral amount from mint data
@@ -85,7 +87,6 @@ pub fn execute(
     );
     borrows.positions[borrow_index as usize].collateral_amount =
         RawDecimal::from(new_collateral_amount);
-    let slot = Clock::get()?.slot;
 
     let new_supplied_collateral = rescale_toward_zero(
         pool.supplied_mint_collateral_amount.to_decimal() - amount_value,
@@ -102,7 +103,6 @@ pub fn execute(
         borrows.positions[borrow_index as usize]
             .collateral_amount
             .to_decimal(),
-        slot,
     )
     .unwrap();
 
