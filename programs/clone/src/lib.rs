@@ -21,13 +21,15 @@ pub mod clone {
     pub fn initialize_clone(
         ctx: Context<InitializeClone>,
         max_health_liquidation: u64,
-        liquidator_fee: u64,
+        comet_liquidator_fee: u64,
+        borrow_liquidator_fee: u64,
         treasury_address: Pubkey,
     ) -> Result<()> {
         instructions::initialize_clone::execute(
             ctx,
             max_health_liquidation,
-            liquidator_fee,
+            comet_liquidator_fee,
+            borrow_liquidator_fee,
             treasury_address,
         )
     }
@@ -95,8 +97,7 @@ pub mod clone {
 
     pub fn initialize_pool(
         ctx: Context<InitializePool>,
-        stable_collateral_ratio: u16,
-        crypto_collateral_ratio: u16,
+        overcollateral_ratio: u16,
         liquidity_trading_fee: u16,
         treasury_trading_fee: u16,
         il_health_score_coefficient: u64,
@@ -106,8 +107,7 @@ pub mod clone {
     ) -> Result<()> {
         instructions::initialize_pool::execute(
             ctx,
-            stable_collateral_ratio,
-            crypto_collateral_ratio,
+            overcollateral_ratio,
             liquidity_trading_fee,
             treasury_trading_fee,
             il_health_score_coefficient,
@@ -166,10 +166,11 @@ pub mod clone {
 
     pub fn pay_borrow_debt(
         ctx: Context<PayBorrowDebt>,
+        user: Pubkey,
         borrow_index: u8,
         amount: u64,
     ) -> Result<()> {
-        instructions::pay_borrow_debt::execute(ctx, borrow_index, amount)
+        instructions::pay_borrow_debt::execute(ctx, user, borrow_index, amount)
     }
 
     pub fn borrow_more(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Result<()> {
@@ -235,8 +236,9 @@ pub mod clone {
     pub fn liquidate_borrow_position(
         ctx: Context<LiquidateBorrowPosition>,
         borrow_index: u8,
+        amount: u64,
     ) -> Result<()> {
-        instructions::liquidate_borrow_position::execute(ctx, borrow_index)
+        instructions::liquidate_borrow_position::execute(ctx, borrow_index, amount)
     }
 
     pub fn collect_lp_rewards(

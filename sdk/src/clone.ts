@@ -72,7 +72,8 @@ export class CloneClient {
   }
   public async initializeClone(
     maxHealthLiquidation: number,
-    liquidatorFee: number,
+    cometLiquidatorFee: number,
+    borrowLiquidatorFee: number,
     treasuryAddress: PublicKey,
     usdcMint: PublicKey
   ) {
@@ -85,7 +86,8 @@ export class CloneClient {
     await this.program.methods
       .initializeClone(
         new BN(maxHealthLiquidation),
-        new BN(liquidatorFee),
+        new BN(cometLiquidatorFee),
+        new BN(borrowLiquidatorFee),
         treasuryAddress
       )
       .accounts({
@@ -161,8 +163,7 @@ export class CloneClient {
 
   public async initializePool(
     admin: PublicKey,
-    stableCollateralRatio: number,
-    cryptoCollateralRatio: number,
+    overcollateralRatio: number,
     liquidityTradingFee: number,
     treasuryTradingFee: number,
     ilHealthScoreCoefficient: number,
@@ -189,8 +190,7 @@ export class CloneClient {
 
     await this.program.methods
       .initializePool(
-        stableCollateralRatio,
-        cryptoCollateralRatio,
+        overcollateralRatio,
         liquidityTradingFee,
         treasuryTradingFee,
         toDevnetScale(ilHealthScoreCoefficient),
@@ -466,9 +466,9 @@ export class CloneClient {
     let userAddress = await this.getUserAddress();
 
     return await this.program.methods
-      .payBorrowDebt(borrowIndex, onassetAmount)
+      .payBorrowDebt(this.provider.publicKey!, borrowIndex, onassetAmount)
       .accounts({
-        user: this.provider.publicKey!,
+        payer: this.provider.publicKey!,
         userAccount: userAddress.userPubkey,
         clone: this.cloneAddress[0],
         tokenData: this.clone!.tokenData,
@@ -745,6 +745,7 @@ export class CloneClient {
   public async liquidateBorrowPositionInstruction(
     liquidateAccount: PublicKey,
     borrowIndex: number,
+    amount: BN,
     liquidatorCollateralTokenAccount: PublicKey,
     liquidatorOnassetTokenAccount: PublicKey
   ) {
@@ -759,7 +760,7 @@ export class CloneClient {
     const collateral = tokenData.collaterals[mintPosition.collateralIndex];
 
     return this.program.methods
-      .liquidateBorrowPosition(borrowIndex)
+      .liquidateBorrowPosition(borrowIndex, amount)
       .accounts({
         liquidator: this.provider.publicKey!,
         clone: this.cloneAddress[0],

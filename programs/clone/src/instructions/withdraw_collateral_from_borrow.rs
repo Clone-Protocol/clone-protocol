@@ -58,14 +58,17 @@ pub fn execute(
     let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let borrow_positions = &mut ctx.accounts.borrow_positions.load_mut()?;
+    let borrow_position = borrow_positions.borrow_positions[borrow_index as usize];
 
     let pool_index = borrow_positions.borrow_positions[borrow_index as usize].pool_index;
     let pool = token_data.pools[pool_index as usize];
-    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
-    let collateral_ratio = pool.asset_info.stable_collateral_ratio;
-    let collateral = token_data.collaterals
-        [borrow_positions.borrow_positions[borrow_index as usize].collateral_index as usize];
-    let mint_position = borrow_positions.borrow_positions[borrow_index as usize];
+    let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
+    let collateral_ratio = pool.asset_info.overcollateral_ratio;
+    let collateral = token_data.collaterals[borrow_position.collateral_index as usize];
+    let mut collateral_oracle: OracleInfo = Default::default();
+    if collateral.oracle_info_index != u64::MAX {
+        collateral_oracle = token_data.oracles[collateral.oracle_info_index as usize];
+    }
 
     let amount_value = Decimal::new(
         amount.try_into().unwrap(),
@@ -84,7 +87,7 @@ pub fn execute(
 
     // subtract collateral amount from mint data
     let new_collateral_amount = rescale_toward_zero(
-        mint_position.collateral_amount.to_decimal() - amount_value,
+        borrow_position.collateral_amount.to_decimal() - amount_value,
         CLONE_TOKEN_SCALE,
     );
     borrow_positions.borrow_positions[borrow_index as usize].collateral_amount =
@@ -94,20 +97,19 @@ pub fn execute(
         pool.supplied_mint_collateral_amount.to_decimal() - amount_value,
         CLONE_TOKEN_SCALE,
     );
-    token_data.pools[mint_position.pool_index as usize].supplied_mint_collateral_amount =
+    token_data.pools[borrow_position.pool_index as usize].supplied_mint_collateral_amount =
         RawDecimal::from(new_supplied_collateral);
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
-        oracle,
-        mint_position.borrowed_onasset.to_decimal(),
-        collateral_ratio.to_decimal(),
-        borrow_positions.borrow_positions[borrow_index as usize]
-            .collateral_amount
-            .to_decimal(),
+        pool_oracle,
+        collateral_oracle,
+        borrow_position.borrowed_onasset.to_decimal(),
+        pool.asset_info.overcollateral_ratio.to_decimal(),
+        collateral.collateralization_ratio.to_decimal(),
+        new_collateral_amount,
     )
     .unwrap();
-
     // send collateral back to user
     let cpi_accounts = Transfer {
         from: ctx.accounts.vault.to_account_info().clone(),

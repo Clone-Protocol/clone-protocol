@@ -5,10 +5,11 @@ use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
+use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(borrow_index: u8)]
+#[instruction(borrow_index: u8, amount: u64)]
 pub struct LiquidateBorrowPosition<'info> {
     pub liquidator: Signer<'info>,
     #[account(
@@ -66,130 +67,152 @@ pub struct LiquidateBorrowPosition<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Result<()> {
+pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: u64) -> Result<()> {
     let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
 
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let mut borrow_positions = ctx.accounts.borrow_positions.load_mut()?;
-    let mint_position = borrow_positions.borrow_positions[borrow_index as usize];
+    let borrow_position = borrow_positions.borrow_positions[borrow_index as usize];
 
-    let collateral = token_data.collaterals[mint_position.collateral_index as usize];
-    let pool = token_data.pools[mint_position.pool_index as usize];
-    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
-    // Check if this position is valid for liquidation
-    if collateral.stable == 0 {
-        return Err(CloneError::NonStablesNotSupported.into());
+    let collateral = token_data.collaterals[borrow_position.collateral_index as usize];
+    let pool = token_data.pools[borrow_position.pool_index as usize];
+    let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
+
+    let collateral_oracle = token_data.oracles[collateral.oracle_info_index as usize];
+    let authorized_amount = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
+    let mut collateral_price = Decimal::one();
+    let mut collateral_oracle: OracleInfo = Default::default();
+    if collateral.oracle_info_index != u64::MAX {
+        collateral_oracle = token_data.oracles[collateral.oracle_info_index as usize];
+        collateral_price = collateral_oracle.price.to_decimal();
     }
+    let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
 
-    let borrowed_onasset = mint_position.borrowed_onasset.to_decimal();
-    let collateral_amount_value = mint_position.collateral_amount.to_decimal();
+    let burn_amount = borrow_position
+        .borrowed_onasset
+        .to_decimal()
+        .min(authorized_amount);
 
-    if pool.status != Status::Liquidation as u64 {
-        if check_mint_collateral_sufficient(
-            oracle,
-            borrowed_onasset,
-            pool.asset_info.stable_collateral_ratio.to_decimal(),
-            collateral_amount_value,
-        )
-        .is_ok()
-        {
-            return Err(CloneError::BorrowPositionUnableToLiquidate.into());
-        }
-    } else {
-        return_error_if_false!(
-            check_feed_update(oracle, Clock::get()?.slot).is_ok(),
-            CloneError::OutdatedOracle
-        );
-    }
-
-    // Burn the onAsset from the liquidator
-    let cpi_accounts = Burn {
-        mint: ctx.accounts.onasset_mint.to_account_info().clone(),
-        from: ctx
-            .accounts
-            .liquidator_onasset_token_account
-            .to_account_info()
-            .clone(),
-        authority: ctx.accounts.liquidator.to_account_info().clone(),
-    };
-    let burn_liquidator_onasset_context = CpiContext::new(
-        ctx.accounts.token_program.to_account_info().clone(),
-        cpi_accounts,
+    let collateral_reward = rescale_toward_zero(
+        Decimal::one()
+            + ctx
+                .accounts
+                .clone
+                .liquidation_config
+                .comet_liquidator_fee
+                .to_decimal()
+                * burn_amount
+                * pool_oracle.price.to_decimal()
+                / collateral_price,
+        collateral_scale,
     );
 
-    token::burn(
-        burn_liquidator_onasset_context,
-        mint_position
-            .borrowed_onasset
-            .to_decimal()
-            .mantissa()
-            .try_into()
-            .unwrap(),
-    )?;
+    // if pool.status != Status::Liquidation as u64 {
+    //     if check_mint_collateral_sufficient(
+    //         pool_oracle,
+    //         borrow_position.borrowed_onasset,
+    //         pool.asset_info.overcollateral_ratio.to_decimal(),
+    //         collateral_amount_value,
+    //     )
+    //     .is_ok()
+    //     {
+    //         return Err(CloneError::BorrowPositionUnableToLiquidate.into());
+    //     }
+    // } else {
+    //     return_error_if_false!(
+    //         check_feed_update(oracle, Clock::get()?.slot).is_ok(),
+    //         CloneError::OutdatedOracle
+    //     );
+    // }
 
-    // Send the user the remaining collateral.
-    let cpi_accounts = Transfer {
-        from: ctx.accounts.vault.to_account_info().clone(),
-        to: ctx
-            .accounts
-            .liquidator_collateral_token_account
-            .to_account_info()
-            .clone(),
-        authority: ctx.accounts.clone.to_account_info().clone(),
-    };
-    let send_collateral_context = CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info().clone(),
-        cpi_accounts,
-        seeds,
-    );
+    // // Burn the onAsset from the liquidator
+    // let cpi_accounts = Burn {
+    //     mint: ctx.accounts.onasset_mint.to_account_info().clone(),
+    //     from: ctx
+    //         .accounts
+    //         .liquidator_onasset_token_account
+    //         .to_account_info()
+    //         .clone(),
+    //     authority: ctx.accounts.liquidator.to_account_info().clone(),
+    // };
+    // let burn_liquidator_onasset_context = CpiContext::new(
+    //     ctx.accounts.token_program.to_account_info().clone(),
+    //     cpi_accounts,
+    // );
 
-    token::transfer(
-        send_collateral_context,
-        mint_position
-            .collateral_amount
-            .to_decimal()
-            .mantissa()
-            .try_into()
-            .unwrap(),
-    )?;
+    // token::burn(
+    //     burn_liquidator_onasset_context,
+    //     mint_position
+    //         .borrowed_onasset
+    //         .to_decimal()
+    //         .mantissa()
+    //         .try_into()
+    //         .unwrap(),
+    // )?;
 
-    // Update data
-    let new_minted_amount = rescale_toward_zero(
-        pool.total_minted_amount.to_decimal() - borrowed_onasset,
-        CLONE_TOKEN_SCALE,
-    );
-    token_data.pools[mint_position.pool_index as usize].total_minted_amount =
-        RawDecimal::from(new_minted_amount);
+    // // Send the user the remaining collateral.
+    // let cpi_accounts = Transfer {
+    //     from: ctx.accounts.vault.to_account_info().clone(),
+    //     to: ctx
+    //         .accounts
+    //         .liquidator_collateral_token_account
+    //         .to_account_info()
+    //         .clone(),
+    //     authority: ctx.accounts.clone.to_account_info().clone(),
+    // };
+    // let send_collateral_context = CpiContext::new_with_signer(
+    //     ctx.accounts.token_program.to_account_info().clone(),
+    //     cpi_accounts,
+    //     seeds,
+    // );
 
-    let new_supplied_collateral = rescale_toward_zero(
-        pool.supplied_mint_collateral_amount.to_decimal()
-            - mint_position.collateral_amount.to_decimal(),
-        CLONE_TOKEN_SCALE,
-    );
-    token_data.pools[mint_position.pool_index as usize].supplied_mint_collateral_amount =
-        RawDecimal::from(new_supplied_collateral);
+    // token::transfer(
+    //     send_collateral_context,
+    //     mint_position
+    //         .collateral_amount
+    //         .to_decimal()
+    //         .mantissa()
+    //         .try_into()
+    //         .unwrap(),
+    // )?;
 
-    // Remove position
-    borrow_positions.remove(borrow_index as usize);
+    // // Update data
+    // let new_minted_amount = rescale_toward_zero(
+    //     pool.total_minted_amount.to_decimal() - borrowed_onasset,
+    //     CLONE_TOKEN_SCALE,
+    // );
+    // token_data.pools[mint_position.pool_index as usize].total_minted_amount =
+    //     RawDecimal::from(new_minted_amount);
 
-    emit!(BorrowUpdate {
-        event_id: ctx.accounts.clone.event_counter,
-        user_address: ctx.accounts.user.key(),
-        pool_index: borrow_positions.borrow_positions[borrow_index as usize]
-            .pool_index
-            .try_into()
-            .unwrap(),
-        is_liquidation: true,
-        collateral_supplied: 0,
-        collateral_delta: -mint_position.collateral_amount.to_decimal().mantissa() as i64,
-        collateral_index: borrow_positions.borrow_positions[borrow_index as usize]
-            .collateral_index
-            .try_into()
-            .unwrap(),
-        borrowed_amount: 0,
-        borrowed_delta: -mint_position.borrowed_onasset.to_decimal().mantissa() as i64
-    });
-    ctx.accounts.clone.event_counter += 1;
+    // let new_supplied_collateral = rescale_toward_zero(
+    //     pool.supplied_mint_collateral_amount.to_decimal()
+    //         - mint_position.collateral_amount.to_decimal(),
+    //     CLONE_TOKEN_SCALE,
+    // );
+    // token_data.pools[mint_position.pool_index as usize].supplied_mint_collateral_amount =
+    //     RawDecimal::from(new_supplied_collateral);
+
+    // // Remove position
+    // borrow_positions.remove(borrow_index as usize);
+
+    // emit!(BorrowUpdate {
+    //     event_id: ctx.accounts.clone.event_counter,
+    //     user_address: ctx.accounts.user.key(),
+    //     pool_index: borrow_positions.borrow_positions[borrow_index as usize]
+    //         .pool_index
+    //         .try_into()
+    //         .unwrap(),
+    //     is_liquidation: true,
+    //     collateral_supplied: 0,
+    //     collateral_delta: -mint_position.collateral_amount.to_decimal().mantissa() as i64,
+    //     collateral_index: borrow_positions.borrow_positions[borrow_index as usize]
+    //         .collateral_index
+    //         .try_into()
+    //         .unwrap(),
+    //     borrowed_amount: 0,
+    //     borrowed_delta: -mint_position.borrowed_onasset.to_decimal().mantissa() as i64
+    // });
+    // ctx.accounts.clone.event_counter += 1;
 
     Ok(())
 }

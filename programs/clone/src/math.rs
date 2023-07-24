@@ -27,16 +27,29 @@ pub fn calculate_liquidity_proportion_from_onusd(
 }
 
 pub fn check_mint_collateral_sufficient(
-    oracle: OracleInfo,
+    pool_oracle: OracleInfo,
+    collateral_oracle: OracleInfo,
     asset_amount_borrowed: Decimal,
-    collateral_ratio: Decimal,
+    overcollateral_ratio: Decimal,
+    collateralization_ratio: Decimal,
     collateral_amount: Decimal,
 ) -> Result<()> {
     let slot = Clock::get().expect("Failed to get slot.").slot;
-    if check_feed_update(oracle, slot).is_err() {
+    if check_feed_update(pool_oracle, slot).is_err()
+    {
         return Err(error!(CloneError::OutdatedOracle));
     }
-    if (oracle.price.to_decimal() * asset_amount_borrowed * collateral_ratio) > collateral_amount {
+    let collateral_price = if collateral_oracle != Default::default() {
+        if check_feed_update(collateral_oracle, slot).is_err() {
+            return Err(error!(CloneError::OutdatedOracle));
+        }
+        collateral_oracle.price.to_decimal()
+    } else {
+        Decimal::one()
+    };
+    if pool_oracle.price.to_decimal() * asset_amount_borrowed * overcollateral_ratio
+        > collateral_price * collateral_amount * collateralization_ratio
+    {
         return Err(error!(CloneError::InvalidMintCollateralRatio));
     }
     Ok(())

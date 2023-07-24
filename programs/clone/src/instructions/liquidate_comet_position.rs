@@ -142,7 +142,7 @@ pub fn execute(
         .accounts
         .clone
         .liquidation_config
-        .liquidator_fee
+        .comet_liquidator_fee
         .to_decimal();
 
     // calculate reward for liquidator

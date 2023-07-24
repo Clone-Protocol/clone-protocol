@@ -7,8 +7,7 @@ use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(
-    stable_collateral_ratio: u16,
-    crypto_collateral_ratio: u16,
+    overcollateral_ratio: u16,
     liquidity_trading_fee: u16,
     treasury_trading_fee: u16,
     il_health_score_coefficient: u64,
@@ -86,8 +85,7 @@ pub struct InitializePool<'info> {
 
 pub fn execute(
     ctx: Context<InitializePool>,
-    stable_collateral_ratio: u16,
-    crypto_collateral_ratio: u16,
+    overcollateral_ratio: u16,
     liquidity_trading_fee: u16,
     treasury_trading_fee: u16,
     il_health_score_coefficient: u64,
@@ -126,10 +124,7 @@ pub fn execute(
         *ctx.accounts.onasset_mint.to_account_info().key;
     token_data.pools[index as usize]
         .asset_info
-        .stable_collateral_ratio = RawDecimal::from_percent(stable_collateral_ratio);
-    token_data.pools[index as usize]
-        .asset_info
-        .crypto_collateral_ratio = RawDecimal::from_percent(crypto_collateral_ratio);
+        .overcollateral_ratio = RawDecimal::from_percent(overcollateral_ratio);
     token_data.pools[index as usize]
         .asset_info
         .il_health_score_coefficient = RawDecimal::new(
