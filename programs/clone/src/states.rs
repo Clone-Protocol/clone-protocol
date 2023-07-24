@@ -75,7 +75,6 @@ pub struct Clone {
     pub event_counter: u64,                    // 8
 }
 
-
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct LiquidationConfig {
@@ -161,7 +160,7 @@ pub struct Pool {
     pub total_minted_amount: RawDecimal,             // 16
     pub supplied_mint_collateral_amount: RawDecimal, // 16
     pub asset_info: AssetInfo,                       // 120
-    pub status: u64                                   // 8
+    pub status: u64,                                 // 8
 }
 
 #[derive(Default, Debug)]
@@ -195,11 +194,15 @@ impl Pool {
         quantity: Decimal,
         quantity_is_input: bool,
         quantity_is_onusd: bool,
+        override_liquidity_trading_fee: Option<Decimal>,
+        override_treasury_trading_fee: Option<Decimal>,
     ) -> SwapSummary {
         let (pool_onusd, pool_onasset) = self.calculate_jit_pool(oracle_price);
         let invariant = pool_onasset * pool_onusd;
-        let liquidity_trading_fee = self.liquidity_trading_fee.to_decimal();
-        let treasury_trading_fee = self.treasury_trading_fee.to_decimal();
+        let liquidity_trading_fee =
+            override_liquidity_trading_fee.unwrap_or(self.liquidity_trading_fee.to_decimal());
+        let treasury_trading_fee =
+            override_treasury_trading_fee.unwrap_or(self.treasury_trading_fee.to_decimal());
 
         if quantity_is_input {
             let (i_pool, o_pool) = if quantity_is_onusd {
@@ -323,7 +326,7 @@ pub struct Collateral {
     pub stable: u64,                         // 8
     pub collateralization_ratio: RawDecimal, // 16
     pub liquidation_discount: RawDecimal,    // 16
-    pub status: u64,                          // 8
+    pub status: u64,                         // 8
 }
 
 #[account]

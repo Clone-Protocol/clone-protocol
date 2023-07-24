@@ -17,8 +17,8 @@ cpi = ["no-entrypoint"]
 default = ["pyth-local"]
 
 [dependencies]
-anchor-lang = "0.25.0"
-anchor-spl = "0.25.0"
+anchor-lang = "0.26.0"
+anchor-spl = "0.26.0"
 solana-program = "1.9.5"
 bytemuck = "1.7.3"
 pyth = { path = "../pyth", version = "0.1.0", features = ["cpi"] }

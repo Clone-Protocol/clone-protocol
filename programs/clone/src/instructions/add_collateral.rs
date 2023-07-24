@@ -67,7 +67,7 @@ pub fn execute(
             collateralization_ratio.try_into().unwrap(),
         ),
         liquidation_discount: RawDecimal::from_percent(liquidation_discount.try_into().unwrap()),
-        status: 0
+        status: 0,
     });
 
     Ok(())

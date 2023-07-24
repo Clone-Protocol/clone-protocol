@@ -32,17 +32,11 @@ pub mod clone {
         )
     }
 
-    pub fn add_auth(
-        ctx: Context<AddAuth>,
-        auth: Pubkey,
-    ) -> Result<()> {
+    pub fn add_auth(ctx: Context<AddAuth>, auth: Pubkey) -> Result<()> {
         instructions::add_auth::execute(ctx, auth)
     }
 
-    pub fn remove_auth(
-        ctx: Context<RemoveAuth>,
-        auth: Pubkey,
-    ) -> Result<()> {
+    pub fn remove_auth(ctx: Context<RemoveAuth>, auth: Pubkey) -> Result<()> {
         instructions::remove_auth::execute(ctx, auth)
     }
 
@@ -229,7 +223,13 @@ pub mod clone {
         amount: u64,
         pay_onusd_debt: bool,
     ) -> Result<()> {
-        instructions::liquidate_comet_position::execute(ctx, comet_position_index, comet_collateral_index, amount, pay_onusd_debt)
+        instructions::liquidate_comet_position::execute(
+            ctx,
+            comet_position_index,
+            comet_collateral_index,
+            amount,
+            pay_onusd_debt,
+        )
     }
 
     pub fn liquidate_borrow_position(

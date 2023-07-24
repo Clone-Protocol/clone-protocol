@@ -32,7 +32,7 @@ pub struct LiquidateCometPosition<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         has_one = clone,
-        constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Active as u64 || 
+        constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Active as u64 ||
         token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status == Status::Liquidation as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
@@ -132,90 +132,63 @@ pub fn execute(
     } else {
         ild_share.onasset_ild_share.min(authorized_amount)
     };
-    
+
+    let burn_amount_usd_price = if pay_onusd_debt {
+        Decimal::one()
+    } else {
+        pool_oracle.price.to_decimal()
+    };
+    let liquidator_fee = ctx
+        .accounts
+        .clone
+        .liquidation_config
+        .liquidator_fee
+        .to_decimal();
 
     // calculate reward for liquidator
-    let collateral_reward = rescale_toward_zero(
-        Decimal::one()
-            + ctx
-                .accounts
-                .clone
-                .liquidation_config
-                .liquidator_fee
-                .to_decimal()
-                * if pay_onusd_debt {
-                    burn_amount
-                } else {
-                    burn_amount * pool_oracle.price.to_decimal()
-                }
-                / collateral_price,
+    let mut collateral_reward = rescale_toward_zero(
+        (Decimal::one() + liquidator_fee) * burn_amount_usd_price * burn_amount / collateral_price,
         collateral_scale,
     );
 
     if collateral_reward > comet_collateral.collateral_amount.to_decimal() {
-        burn_amount = comet_collateral.collateral_amount.to_decimal()
-            * ctx
-                .accounts
-                .clone
-                .liquidation_config
-                .liquidator_fee
-                .to_decimal()
-            / if pay_onusd_debt {
-                Decimal::one()
-            } else {
-                pool_oracle.price.to_decimal()
-            }
-            * collateral_price;
+        collateral_reward = comet_collateral.collateral_amount.to_decimal();
+        burn_amount = rescale_toward_zero(
+            collateral_reward * collateral_price
+                / ((Decimal::one() + liquidator_fee) * burn_amount_usd_price),
+            CLONE_TOKEN_SCALE,
+        );
     }
 
     if (pay_onusd_debt && ild_share.onusd_ild_share > Decimal::ZERO)
         || (!pay_onusd_debt && ild_share.onasset_ild_share > Decimal::ZERO)
     {
-        let (cpi_accounts, burn_amount) = if pay_onusd_debt {
+        let cpi_accounts = if pay_onusd_debt {
             comet.positions[comet_position_index as usize].onusd_ild_rebate = RawDecimal::from(
                 rescale_toward_zero(onusd_ild_rebate + burn_amount, CLONE_TOKEN_SCALE),
             );
-            (
-                Burn {
-                    mint: ctx.accounts.onusd_mint.to_account_info().clone(),
-                    from: ctx
-                        .accounts
-                        .liquidator_onusd_token_account
-                        .to_account_info()
-                        .clone(),
-                    authority: ctx.accounts.user.to_account_info().clone(),
-                },
-                burn_amount,
-            )
-        } else {
-            if collateral_reward > comet_collateral.collateral_amount.to_decimal() {
-                burn_amount = (comet_collateral.collateral_amount.to_decimal()
-                    / (Decimal::one()
-                        + ctx
-                            .accounts
-                            .clone
-                            .liquidation_config
-                            .liquidator_fee
-                            .to_decimal()))
-                    * collateral_price;
+            Burn {
+                mint: ctx.accounts.onusd_mint.to_account_info().clone(),
+                from: ctx
+                    .accounts
+                    .liquidator_onusd_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.user.to_account_info().clone(),
             }
-
+        } else {
             comet.positions[comet_position_index as usize].onasset_ild_rebate = RawDecimal::from(
                 rescale_toward_zero(onasset_ild_rebate + burn_amount, CLONE_TOKEN_SCALE),
             );
-            msg!(&burn_amount.to_string());
-            (
-                Burn {
-                    mint: ctx.accounts.onasset_mint.to_account_info().clone(),
-                    from: ctx
-                        .accounts
-                        .liquidator_onasset_token_account
-                        .to_account_info()
-                        .clone(),
-                    authority: ctx.accounts.user.to_account_info().clone(),
-                },
-                burn_amount,
-            )
+            Burn {
+                mint: ctx.accounts.onasset_mint.to_account_info().clone(),
+                from: ctx
+                    .accounts
+                    .liquidator_onasset_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.user.to_account_info().clone(),
+            }
         };
 
         token::burn(
@@ -247,7 +220,7 @@ pub fn execute(
             collateral_reward.mantissa().try_into().unwrap(),
         )?;
 
-        // Remove equivalent onusd reward from user's collateral
+        // Remove equivalent reward from user's collateral
         let new_collateral_amount = rescale_toward_zero(
             comet.collaterals[collateral_index]
                 .collateral_amount
@@ -276,7 +249,15 @@ pub fn execute(
     };
     ctx.accounts.clone.event_counter += 1;
 
-    if comet.positions[comet_position_index as usize].onusd_ild_rebate.to_decimal() == Decimal::ZERO && comet.positions[comet_position_index as usize].onasset_ild_rebate.to_decimal() == Decimal::ZERO {
+    if comet.positions[comet_position_index as usize]
+        .onusd_ild_rebate
+        .to_decimal()
+        == Decimal::ZERO
+        && comet.positions[comet_position_index as usize]
+            .onasset_ild_rebate
+            .to_decimal()
+            == Decimal::ZERO
+    {
         comet.remove_position(comet_position_index as usize);
     }
 
