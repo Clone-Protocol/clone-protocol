@@ -723,6 +723,29 @@ createErrorFromNameLookup.set(
 )
 
 /**
+ * InvalidOracleIndex: 'Invalid oracle index'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class InvalidOracleIndexError extends Error {
+  readonly code: number = 0x178e
+  readonly name: string = 'InvalidOracleIndex'
+  constructor() {
+    super('Invalid oracle index')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, InvalidOracleIndexError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x178e, () => new InvalidOracleIndexError())
+createErrorFromNameLookup.set(
+  'InvalidOracleIndex',
+  () => new InvalidOracleIndexError()
+)
+
+/**
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
  * @category generated

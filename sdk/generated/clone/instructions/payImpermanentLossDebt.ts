@@ -6,8 +6,9 @@
  */
 
 import * as splToken from '@solana/spl-token'
-import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
+import * as beet from '@metaplex-foundation/beet'
+import * as beetSolana from '@metaplex-foundation/beet-solana'
 
 /**
  * @category Instructions
@@ -15,6 +16,7 @@ import * as web3 from '@solana/web3.js'
  * @category generated
  */
 export type PayImpermanentLossDebtInstructionArgs = {
+  user: web3.PublicKey
   cometPositionIndex: number
   amount: beet.bignum
   payOnusdDebt: boolean
@@ -31,6 +33,7 @@ export const payImpermanentLossDebtStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
+    ['user', beetSolana.publicKey],
     ['cometPositionIndex', beet.u8],
     ['amount', beet.u64],
     ['payOnusdDebt', beet.bool],
@@ -40,29 +43,29 @@ export const payImpermanentLossDebtStruct = new beet.BeetArgsStruct<
 /**
  * Accounts required by the _payImpermanentLossDebt_ instruction
  *
- * @property [**signer**] user
+ * @property [**signer**] payer
  * @property [] userAccount
  * @property [_writable_] clone
  * @property [] tokenData
  * @property [_writable_] comet
  * @property [_writable_] onusdMint
  * @property [_writable_] onassetMint
- * @property [_writable_] userOnusdTokenAccount
- * @property [_writable_] userOnassetTokenAccount
+ * @property [_writable_] payerOnusdTokenAccount
+ * @property [_writable_] payerOnassetTokenAccount
  * @category Instructions
  * @category PayImpermanentLossDebt
  * @category generated
  */
 export type PayImpermanentLossDebtInstructionAccounts = {
-  user: web3.PublicKey
+  payer: web3.PublicKey
   userAccount: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
   comet: web3.PublicKey
   onusdMint: web3.PublicKey
   onassetMint: web3.PublicKey
-  userOnusdTokenAccount: web3.PublicKey
-  userOnassetTokenAccount: web3.PublicKey
+  payerOnusdTokenAccount: web3.PublicKey
+  payerOnassetTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
@@ -84,7 +87,7 @@ export const payImpermanentLossDebtInstructionDiscriminator = [
 export function createPayImpermanentLossDebtInstruction(
   accounts: PayImpermanentLossDebtInstructionAccounts,
   args: PayImpermanentLossDebtInstructionArgs,
-  programId = new web3.PublicKey('GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA')
+  programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
   const [data] = payImpermanentLossDebtStruct.serialize({
     instructionDiscriminator: payImpermanentLossDebtInstructionDiscriminator,
@@ -92,7 +95,7 @@ export function createPayImpermanentLossDebtInstruction(
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.user,
+      pubkey: accounts.payer,
       isWritable: false,
       isSigner: true,
     },
@@ -127,12 +130,12 @@ export function createPayImpermanentLossDebtInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.userOnusdTokenAccount,
+      pubkey: accounts.payerOnusdTokenAccount,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.userOnassetTokenAccount,
+      pubkey: accounts.payerOnassetTokenAccount,
       isWritable: true,
       isSigner: false,
     },

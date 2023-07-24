@@ -5,10 +5,9 @@ use pyth_sdk_solana::Price;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
+declare_id!("CS52uHyHj6yod3TCQsrhPS8SqqnvoEHNjtTLoUio5kWB");
 
-declare_id!("G9fZ4yPY66oqrCGtCzrdbSyqBw8xFjSWAe5quV61cb75");
-
-const DEVNET_TOKEN_SCALE: u32 = 8;
+const CLONE_TOKEN_SCALE: u32 = 8;
 const USDC_TOKEN_SCALE: u8 = 7;
 const NUM_ASSETS: usize = 10;
 
@@ -113,7 +112,7 @@ pub mod jupiter_agg_mock {
 
         if is_amount_asset {
             let onasset_decimal =
-                rust_decimal::Decimal::new(amount.try_into().unwrap(), DEVNET_TOKEN_SCALE);
+                rust_decimal::Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
             let mut usdc_amount = (onasset_decimal * price)
                 .round_dp_with_strategy(USDC_TOKEN_SCALE.into(), RoundingStrategy::ToZero);
             usdc_amount.rescale(USDC_TOKEN_SCALE.into());
@@ -197,8 +196,8 @@ pub mod jupiter_agg_mock {
             let onusd_decimal =
                 rust_decimal::Decimal::new(amount.try_into().unwrap(), USDC_TOKEN_SCALE.into());
             let mut asset_amount = (onusd_decimal / price)
-                .round_dp_with_strategy(DEVNET_TOKEN_SCALE, RoundingStrategy::ToZero);
-            asset_amount.rescale(DEVNET_TOKEN_SCALE);
+                .round_dp_with_strategy(CLONE_TOKEN_SCALE, RoundingStrategy::ToZero);
+            asset_amount.rescale(CLONE_TOKEN_SCALE);
 
             if is_amount_input {
                 // burn amount usdc
@@ -313,7 +312,7 @@ pub struct CreateAsset<'info> {
     payer: Signer<'info>,
     #[account(
         init,
-        mint::decimals = DEVNET_TOKEN_SCALE as u8,
+        mint::decimals = CLONE_TOKEN_SCALE as u8,
         mint::authority = jupiter_account,
         payer = payer
     )]

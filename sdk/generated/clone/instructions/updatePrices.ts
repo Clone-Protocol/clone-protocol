@@ -7,7 +7,7 @@
 
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
-import { PoolIndices, poolIndicesBeet } from '../types/PoolIndices'
+import { OracleIndices, oracleIndicesBeet } from '../types/OracleIndices'
 
 /**
  * @category Instructions
@@ -15,7 +15,7 @@ import { PoolIndices, poolIndicesBeet } from '../types/PoolIndices'
  * @category generated
  */
 export type UpdatePricesInstructionArgs = {
-  poolIndices: PoolIndices
+  indices: OracleIndices
 }
 /**
  * @category Instructions
@@ -29,7 +29,7 @@ export const updatePricesStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['poolIndices', poolIndicesBeet],
+    ['indices', oracleIndicesBeet],
   ],
   'UpdatePricesInstructionArgs'
 )
@@ -65,7 +65,7 @@ export const updatePricesInstructionDiscriminator = [
 export function createUpdatePricesInstruction(
   accounts: UpdatePricesInstructionAccounts,
   args: UpdatePricesInstructionArgs,
-  programId = new web3.PublicKey('GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA')
+  programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
   const [data] = updatePricesStruct.serialize({
     instructionDiscriminator: updatePricesInstructionDiscriminator,

@@ -8,8 +8,6 @@ use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(
-    il_health_score_cutoff: u64,
-    il_liquidation_reward_pct: u64,
     max_health_liquidation: u64,
     liquidator_fee: u64,
     treasury_address: Pubkey,
@@ -58,8 +56,6 @@ pub struct InitializeClone<'info> {
 #[allow(clippy::too_many_arguments)]
 pub fn execute(
     ctx: Context<InitializeClone>,
-    il_health_score_cutoff: u64,
-    il_liquidation_reward_pct: u64,
     max_health_liquidation: u64,
     liquidator_fee: u64,
     treasury_address: Pubkey,
@@ -77,24 +73,25 @@ pub fn execute(
 
     ctx.accounts.clone.liquidation_config = LiquidationConfig {
         max_health_liquidation: RawDecimal::new(max_health_liquidation.try_into().unwrap(), 0),
-        liquidator_fee: RawDecimal::new(liquidator_fee.try_into().unwrap(), 4),
+        liquidator_fee: RawDecimal::new(liquidator_fee.try_into().unwrap(), BPS_SCALE),
     };
 
     // add onusd as first collateral type
     token_data.append_collateral(Collateral {
-        pool_index: u8::MAX.into(),
+        oracle_info_index: u64::MAX,
         mint: *ctx.accounts.onusd_mint.to_account_info().key,
         vault: *ctx.accounts.onusd_vault.to_account_info().key,
-        vault_onusd_supply: RawDecimal::new(0, DEVNET_TOKEN_SCALE),
-        vault_mint_supply: RawDecimal::new(0, DEVNET_TOKEN_SCALE),
-        vault_comet_supply: RawDecimal::new(0, DEVNET_TOKEN_SCALE),
+        vault_onusd_supply: RawDecimal::new(0, CLONE_TOKEN_SCALE),
+        vault_mint_supply: RawDecimal::new(0, CLONE_TOKEN_SCALE),
+        vault_comet_supply: RawDecimal::new(0, CLONE_TOKEN_SCALE),
         collateralization_ratio: RawDecimal::from(Decimal::one()),
         stable: 1,
+        liquidation_discount: RawDecimal::new(0, CLONE_TOKEN_SCALE),
     });
     // add usdc as second collateral type
     let usdc_scale = ctx.accounts.usdc_mint.decimals;
     token_data.append_collateral(Collateral {
-        pool_index: u8::MAX.into(),
+        oracle_info_index: u64::MAX,
         mint: *ctx.accounts.usdc_mint.to_account_info().key,
         vault: *ctx.accounts.usdc_vault.to_account_info().key,
         vault_onusd_supply: RawDecimal::new(0, usdc_scale.into()),
@@ -102,18 +99,11 @@ pub fn execute(
         vault_comet_supply: RawDecimal::new(0, usdc_scale.into()),
         collateralization_ratio: RawDecimal::from(Decimal::one()),
         stable: 1,
+        liquidation_discount: RawDecimal::new(0, usdc_scale.into()),
     });
 
     // set token data
     token_data.clone = *ctx.accounts.clone.to_account_info().key;
-    token_data.il_health_score_cutoff = RawDecimal::new(
-        il_health_score_cutoff.try_into().unwrap(),
-        DEVNET_TOKEN_SCALE,
-    );
-    token_data.il_liquidation_reward_pct = RawDecimal::new(
-        il_liquidation_reward_pct.try_into().unwrap(),
-        DEVNET_TOKEN_SCALE,
-    );
 
     Ok(())
 }

@@ -18,7 +18,7 @@ import { BorrowPosition, borrowPositionBeet } from '../types/BorrowPosition'
 export type BorrowPositionsArgs = {
   owner: web3.PublicKey
   numPositions: beet.bignum
-  borrowPositions: BorrowPosition[] /* size: 255 */
+  borrowPositions: BorrowPosition[] /* size: 24 */
 }
 
 export const borrowPositionsDiscriminator = [
@@ -35,7 +35,7 @@ export class BorrowPositions implements BorrowPositionsArgs {
   private constructor(
     readonly owner: web3.PublicKey,
     readonly numPositions: beet.bignum,
-    readonly borrowPositions: BorrowPosition[] /* size: 255 */
+    readonly borrowPositions: BorrowPosition[] /* size: 24 */
   ) {}
 
   /**
@@ -89,7 +89,7 @@ export class BorrowPositions implements BorrowPositionsArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      'GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA'
+      'F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, borrowPositionsBeet)
@@ -183,7 +183,7 @@ export const borrowPositionsBeet = new beet.BeetStruct<
     ['accountDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['owner', beetSolana.publicKey],
     ['numPositions', beet.u64],
-    ['borrowPositions', beet.uniformFixedSizeArray(borrowPositionBeet, 255)],
+    ['borrowPositions', beet.uniformFixedSizeArray(borrowPositionBeet, 24)],
   ],
   BorrowPositions.fromArgs,
   'BorrowPositions'

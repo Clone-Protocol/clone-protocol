@@ -103,22 +103,28 @@ pub fn execute(
         RawDecimal::from(new_vault_comet_supply);
 
     // find the comet collateral index
-    let comet_collateral_index = comet.get_collateral_index(collateral_index);
+    let mut comet_collateral_index: Option<usize> = None;
+    for (i, collateral) in comet.collaterals[..comet.num_collaterals as usize]
+        .iter()
+        .enumerate()
+    {
+        if collateral.collateral_index == collateral_index as u64 {
+            comet_collateral_index = Some(i);
+            break;
+        }
+    }
 
     // check to see if a new collateral must be added to the position
-    if comet_collateral_index == usize::MAX {
+    if let Some(index) = comet_collateral_index {
+        comet.collaterals[index].collateral_amount = RawDecimal::from(
+            comet.collaterals[index].collateral_amount.to_decimal() + added_collateral_value,
+        );
+    } else {
         comet.add_collateral(CometCollateral {
             authority: *ctx.accounts.user.to_account_info().key,
             collateral_amount: RawDecimal::from(added_collateral_value),
             collateral_index: collateral_index.into(),
         });
-    } else {
-        comet.collaterals[comet_collateral_index].collateral_amount = RawDecimal::from(
-            comet.collaterals[comet_collateral_index]
-                .collateral_amount
-                .to_decimal()
-                + added_collateral_value,
-        );
     }
 
     // send collateral from user to vault

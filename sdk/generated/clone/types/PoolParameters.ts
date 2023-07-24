@@ -5,8 +5,6 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from '@solana/web3.js'
-import * as beetSolana from '@metaplex-foundation/beet-solana'
 import * as beet from '@metaplex-foundation/beet'
 import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 /**
@@ -21,13 +19,12 @@ import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 export type PoolParametersRecord = {
   TreasuryTradingFee: { value: RawDecimal }
   LiquidityTradingFee: { value: RawDecimal }
-  PythAddress: { address: web3.PublicKey }
+  OracleInfoIndex: { value: beet.bignum }
   StableCollateralRatio: { value: RawDecimal }
   CryptoCollateralRatio: { value: RawDecimal }
   IlHealthScoreCoefficient: { value: RawDecimal }
   PositionHealthScoreCoefficient: { value: RawDecimal }
   LiquidationDiscountRate: { value: RawDecimal }
-  MaxOwnershipPct: { value: RawDecimal }
 }
 
 /**
@@ -51,9 +48,10 @@ export const isPoolParametersLiquidityTradingFee = (
   x: PoolParameters
 ): x is PoolParameters & { __kind: 'LiquidityTradingFee' } =>
   x.__kind === 'LiquidityTradingFee'
-export const isPoolParametersPythAddress = (
+export const isPoolParametersOracleInfoIndex = (
   x: PoolParameters
-): x is PoolParameters & { __kind: 'PythAddress' } => x.__kind === 'PythAddress'
+): x is PoolParameters & { __kind: 'OracleInfoIndex' } =>
+  x.__kind === 'OracleInfoIndex'
 export const isPoolParametersStableCollateralRatio = (
   x: PoolParameters
 ): x is PoolParameters & { __kind: 'StableCollateralRatio' } =>
@@ -74,10 +72,6 @@ export const isPoolParametersLiquidationDiscountRate = (
   x: PoolParameters
 ): x is PoolParameters & { __kind: 'LiquidationDiscountRate' } =>
   x.__kind === 'LiquidationDiscountRate'
-export const isPoolParametersMaxOwnershipPct = (
-  x: PoolParameters
-): x is PoolParameters & { __kind: 'MaxOwnershipPct' } =>
-  x.__kind === 'MaxOwnershipPct'
 
 /**
  * @category userTypes
@@ -101,10 +95,10 @@ export const poolParametersBeet = beet.dataEnum<PoolParametersRecord>([
   ],
 
   [
-    'PythAddress',
-    new beet.BeetArgsStruct<PoolParametersRecord['PythAddress']>(
-      [['address', beetSolana.publicKey]],
-      'PoolParametersRecord["PythAddress"]'
+    'OracleInfoIndex',
+    new beet.BeetArgsStruct<PoolParametersRecord['OracleInfoIndex']>(
+      [['value', beet.u64]],
+      'PoolParametersRecord["OracleInfoIndex"]'
     ),
   ],
 
@@ -147,14 +141,6 @@ export const poolParametersBeet = beet.dataEnum<PoolParametersRecord>([
     new beet.BeetArgsStruct<PoolParametersRecord['LiquidationDiscountRate']>(
       [['value', rawDecimalBeet]],
       'PoolParametersRecord["LiquidationDiscountRate"]'
-    ),
-  ],
-
-  [
-    'MaxOwnershipPct',
-    new beet.BeetArgsStruct<PoolParametersRecord['MaxOwnershipPct']>(
-      [['value', rawDecimalBeet]],
-      'PoolParametersRecord["MaxOwnershipPct"]'
     ),
   ],
 ]) as beet.FixableBeet<PoolParameters, PoolParameters>

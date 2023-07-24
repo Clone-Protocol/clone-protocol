@@ -1,0 +1,21 @@
+[package]
+name = "clone-staking"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "clone_staking"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = {version = "0.26.0", features = ["init-if-needed"]}
+anchor-spl = "0.26.0"
+bytemuck = { version = "1.4.0", features = ["derive", "min_const_generics"]}

@@ -21,7 +21,7 @@ import { Clone, IDL as cloneIDL } from "../sdk/src/idl/clone";
 import { Pyth, IDL as pythIDL } from "../sdk/src/idl/pyth";
 import { Provider, BN } from "@coral-xyz/anchor";
 import { Decimal } from "../sdk/src/decimal";
-import { DEVNET_TOKEN_SCALE, toDevnetScale } from "../sdk/src/clone";
+import { CLONE_TOKEN_SCALE, toDevnetScale } from "../sdk/src/clone";
 
 const chalk = require("chalk");
 
@@ -184,13 +184,13 @@ export const getOrCreateAssociatedTokenAccount = async (
 export const convertToRawDecimal = (num: number) => {
   let temp = new Decimal(
     BigInt(toDevnetScale(num).toNumber()),
-    BigInt(DEVNET_TOKEN_SCALE)
+    BigInt(CLONE_TOKEN_SCALE)
   );
   return temp.toRawDecimal();
 };
 
 export const fromDevnetScale = (x: number): number => {
-  const scale = Math.pow(10, DEVNET_TOKEN_SCALE);
+  const scale = Math.pow(10, CLONE_TOKEN_SCALE);
   return x / scale;
 };
 

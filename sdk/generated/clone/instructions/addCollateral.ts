@@ -17,8 +17,9 @@ import * as web3 from '@solana/web3.js'
 export type AddCollateralInstructionArgs = {
   scale: number
   stable: boolean
-  collateralizationRatio: beet.bignum
-  poolIndex: number
+  collateralizationRatio: number
+  oracleInfoIndex: number
+  liquidationDiscount: number
 }
 /**
  * @category Instructions
@@ -34,8 +35,9 @@ export const addCollateralStruct = new beet.BeetArgsStruct<
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['scale', beet.u8],
     ['stable', beet.bool],
-    ['collateralizationRatio', beet.u64],
-    ['poolIndex', beet.u8],
+    ['collateralizationRatio', beet.u8],
+    ['oracleInfoIndex', beet.u8],
+    ['liquidationDiscount', beet.u8],
   ],
   'AddCollateralInstructionArgs'
 )
@@ -80,7 +82,7 @@ export const addCollateralInstructionDiscriminator = [
 export function createAddCollateralInstruction(
   accounts: AddCollateralInstructionAccounts,
   args: AddCollateralInstructionArgs,
-  programId = new web3.PublicKey('GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA')
+  programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
   const [data] = addCollateralStruct.serialize({
     instructionDiscriminator: addCollateralInstructionDiscriminator,

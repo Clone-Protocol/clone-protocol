@@ -6,15 +6,21 @@
  */
 
 import * as beet from '@metaplex-foundation/beet'
-export type PoolIndices = {
-  indices: number[] /* size: 128 */
+export type Tier = {
+  stakeRequirement: beet.bignum
+  lpTradingFeeBps: number
+  treasuryTradingFeeBps: number
 }
 
 /**
  * @category userTypes
  * @category generated
  */
-export const poolIndicesBeet = new beet.BeetArgsStruct<PoolIndices>(
-  [['indices', beet.uniformFixedSizeArray(beet.u8, 128)]],
-  'PoolIndices'
+export const tierBeet = new beet.BeetArgsStruct<Tier>(
+  [
+    ['stakeRequirement', beet.u64],
+    ['lpTradingFeeBps', beet.u16],
+    ['treasuryTradingFeeBps', beet.u16],
+  ],
+  'Tier'
 )

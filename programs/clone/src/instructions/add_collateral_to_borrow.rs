@@ -88,7 +88,7 @@ pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u6
             .supplied_mint_collateral_amount
             .to_decimal()
             + amount_value,
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
 
     token_data.pools[mint_position.pool_index as usize].supplied_mint_collateral_amount =

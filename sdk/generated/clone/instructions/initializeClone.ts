@@ -16,8 +16,6 @@ import * as beetSolana from '@metaplex-foundation/beet-solana'
  * @category generated
  */
 export type InitializeCloneInstructionArgs = {
-  ilHealthScoreCutoff: beet.bignum
-  ilLiquidationRewardPct: beet.bignum
   maxHealthLiquidation: beet.bignum
   liquidatorFee: beet.bignum
   treasuryAddress: web3.PublicKey
@@ -34,8 +32,6 @@ export const initializeCloneStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['ilHealthScoreCutoff', beet.u64],
-    ['ilLiquidationRewardPct', beet.u64],
     ['maxHealthLiquidation', beet.u64],
     ['liquidatorFee', beet.u64],
     ['treasuryAddress', beetSolana.publicKey],
@@ -87,7 +83,7 @@ export const initializeCloneInstructionDiscriminator = [
 export function createInitializeCloneInstruction(
   accounts: InitializeCloneInstructionAccounts,
   args: InitializeCloneInstructionArgs,
-  programId = new web3.PublicKey('GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA')
+  programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
   const [data] = initializeCloneStruct.serialize({
     instructionDiscriminator: initializeCloneInstructionDiscriminator,

@@ -14,7 +14,7 @@ use std::convert::TryInto;
     il_health_score_coefficient: u64,
     position_health_score_coefficient: u64,
     liquidation_discount_rate: u64,
-    max_ownership_pct: u64,
+    oracle_info_index: u8,
 )]
 pub struct InitializePool<'info> {
     #[account(mut, address = clone.admin)]
@@ -79,8 +79,6 @@ pub struct InitializePool<'info> {
         payer = admin
     )]
     pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
-    /// CHECK: External pyth oracle, instruction can only be executed by admin
-    pub pyth_oracle: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -95,7 +93,7 @@ pub fn execute(
     il_health_score_coefficient: u64,
     position_health_score_coefficient: u64,
     liquidation_discount_rate: u64,
-    max_ownership_pct: u64,
+    oracle_info_index: u8,
 ) -> Result<()> {
     // ensure valid health score coefficient
     return_error_if_false!(
@@ -126,8 +124,6 @@ pub fn execute(
     let index = token_data.num_pools - 1;
     token_data.pools[index as usize].asset_info.onasset_mint =
         *ctx.accounts.onasset_mint.to_account_info().key;
-    token_data.pools[index as usize].asset_info.pyth_address =
-        ctx.accounts.pyth_oracle.to_account_info().key();
     token_data.pools[index as usize]
         .asset_info
         .stable_collateral_ratio = RawDecimal::from_percent(stable_collateral_ratio);
@@ -138,21 +134,21 @@ pub fn execute(
         .asset_info
         .il_health_score_coefficient = RawDecimal::new(
         il_health_score_coefficient.try_into().unwrap(),
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     token_data.pools[index as usize]
         .asset_info
         .position_health_score_coefficient = RawDecimal::new(
         position_health_score_coefficient.try_into().unwrap(),
-        DEVNET_TOKEN_SCALE,
+        CLONE_TOKEN_SCALE,
     );
     token_data.pools[index as usize]
         .asset_info
         .liquidation_discount_rate =
-        RawDecimal::new(liquidation_discount_rate.try_into().unwrap(), 4);
+        RawDecimal::new(liquidation_discount_rate.try_into().unwrap(), BPS_SCALE);
     token_data.pools[index as usize]
         .asset_info
-        .max_ownership_pct = RawDecimal::from_percent(max_ownership_pct.try_into().unwrap());
+        .oracle_info_index = oracle_info_index as u64;
 
     Ok(())
 }

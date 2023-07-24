@@ -10,7 +10,7 @@ pub mod states;
 
 use instructions::*;
 
-declare_id!("GCXnnWFmt4zFmoAo2nRGe4qQyuusLzDW7CVN484bHMvA");
+declare_id!("F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v");
 
 #[program]
 pub mod clone {
@@ -20,16 +20,12 @@ pub mod clone {
     #[allow(clippy::too_many_arguments)]
     pub fn initialize_clone(
         ctx: Context<InitializeClone>,
-        il_health_score_cutoff: u64,
-        il_liquidation_reward_pct: u64,
         max_health_liquidation: u64,
         liquidator_fee: u64,
         treasury_address: Pubkey,
     ) -> Result<()> {
         instructions::initialize_clone::execute(
             ctx,
-            il_health_score_cutoff,
-            il_liquidation_reward_pct,
             max_health_liquidation,
             liquidator_fee,
             treasury_address,
@@ -75,15 +71,17 @@ pub mod clone {
         ctx: Context<AddCollateral>,
         scale: u8,
         stable: bool,
-        collateralization_ratio: u64,
-        pool_index: u8,
+        collateralization_ratio: u8,
+        oracle_info_index: u8,
+        liquidation_discount: u8,
     ) -> Result<()> {
         instructions::add_collateral::execute(
             ctx,
             scale,
             stable,
             collateralization_ratio,
-            pool_index,
+            oracle_info_index,
+            liquidation_discount,
         )
     }
 
@@ -96,7 +94,7 @@ pub mod clone {
         il_health_score_coefficient: u64,
         position_health_score_coefficient: u64,
         liquidation_discount_rate: u64,
-        max_ownership_pct: u64,
+        oracle_info_index: u8,
     ) -> Result<()> {
         instructions::initialize_pool::execute(
             ctx,
@@ -107,15 +105,15 @@ pub mod clone {
             il_health_score_coefficient,
             position_health_score_coefficient,
             liquidation_discount_rate,
-            max_ownership_pct,
+            oracle_info_index,
         )
     }
 
     pub fn update_prices<'info>(
         ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
-        pool_indices: PoolIndices,
+        indices: OracleIndices,
     ) -> Result<()> {
-        instructions::update_prices::execute(ctx, pool_indices)
+        instructions::update_prices::execute(ctx, indices)
     }
 
     pub fn mint_onusd(ctx: Context<MintONUSD>, amount: u64) -> Result<()> {
@@ -226,47 +224,14 @@ pub mod clone {
 
     pub fn pay_impermanent_loss_debt(
         ctx: Context<PayImpermanentLossDebt>,
+        user: Pubkey,
         comet_position_index: u8,
         amount: u64,
         pay_onusd_debt: bool,
     ) -> Result<()> {
         instructions::pay_impermanent_loss_debt::execute(
             ctx,
-            comet_position_index,
-            amount,
-            pay_onusd_debt,
-        )
-    }
-
-    pub fn liquidate_comet_nonstable_collateral(
-        ctx: Context<LiquidateCometNonStableCollateral>,
-        stable_swap_in_amount: u64,
-        comet_nonstable_collateral_index: u8,
-        comet_stable_collateral_index: u8,
-    ) -> Result<()> {
-        instructions::liquidate_comet_nonstable_collateral::execute(
-            ctx,
-            stable_swap_in_amount,
-            comet_nonstable_collateral_index,
-            comet_stable_collateral_index,
-        )
-    }
-
-    pub fn liquidate_comet_stable_collateral(
-        ctx: Context<LiquidateCometStableCollateral>,
-        comet_collateral_index: u8,
-    ) -> Result<()> {
-        instructions::liquidate_comet_stable_collateral::execute(ctx, comet_collateral_index)
-    }
-
-    pub fn liquidate_comet_position(
-        ctx: Context<LiquidateCometPosition>,
-        comet_position_index: u8,
-        amount: u64,
-        pay_onusd_debt: bool,
-    ) -> Result<()> {
-        instructions::liquidate_comet_position::execute(
-            ctx,
+            user,
             comet_position_index,
             amount,
             pay_onusd_debt,
@@ -320,5 +285,13 @@ pub mod clone {
             quantity_is_onusd,
             result_threshold,
         )
+    }
+
+    pub fn add_oracle_feed(ctx: Context<AddOracleFeed>, pyth_address: Pubkey) -> Result<()> {
+        instructions::add_oracle_feed::execute(ctx, pyth_address)
+    }
+
+    pub fn remove_oracle_feed(ctx: Context<RemoveOracleFeed>, index: u8) -> Result<()> {
+        instructions::remove_oracle_feed::execute(ctx, index)
     }
 }
