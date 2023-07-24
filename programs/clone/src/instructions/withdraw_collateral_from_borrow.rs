@@ -63,7 +63,6 @@ pub fn execute(
     let pool_index = borrow_positions.borrow_positions[borrow_index as usize].pool_index;
     let pool = token_data.pools[pool_index as usize];
     let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
-    let collateral_ratio = pool.asset_info.overcollateral_ratio;
     let collateral = token_data.collaterals[borrow_position.collateral_index as usize];
     let mut collateral_oracle: OracleInfo = Default::default();
     if collateral.oracle_info_index != u64::MAX {
@@ -93,19 +92,12 @@ pub fn execute(
     borrow_positions.borrow_positions[borrow_index as usize].collateral_amount =
         RawDecimal::from(new_collateral_amount);
 
-    let new_supplied_collateral = rescale_toward_zero(
-        pool.supplied_mint_collateral_amount.to_decimal() - amount_value,
-        CLONE_TOKEN_SCALE,
-    );
-    token_data.pools[borrow_position.pool_index as usize].supplied_mint_collateral_amount =
-        RawDecimal::from(new_supplied_collateral);
-
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
         pool_oracle,
         collateral_oracle,
         borrow_position.borrowed_onasset.to_decimal(),
-        pool.asset_info.overcollateral_ratio.to_decimal(),
+        pool.asset_info.min_overcollateral_ratio.to_decimal(),
         collateral.collateralization_ratio.to_decimal(),
         new_collateral_amount,
     )

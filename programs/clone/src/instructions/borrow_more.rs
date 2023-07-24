@@ -66,7 +66,6 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
     if collateral.oracle_info_index != u64::MAX {
         collateral_oracle = token_data.oracles[collateral.oracle_info_index as usize];
     }
-    let collateral_ratio = pool.asset_info.overcollateral_ratio.to_decimal();
 
     // update total amount of borrowed onasset
     let new_minted_amount = rescale_toward_zero(
@@ -88,7 +87,7 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
         pool_oracle,
         collateral_oracle,
         new_minted_amount,
-        pool.asset_info.overcollateral_ratio.to_decimal(),
+        pool.asset_info.min_overcollateral_ratio.to_decimal(),
         collateral.collateralization_ratio.to_decimal(),
         borrow_position.collateral_amount.to_decimal(),
     ).unwrap();

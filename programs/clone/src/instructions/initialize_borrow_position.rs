@@ -88,7 +88,7 @@ pub fn execute(
         pool_oracle,
         collateral_oracle,
         onasset_amount_value,
-        pool.asset_info.overcollateral_ratio.to_decimal(),
+        pool.asset_info.min_overcollateral_ratio.to_decimal(),
         collateral.collateralization_ratio.to_decimal(),
         collateral_amount_value,
     ).unwrap();
@@ -156,16 +156,6 @@ pub fn execute(
     );
     token_data.pools[pool_index as usize].total_minted_amount =
         RawDecimal::from(total_minted_amount);
-
-    let supplied_collateral = rescale_toward_zero(
-        token_data.pools[pool_index as usize]
-            .supplied_mint_collateral_amount
-            .to_decimal()
-            + collateral_amount_value,
-        CLONE_TOKEN_SCALE,
-    );
-    token_data.pools[pool_index as usize].supplied_mint_collateral_amount =
-        RawDecimal::from(supplied_collateral);
 
     // increment number of mint positions
     borrow_positions.num_positions += 1;

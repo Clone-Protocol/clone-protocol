@@ -30,13 +30,12 @@ pub fn check_mint_collateral_sufficient(
     pool_oracle: OracleInfo,
     collateral_oracle: OracleInfo,
     asset_amount_borrowed: Decimal,
-    overcollateral_ratio: Decimal,
+    min_overcollateral_ratio: Decimal,
     collateralization_ratio: Decimal,
     collateral_amount: Decimal,
 ) -> Result<()> {
     let slot = Clock::get().expect("Failed to get slot.").slot;
-    if check_feed_update(pool_oracle, slot).is_err()
-    {
+    if check_feed_update(pool_oracle, slot).is_err() {
         return Err(error!(CloneError::OutdatedOracle));
     }
     let collateral_price = if collateral_oracle != Default::default() {
@@ -47,8 +46,9 @@ pub fn check_mint_collateral_sufficient(
     } else {
         Decimal::one()
     };
-    if pool_oracle.price.to_decimal() * asset_amount_borrowed * overcollateral_ratio
-        > collateral_price * collateral_amount * collateralization_ratio
+    if (collateral_price * collateral_amount * collateralization_ratio)
+        / (pool_oracle.price.to_decimal() * asset_amount_borrowed)
+        > min_overcollateral_ratio
     {
         return Err(error!(CloneError::InvalidMintCollateralRatio));
     }

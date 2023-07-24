@@ -91,7 +91,7 @@ pub struct TokenData {
     pub num_pools: u64,                             // 8
     pub num_collaterals: u64,                       // 8
     pub num_oracles: u64,                           // 8
-    pub pools: [Pool; NUM_POOLS],                   // 64 * 256 = 16,384
+    pub pools: [Pool; NUM_POOLS],                   // 64 * 256 = 15,360
     pub collaterals: [Collateral; NUM_COLLATERALS], // 16 * 144 = 2,688
     pub oracles: [OracleInfo; NUM_ORACLES],         // 80 * 64 = 5,120
 }
@@ -128,13 +128,14 @@ impl TokenData {
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct AssetInfo {
-    // 104
-    pub onasset_mint: Pubkey,                          // 32
-    pub oracle_info_index: u64,                        // 8
-    pub overcollateral_ratio: RawDecimal,              // 16
-    pub il_health_score_coefficient: RawDecimal,       // 16
-    pub position_health_score_coefficient: RawDecimal, // 16
-    pub liquidation_discount_rate: RawDecimal,         // 16
+    // 120
+    pub onasset_mint: Pubkey,                             // 32
+    pub oracle_info_index: u64,                           // 8
+    pub min_overcollateral_ratio: RawDecimal,                 // 16
+    pub max_liquidation_overcollateral_ratio: RawDecimal, // 16
+    pub il_health_score_coefficient: RawDecimal,          // 16
+    pub position_health_score_coefficient: RawDecimal,    // 16
+    pub liquidation_discount_rate: RawDecimal,            // 16
 }
 
 #[zero_copy]
@@ -151,16 +152,15 @@ pub struct OracleInfo {
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct Pool {
     // 256
-    pub underlying_asset_token_account: Pubkey,      // 32
-    pub committed_onusd_liquidity: RawDecimal,       // 16
-    pub onusd_ild: RawDecimal,                       // 16
-    pub onasset_ild: RawDecimal,                     // 16
-    pub treasury_trading_fee: RawDecimal,            // 16
-    pub liquidity_trading_fee: RawDecimal,           // 16
-    pub total_minted_amount: RawDecimal,             // 16
-    pub supplied_mint_collateral_amount: RawDecimal, // 16
-    pub asset_info: AssetInfo,                       // 120
-    pub status: u64,                                 // 8
+    pub underlying_asset_token_account: Pubkey, // 32
+    pub committed_onusd_liquidity: RawDecimal,  // 16
+    pub onusd_ild: RawDecimal,                  // 16
+    pub onasset_ild: RawDecimal,                // 16
+    pub treasury_trading_fee: RawDecimal,       // 16
+    pub liquidity_trading_fee: RawDecimal,      // 16
+    pub total_minted_amount: RawDecimal,        // 16
+    pub asset_info: AssetInfo,                  // 120
+    pub status: u64,                            // 8
 }
 
 #[derive(Default, Debug)]

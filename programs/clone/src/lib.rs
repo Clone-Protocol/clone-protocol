@@ -97,7 +97,8 @@ pub mod clone {
 
     pub fn initialize_pool(
         ctx: Context<InitializePool>,
-        overcollateral_ratio: u16,
+        min_overcollateral_ratio: u16,
+        max_liquidation_overcollateral_ratio: u16,
         liquidity_trading_fee: u16,
         treasury_trading_fee: u16,
         il_health_score_coefficient: u64,
@@ -107,7 +108,8 @@ pub mod clone {
     ) -> Result<()> {
         instructions::initialize_pool::execute(
             ctx,
-            overcollateral_ratio,
+            min_overcollateral_ratio,
+            max_liquidation_overcollateral_ratio,
             liquidity_trading_fee,
             treasury_trading_fee,
             il_health_score_coefficient,

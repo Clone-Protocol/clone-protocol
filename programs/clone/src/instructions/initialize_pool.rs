@@ -7,7 +7,8 @@ use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(
-    overcollateral_ratio: u16,
+    min_overcollateral_ratio: u16,
+    max_liquidation_overcollateral_ratio: u16,
     liquidity_trading_fee: u16,
     treasury_trading_fee: u16,
     il_health_score_coefficient: u64,
@@ -85,7 +86,8 @@ pub struct InitializePool<'info> {
 
 pub fn execute(
     ctx: Context<InitializePool>,
-    overcollateral_ratio: u16,
+    min_overcollateral_ratio: u16,
+    max_liquidation_overcollateral_ratio: u16,
     liquidity_trading_fee: u16,
     treasury_trading_fee: u16,
     il_health_score_coefficient: u64,
@@ -110,7 +112,6 @@ pub fn execute(
         treasury_trading_fee: RawDecimal::from_bps(treasury_trading_fee.into()),
         liquidity_trading_fee: RawDecimal::from_bps(liquidity_trading_fee.into()),
         total_minted_amount: RawDecimal::default(),
-        supplied_mint_collateral_amount: RawDecimal::default(),
         asset_info: AssetInfo {
             ..Default::default()
         },
@@ -124,7 +125,11 @@ pub fn execute(
         *ctx.accounts.onasset_mint.to_account_info().key;
     token_data.pools[index as usize]
         .asset_info
-        .overcollateral_ratio = RawDecimal::from_percent(overcollateral_ratio);
+        .min_overcollateral_ratio = RawDecimal::from_percent(min_overcollateral_ratio);
+    token_data.pools[index as usize]
+        .asset_info
+        .max_liquidation_overcollateral_ratio =
+        RawDecimal::from_percent(max_liquidation_overcollateral_ratio);
     token_data.pools[index as usize]
         .asset_info
         .il_health_score_coefficient = RawDecimal::new(
