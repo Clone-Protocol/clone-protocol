@@ -6,18 +6,21 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 
 #[derive(Accounts)]
 #[instruction(comet_collateral_index: u8, collateral_amount: u64)]
 pub struct WithdrawCollateralFromComet<'info> {
     pub user: Signer<'info>,
     #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_account.bump,
+        mut,
+        seeds = [USER_SEED.as_ref(), user.key.as_ref()],
+        bump,
+        constraint = (comet_collateral_index as u64) < user_account.comet.num_collaterals @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: Account<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data,
     )]
@@ -29,13 +32,7 @@ pub struct WithdrawCollateralFromComet<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        constraint = &comet.load()?.owner == user.to_account_info().key @ CloneError::InvalidAccountLoaderOwner,
-        constraint = (comet_collateral_index as u64) < comet.load()?.num_collaterals @ CloneError::InvalidInputPositionIndex
-    )]
-    pub comet: AccountLoader<'info, Comet>,
-    #[account(
-        mut,
-        address = token_data.load()?.collaterals[comet.load()?.collaterals[comet_collateral_index as usize].collateral_index as usize].vault,
+        address = token_data.load()?.collaterals[user_account.comet.collaterals[comet_collateral_index as usize].collateral_index as usize].vault,
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -52,12 +49,12 @@ pub fn execute(
     comet_collateral_index: u8,
     collateral_amount: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[CLONE_PROGRAM_SEED.as_ref(), bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let comet_collateral_index = comet_collateral_index as usize;
 
-    let mut comet = ctx.accounts.comet.load_mut()?;
+    let comet = &mut ctx.accounts.user_account.comet;
     let comet_collateral = comet.collaterals[comet_collateral_index];
     let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
 
@@ -85,8 +82,8 @@ pub fn execute(
     comet.collaterals[comet_collateral_index].collateral_amount =
         RawDecimal::from(new_collateral_amount);
 
-    // remove collateral if empty and not the last ONUSD collateral.
-    if new_collateral_amount.is_zero() && comet_collateral_index != ONUSD_COLLATERAL_INDEX {
+    // remove collateral if empty
+    if new_collateral_amount.is_zero() {
         comet.remove_collateral(comet_collateral_index);
     }
 

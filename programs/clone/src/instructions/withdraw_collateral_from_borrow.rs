@@ -6,19 +6,22 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
+
 
 #[derive(Accounts)]
-#[instruction( borrow_index: u8, amount: u64)]
+#[instruction(borrow_index: u8, amount: u64)]
 pub struct WithdrawCollateralFromBorrow<'info> {
-    #[account(address = borrow_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_account.bump,
+        mut,
+        seeds = [USER_SEED.as_ref(), user.key.as_ref()],
+        bump,
+        constraint = (borrow_index as u64) < user_account.borrows.num_positions @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: Account<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data,
     )]
@@ -30,13 +33,7 @@ pub struct WithdrawCollateralFromBorrow<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        address = user_account.borrow_positions,
-        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ CloneError::InvalidInputPositionIndex
-    )]
-    pub borrow_positions: AccountLoader<'info, BorrowPositions>,
-    #[account(
-        mut,
-        address = token_data.load()?.collaterals[borrow_positions.load()?.borrow_positions[borrow_index as usize].collateral_index as usize].vault @ CloneError::InvalidInputCollateralAccount,
+        address = token_data.load()?.collaterals[user_account.borrows.positions[borrow_index as usize].collateral_index as usize].vault @ CloneError::InvalidInputCollateralAccount,
         constraint = vault.amount >= amount @ CloneError::InvalidTokenAccountBalance
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
@@ -54,17 +51,17 @@ pub fn execute(
     borrow_index: u8,
     amount: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[CLONE_PROGRAM_SEED.as_ref(), bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let borrow_positions = &mut ctx.accounts.borrow_positions.load_mut()?;
+    let borrows = &mut ctx.accounts.user_account.borrows;
 
-    let pool_index = borrow_positions.borrow_positions[borrow_index as usize].pool_index;
+    let pool_index = borrows.positions[borrow_index as usize].pool_index;
     let pool = token_data.pools[pool_index as usize];
     let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral_ratio = pool.asset_info.stable_collateral_ratio;
     let collateral = token_data.collaterals
-        [borrow_positions.borrow_positions[borrow_index as usize].collateral_index as usize];
-    let mint_position = borrow_positions.borrow_positions[borrow_index as usize];
+        [borrows.positions[borrow_index as usize].collateral_index as usize];
+    let borrow_position = borrows.positions[borrow_index as usize];
 
     let amount_value = Decimal::new(
         amount.try_into().unwrap(),
@@ -78,15 +75,15 @@ pub fn execute(
         current_vault_mint_supply.scale(),
     );
     token_data.collaterals
-        [borrow_positions.borrow_positions[borrow_index as usize].collateral_index as usize]
+        [borrows.positions[borrow_index as usize].collateral_index as usize]
         .vault_mint_supply = RawDecimal::from(new_vault_mint_supply);
 
     // subtract collateral amount from mint data
     let new_collateral_amount = rescale_toward_zero(
-        mint_position.collateral_amount.to_decimal() - amount_value,
+        borrow_position.collateral_amount.to_decimal() - amount_value,
         CLONE_TOKEN_SCALE,
     );
-    borrow_positions.borrow_positions[borrow_index as usize].collateral_amount =
+    borrows.positions[borrow_index as usize].collateral_amount =
         RawDecimal::from(new_collateral_amount);
     let slot = Clock::get()?.slot;
 
@@ -94,15 +91,15 @@ pub fn execute(
         pool.supplied_mint_collateral_amount.to_decimal() - amount_value,
         CLONE_TOKEN_SCALE,
     );
-    token_data.pools[mint_position.pool_index as usize].supplied_mint_collateral_amount =
+    token_data.pools[borrow_position.pool_index as usize].supplied_mint_collateral_amount =
         RawDecimal::from(new_supplied_collateral);
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
         oracle,
-        mint_position.borrowed_onasset.to_decimal(),
+        borrow_position.borrowed_onasset.to_decimal(),
         collateral_ratio.to_decimal(),
-        borrow_positions.borrow_positions[borrow_index as usize]
+        borrows.positions[borrow_index as usize]
             .collateral_amount
             .to_decimal(),
         slot,
@@ -128,18 +125,18 @@ pub fn execute(
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
-        pool_index: borrow_positions.borrow_positions[borrow_index as usize]
+        pool_index: borrows.positions[borrow_index as usize]
             .pool_index
             .try_into()
             .unwrap(),
         is_liquidation: false,
         collateral_supplied: new_collateral_amount.mantissa().try_into().unwrap(),
         collateral_delta: -(amount_value.mantissa() as i64),
-        collateral_index: borrow_positions.borrow_positions[borrow_index as usize]
+        collateral_index: borrows.positions[borrow_index as usize]
             .collateral_index
             .try_into()
             .unwrap(),
-        borrowed_amount: borrow_positions.borrow_positions[borrow_index as usize]
+        borrowed_amount: borrows.positions[borrow_index as usize]
             .borrowed_onasset
             .to_decimal()
             .mantissa()
@@ -150,12 +147,12 @@ pub fn execute(
     ctx.accounts.clone.event_counter += 1;
 
     // check to see if mint is empty, if so remove
-    if borrow_positions.borrow_positions[borrow_index as usize]
+    if borrows.positions[borrow_index as usize]
         .collateral_amount
         .to_decimal()
         .is_zero()
     {
-        borrow_positions.remove(borrow_index as usize);
+        borrows.remove(borrow_index as usize);
     }
 
     Ok(())

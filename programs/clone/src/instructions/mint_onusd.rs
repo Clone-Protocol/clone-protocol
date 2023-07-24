@@ -5,13 +5,14 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
+use crate::CLONE_PROGRAM_SEED;
 
 #[derive(Accounts)]
 #[instruction( amount: u64)]
 pub struct MintONUSD<'info> {
     pub user: Signer<'info>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = onusd_mint,
         has_one = token_data
@@ -48,7 +49,7 @@ pub struct MintONUSD<'info> {
 }
 
 pub fn execute(ctx: Context<MintONUSD>, amount: u64) -> Result<()> {
-    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[CLONE_PROGRAM_SEED.as_ref(), bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let collateral = token_data.collaterals[USDC_COLLATERAL_INDEX];

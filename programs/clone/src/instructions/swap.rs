@@ -8,10 +8,12 @@ use anchor_spl::token::{self, *};
 use clone_staking::{
     program::CloneStaking as CloneStakingProgram,
     states::{CloneStaking, User as UserStaking},
-    CLONE_STAKING_SEED, USER_SEED,
+    CLONE_STAKING_SEED, USER_SEED as USER_STAKING_SEED,
 };
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
+use crate::CLONE_PROGRAM_SEED;
+
 
 #[derive(Accounts)]
 #[instruction(
@@ -25,7 +27,7 @@ pub struct Swap<'info> {
     pub user: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data
     )]
@@ -79,7 +81,7 @@ pub struct Swap<'info> {
     )]
     pub clone_staking: Option<Account<'info, CloneStaking>>,
     #[account(
-        seeds = [USER_SEED.as_ref(), user.key.as_ref()],
+        seeds = [USER_STAKING_SEED.as_ref(), user.key.as_ref()],
         bump,
         seeds::program = clone_staking_program.clone().unwrap().key(),
     )]
@@ -95,7 +97,7 @@ pub fn execute(
     quantity_is_onusd: bool,
     result_threshold: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[CLONE_PROGRAM_SEED.as_ref(), bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let pool = token_data.pools[pool_index as usize];
     let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];

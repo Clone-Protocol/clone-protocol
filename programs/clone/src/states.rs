@@ -58,17 +58,9 @@ pub struct Clone {
     pub token_data: Pubkey,                    // 32
     pub admin: Pubkey,                         // 32
     pub bump: u8,                              // 1
-    pub liquidation_config: LiquidationConfig, // 48
+    pub liquidator_fee_bps: u16,               // 16,
     pub treasury_address: Pubkey,              // 32
     pub event_counter: u64,                    // 8
-}
-
-#[zero_copy]
-#[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
-pub struct LiquidationConfig {
-    // 32
-    pub liquidator_fee: RawDecimal,         // 16,
-    pub max_health_liquidation: RawDecimal, // 16
 }
 
 #[account(zero_copy)]
@@ -320,16 +312,13 @@ pub struct Collateral {
 #[derive(Default)]
 pub struct User {
     // 97
-    pub authority: Pubkey,        // 32
-    pub borrow_positions: Pubkey, // 32
-    pub comet: Pubkey,            // 32
-    pub bump: u8,                 // 1
+    pub borrows: BorrowPositions,
+    pub comet: Comet,
 }
 
-#[account(zero_copy)]
+#[derive(AnchorSerialize, AnchorDeserialize, Copy, Clone, PartialEq, Eq)]
 pub struct Comet {
     // 46,976
-    pub owner: Pubkey,                                   // 32
     pub num_positions: u64,                              // 8
     pub num_collaterals: u64,                            // 8
     pub positions: [CometPosition; NUM_POOLS],           // 255 * 120 = 30,600
@@ -339,7 +328,6 @@ pub struct Comet {
 impl Default for Comet {
     fn default() -> Self {
         Self {
-            owner: Pubkey::default(),
             num_positions: 0,
             num_collaterals: 0,
             positions: [CometPosition::default(); NUM_POOLS],
@@ -391,21 +379,23 @@ impl Comet {
             });
         total_value
     }
+
+    pub fn is_empty(&self) -> bool {
+        return self.num_positions == 0 && self.num_collaterals == 0;
+    }
 }
 
-#[zero_copy]
+#[derive(AnchorSerialize, AnchorDeserialize, Copy, Clone, PartialEq, Eq)]
 pub struct CometPosition {
     // 120
-    pub authority: Pubkey,                     // 32
     pub pool_index: u64,                       // 8
-    pub committed_onusd_liquidity: RawDecimal, //16
+    pub committed_onusd_liquidity: RawDecimal, // 16
     pub onusd_ild_rebate: RawDecimal,          // 16
     pub onasset_ild_rebate: RawDecimal,        // 16
 }
 impl Default for CometPosition {
     fn default() -> Self {
         Self {
-            authority: Pubkey::default(),
             pool_index: u8::MAX.into(),
             committed_onusd_liquidity: RawDecimal::default(),
             onusd_ild_rebate: RawDecimal::default(),
@@ -422,58 +412,55 @@ impl CometPosition {
     }
 }
 
-#[zero_copy]
-#[derive(Debug)]
+#[derive(AnchorSerialize, AnchorDeserialize, Copy, Clone, PartialEq, Eq)]
 pub struct CometCollateral {
     // 64
-    pub authority: Pubkey,             // 32
     pub collateral_amount: RawDecimal, // 24
     pub collateral_index: u64,         // 8
 }
 impl Default for CometCollateral {
     fn default() -> Self {
         Self {
-            authority: Pubkey::default(),
             collateral_amount: RawDecimal::default(),
             collateral_index: u8::MAX.into(),
         }
     }
 }
-#[account(zero_copy)]
+#[derive(AnchorSerialize, AnchorDeserialize, Copy, Clone, PartialEq, Eq)]
 pub struct BorrowPositions {
     // 20,440
-    pub owner: Pubkey,                                            // 32
     pub num_positions: u64,                                       // 8
-    pub borrow_positions: [BorrowPosition; NUM_BORROW_POSITIONS], // 255 * 80 = 20,400
+    pub positions: [BorrowPosition; NUM_BORROW_POSITIONS], // 255 * 80 = 20,400
 }
 
 impl Default for BorrowPositions {
     fn default() -> Self {
         Self {
-            owner: Pubkey::default(),
             num_positions: 0,
-            borrow_positions: [BorrowPosition::default(); NUM_BORROW_POSITIONS],
+            positions: [BorrowPosition::default(); NUM_BORROW_POSITIONS],
         }
     }
 }
 
 impl BorrowPositions {
     pub fn remove(&mut self, index: usize) {
-        self.borrow_positions[index] = self.borrow_positions[(self.num_positions - 1) as usize];
-        self.borrow_positions[(self.num_positions - 1) as usize] = BorrowPosition {
+        self.positions[index] = self.positions[(self.num_positions - 1) as usize];
+        self.positions[(self.num_positions - 1) as usize] = BorrowPosition {
             ..Default::default()
         };
         self.num_positions -= 1;
     }
+
+    pub fn is_empty(&self) -> bool {
+        return self.num_positions == 0;
+    }
 }
 
-#[zero_copy]
-#[derive(Default)]
+#[derive(Default, AnchorSerialize, AnchorDeserialize, Copy, Clone, PartialEq, Eq)]
 pub struct BorrowPosition {
     // 80
-    pub authority: Pubkey,             // 32
-    pub collateral_amount: RawDecimal, // 16
     pub pool_index: u64,               // 8
-    pub collateral_index: u64,         // 8
     pub borrowed_onasset: RawDecimal,  // 16
+    pub collateral_amount: RawDecimal, // 16
+    pub collateral_index: u64,         // 8
 }

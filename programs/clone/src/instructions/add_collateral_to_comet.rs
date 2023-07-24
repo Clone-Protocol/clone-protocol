@@ -6,19 +6,19 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
+use crate::{USER_SEED, CLONE_PROGRAM_SEED};
 
 #[derive(Accounts)]
 #[instruction(collateral_index: u8, collateral_amount: u64)]
 pub struct AddCollateralToComet<'info> {
-    #[account(address = comet.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_account.bump,
+        seeds = [USER_SEED.as_ref(), user.key.as_ref()],
+        bump,
     )]
-    pub user_account: Account<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data,
     )]
@@ -31,14 +31,7 @@ pub struct AddCollateralToComet<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        address = user_account.comet,
-        constraint = &comet.load()?.owner == user.to_account_info().key @ CloneError::InvalidAccountLoaderOwner,
-    )]
-    pub comet: AccountLoader<'info, Comet>,
-    #[account(
-        mut,
         address = token_data.load()?.collaterals[collateral_index as usize].vault,
-        constraint = vault.mint == token_data.load()?.collaterals[collateral_index as usize].mint
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -75,7 +68,7 @@ pub fn execute(
     collateral_amount: u64,
 ) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let mut comet = ctx.accounts.comet.load_mut()?;
+    let comet = &mut ctx.accounts.user_account.comet;
 
     let collateral = token_data.collaterals[collateral_index as usize];
     let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
@@ -121,7 +114,6 @@ pub fn execute(
         );
     } else {
         comet.add_collateral(CometCollateral {
-            authority: *ctx.accounts.user.to_account_info().key,
             collateral_amount: RawDecimal::from(added_collateral_value),
             collateral_index: collateral_index.into(),
         });

@@ -1,5 +1,7 @@
 use crate::states::*;
 use anchor_lang::prelude::*;
+use crate::CLONE_PROGRAM_SEED;
+
 
 #[derive(Accounts)]
 #[instruction(pyth_address: Pubkey)]
@@ -7,7 +9,7 @@ pub struct AddOracleFeed<'info> {
     #[account(address = clone.admin)]
     pub admin: Signer<'info>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data,
         has_one = admin

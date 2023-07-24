@@ -20,14 +20,12 @@ pub mod clone {
     #[allow(clippy::too_many_arguments)]
     pub fn initialize_clone(
         ctx: Context<InitializeClone>,
-        max_health_liquidation: u64,
-        liquidator_fee: u64,
+        liquidator_fee_bps: u16,
         treasury_address: Pubkey,
     ) -> Result<()> {
         instructions::initialize_clone::execute(
             ctx,
-            max_health_liquidation,
-            liquidator_fee,
+            liquidator_fee_bps,
             treasury_address,
         )
     }
@@ -57,14 +55,6 @@ pub mod clone {
 
     pub fn initialize_user(ctx: Context<InitializeUser>, authority: Pubkey) -> Result<()> {
         instructions::initialize_user::execute(ctx, authority)
-    }
-
-    pub fn initialize_borrow_positions(ctx: Context<InitializeBorrowPositions>) -> Result<()> {
-        instructions::initialize_borrow_positions::execute(ctx)
-    }
-
-    pub fn initialize_comet(ctx: Context<InitializeComet>) -> Result<()> {
-        instructions::initialize_comet::execute(ctx)
     }
 
     pub fn add_collateral(
@@ -236,14 +226,6 @@ pub mod clone {
             amount,
             pay_onusd_debt,
         )
-    }
-
-    pub fn close_comet_account(ctx: Context<CloseCometAccount>) -> Result<()> {
-        instructions::close_comet_account::execute(ctx)
-    }
-
-    pub fn close_borrow_positions_account(ctx: Context<CloseBorrowPositionsAccount>) -> Result<()> {
-        instructions::close_borrow_positions_account::execute(ctx)
     }
 
     pub fn close_user_account(ctx: Context<CloseUserAccount>) -> Result<()> {

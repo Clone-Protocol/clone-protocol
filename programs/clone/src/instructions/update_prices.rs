@@ -4,6 +4,7 @@ use crate::states::*;
 use anchor_lang::prelude::*;
 use pyth_sdk_solana::Price;
 use std::convert::TryInto;
+use crate::CLONE_PROGRAM_SEED;
 
 pub const MAX_SIZE: usize = 128;
 
@@ -43,7 +44,7 @@ pub struct OracleIndices {
 #[instruction(oracle_indices: OracleIndices)]
 pub struct UpdatePrices<'info> {
     #[account(
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data
     )]

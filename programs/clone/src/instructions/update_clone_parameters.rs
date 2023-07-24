@@ -1,10 +1,10 @@
 use crate::states::*;
 use anchor_lang::prelude::*;
+use crate::CLONE_PROGRAM_SEED;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum CloneParameters {
-    LiquidationFee { value: RawDecimal },
-    MaxHealthLiquidation { value: RawDecimal },
+    LiquidationFee { value: u16 },
     TreasuryAddress { address: Pubkey },
 }
 
@@ -17,7 +17,7 @@ pub struct UpdateCloneParameters<'info> {
     pub admin: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
     )]
     pub clone: Account<'info, Clone>,
@@ -26,10 +26,7 @@ pub struct UpdateCloneParameters<'info> {
 pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> Result<()> {
     match params {
         CloneParameters::LiquidationFee { value } => {
-            ctx.accounts.clone.liquidation_config.liquidator_fee = value;
-        }
-        CloneParameters::MaxHealthLiquidation { value } => {
-            ctx.accounts.clone.liquidation_config.max_health_liquidation = value;
+            ctx.accounts.clone.liquidator_fee_bps = value;
         }
         CloneParameters::TreasuryAddress { address } => {
             ctx.accounts.clone.treasury_address = address;

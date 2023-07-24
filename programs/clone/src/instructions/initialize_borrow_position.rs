@@ -7,19 +7,20 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
+use crate::{USER_SEED, CLONE_PROGRAM_SEED};
+
 
 #[derive(Accounts)]
 #[instruction(pool_index: u8, collateral_index: u8, onasset_amount: u64, collateral_amount: u64)]
 pub struct InitializeBorrowPosition<'info> {
-    #[account(address = borrow_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_account.bump,
+        seeds = [USER_SEED.as_ref(), user.key.as_ref()],
+        bump,
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data,
     )]
@@ -30,11 +31,6 @@ pub struct InitializeBorrowPosition<'info> {
         constraint = token_data.load()?.pools[pool_index as usize].deprecated == 0 @ CloneError::PoolDeprecated
     )]
     pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        mut,
-        address = user_account.borrow_positions,
-    )]
-    pub borrow_positions: AccountLoader<'info, BorrowPositions>,
     #[account(
         mut,
         address = token_data.load()?.collaterals[collateral_index as usize].vault
@@ -68,7 +64,7 @@ pub fn execute(
     onasset_amount: u64,
     collateral_amount: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[CLONE_PROGRAM_SEED.as_ref(), bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let pool = token_data.pools[pool_index as usize];
@@ -129,10 +125,9 @@ pub fn execute(
     )?;
 
     // set mint position data
-    let mut borrow_positions = ctx.accounts.borrow_positions.load_mut()?;
-    let num_positions = borrow_positions.num_positions;
-    borrow_positions.borrow_positions[num_positions as usize] = BorrowPosition {
-        authority: *ctx.accounts.user.to_account_info().key,
+    let borrows = &mut ctx.accounts.user_account.borrows;
+    let num_positions = borrows.num_positions;
+    borrows.positions[num_positions as usize] = BorrowPosition {
         collateral_amount: RawDecimal::from(collateral_amount_value),
         collateral_index: collateral_index.try_into().unwrap(),
         pool_index: pool_index.try_into().unwrap(),
@@ -170,7 +165,7 @@ pub fn execute(
         RawDecimal::from(supplied_collateral);
 
     // increment number of mint positions
-    borrow_positions.num_positions += 1;
+    borrows.num_positions += 1;
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,

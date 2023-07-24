@@ -1,5 +1,6 @@
 use crate::{error::CloneError, states::*};
 use anchor_lang::prelude::*;
+use crate::CLONE_PROGRAM_SEED;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum CollateralParameters {
@@ -17,7 +18,7 @@ pub struct UpdateCollateralParameters<'info> {
     pub admin: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data
     )]

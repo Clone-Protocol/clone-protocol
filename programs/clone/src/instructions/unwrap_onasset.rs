@@ -3,13 +3,14 @@ use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
+use crate::CLONE_PROGRAM_SEED;
 
 #[derive(Accounts)]
 #[instruction(amount: u64, pool_index: u8)]
 pub struct UnwrapOnAsset<'info> {
     pub user: Signer<'info>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data
     )]
@@ -54,7 +55,7 @@ pub fn execute(ctx: Context<UnwrapOnAsset>, amount: u64, pool_index: u8) -> Resu
         CloneError::PoolNotFound
     );
 
-    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[CLONE_PROGRAM_SEED.as_ref(), bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
 
     // burn onasset from user
     let cpi_program = ctx.accounts.token_program.to_account_info();

@@ -4,6 +4,7 @@ use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use std::convert::TryInto;
+use crate::CLONE_PROGRAM_SEED;
 
 #[derive(Accounts)]
 #[instruction(scale: u8, stable: bool, collateralization_ratio: u8, oracle_info_index: u8)]
@@ -11,7 +12,7 @@ pub struct AddCollateral<'info> {
     #[account(mut, address = clone.admin)]
     pub admin: Signer<'info>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data,
         has_one = admin

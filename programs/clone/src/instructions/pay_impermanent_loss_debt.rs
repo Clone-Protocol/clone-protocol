@@ -6,19 +6,22 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
+use crate::{USER_SEED, CLONE_PROGRAM_SEED};
 
 #[derive(Accounts)]
 #[instruction(user: Pubkey, comet_position_index: u8, amount: u64, pay_onusd_debt: bool)]
 pub struct PayImpermanentLossDebt<'info> {
     pub payer: Signer<'info>,
     #[account(
-        seeds = [b"user".as_ref(), user.as_ref()],
-        bump = user_account.bump,
+        mut,
+        seeds = [USER_SEED.as_ref(), user.as_ref()],
+        bump,
+        constraint = user_account.comet.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: Account<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data
     )]
@@ -29,19 +32,12 @@ pub struct PayImpermanentLossDebt<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        address = user_account.comet,
-        constraint = comet.load()?.owner == user @ CloneError::InvalidAccountLoaderOwner,
-        constraint = comet.load()?.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
-    )]
-    pub comet: AccountLoader<'info, Comet>,
-    #[account(
-        mut,
         address = clone.onusd_mint
     )]
     pub onusd_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
+        address = token_data.load()?.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -69,7 +65,7 @@ pub fn execute(
     return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
     let authorized_amount = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
     let token_data = ctx.accounts.token_data.load()?;
-    let mut comet = ctx.accounts.comet.load_mut()?;
+    let comet = &mut ctx.accounts.user_account.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
     let onusd_ild_rebate = comet_position.onusd_ild_rebate.to_decimal();

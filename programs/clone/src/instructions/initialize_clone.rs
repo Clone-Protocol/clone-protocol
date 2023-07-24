@@ -1,10 +1,10 @@
-use crate::error::*;
-use crate::return_error_if_false;
+
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use rust_decimal::prelude::*;
-use std::convert::TryInto;
+
+pub const CLONE_PROGRAM_SEED: &str = "clone";
 
 #[derive(Accounts)]
 #[instruction(
@@ -18,7 +18,7 @@ pub struct InitializeClone<'info> {
     #[account(
         init,
         space = 8 + 200,
-        seeds = [b"clone"],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump,
         payer = admin
     )]
@@ -56,12 +56,9 @@ pub struct InitializeClone<'info> {
 #[allow(clippy::too_many_arguments)]
 pub fn execute(
     ctx: Context<InitializeClone>,
-    max_health_liquidation: u64,
-    liquidator_fee: u64,
+    liquidator_fee_bps: u16,
     treasury_address: Pubkey,
 ) -> Result<()> {
-    return_error_if_false!(max_health_liquidation < 100, CloneError::InvalidValueRange);
-    return_error_if_false!(liquidator_fee < 10000, CloneError::InvalidValueRange);
     let mut token_data = ctx.accounts.token_data.load_init()?;
 
     // set manager data
@@ -71,10 +68,7 @@ pub fn execute(
     ctx.accounts.clone.bump = *ctx.bumps.get("clone").unwrap();
     ctx.accounts.clone.treasury_address = treasury_address;
 
-    ctx.accounts.clone.liquidation_config = LiquidationConfig {
-        max_health_liquidation: RawDecimal::new(max_health_liquidation.try_into().unwrap(), 0),
-        liquidator_fee: RawDecimal::new(liquidator_fee.try_into().unwrap(), BPS_SCALE),
-    };
+    ctx.accounts.clone.liquidator_fee_bps = liquidator_fee_bps;
 
     // add onusd as first collateral type
     token_data.append_collateral(Collateral {

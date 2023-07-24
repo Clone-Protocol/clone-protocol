@@ -6,20 +6,22 @@ use crate::states::*;
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 
 #[derive(Accounts)]
 #[instruction(comet_position_index: u8, liquidity_token_amount: u64)]
 pub struct WithdrawLiquidityFromComet<'info> {
-    #[account(address = comet.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_account.bump,
+        mut,
+        seeds = [USER_SEED.as_ref(), user.key.as_ref()],
+        bump,
+        constraint = (comet_position_index as u64) < user_account.comet.num_positions @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: Account<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data,
     )]
@@ -29,12 +31,6 @@ pub struct WithdrawLiquidityFromComet<'info> {
         has_one = clone,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        mut,
-        constraint = comet.to_account_info().key() == user_account.comet,
-        constraint = (comet_position_index as u64) < comet.load()?.num_positions @ CloneError::InvalidInputPositionIndex
-    )]
-    pub comet: AccountLoader<'info, Comet>,
 }
 
 pub fn withdraw_liquidity(
@@ -141,7 +137,7 @@ pub fn execute(
     onusd_amount: u64,
 ) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let comet = &mut ctx.accounts.comet.load_mut()?;
+    let comet = &mut ctx.accounts.user_account.comet;
     withdraw_liquidity(
         token_data,
         comet,
