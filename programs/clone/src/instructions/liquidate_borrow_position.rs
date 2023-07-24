@@ -1,6 +1,7 @@
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -18,7 +19,8 @@ pub struct LiquidateBorrowPosition<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone
+        has_one = clone,
+        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     /// CHECK: Only used for address validation.
@@ -40,8 +42,7 @@ pub struct LiquidateBorrowPosition<'info> {
     #[account(
         mut,
         owner = *user_account.to_account_info().owner,
-        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ CloneError::InvalidInputPositionIndex,
-        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].deprecated == 0 @ CloneError::PoolDeprecated
+        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ CloneError::InvalidInputPositionIndex
     )]
     pub borrow_positions: AccountLoader<'info, BorrowPositions>,
     #[account(
@@ -80,24 +81,25 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Resul
         return Err(CloneError::NonStablesNotSupported.into());
     }
 
-    // ensure price data is up to date
-    let slot = Clock::get()?.slot;
-    check_feed_update(oracle, slot).unwrap();
-
     let borrowed_onasset = mint_position.borrowed_onasset.to_decimal();
     let collateral_amount_value = mint_position.collateral_amount.to_decimal();
 
-    // Should fail here.
-    if check_mint_collateral_sufficient(
-        oracle,
-        borrowed_onasset,
-        pool.asset_info.stable_collateral_ratio.to_decimal(),
-        collateral_amount_value,
-        slot,
-    )
-    .is_ok()
-    {
-        return Err(CloneError::MintPositionUnableToLiquidate.into());
+    if pool.status != Status::Liquidation as u64 {
+        if check_mint_collateral_sufficient(
+            oracle,
+            borrowed_onasset,
+            pool.asset_info.stable_collateral_ratio.to_decimal(),
+            collateral_amount_value,
+        )
+        .is_ok()
+        {
+            return Err(CloneError::BorrowPositionUnableToLiquidate.into());
+        }
+    } else {
+        return_error_if_false!(
+            check_feed_update(oracle, Clock::get()?.slot).is_ok(),
+            CloneError::OutdatedOracle
+        );
     }
 
     // Burn the onAsset from the liquidator
@@ -135,14 +137,14 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8) -> Resul
             .clone(),
         authority: ctx.accounts.clone.to_account_info().clone(),
     };
-    let send_usdc_context = CpiContext::new_with_signer(
+    let send_collateral_context = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info().clone(),
         cpi_accounts,
         seeds,
     );
 
     token::transfer(
-        send_usdc_context,
+        send_collateral_context,
         mint_position
             .collateral_amount
             .to_decimal()

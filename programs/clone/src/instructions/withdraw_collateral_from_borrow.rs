@@ -22,10 +22,11 @@ pub struct WithdrawCollateralFromBorrow<'info> {
         bump = clone.bump,
         has_one = token_data,
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone
+        has_one = clone,
+        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -88,7 +89,6 @@ pub fn execute(
     );
     borrow_positions.borrow_positions[borrow_index as usize].collateral_amount =
         RawDecimal::from(new_collateral_amount);
-    let slot = Clock::get()?.slot;
 
     let new_supplied_collateral = rescale_toward_zero(
         pool.supplied_mint_collateral_amount.to_decimal() - amount_value,
@@ -105,7 +105,6 @@ pub fn execute(
         borrow_positions.borrow_positions[borrow_index as usize]
             .collateral_amount
             .to_decimal(),
-        slot,
     )
     .unwrap();
 

@@ -27,7 +27,7 @@ pub struct InitializeBorrowPosition<'info> {
     #[account(
         mut,
         has_one = clone,
-        constraint = token_data.load()?.pools[pool_index as usize].deprecated == 0 @ CloneError::PoolDeprecated
+        constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -86,13 +86,11 @@ pub fn execute(
     let collateral_ratio = pool.asset_info.stable_collateral_ratio.to_decimal();
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
-    let slot = Clock::get()?.slot;
     check_mint_collateral_sufficient(
         oracle,
         onasset_amount_value,
         collateral_ratio,
         collateral_amount_value,
-        slot,
     )?;
 
     // lock user collateral in vault

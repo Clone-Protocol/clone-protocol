@@ -22,10 +22,11 @@ pub struct BorrowMore<'info> {
         bump = clone.bump,
         has_one = token_data,
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
         has_one = clone,
+        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -37,8 +38,7 @@ pub struct BorrowMore<'info> {
     #[account(
         mut,
         address = user_account.borrow_positions,
-        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ CloneError::InvalidInputPositionIndex,
-        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].deprecated == 0 @ CloneError::PoolDeprecated
+        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ CloneError::InvalidInputPositionIndex
     )]
     pub borrow_positions: AccountLoader<'info, BorrowPositions>,
     #[account(
@@ -71,8 +71,6 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
     borrow_positions.borrow_positions[borrow_index as usize].borrowed_onasset =
         RawDecimal::from(new_minted_amount);
 
-    let slot = Clock::get()?.slot;
-
     // Update protocol-wide total
     let total_minted = rescale_toward_zero(
         pool.total_minted_amount.to_decimal() + amount_value,
@@ -88,7 +86,6 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
             .to_decimal(),
         collateral_ratio,
         mint_position.collateral_amount.to_decimal(),
-        slot,
     )
     .unwrap();
 

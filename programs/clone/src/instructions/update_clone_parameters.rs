@@ -20,7 +20,7 @@ pub struct UpdateCloneParameters<'info> {
         seeds = [b"clone".as_ref()],
         bump = clone.bump,
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
 }
 
 pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> Result<()> {

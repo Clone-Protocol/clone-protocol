@@ -12,7 +12,7 @@ pub struct RemoveOracleFeed<'info> {
         has_one = token_data,
         has_one = admin
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
         has_one = clone

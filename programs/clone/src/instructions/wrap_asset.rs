@@ -15,7 +15,9 @@ pub struct WrapAsset<'info> {
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
-        has_one = clone
+        has_one = clone,
+        constraint = token_data.load()?.pools[pool_index as usize].status != Status::Frozen as u64 &&
+        token_data.load()?.pools[pool_index as usize].status != Status::Deprecation as u64 @ CloneError::StatusPreventsAction,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(

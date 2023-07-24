@@ -15,7 +15,7 @@ pub struct BurnONUSD<'info> {
         has_one = onusd_mint,
         has_one = token_data
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
         has_one = clone

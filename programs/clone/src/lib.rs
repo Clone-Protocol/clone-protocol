@@ -32,6 +32,14 @@ pub mod clone {
         )
     }
 
+    pub fn add_auth(ctx: Context<AddAuth>, auth: Pubkey) -> Result<()> {
+        instructions::add_auth::execute(ctx, auth)
+    }
+
+    pub fn remove_auth(ctx: Context<RemoveAuth>, auth: Pubkey) -> Result<()> {
+        instructions::remove_auth::execute(ctx, auth)
+    }
+
     pub fn update_clone_parameters(
         ctx: Context<UpdateCloneParameters>,
         params: CloneParameters,
@@ -208,6 +216,22 @@ pub mod clone {
         )
     }
 
+    pub fn liquidate_comet_position(
+        ctx: Context<LiquidateCometPosition>,
+        comet_position_index: u8,
+        comet_collateral_index: u8,
+        amount: u64,
+        pay_onusd_debt: bool,
+    ) -> Result<()> {
+        instructions::liquidate_comet_position::execute(
+            ctx,
+            comet_position_index,
+            comet_collateral_index,
+            amount,
+            pay_onusd_debt,
+        )
+    }
+
     pub fn liquidate_borrow_position(
         ctx: Context<LiquidateBorrowPosition>,
         borrow_index: u8,
@@ -248,10 +272,6 @@ pub mod clone {
 
     pub fn close_user_account(ctx: Context<CloseUserAccount>) -> Result<()> {
         instructions::close_user_account::execute(ctx)
-    }
-
-    pub fn deprecate_pool(ctx: Context<DeprecatePool>, pool_index: u8) -> Result<()> {
-        instructions::deprecate_pool::execute(ctx, pool_index)
     }
 
     pub fn wrap_asset(ctx: Context<WrapAsset>, amount: u64, pool_index: u8) -> Result<()> {

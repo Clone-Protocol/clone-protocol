@@ -47,7 +47,7 @@ pub struct UpdatePrices<'info> {
         bump = clone.bump,
         has_one = token_data
     )]
-    pub clone: Account<'info, Clone>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
         has_one = clone
