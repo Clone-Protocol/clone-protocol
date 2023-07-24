@@ -136,13 +136,13 @@ pub fn execute(
 
     // calculate reward for liquidator
     let collateral_reward = rescale_toward_zero(
-        Decimal::one()
+        (Decimal::one()
             + ctx
                 .accounts
                 .clone
                 .liquidation_config
-                .liquidator_fee
-                .to_decimal()
+                .comet_liquidator_fee
+                .to_decimal())
                 * if pay_onusd_debt {
                     burn_amount
                 } else {
@@ -153,19 +153,18 @@ pub fn execute(
     );
 
     if collateral_reward > comet_collateral.collateral_amount.to_decimal() {
-        burn_amount = comet_collateral.collateral_amount.to_decimal()
-            * ctx
-                .accounts
-                .clone
-                .liquidation_config
-                .liquidator_fee
-                .to_decimal()
-            / if pay_onusd_debt {
+        burn_amount = comet_collateral.collateral_amount.to_decimal() * collateral_price
+        / Decimal::one() + ctx
+        .accounts
+        .clone
+        .liquidation_config
+        .comet_liquidator_fee.to_decimal()
+        / 
+            if pay_onusd_debt {
                 Decimal::one()
             } else {
                 pool_oracle.price.to_decimal()
-            }
-            * collateral_price;
+            };
     }
 
     if (pay_onusd_debt && ild_share.onusd_ild_share > Decimal::ZERO)
@@ -188,18 +187,6 @@ pub fn execute(
                 burn_amount,
             )
         } else {
-            if collateral_reward > comet_collateral.collateral_amount.to_decimal() {
-                burn_amount = (comet_collateral.collateral_amount.to_decimal()
-                    / (Decimal::one()
-                        + ctx
-                            .accounts
-                            .clone
-                            .liquidation_config
-                            .liquidator_fee
-                            .to_decimal()))
-                    * collateral_price;
-            }
-
             comet.positions[comet_position_index as usize].onasset_ild_rebate = RawDecimal::from(
                 rescale_toward_zero(onasset_ild_rebate + burn_amount, CLONE_TOKEN_SCALE),
             );

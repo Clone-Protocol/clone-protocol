@@ -64,34 +64,34 @@ impl Default for RawDecimal {
 #[account]
 #[derive(Default)]
 pub struct Clone {
-    // 489
+    // 505
     pub onusd_mint: Pubkey,                    // 32
     pub token_data: Pubkey,                    // 32
     pub admin: Pubkey,                         // 32
     pub auth: [Pubkey; 10],                    // 320
     pub bump: u8,                              // 1
-    pub liquidation_config: LiquidationConfig, // 32
+    pub liquidation_config: LiquidationConfig, // 48
     pub treasury_address: Pubkey,              // 32
     pub event_counter: u64,                    // 8
 }
 
-
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct LiquidationConfig {
-    // 32
-    pub liquidator_fee: RawDecimal,         // 16,
+    // 48
+    pub comet_liquidator_fee: RawDecimal,   // 16,
+    pub borrow_liquidator_fee: RawDecimal,  // 16,
     pub max_health_liquidation: RawDecimal, // 16
 }
 
 #[account(zero_copy)]
 pub struct TokenData {
-    // 25,264
+    // 24,248
     pub clone: Pubkey,                              // 32
     pub num_pools: u64,                             // 8
     pub num_collaterals: u64,                       // 8
     pub num_oracles: u64,                           // 8
-    pub pools: [Pool; NUM_POOLS],                   // 64 * 272 = 17,408
+    pub pools: [Pool; NUM_POOLS],                   // 64 * 256 = 16,384
     pub collaterals: [Collateral; NUM_COLLATERALS], // 16 * 144 = 2,688
     pub oracles: [OracleInfo; NUM_ORACLES],         // 80 * 64 = 5,120
 }
@@ -128,11 +128,10 @@ impl TokenData {
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct AssetInfo {
-    // 120
+    // 104
     pub onasset_mint: Pubkey,                          // 32
     pub oracle_info_index: u64,                        // 8
-    pub stable_collateral_ratio: RawDecimal,           // 16
-    pub crypto_collateral_ratio: RawDecimal,           // 16
+    pub overcollateral_ratio: RawDecimal,              // 16
     pub il_health_score_coefficient: RawDecimal,       // 16
     pub position_health_score_coefficient: RawDecimal, // 16
     pub liquidation_discount_rate: RawDecimal,         // 16
@@ -151,7 +150,7 @@ pub struct OracleInfo {
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct Pool {
-    // 272
+    // 256
     pub underlying_asset_token_account: Pubkey,      // 32
     pub committed_onusd_liquidity: RawDecimal,       // 16
     pub onusd_ild: RawDecimal,                       // 16
@@ -160,8 +159,8 @@ pub struct Pool {
     pub liquidity_trading_fee: RawDecimal,           // 16
     pub total_minted_amount: RawDecimal,             // 16
     pub supplied_mint_collateral_amount: RawDecimal, // 16
-    pub asset_info: AssetInfo,                       // 120
-    pub status: u64                                   // 8
+    pub asset_info: AssetInfo,                       // 104
+    pub status: u64,                                 // 8
 }
 
 #[derive(Default, Debug)]
@@ -323,7 +322,7 @@ pub struct Collateral {
     pub stable: u64,                         // 8
     pub collateralization_ratio: RawDecimal, // 16
     pub liquidation_discount: RawDecimal,    // 16
-    pub status: u64,                          // 8
+    pub status: u64,                         // 8
 }
 
 #[account]

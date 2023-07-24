@@ -14,7 +14,8 @@ export interface Clone {
 }
 
 export interface LiquidationConfig {
-  liquidatorFee: RawDecimal;
+  cometLiquidatorFee: RawDecimal;
+  borrowLiquidatorFee: RawDecimal;
   maxHealthLiquidation: RawDecimal;
 }
 
@@ -80,8 +81,7 @@ export interface CometCollateral {
 export interface AssetInfo {
   onassetMint: PublicKey;
   oracleInfoIndex: BN;
-  stableCollateralRatio: RawDecimal;
-  cryptoCollateralRatio: RawDecimal;
+  overcollateralRatio: RawDecimal;
   ilHealthScoreCoefficient: RawDecimal;
   positionHealthScoreCoefficient: RawDecimal;
   liquidationDiscountRate: RawDecimal;

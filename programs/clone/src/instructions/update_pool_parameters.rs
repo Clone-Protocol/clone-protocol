@@ -7,8 +7,7 @@ pub enum PoolParameters {
     TreasuryTradingFee { value: RawDecimal },
     LiquidityTradingFee { value: RawDecimal },
     OracleInfoIndex { value: u64 },
-    StableCollateralRatio { value: RawDecimal },
-    CryptoCollateralRatio { value: RawDecimal },
+    OvercollateralRatio { value: RawDecimal },
     IlHealthScoreCoefficient { value: RawDecimal },
     PositionHealthScoreCoefficient { value: RawDecimal },
     LiquidationDiscountRate { value: RawDecimal },
@@ -80,11 +79,8 @@ pub fn execute(
         PoolParameters::OracleInfoIndex { value } => {
             pool.asset_info.oracle_info_index = value;
         }
-        PoolParameters::StableCollateralRatio { value } => {
-            pool.asset_info.stable_collateral_ratio = value;
-        }
-        PoolParameters::CryptoCollateralRatio { value } => {
-            pool.asset_info.crypto_collateral_ratio = value;
+        PoolParameters::OvercollateralRatio { value } => {
+            pool.asset_info.overcollateral_ratio = value;
         }
         PoolParameters::IlHealthScoreCoefficient { value } => {
             pool.asset_info.il_health_score_coefficient = value;

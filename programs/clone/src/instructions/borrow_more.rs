@@ -59,13 +59,18 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
 
     let pool_index = borrow_positions.borrow_positions[borrow_index as usize].pool_index;
     let pool = token_data.pools[pool_index as usize];
-    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
-    let mint_position = borrow_positions.borrow_positions[borrow_index as usize];
-    let collateral_ratio = pool.asset_info.stable_collateral_ratio.to_decimal();
+    let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
+    let borrow_position = borrow_positions.borrow_positions[borrow_index as usize];
+    let collateral = token_data.collaterals[borrow_position.collateral_index as usize];
+    let mut collateral_oracle: OracleInfo = Default::default();
+    if collateral.oracle_info_index != u64::MAX {
+        collateral_oracle = token_data.oracles[collateral.oracle_info_index as usize];
+    }
+    let collateral_ratio = pool.asset_info.overcollateral_ratio.to_decimal();
 
     // update total amount of borrowed onasset
     let new_minted_amount = rescale_toward_zero(
-        mint_position.borrowed_onasset.to_decimal() + amount_value,
+        borrow_position.borrowed_onasset.to_decimal() + amount_value,
         CLONE_TOKEN_SCALE,
     );
     borrow_positions.borrow_positions[borrow_index as usize].borrowed_onasset =
@@ -80,14 +85,13 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
-        oracle,
-        borrow_positions.borrow_positions[borrow_index as usize]
-            .borrowed_onasset
-            .to_decimal(),
-        collateral_ratio,
-        mint_position.collateral_amount.to_decimal(),
-    )
-    .unwrap();
+        pool_oracle,
+        collateral_oracle,
+        new_minted_amount,
+        pool.asset_info.overcollateral_ratio.to_decimal(),
+        collateral.collateralization_ratio.to_decimal(),
+        borrow_position.collateral_amount.to_decimal(),
+    ).unwrap();
 
     // mint onasset to the user
     let cpi_accounts = MintTo {
