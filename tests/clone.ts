@@ -239,6 +239,7 @@ describe("clone", async () => {
     await cloneClient.initializeClone(
       maxHealthLiquidation,
       liquidatorFee,
+      liquidatorFee,
       treasuryAddress.publicKey,
       mockUSDCMint.publicKey
     );
@@ -466,14 +467,15 @@ describe("clone", async () => {
     assert(oracle.pythAddress.equals(priceFeed), "check price feed");
 
     assert.equal(
-      toNumber(assetInfo.stableCollateralRatio),
+      toNumber(assetInfo.minOvercollateralRatio),
       1.5,
-      "stable collateral ratio incorrect"
+      "overcollateral ratio incorrect"
     );
+
     assert.equal(
-      toNumber(assetInfo.cryptoCollateralRatio),
-      2,
-      "crypto collateral ratio incorrect"
+      toNumber(assetInfo.maxLiquidationOvercollateralRatio),
+      2.0,
+      "max liquidation overcollateral ratio incorrect"
     );
 
     const first_collateral = tokenData.collaterals[1];
@@ -778,11 +780,6 @@ describe("clone", async () => {
       "stored minted amount"
     );
     assert.equal(
-      toNumber(pool.suppliedMintCollateralAmount),
-      usdctoDeposit,
-      "check supplied collateral amount!"
-    );
-    assert.equal(
       toNumber(pool.totalMintedAmount),
       mintAmount,
       "check supplied collateral amount!"
@@ -866,12 +863,6 @@ describe("clone", async () => {
       vault.value!.uiAmount,
       startingVaultAmount - collateralWithdrawal,
       "check usdc vault amount"
-    );
-
-    assert.equal(
-      toNumber(pool.suppliedMintCollateralAmount),
-      0,
-      "check supplied collateral amount!"
     );
     assert.equal(
       toNumber(pool.totalMintedAmount),
@@ -2007,13 +1998,14 @@ describe("clone", async () => {
 
     userMintPositions = await cloneClient.getBorrowPositions();
     position = userMintPositions.borrowPositions[positionIndex];
-    let numMintPositions = userMintPositions.numPositions.toNumber();
 
     let priceThreshold =
       toNumber(position.collateralAmount) /
       (1.5 * toNumber(position.borrowedOnasset));
 
     await setPrice(pythProgram, priceThreshold * 1.1, oracle.pythAddress);
+
+    let initialOvercollateralRatio = toNumber(position.collateralAmount) / (toNumber(position.borrowedOnasset) * toNumber(oracle.price))
 
     await cloneClient.provider.sendAndConfirm!(
       new Transaction()
@@ -2022,15 +2014,20 @@ describe("clone", async () => {
           await cloneClient.liquidateBorrowPositionInstruction(
             cloneClient.provider.publicKey!,
             positionIndex,
+            toDevnetScale(19000 * toNumber(oracle.price) * 0.01),
             collateralTokenAccountInfo.address,
             onassetTokenAccountInfo.address
           )
         )
     );
     userMintPositions = await cloneClient.getBorrowPositions();
-    assert.equal(
-      numMintPositions - 1,
-      userMintPositions.numPositions.toNumber(),
+    position = userMintPositions.borrowPositions[positionIndex];
+    
+    let finalOvercollateralRatio = toNumber(position.collateralAmount) / (toNumber(position.borrowedOnasset) * toNumber(oracle.price))
+
+    assert.isAbove(
+      finalOvercollateralRatio,
+      initialOvercollateralRatio,
       "Liquidation did not finish!"
     );
 

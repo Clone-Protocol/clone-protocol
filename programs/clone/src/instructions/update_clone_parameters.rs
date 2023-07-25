@@ -3,7 +3,8 @@ use anchor_lang::prelude::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum CloneParameters {
-    LiquidationFee { value: RawDecimal },
+    CometLiquidationFee { value: RawDecimal },
+    BorrowLiquidationFee { value: RawDecimal },
     MaxHealthLiquidation { value: RawDecimal },
     TreasuryAddress { address: Pubkey },
 }
@@ -25,8 +26,11 @@ pub struct UpdateCloneParameters<'info> {
 
 pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> Result<()> {
     match params {
-        CloneParameters::LiquidationFee { value } => {
-            ctx.accounts.clone.liquidation_config.liquidator_fee = value;
+        CloneParameters::CometLiquidationFee { value } => {
+            ctx.accounts.clone.liquidation_config.comet_liquidator_fee = value;
+        }
+        CloneParameters::BorrowLiquidationFee { value } => {
+            ctx.accounts.clone.liquidation_config.borrow_liquidator_fee = value;
         }
         CloneParameters::MaxHealthLiquidation { value } => {
             ctx.accounts.clone.liquidation_config.max_health_liquidation = value;

@@ -8,13 +8,12 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction( borrow_index: u8, amount: u64)]
+#[instruction(user: Pubkey, borrow_index: u8, amount: u64)]
 pub struct PayBorrowDebt<'info> {
-    #[account(address = borrow_positions.load()?.owner)]
-    pub user: Signer<'info>,
+    pub payer: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"user".as_ref(), user.key.as_ref()],
+        seeds = [b"user".as_ref(), user.as_ref()],
         bump = user_account.bump,
     )]
     pub user_account: Account<'info, User>,
@@ -58,14 +57,19 @@ impl<'a, 'b, 'c, 'info> From<&PayBorrowDebt<'info>> for CpiContext<'a, 'b, 'c, '
                 .user_onasset_token_account
                 .to_account_info()
                 .clone(),
-            authority: accounts.user.to_account_info().clone(),
+            authority: accounts.payer.to_account_info().clone(),
         };
         let cpi_program = accounts.token_program.to_account_info();
         CpiContext::new(cpi_program, cpi_accounts)
     }
 }
 
-pub fn execute(ctx: Context<PayBorrowDebt>, borrow_index: u8, amount: u64) -> Result<()> {
+pub fn execute(
+    ctx: Context<PayBorrowDebt>,
+    user: Pubkey,
+    borrow_index: u8,
+    amount: u64,
+) -> Result<()> {
     let mut amount_value = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
 
     let mut token_data = ctx.accounts.token_data.load_mut()?;
@@ -83,7 +87,7 @@ pub fn execute(ctx: Context<PayBorrowDebt>, borrow_index: u8, amount: u64) -> Re
             .user_onasset_token_account
             .to_account_info()
             .clone(),
-        authority: ctx.accounts.user.to_account_info().clone(),
+        authority: ctx.accounts.payer.to_account_info().clone(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::burn(
@@ -111,7 +115,7 @@ pub fn execute(ctx: Context<PayBorrowDebt>, borrow_index: u8, amount: u64) -> Re
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
-        user_address: ctx.accounts.user.key(),
+        user_address: user,
         pool_index: borrow_positions.borrow_positions[borrow_index as usize]
             .pool_index
             .try_into()

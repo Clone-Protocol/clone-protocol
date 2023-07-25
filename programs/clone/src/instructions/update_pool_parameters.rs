@@ -1,5 +1,6 @@
 use crate::{error::CloneError, states::*};
 use anchor_lang::prelude::*;
+use crate::return_error_if_false;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum PoolParameters {
@@ -7,8 +8,8 @@ pub enum PoolParameters {
     TreasuryTradingFee { value: RawDecimal },
     LiquidityTradingFee { value: RawDecimal },
     OracleInfoIndex { value: u64 },
-    StableCollateralRatio { value: RawDecimal },
-    CryptoCollateralRatio { value: RawDecimal },
+    MinOvercollateralRatio { value: RawDecimal },
+    MaxLiquidationOvercollateralRatio { value: RawDecimal },
     IlHealthScoreCoefficient { value: RawDecimal },
     PositionHealthScoreCoefficient { value: RawDecimal },
     LiquidationDiscountRate { value: RawDecimal },
@@ -53,23 +54,15 @@ pub fn execute(
         .iter()
         .any(|auth| *auth == *ctx.accounts.auth.key);
 
-    if !is_admin && !is_auth {
-        return Err(error!(CloneError::Unauthorized));
-    }
+
+    return_error_if_false!(is_admin || is_auth, CloneError::Unauthorized);
 
     match params {
         PoolParameters::Status { value } => {
             // Only allow auth users to change the status to 'Frozen'
-            if !is_admin && value != Status::Frozen as u64 && is_auth {
-                return Err(error!(CloneError::Unauthorized));
-            }
-            if value > Status::Deprecation as u64 {
-                return Err(error!(CloneError::InvalidStatus));
-            }
+            return_error_if_false!(is_admin || value == Status::Frozen as u64, CloneError::Unauthorized);
+            return_error_if_false!(value <= Status::Deprecation as u64, CloneError::InvalidStatus);
             pool.status = value;
-            if !is_admin {
-                return Ok(());
-            }
         }
         PoolParameters::TreasuryTradingFee { value } => {
             pool.treasury_trading_fee = value;
@@ -80,11 +73,11 @@ pub fn execute(
         PoolParameters::OracleInfoIndex { value } => {
             pool.asset_info.oracle_info_index = value;
         }
-        PoolParameters::StableCollateralRatio { value } => {
-            pool.asset_info.stable_collateral_ratio = value;
+        PoolParameters::MinOvercollateralRatio { value } => {
+            pool.asset_info.min_overcollateral_ratio = value;
         }
-        PoolParameters::CryptoCollateralRatio { value } => {
-            pool.asset_info.crypto_collateral_ratio = value;
+        PoolParameters::MaxLiquidationOvercollateralRatio { value } => {
+            pool.asset_info.max_liquidation_overcollateral_ratio = value;
         }
         PoolParameters::IlHealthScoreCoefficient { value } => {
             pool.asset_info.il_health_score_coefficient = value;

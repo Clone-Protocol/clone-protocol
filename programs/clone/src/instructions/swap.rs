@@ -119,10 +119,7 @@ pub fn execute(
         }
     }
 
-    return_error_if_false!(
-        check_feed_update(oracle, Clock::get()?.slot).is_ok(),
-        CloneError::OutdatedOracle
-    );
+    check_feed_update(oracle, Clock::get()?.slot)?;
 
     return_error_if_false!(
         pool.committed_onusd_liquidity.to_decimal() > Decimal::ZERO,

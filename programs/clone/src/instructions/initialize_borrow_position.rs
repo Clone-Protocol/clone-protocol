@@ -1,7 +1,6 @@
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
-use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
@@ -72,24 +71,25 @@ pub fn execute(
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let pool = token_data.pools[pool_index as usize];
-    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
+    let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral = token_data.collaterals[collateral_index as usize];
+    let mut collateral_oracle: Option<OracleInfo> = None;
+    if collateral.oracle_info_index != u64::MAX {
+        collateral_oracle = Some(token_data.oracles[collateral.oracle_info_index as usize]);
+    }
     let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
 
     let collateral_amount_value =
         Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale);
     let onasset_amount_value = Decimal::new(onasset_amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
 
-    // check to see if collateral is stable
-    return_error_if_false!(collateral.stable == 1, CloneError::InvalidCollateralType);
-
-    let collateral_ratio = pool.asset_info.stable_collateral_ratio.to_decimal();
-
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
-        oracle,
+        pool_oracle,
+        collateral_oracle,
         onasset_amount_value,
-        collateral_ratio,
+        pool.asset_info.min_overcollateral_ratio.to_decimal(),
+        collateral.collateralization_ratio.to_decimal(),
         collateral_amount_value,
     )?;
 
@@ -156,16 +156,6 @@ pub fn execute(
     );
     token_data.pools[pool_index as usize].total_minted_amount =
         RawDecimal::from(total_minted_amount);
-
-    let supplied_collateral = rescale_toward_zero(
-        token_data.pools[pool_index as usize]
-            .supplied_mint_collateral_amount
-            .to_decimal()
-            + collateral_amount_value,
-        CLONE_TOKEN_SCALE,
-    );
-    token_data.pools[pool_index as usize].supplied_mint_collateral_amount =
-        RawDecimal::from(supplied_collateral);
 
     // increment number of mint positions
     borrow_positions.num_positions += 1;
