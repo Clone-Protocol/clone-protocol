@@ -28,20 +28,16 @@ pub fn calculate_liquidity_proportion_from_onusd(
 
 pub fn check_mint_collateral_sufficient(
     pool_oracle: OracleInfo,
-    collateral_oracle: OracleInfo,
+    collateral_oracle: Option<OracleInfo>,
     asset_amount_borrowed: Decimal,
     min_overcollateral_ratio: Decimal,
     collateralization_ratio: Decimal,
     collateral_amount: Decimal,
 ) -> Result<()> {
     let slot = Clock::get().expect("Failed to get slot.").slot;
-    if check_feed_update(pool_oracle, slot).is_err() {
-        return Err(error!(CloneError::OutdatedOracle));
-    }
-    let collateral_price = if collateral_oracle != Default::default() {
-        if check_feed_update(collateral_oracle, slot).is_err() {
-            return Err(error!(CloneError::OutdatedOracle));
-        }
+    check_feed_update(pool_oracle, slot).unwrap();
+    let collateral_price = if let Some(collateral_oracle) = collateral_oracle {
+        check_feed_update(collateral_oracle, slot).unwrap();
         collateral_oracle.price.to_decimal()
     } else {
         Decimal::one()
@@ -122,9 +118,7 @@ pub fn calculate_health_score(comet: &Comet, token_data: &TokenData) -> Result<H
         let pool = token_data.pools[comet_position.pool_index as usize];
         let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
 
-        if check_feed_update(oracle, slot).is_err() {
-            return Err(error!(CloneError::OutdatedOracle));
-        }
+        check_feed_update(oracle, slot).unwrap();
         let (impermanent_loss_term, position_term) =
             calculate_comet_position_loss(token_data, &comet_position)?;
 

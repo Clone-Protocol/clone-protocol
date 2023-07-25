@@ -1,7 +1,6 @@
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
-use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -80,10 +79,12 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
 
     let authorized_amount = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
     let mut collateral_price = Decimal::one();
-    let mut collateral_oracle: OracleInfo = Default::default();
+    let mut collateral_oracle: Option<OracleInfo> = None;
     if collateral.oracle_info_index != u64::MAX {
-        collateral_oracle = token_data.oracles[collateral.oracle_info_index as usize];
-        collateral_price = collateral_oracle.price.to_decimal();
+        collateral_oracle = Some(token_data.oracles[collateral.oracle_info_index as usize]);
+        if let Some(oracle) = &collateral_oracle {
+            collateral_price = oracle.price.to_decimal();
+        }
     }
     let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
 
@@ -106,15 +107,9 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
             return Err(CloneError::BorrowPositionUnableToLiquidate.into());
         }
     } else {
-        return_error_if_false!(
-            check_feed_update(pool_oracle, Clock::get()?.slot).is_ok(),
-            CloneError::OutdatedOracle
-        );
-        if collateral_oracle != Default::default() {
-            return_error_if_false!(
-                check_feed_update(collateral_oracle, Clock::get()?.slot).is_ok(),
-                CloneError::OutdatedOracle
-            );
+        check_feed_update(pool_oracle, Clock::get()?.slot).unwrap();
+        if let Some(oracle) = collateral_oracle {
+            check_feed_update(oracle, Clock::get()?.slot).unwrap();
         }
     }
 

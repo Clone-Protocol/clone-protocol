@@ -103,10 +103,7 @@ pub fn execute(
     let mut collateral_price = Decimal::one();
     if collateral.oracle_info_index != u64::MAX {
         let collateral_oracle = token_data.oracles[collateral.oracle_info_index as usize];
-        return_error_if_false!(
-            check_feed_update(collateral_oracle, Clock::get()?.slot).is_ok(),
-            CloneError::OutdatedOracle
-        );
+        check_feed_update(collateral_oracle, Clock::get()?.slot).unwrap();
         collateral_price = collateral_oracle.price.to_decimal();
     }
     let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
@@ -121,10 +118,7 @@ pub fn execute(
             CloneError::NotSubjectToLiquidation
         );
     } else {
-        return_error_if_false!(
-            check_feed_update(pool_oracle, Clock::get()?.slot).is_ok(),
-            CloneError::OutdatedOracle
-        );
+        check_feed_update(pool_oracle, Clock::get()?.slot).unwrap();
     }
 
     let mut burn_amount = if pay_onusd_debt {

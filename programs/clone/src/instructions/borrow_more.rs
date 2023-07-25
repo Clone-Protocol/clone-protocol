@@ -62,9 +62,9 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
     let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     let borrow_position = borrow_positions.borrow_positions[borrow_index as usize];
     let collateral = token_data.collaterals[borrow_position.collateral_index as usize];
-    let mut collateral_oracle: OracleInfo = Default::default();
+    let mut collateral_oracle: Option<OracleInfo> = None;
     if collateral.oracle_info_index != u64::MAX {
-        collateral_oracle = token_data.oracles[collateral.oracle_info_index as usize];
+        collateral_oracle = Some(token_data.oracles[collateral.oracle_info_index as usize]);
     }
 
     // update total amount of borrowed onasset
