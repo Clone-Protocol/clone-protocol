@@ -1,5 +1,5 @@
-use crate::CLONE_PROGRAM_SEED;
 use crate::{error::CloneError, states::*};
+use crate::{return_error_if_false, CLONE_PROGRAM_SEED};
 use anchor_lang::prelude::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
@@ -54,23 +54,25 @@ pub fn execute(
         .iter()
         .any(|auth| *auth == *ctx.accounts.auth.key);
 
-    if !is_admin && !is_auth {
-        return Err(error!(CloneError::Unauthorized));
-    }
+    // Always allow admin, auth only if Status is updated to Frozen
+    return_error_if_false!(
+        if is_admin {
+            true
+        } else if is_auth {
+            if let PoolParameters::Status { value } = params {
+                value == (Status::Frozen as u64)
+            } else {
+                false
+            }
+        } else {
+            false
+        },
+        CloneError::Unauthorized
+    );
 
     match params {
         PoolParameters::Status { value } => {
-            // Only allow auth users to change the status to 'Frozen'
-            if !is_admin && value != Status::Frozen as u64 && is_auth {
-                return Err(error!(CloneError::Unauthorized));
-            }
-            if value > Status::Deprecation as u64 {
-                return Err(error!(CloneError::InvalidStatus));
-            }
             pool.status = value;
-            if !is_admin {
-                return Ok(());
-            }
         }
         PoolParameters::TreasuryTradingFee { value } => {
             pool.treasury_trading_fee = value;

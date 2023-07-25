@@ -1,4 +1,3 @@
-pub mod add_auth;
 pub mod add_collateral;
 pub mod add_collateral_to_borrow;
 pub mod add_collateral_to_comet;
@@ -17,7 +16,6 @@ pub mod liquidate_comet_position;
 pub mod mint_onusd;
 pub mod pay_borrow_debt;
 pub mod pay_impermanent_loss_debt;
-pub mod remove_auth;
 pub mod remove_comet_position;
 pub mod remove_oracle_feed;
 pub mod swap;
@@ -31,7 +29,6 @@ pub mod withdraw_collateral_from_comet;
 pub mod withdraw_liquidity_from_comet;
 pub mod wrap_asset;
 
-pub use add_auth::*;
 pub use add_collateral::*;
 pub use add_collateral_to_borrow::*;
 pub use add_collateral_to_comet::*;
@@ -50,7 +47,6 @@ pub use liquidate_comet_position::*;
 pub use mint_onusd::*;
 pub use pay_borrow_debt::*;
 pub use pay_impermanent_loss_debt::*;
-pub use remove_auth::*;
 pub use remove_comet_position::*;
 pub use remove_oracle_feed::*;
 pub use swap::*;

@@ -11,79 +11,89 @@ import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
- * @category LiquidateBorrowPosition
+ * @category LiquidateCometPosition
  * @category generated
  */
-export type LiquidateBorrowPositionInstructionArgs = {
-  borrowIndex: number
+export type LiquidateCometPositionInstructionArgs = {
+  cometPositionIndex: number
+  cometCollateralIndex: number
+  amount: beet.bignum
+  payOnusdDebt: boolean
 }
 /**
  * @category Instructions
- * @category LiquidateBorrowPosition
+ * @category LiquidateCometPosition
  * @category generated
  */
-export const liquidateBorrowPositionStruct = new beet.BeetArgsStruct<
-  LiquidateBorrowPositionInstructionArgs & {
+export const liquidateCometPositionStruct = new beet.BeetArgsStruct<
+  LiquidateCometPositionInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['borrowIndex', beet.u8],
+    ['cometPositionIndex', beet.u8],
+    ['cometCollateralIndex', beet.u8],
+    ['amount', beet.u64],
+    ['payOnusdDebt', beet.bool],
   ],
-  'LiquidateBorrowPositionInstructionArgs'
+  'LiquidateCometPositionInstructionArgs'
 )
 /**
- * Accounts required by the _liquidateBorrowPosition_ instruction
+ * Accounts required by the _liquidateCometPosition_ instruction
  *
  * @property [**signer**] liquidator
- * @property [] clone
- * @property [_writable_] tokenData
  * @property [] user
  * @property [_writable_] userAccount
+ * @property [_writable_] clone
+ * @property [] tokenData
+ * @property [_writable_] onusdMint
  * @property [_writable_] onassetMint
- * @property [_writable_] vault
- * @property [_writable_] liquidatorCollateralTokenAccount
+ * @property [_writable_] liquidatorOnusdTokenAccount
  * @property [_writable_] liquidatorOnassetTokenAccount
+ * @property [_writable_] liquidatorCollateralTokenAccount
+ * @property [_writable_] vault
  * @category Instructions
- * @category LiquidateBorrowPosition
+ * @category LiquidateCometPosition
  * @category generated
  */
-export type LiquidateBorrowPositionInstructionAccounts = {
+export type LiquidateCometPositionInstructionAccounts = {
   liquidator: web3.PublicKey
-  clone: web3.PublicKey
-  tokenData: web3.PublicKey
   user: web3.PublicKey
   userAccount: web3.PublicKey
+  clone: web3.PublicKey
+  tokenData: web3.PublicKey
+  onusdMint: web3.PublicKey
   onassetMint: web3.PublicKey
-  vault: web3.PublicKey
-  liquidatorCollateralTokenAccount: web3.PublicKey
+  liquidatorOnusdTokenAccount: web3.PublicKey
   liquidatorOnassetTokenAccount: web3.PublicKey
+  liquidatorCollateralTokenAccount: web3.PublicKey
+  vault: web3.PublicKey
   tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const liquidateBorrowPositionInstructionDiscriminator = [
-  235, 201, 17, 133, 234, 72, 84, 210,
+export const liquidateCometPositionInstructionDiscriminator = [
+  15, 195, 173, 61, 94, 219, 143, 205,
 ]
 
 /**
- * Creates a _LiquidateBorrowPosition_ instruction.
+ * Creates a _LiquidateCometPosition_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category LiquidateBorrowPosition
+ * @category LiquidateCometPosition
  * @category generated
  */
-export function createLiquidateBorrowPositionInstruction(
-  accounts: LiquidateBorrowPositionInstructionAccounts,
-  args: LiquidateBorrowPositionInstructionArgs,
+export function createLiquidateCometPositionInstruction(
+  accounts: LiquidateCometPositionInstructionAccounts,
+  args: LiquidateCometPositionInstructionArgs,
   programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
-  const [data] = liquidateBorrowPositionStruct.serialize({
-    instructionDiscriminator: liquidateBorrowPositionInstructionDiscriminator,
+  const [data] = liquidateCometPositionStruct.serialize({
+    instructionDiscriminator: liquidateCometPositionInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
@@ -91,16 +101,6 @@ export function createLiquidateBorrowPositionInstruction(
       pubkey: accounts.liquidator,
       isWritable: false,
       isSigner: true,
-    },
-    {
-      pubkey: accounts.clone,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.tokenData,
-      isWritable: true,
-      isSigner: false,
     },
     {
       pubkey: accounts.user,
@@ -113,12 +113,32 @@ export function createLiquidateBorrowPositionInstruction(
       isSigner: false,
     },
     {
+      pubkey: accounts.clone,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.tokenData,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.onusdMint,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
       pubkey: accounts.onassetMint,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.vault,
+      pubkey: accounts.liquidatorOnusdTokenAccount,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.liquidatorOnassetTokenAccount,
       isWritable: true,
       isSigner: false,
     },
@@ -128,7 +148,7 @@ export function createLiquidateBorrowPositionInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.liquidatorOnassetTokenAccount,
+      pubkey: accounts.vault,
       isWritable: true,
       isSigner: false,
     },

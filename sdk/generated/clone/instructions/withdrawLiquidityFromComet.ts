@@ -15,7 +15,7 @@ import * as web3 from '@solana/web3.js'
  */
 export type WithdrawLiquidityFromCometInstructionArgs = {
   cometPositionIndex: number
-  liquidityTokenAmount: beet.bignum
+  onusdAmount: beet.bignum
 }
 /**
  * @category Instructions
@@ -30,7 +30,7 @@ export const withdrawLiquidityFromCometStruct = new beet.BeetArgsStruct<
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['cometPositionIndex', beet.u8],
-    ['liquidityTokenAmount', beet.u64],
+    ['onusdAmount', beet.u64],
   ],
   'WithdrawLiquidityFromCometInstructionArgs'
 )
@@ -38,10 +38,9 @@ export const withdrawLiquidityFromCometStruct = new beet.BeetArgsStruct<
  * Accounts required by the _withdrawLiquidityFromComet_ instruction
  *
  * @property [**signer**] user
- * @property [] userAccount
+ * @property [_writable_] userAccount
  * @property [_writable_] clone
  * @property [_writable_] tokenData
- * @property [_writable_] comet
  * @category Instructions
  * @category WithdrawLiquidityFromComet
  * @category generated
@@ -51,7 +50,6 @@ export type WithdrawLiquidityFromCometInstructionAccounts = {
   userAccount: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
-  comet: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
@@ -87,7 +85,7 @@ export function createWithdrawLiquidityFromCometInstruction(
     },
     {
       pubkey: accounts.userAccount,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {
@@ -97,11 +95,6 @@ export function createWithdrawLiquidityFromCometInstruction(
     },
     {
       pubkey: accounts.tokenData,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.comet,
       isWritable: true,
       isSigner: false,
     },

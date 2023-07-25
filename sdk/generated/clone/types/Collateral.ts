@@ -19,6 +19,7 @@ export type Collateral = {
   stable: beet.bignum
   collateralizationRatio: RawDecimal
   liquidationDiscount: RawDecimal
+  status: beet.bignum
 }
 
 /**
@@ -36,6 +37,7 @@ export const collateralBeet = new beet.BeetArgsStruct<Collateral>(
     ['stable', beet.u64],
     ['collateralizationRatio', rawDecimalBeet],
     ['liquidationDiscount', rawDecimalBeet],
+    ['status', beet.u64],
   ],
   'Collateral'
 )

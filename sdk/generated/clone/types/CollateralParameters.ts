@@ -17,6 +17,7 @@ import { RawDecimal, rawDecimalBeet } from './RawDecimal'
  * @private
  */
 export type CollateralParametersRecord = {
+  Status: { status: beet.bignum }
   OracleInfoIndex: { value: beet.bignum }
   CollateralizationRatio: { value: RawDecimal }
 }
@@ -35,6 +36,9 @@ export type CollateralParametersRecord = {
 export type CollateralParameters =
   beet.DataEnumKeyAsKind<CollateralParametersRecord>
 
+export const isCollateralParametersStatus = (
+  x: CollateralParameters
+): x is CollateralParameters & { __kind: 'Status' } => x.__kind === 'Status'
 export const isCollateralParametersOracleInfoIndex = (
   x: CollateralParameters
 ): x is CollateralParameters & { __kind: 'OracleInfoIndex' } =>
@@ -50,6 +54,14 @@ export const isCollateralParametersCollateralizationRatio = (
  */
 export const collateralParametersBeet =
   beet.dataEnum<CollateralParametersRecord>([
+    [
+      'Status',
+      new beet.BeetArgsStruct<CollateralParametersRecord['Status']>(
+        [['status', beet.u64]],
+        'CollateralParametersRecord["Status"]'
+      ),
+    ],
+
     [
       'OracleInfoIndex',
       new beet.BeetArgsStruct<CollateralParametersRecord['OracleInfoIndex']>(

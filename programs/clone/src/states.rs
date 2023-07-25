@@ -23,6 +23,7 @@ pub const NUM_POOLS: usize = 64;
 pub const NUM_COLLATERALS: usize = 16;
 pub const NUM_ORACLES: usize = 80;
 pub const NUM_BORROW_POSITIONS: usize = 24;
+pub const NUM_AUTH: usize = 10;
 
 #[zero_copy]
 #[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
@@ -68,7 +69,7 @@ pub struct Clone {
     pub onusd_mint: Pubkey,       // 32
     pub token_data: Pubkey,       // 32
     pub admin: Pubkey,            // 32
-    pub auth: [Pubkey; 10],       // 320
+    pub auth: [Pubkey; NUM_AUTH], // 320
     pub bump: u8,                 // 1
     pub liquidator_fee_bps: u16,  // 16,
     pub treasury_address: Pubkey, // 32

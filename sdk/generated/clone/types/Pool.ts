@@ -20,7 +20,7 @@ export type Pool = {
   totalMintedAmount: RawDecimal
   suppliedMintCollateralAmount: RawDecimal
   assetInfo: AssetInfo
-  deprecated: beet.bignum
+  status: beet.bignum
 }
 
 /**
@@ -38,7 +38,7 @@ export const poolBeet = new beet.BeetArgsStruct<Pool>(
     ['totalMintedAmount', rawDecimalBeet],
     ['suppliedMintCollateralAmount', rawDecimalBeet],
     ['assetInfo', assetInfoBeet],
-    ['deprecated', beet.u64],
+    ['status', beet.u64],
   ],
   'Pool'
 )

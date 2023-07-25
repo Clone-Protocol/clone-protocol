@@ -26,14 +26,6 @@ pub mod clone {
         instructions::initialize_clone::execute(ctx, liquidator_fee_bps, treasury_address)
     }
 
-    pub fn add_auth(ctx: Context<AddAuth>, auth: Pubkey) -> Result<()> {
-        instructions::add_auth::execute(ctx, auth)
-    }
-
-    pub fn remove_auth(ctx: Context<RemoveAuth>, auth: Pubkey) -> Result<()> {
-        instructions::remove_auth::execute(ctx, auth)
-    }
-
     pub fn update_clone_parameters(
         ctx: Context<UpdateCloneParameters>,
         params: CloneParameters,
@@ -193,12 +185,12 @@ pub mod clone {
     pub fn withdraw_liquidity_from_comet(
         ctx: Context<WithdrawLiquidityFromComet>,
         comet_position_index: u8,
-        liquidity_token_amount: u64,
+        onusd_amount: u64,
     ) -> Result<()> {
         instructions::withdraw_liquidity_from_comet::execute(
             ctx,
             comet_position_index,
-            liquidity_token_amount,
+            onusd_amount,
         )
     }
 

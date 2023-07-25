@@ -5,12 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from '@solana/web3.js'
 import * as beet from '@metaplex-foundation/beet'
-import * as beetSolana from '@metaplex-foundation/beet-solana'
 import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 export type CometPosition = {
-  authority: web3.PublicKey
   poolIndex: beet.bignum
   committedOnusdLiquidity: RawDecimal
   onusdIldRebate: RawDecimal
@@ -23,7 +20,6 @@ export type CometPosition = {
  */
 export const cometPositionBeet = new beet.BeetArgsStruct<CometPosition>(
   [
-    ['authority', beetSolana.publicKey],
     ['poolIndex', beet.u64],
     ['committedOnusdLiquidity', rawDecimalBeet],
     ['onusdIldRebate', rawDecimalBeet],

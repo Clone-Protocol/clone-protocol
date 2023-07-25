@@ -58,57 +58,11 @@ export type Clone = {
       ],
       "args": [
         {
-          "name": "maxHealthLiquidation",
-          "type": "u64"
-        },
-        {
-          "name": "liquidatorFee",
-          "type": "u64"
+          "name": "liquidatorFeeBps",
+          "type": "u16"
         },
         {
           "name": "treasuryAddress",
-          "type": "publicKey"
-        }
-      ]
-    },
-    {
-      "name": "addAuth",
-      "accounts": [
-        {
-          "name": "admin",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "auth",
-          "type": "publicKey"
-        }
-      ]
-    },
-    {
-      "name": "removeAuth",
-      "accounts": [
-        {
-          "name": "admin",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "auth",
           "type": "publicKey"
         }
       ]
@@ -204,7 +158,7 @@ export type Clone = {
       "name": "initializeUser",
       "accounts": [
         {
-          "name": "user",
+          "name": "payer",
           "isMut": true,
           "isSigner": true
         },
@@ -235,78 +189,6 @@ export type Clone = {
           "type": "publicKey"
         }
       ]
-    },
-    {
-      "name": "initializeBorrowPositions",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "borrowPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "initializeComet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
     },
     {
       "name": "addCollateral",
@@ -633,11 +515,6 @@ export type Clone = {
           "isSigner": false
         },
         {
-          "name": "borrowPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "vault",
           "isMut": true,
           "isSigner": false
@@ -692,7 +569,7 @@ export type Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -702,11 +579,6 @@ export type Clone = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -747,7 +619,7 @@ export type Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -757,11 +629,6 @@ export type Clone = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -821,11 +688,6 @@ export type Clone = {
           "isSigner": false
         },
         {
-          "name": "borrowPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "onassetMint",
           "isMut": true,
           "isSigner": false
@@ -876,11 +738,6 @@ export type Clone = {
           "isSigner": false
         },
         {
-          "name": "borrowPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "onassetMint",
           "isMut": true,
           "isSigner": false
@@ -926,11 +783,6 @@ export type Clone = {
           "isSigner": false
         },
         {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "vault",
           "isMut": true,
           "isSigner": false
@@ -967,7 +819,7 @@ export type Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -977,11 +829,6 @@ export type Clone = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
           "isMut": true,
           "isSigner": false
         },
@@ -1034,11 +881,6 @@ export type Clone = {
           "name": "tokenData",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1062,7 +904,7 @@ export type Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1074,11 +916,6 @@ export type Clone = {
           "name": "tokenData",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
         }
       ],
       "args": [
@@ -1087,7 +924,7 @@ export type Clone = {
           "type": "u8"
         },
         {
-          "name": "liquidityTokenAmount",
+          "name": "onusdAmount",
           "type": "u64"
         }
       ]
@@ -1107,7 +944,7 @@ export type Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1118,11 +955,6 @@ export type Clone = {
         {
           "name": "tokenData",
           "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
           "isSigner": false
         },
         {
@@ -1205,16 +1037,11 @@ export type Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "borrowPositions",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
@@ -1256,7 +1083,7 @@ export type Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1267,11 +1094,6 @@ export type Clone = {
         {
           "name": "tokenData",
           "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
           "isSigner": false
         },
         {
@@ -1317,7 +1139,7 @@ export type Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1328,11 +1150,6 @@ export type Clone = {
         {
           "name": "tokenData",
           "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
           "isSigner": false
         },
         {
@@ -1379,68 +1196,6 @@ export type Clone = {
           "type": "bool"
         }
       ]
-    },
-    {
-      "name": "closeCometAccount",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "destination",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "closeBorrowPositionsAccount",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "borrowPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "destination",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
     },
     {
       "name": "closeUserAccount",
@@ -1598,7 +1353,7 @@ export type Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1608,11 +1363,6 @@ export type Clone = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
           "isMut": true,
           "isSigner": false
         }
@@ -1804,10 +1554,8 @@ export type Clone = {
             "type": "u8"
           },
           {
-            "name": "liquidationConfig",
-            "type": {
-              "defined": "LiquidationConfig"
-            }
+            "name": "liquidatorFeeBps",
+            "type": "u16"
           },
           {
             "name": "treasuryAddress",
@@ -1883,88 +1631,15 @@ export type Clone = {
         "kind": "struct",
         "fields": [
           {
-            "name": "authority",
-            "type": "publicKey"
-          },
-          {
-            "name": "borrowPositions",
-            "type": "publicKey"
+            "name": "borrows",
+            "type": {
+              "defined": "BorrowPositions"
+            }
           },
           {
             "name": "comet",
-            "type": "publicKey"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "comet",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "owner",
-            "type": "publicKey"
-          },
-          {
-            "name": "numPositions",
-            "type": "u64"
-          },
-          {
-            "name": "numCollaterals",
-            "type": "u64"
-          },
-          {
-            "name": "positions",
             "type": {
-              "array": [
-                {
-                  "defined": "CometPosition"
-                },
-                64
-              ]
-            }
-          },
-          {
-            "name": "collaterals",
-            "type": {
-              "array": [
-                {
-                  "defined": "CometCollateral"
-                },
-                16
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "borrowPositions",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "owner",
-            "type": "publicKey"
-          },
-          {
-            "name": "numPositions",
-            "type": "u64"
-          },
-          {
-            "name": "borrowPositions",
-            "type": {
-              "array": [
-                {
-                  "defined": "BorrowPosition"
-                },
-                24
-              ]
+              "defined": "Comet"
             }
           }
         ]
@@ -2001,26 +1676,6 @@ export type Clone = {
                 "u8",
                 16
               ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "LiquidationConfig",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "liquidatorFee",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "maxHealthLiquidation",
-            "type": {
-              "defined": "RawDecimal"
             }
           }
         ]
@@ -2221,14 +1876,48 @@ export type Clone = {
       }
     },
     {
-      "name": "CometPosition",
+      "name": "Comet",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "authority",
-            "type": "publicKey"
+            "name": "numPositions",
+            "type": "u64"
           },
+          {
+            "name": "numCollaterals",
+            "type": "u64"
+          },
+          {
+            "name": "positions",
+            "type": {
+              "array": [
+                {
+                  "defined": "CometPosition"
+                },
+                64
+              ]
+            }
+          },
+          {
+            "name": "collaterals",
+            "type": {
+              "array": [
+                {
+                  "defined": "CometCollateral"
+                },
+                16
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CometPosition",
+      "type": {
+        "kind": "struct",
+        "fields": [
           {
             "name": "poolIndex",
             "type": "u64"
@@ -2260,10 +1949,6 @@ export type Clone = {
         "kind": "struct",
         "fields": [
           {
-            "name": "authority",
-            "type": "publicKey"
-          },
-          {
             "name": "collateralAmount",
             "type": {
               "defined": "RawDecimal"
@@ -2272,6 +1957,29 @@ export type Clone = {
           {
             "name": "collateralIndex",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BorrowPositions",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "numPositions",
+            "type": "u64"
+          },
+          {
+            "name": "positions",
+            "type": {
+              "array": [
+                {
+                  "defined": "BorrowPosition"
+                },
+                24
+              ]
+            }
           }
         ]
       }
@@ -2282,8 +1990,14 @@ export type Clone = {
         "kind": "struct",
         "fields": [
           {
-            "name": "authority",
-            "type": "publicKey"
+            "name": "poolIndex",
+            "type": "u64"
+          },
+          {
+            "name": "borrowedOnasset",
+            "type": {
+              "defined": "RawDecimal"
+            }
           },
           {
             "name": "collateralAmount",
@@ -2292,18 +2006,8 @@ export type Clone = {
             }
           },
           {
-            "name": "poolIndex",
-            "type": "u64"
-          },
-          {
             "name": "collateralIndex",
             "type": "u64"
-          },
-          {
-            "name": "borrowedOnasset",
-            "type": {
-              "defined": "RawDecimal"
-            }
           }
         ]
       }
@@ -2314,24 +2018,29 @@ export type Clone = {
         "kind": "enum",
         "variants": [
           {
-            "name": "LiquidationFee",
+            "name": "AddAuth",
             "fields": [
               {
-                "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "name": "address",
+                "type": "publicKey"
               }
             ]
           },
           {
-            "name": "MaxHealthLiquidation",
+            "name": "RemoveAuth",
+            "fields": [
+              {
+                "name": "address",
+                "type": "publicKey"
+              }
+            ]
+          },
+          {
+            "name": "LiquidationFee",
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u16"
               }
             ]
           },
@@ -2917,57 +2626,11 @@ export const IDL: Clone = {
       ],
       "args": [
         {
-          "name": "maxHealthLiquidation",
-          "type": "u64"
-        },
-        {
-          "name": "liquidatorFee",
-          "type": "u64"
+          "name": "liquidatorFeeBps",
+          "type": "u16"
         },
         {
           "name": "treasuryAddress",
-          "type": "publicKey"
-        }
-      ]
-    },
-    {
-      "name": "addAuth",
-      "accounts": [
-        {
-          "name": "admin",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "auth",
-          "type": "publicKey"
-        }
-      ]
-    },
-    {
-      "name": "removeAuth",
-      "accounts": [
-        {
-          "name": "admin",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "clone",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "auth",
           "type": "publicKey"
         }
       ]
@@ -3063,7 +2726,7 @@ export const IDL: Clone = {
       "name": "initializeUser",
       "accounts": [
         {
-          "name": "user",
+          "name": "payer",
           "isMut": true,
           "isSigner": true
         },
@@ -3094,78 +2757,6 @@ export const IDL: Clone = {
           "type": "publicKey"
         }
       ]
-    },
-    {
-      "name": "initializeBorrowPositions",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "borrowPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "initializeComet",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
     },
     {
       "name": "addCollateral",
@@ -3492,11 +3083,6 @@ export const IDL: Clone = {
           "isSigner": false
         },
         {
-          "name": "borrowPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "vault",
           "isMut": true,
           "isSigner": false
@@ -3551,7 +3137,7 @@ export const IDL: Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -3561,11 +3147,6 @@ export const IDL: Clone = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -3606,7 +3187,7 @@ export const IDL: Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -3616,11 +3197,6 @@ export const IDL: Clone = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "borrowPositions",
           "isMut": true,
           "isSigner": false
         },
@@ -3680,11 +3256,6 @@ export const IDL: Clone = {
           "isSigner": false
         },
         {
-          "name": "borrowPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "onassetMint",
           "isMut": true,
           "isSigner": false
@@ -3735,11 +3306,6 @@ export const IDL: Clone = {
           "isSigner": false
         },
         {
-          "name": "borrowPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "onassetMint",
           "isMut": true,
           "isSigner": false
@@ -3785,11 +3351,6 @@ export const IDL: Clone = {
           "isSigner": false
         },
         {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "vault",
           "isMut": true,
           "isSigner": false
@@ -3826,7 +3387,7 @@ export const IDL: Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -3836,11 +3397,6 @@ export const IDL: Clone = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
           "isMut": true,
           "isSigner": false
         },
@@ -3893,11 +3449,6 @@ export const IDL: Clone = {
           "name": "tokenData",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
         }
       ],
       "args": [
@@ -3921,7 +3472,7 @@ export const IDL: Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -3933,11 +3484,6 @@ export const IDL: Clone = {
           "name": "tokenData",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
         }
       ],
       "args": [
@@ -3946,7 +3492,7 @@ export const IDL: Clone = {
           "type": "u8"
         },
         {
-          "name": "liquidityTokenAmount",
+          "name": "onusdAmount",
           "type": "u64"
         }
       ]
@@ -3966,7 +3512,7 @@ export const IDL: Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -3977,11 +3523,6 @@ export const IDL: Clone = {
         {
           "name": "tokenData",
           "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
           "isSigner": false
         },
         {
@@ -4064,16 +3605,11 @@ export const IDL: Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "borrowPositions",
+          "name": "onassetMint",
           "isMut": true,
           "isSigner": false
         },
@@ -4115,7 +3651,7 @@ export const IDL: Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -4126,11 +3662,6 @@ export const IDL: Clone = {
         {
           "name": "tokenData",
           "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
           "isSigner": false
         },
         {
@@ -4176,7 +3707,7 @@ export const IDL: Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -4187,11 +3718,6 @@ export const IDL: Clone = {
         {
           "name": "tokenData",
           "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
           "isSigner": false
         },
         {
@@ -4238,68 +3764,6 @@ export const IDL: Clone = {
           "type": "bool"
         }
       ]
-    },
-    {
-      "name": "closeCometAccount",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "destination",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "closeBorrowPositionsAccount",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "userAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "borrowPositions",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "destination",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
     },
     {
       "name": "closeUserAccount",
@@ -4457,7 +3921,7 @@ export const IDL: Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -4467,11 +3931,6 @@ export const IDL: Clone = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "comet",
           "isMut": true,
           "isSigner": false
         }
@@ -4663,10 +4122,8 @@ export const IDL: Clone = {
             "type": "u8"
           },
           {
-            "name": "liquidationConfig",
-            "type": {
-              "defined": "LiquidationConfig"
-            }
+            "name": "liquidatorFeeBps",
+            "type": "u16"
           },
           {
             "name": "treasuryAddress",
@@ -4742,88 +4199,15 @@ export const IDL: Clone = {
         "kind": "struct",
         "fields": [
           {
-            "name": "authority",
-            "type": "publicKey"
-          },
-          {
-            "name": "borrowPositions",
-            "type": "publicKey"
+            "name": "borrows",
+            "type": {
+              "defined": "BorrowPositions"
+            }
           },
           {
             "name": "comet",
-            "type": "publicKey"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "comet",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "owner",
-            "type": "publicKey"
-          },
-          {
-            "name": "numPositions",
-            "type": "u64"
-          },
-          {
-            "name": "numCollaterals",
-            "type": "u64"
-          },
-          {
-            "name": "positions",
             "type": {
-              "array": [
-                {
-                  "defined": "CometPosition"
-                },
-                64
-              ]
-            }
-          },
-          {
-            "name": "collaterals",
-            "type": {
-              "array": [
-                {
-                  "defined": "CometCollateral"
-                },
-                16
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "borrowPositions",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "owner",
-            "type": "publicKey"
-          },
-          {
-            "name": "numPositions",
-            "type": "u64"
-          },
-          {
-            "name": "borrowPositions",
-            "type": {
-              "array": [
-                {
-                  "defined": "BorrowPosition"
-                },
-                24
-              ]
+              "defined": "Comet"
             }
           }
         ]
@@ -4860,26 +4244,6 @@ export const IDL: Clone = {
                 "u8",
                 16
               ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "LiquidationConfig",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "liquidatorFee",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "maxHealthLiquidation",
-            "type": {
-              "defined": "RawDecimal"
             }
           }
         ]
@@ -5080,14 +4444,48 @@ export const IDL: Clone = {
       }
     },
     {
-      "name": "CometPosition",
+      "name": "Comet",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "authority",
-            "type": "publicKey"
+            "name": "numPositions",
+            "type": "u64"
           },
+          {
+            "name": "numCollaterals",
+            "type": "u64"
+          },
+          {
+            "name": "positions",
+            "type": {
+              "array": [
+                {
+                  "defined": "CometPosition"
+                },
+                64
+              ]
+            }
+          },
+          {
+            "name": "collaterals",
+            "type": {
+              "array": [
+                {
+                  "defined": "CometCollateral"
+                },
+                16
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CometPosition",
+      "type": {
+        "kind": "struct",
+        "fields": [
           {
             "name": "poolIndex",
             "type": "u64"
@@ -5119,10 +4517,6 @@ export const IDL: Clone = {
         "kind": "struct",
         "fields": [
           {
-            "name": "authority",
-            "type": "publicKey"
-          },
-          {
             "name": "collateralAmount",
             "type": {
               "defined": "RawDecimal"
@@ -5131,6 +4525,29 @@ export const IDL: Clone = {
           {
             "name": "collateralIndex",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BorrowPositions",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "numPositions",
+            "type": "u64"
+          },
+          {
+            "name": "positions",
+            "type": {
+              "array": [
+                {
+                  "defined": "BorrowPosition"
+                },
+                24
+              ]
+            }
           }
         ]
       }
@@ -5141,8 +4558,14 @@ export const IDL: Clone = {
         "kind": "struct",
         "fields": [
           {
-            "name": "authority",
-            "type": "publicKey"
+            "name": "poolIndex",
+            "type": "u64"
+          },
+          {
+            "name": "borrowedOnasset",
+            "type": {
+              "defined": "RawDecimal"
+            }
           },
           {
             "name": "collateralAmount",
@@ -5151,18 +4574,8 @@ export const IDL: Clone = {
             }
           },
           {
-            "name": "poolIndex",
-            "type": "u64"
-          },
-          {
             "name": "collateralIndex",
             "type": "u64"
-          },
-          {
-            "name": "borrowedOnasset",
-            "type": {
-              "defined": "RawDecimal"
-            }
           }
         ]
       }
@@ -5173,24 +4586,29 @@ export const IDL: Clone = {
         "kind": "enum",
         "variants": [
           {
-            "name": "LiquidationFee",
+            "name": "AddAuth",
             "fields": [
               {
-                "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "name": "address",
+                "type": "publicKey"
               }
             ]
           },
           {
-            "name": "MaxHealthLiquidation",
+            "name": "RemoveAuth",
+            "fields": [
+              {
+                "name": "address",
+                "type": "publicKey"
+              }
+            ]
+          },
+          {
+            "name": "LiquidationFee",
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u16"
               }
             ]
           },

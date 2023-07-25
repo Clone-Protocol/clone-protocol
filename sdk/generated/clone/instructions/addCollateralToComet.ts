@@ -42,7 +42,6 @@ export const addCollateralToCometStruct = new beet.BeetArgsStruct<
  * @property [] userAccount
  * @property [] clone
  * @property [_writable_] tokenData
- * @property [_writable_] comet
  * @property [_writable_] vault
  * @property [_writable_] userCollateralTokenAccount
  * @category Instructions
@@ -54,7 +53,6 @@ export type AddCollateralToCometInstructionAccounts = {
   userAccount: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
-  comet: web3.PublicKey
   vault: web3.PublicKey
   userCollateralTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
@@ -102,11 +100,6 @@ export function createAddCollateralToCometInstruction(
     },
     {
       pubkey: accounts.tokenData,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.comet,
       isWritable: true,
       isSigner: false,
     },

@@ -43,7 +43,6 @@ export const borrowMoreStruct = new beet.BeetArgsStruct<
  * @property [] clone
  * @property [_writable_] tokenData
  * @property [_writable_] userOnassetTokenAccount
- * @property [_writable_] borrowPositions
  * @property [_writable_] onassetMint
  * @category Instructions
  * @category BorrowMore
@@ -55,7 +54,6 @@ export type BorrowMoreInstructionAccounts = {
   clone: web3.PublicKey
   tokenData: web3.PublicKey
   userOnassetTokenAccount: web3.PublicKey
-  borrowPositions: web3.PublicKey
   onassetMint: web3.PublicKey
   tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
@@ -107,11 +105,6 @@ export function createBorrowMoreInstruction(
     },
     {
       pubkey: accounts.userOnassetTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.borrowPositions,
       isWritable: true,
       isSigner: false,
     },

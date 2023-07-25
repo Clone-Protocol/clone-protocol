@@ -17,6 +17,7 @@ import { RawDecimal, rawDecimalBeet } from './RawDecimal'
  * @private
  */
 export type PoolParametersRecord = {
+  Status: { value: beet.bignum }
   TreasuryTradingFee: { value: RawDecimal }
   LiquidityTradingFee: { value: RawDecimal }
   OracleInfoIndex: { value: beet.bignum }
@@ -40,6 +41,9 @@ export type PoolParametersRecord = {
  */
 export type PoolParameters = beet.DataEnumKeyAsKind<PoolParametersRecord>
 
+export const isPoolParametersStatus = (
+  x: PoolParameters
+): x is PoolParameters & { __kind: 'Status' } => x.__kind === 'Status'
 export const isPoolParametersTreasuryTradingFee = (
   x: PoolParameters
 ): x is PoolParameters & { __kind: 'TreasuryTradingFee' } =>
@@ -78,6 +82,14 @@ export const isPoolParametersLiquidationDiscountRate = (
  * @category generated
  */
 export const poolParametersBeet = beet.dataEnum<PoolParametersRecord>([
+  [
+    'Status',
+    new beet.BeetArgsStruct<PoolParametersRecord['Status']>(
+      [['value', beet.u64]],
+      'PoolParametersRecord["Status"]'
+    ),
+  ],
+
   [
     'TreasuryTradingFee',
     new beet.BeetArgsStruct<PoolParametersRecord['TreasuryTradingFee']>(

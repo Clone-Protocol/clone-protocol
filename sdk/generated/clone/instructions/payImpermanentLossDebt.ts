@@ -44,10 +44,9 @@ export const payImpermanentLossDebtStruct = new beet.BeetArgsStruct<
  * Accounts required by the _payImpermanentLossDebt_ instruction
  *
  * @property [**signer**] payer
- * @property [] userAccount
+ * @property [_writable_] userAccount
  * @property [_writable_] clone
  * @property [] tokenData
- * @property [_writable_] comet
  * @property [_writable_] onusdMint
  * @property [_writable_] onassetMint
  * @property [_writable_] payerOnusdTokenAccount
@@ -61,7 +60,6 @@ export type PayImpermanentLossDebtInstructionAccounts = {
   userAccount: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
-  comet: web3.PublicKey
   onusdMint: web3.PublicKey
   onassetMint: web3.PublicKey
   payerOnusdTokenAccount: web3.PublicKey
@@ -101,7 +99,7 @@ export function createPayImpermanentLossDebtInstruction(
     },
     {
       pubkey: accounts.userAccount,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {
@@ -112,11 +110,6 @@ export function createPayImpermanentLossDebtInstruction(
     {
       pubkey: accounts.tokenData,
       isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.comet,
-      isWritable: true,
       isSigner: false,
     },
     {

@@ -8,7 +8,7 @@ export interface Clone {
   admin: PublicKey;
   auth: Array<PublicKey>;
   bump: number;
-  liquidationConfig: LiquidationConfig;
+  liquidatorFeeBps: number,
   treasuryAddress: PublicKey;
   eventCounter: BN;
 }
@@ -19,11 +19,10 @@ export interface LiquidationConfig {
 }
 
 export interface User {
-  authority: PublicKey;
-  borrowPositions: PublicKey;
-  comet: PublicKey;
-  bump: number;
+  borrows: Borrows;
+  comet: Comet;
 }
+
 export interface TokenData {
   clone: PublicKey;
   numPools: BN;
@@ -41,14 +40,12 @@ export interface OracleInfo {
   lastUpdateSlot: BN;
 }
 
-export interface BorrowPositions {
-  owner: PublicKey;
+export interface Borrows {
   numPositions: BN;
-  borrowPositions: Array<BorrowPosition>;
+  positions: Array<BorrowPosition>;
 }
 
 export interface BorrowPosition {
-  authority: PublicKey;
   collateralAmount: RawDecimal;
   poolIndex: number;
   collateralIndex: number;
@@ -56,7 +53,6 @@ export interface BorrowPosition {
 }
 
 export interface Comet {
-  owner: PublicKey;
   numPositions: BN;
   numCollaterals: BN;
   positions: Array<CometPosition>;
@@ -64,7 +60,6 @@ export interface Comet {
 }
 
 export interface CometPosition {
-  authority: PublicKey;
   poolIndex: number;
   onusdIldRebate: RawDecimal;
   onassetIldRebate: RawDecimal;
@@ -72,7 +67,6 @@ export interface CometPosition {
 }
 
 export interface CometCollateral {
-  authority: PublicKey;
   collateralAmount: RawDecimal;
   collateralIndex: number;
 }

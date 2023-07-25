@@ -9,7 +9,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(comet_position_index: u8, liquidity_token_amount: u64)]
+#[instruction(comet_position_index: u8, onusd_amount: u64)]
 pub struct WithdrawLiquidityFromComet<'info> {
     pub user: Signer<'info>,
     #[account(
