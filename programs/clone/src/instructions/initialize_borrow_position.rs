@@ -91,7 +91,7 @@ pub fn execute(
         pool.asset_info.min_overcollateral_ratio.to_decimal(),
         collateral.collateralization_ratio.to_decimal(),
         collateral_amount_value,
-    ).unwrap();
+    )?;
 
     // lock user collateral in vault
     let cpi_accounts = Transfer {

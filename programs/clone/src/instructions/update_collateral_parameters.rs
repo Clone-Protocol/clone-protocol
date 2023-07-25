@@ -1,5 +1,6 @@
 use crate::{error::CloneError, states::*};
 use anchor_lang::prelude::*;
+use crate::return_error_if_false;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum CollateralParameters {
@@ -41,9 +42,7 @@ pub fn execute(
 
     match params {
         CollateralParameters::Status { status: value } => {
-            if value > Status::Frozen as u64 {
-                return Err(error!(CloneError::InvalidStatus));
-            }
+            return_error_if_false!(value <= Status::Frozen as u64, CloneError::InvalidStatus);
             collateral.status = value;
         }
         CollateralParameters::OracleInfoIndex { value } => {

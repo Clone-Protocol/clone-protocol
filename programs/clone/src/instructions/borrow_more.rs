@@ -90,7 +90,7 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
         pool.asset_info.min_overcollateral_ratio.to_decimal(),
         collateral.collateralization_ratio.to_decimal(),
         borrow_position.collateral_amount.to_decimal(),
-    ).unwrap();
+    )?;
 
     // mint onasset to the user
     let cpi_accounts = MintTo {

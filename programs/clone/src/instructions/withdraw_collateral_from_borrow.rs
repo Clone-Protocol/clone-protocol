@@ -100,8 +100,7 @@ pub fn execute(
         pool.asset_info.min_overcollateral_ratio.to_decimal(),
         collateral.collateralization_ratio.to_decimal(),
         new_collateral_amount,
-    )
-    .unwrap();
+    )?;
 
     // send collateral back to user
     let cpi_accounts = Transfer {

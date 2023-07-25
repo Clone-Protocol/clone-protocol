@@ -1,5 +1,6 @@
 use crate::{error::CloneError, states::*};
 use anchor_lang::prelude::*;
+use crate::return_error_if_false;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum PoolParameters {
@@ -53,23 +54,15 @@ pub fn execute(
         .iter()
         .any(|auth| *auth == *ctx.accounts.auth.key);
 
-    if !is_admin && !is_auth {
-        return Err(error!(CloneError::Unauthorized));
-    }
+
+    return_error_if_false!(is_admin || is_auth, CloneError::Unauthorized);
 
     match params {
         PoolParameters::Status { value } => {
             // Only allow auth users to change the status to 'Frozen'
-            if !is_admin && value != Status::Frozen as u64 && is_auth {
-                return Err(error!(CloneError::Unauthorized));
-            }
-            if value > Status::Deprecation as u64 {
-                return Err(error!(CloneError::InvalidStatus));
-            }
+            return_error_if_false!(is_admin || value == Status::Frozen as u64, CloneError::Unauthorized);
+            return_error_if_false!(value <= Status::Deprecation as u64, CloneError::InvalidStatus);
             pool.status = value;
-            if !is_admin {
-                return Ok(());
-            }
         }
         PoolParameters::TreasuryTradingFee { value } => {
             pool.treasury_trading_fee = value;

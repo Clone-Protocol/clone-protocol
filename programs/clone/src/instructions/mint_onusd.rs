@@ -1,4 +1,3 @@
-use crate::error::*;
 use crate::math::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
@@ -66,18 +65,6 @@ pub fn execute(ctx: Context<MintONUSD>, amount: u64) -> Result<()> {
         Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE).min(user_usdc_amount),
         CLONE_TOKEN_SCALE,
     );
-
-    // check to see if the collateral used to mint onusd is stable
-    let is_stable: Result<bool> = match collateral.stable {
-        0 => Ok(false),
-        1 => Ok(true),
-        _ => Err(error!(CloneError::InvalidBool)),
-    };
-
-    // if collateral is not stable, we throw an error
-    if !(is_stable.unwrap()) {
-        return Err(CloneError::InvalidCollateralType.into());
-    }
 
     // add collateral amount to vault supply
     let current_vault_onusd_supply = collateral.vault_onusd_supply.to_decimal();

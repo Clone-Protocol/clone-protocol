@@ -1,6 +1,7 @@
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -94,22 +95,22 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
         .min(authorized_amount);
 
     if pool.status != Status::Liquidation as u64 {
-        if check_mint_collateral_sufficient(
-            pool_oracle,
-            collateral_oracle,
-            borrow_position.borrowed_onasset.to_decimal(),
-            pool.asset_info.min_overcollateral_ratio.to_decimal(),
-            collateral.collateralization_ratio.to_decimal(),
-            borrow_position.collateral_amount.to_decimal(),
-        )
-        .is_ok()
-        {
-            return Err(CloneError::BorrowPositionUnableToLiquidate.into());
-        }
+        return_error_if_false!(
+            !check_mint_collateral_sufficient(
+                pool_oracle,
+                collateral_oracle,
+                borrow_position.borrowed_onasset.to_decimal(),
+                pool.asset_info.min_overcollateral_ratio.to_decimal(),
+                collateral.collateralization_ratio.to_decimal(),
+                borrow_position.collateral_amount.to_decimal(),
+            )
+            .is_ok(),
+            CloneError::BorrowPositionUnableToLiquidate
+        );
     } else {
-        check_feed_update(pool_oracle, Clock::get()?.slot).unwrap();
+        check_feed_update(pool_oracle, Clock::get()?.slot)?;
         if let Some(oracle) = collateral_oracle {
-            check_feed_update(oracle, Clock::get()?.slot).unwrap();
+            check_feed_update(oracle, Clock::get()?.slot)?;
         }
     }
 
@@ -205,22 +206,22 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
         borrow_positions.remove(borrow_index as usize);
     } else {
         // Throw error if too much was liquidated
-        if (collateral_price
-            * borrow_positions.borrow_positions[borrow_index as usize]
-                .collateral_amount
-                .to_decimal()
-            * collateral.collateralization_ratio.to_decimal())
-            / (pool_oracle.price.to_decimal()
+        return_error_if_false!(
+            collateral_price
                 * borrow_positions.borrow_positions[borrow_index as usize]
-                    .borrowed_onasset
-                    .to_decimal())
-            > pool
-                .asset_info
-                .max_liquidation_overcollateral_ratio
-                .to_decimal()
-        {
-            return Err(error!(CloneError::InvalidMintCollateralRatio));
-        }
+                    .collateral_amount
+                    .to_decimal()
+                * collateral.collateralization_ratio.to_decimal()
+                / (pool_oracle.price.to_decimal()
+                    * borrow_positions.borrow_positions[borrow_index as usize]
+                        .borrowed_onasset
+                        .to_decimal())
+                <= pool
+                    .asset_info
+                    .max_liquidation_overcollateral_ratio
+                    .to_decimal(),
+            CloneError::InvalidMintCollateralRatio
+        );
     }
 
     emit!(BorrowUpdate {

@@ -1,10 +1,12 @@
+use crate::return_error_if_false;
 use crate::states::*;
 use crate::*;
 
 pub fn check_feed_update(oracle_info: OracleInfo, slot: u64) -> Result<()> {
-    if oracle_info.last_update_slot < slot {
-        return Err(CloneError::OutdatedOracle.into());
-    }
+    return_error_if_false!(
+        oracle_info.last_update_slot == slot,
+        CloneError::OutdatedOracle
+    );
     Ok(())
 }
 
@@ -35,21 +37,22 @@ pub fn check_mint_collateral_sufficient(
     collateral_amount: Decimal,
 ) -> Result<()> {
     let slot = Clock::get().expect("Failed to get slot.").slot;
-    check_feed_update(pool_oracle, slot).unwrap();
+    check_feed_update(pool_oracle, slot)?;
     let collateral_price = if let Some(collateral_oracle) = collateral_oracle {
-        check_feed_update(collateral_oracle, slot).unwrap();
+        check_feed_update(collateral_oracle, slot)?;
         collateral_oracle.price.to_decimal()
     } else {
         Decimal::one()
     };
 
-    if (asset_amount_borrowed != Decimal::ZERO)
-        && (collateral_price * collateral_amount * collateralization_ratio)
-            / (pool_oracle.price.to_decimal() * asset_amount_borrowed)
-            < min_overcollateral_ratio
-    {
-        return Err(error!(CloneError::InvalidMintCollateralRatio));
-    }
+    return_error_if_false!(
+        (asset_amount_borrowed == Decimal::ZERO)
+            || (collateral_price * collateral_amount * collateralization_ratio)
+                / (pool_oracle.price.to_decimal() * asset_amount_borrowed)
+                >= min_overcollateral_ratio,
+        CloneError::InvalidMintCollateralRatio
+    );
+
     Ok(())
 }
 
@@ -118,7 +121,7 @@ pub fn calculate_health_score(comet: &Comet, token_data: &TokenData) -> Result<H
         let pool = token_data.pools[comet_position.pool_index as usize];
         let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
 
-        check_feed_update(oracle, slot).unwrap();
+        check_feed_update(oracle, slot)?;
         let (impermanent_loss_term, position_term) =
             calculate_comet_position_loss(token_data, &comet_position)?;
 

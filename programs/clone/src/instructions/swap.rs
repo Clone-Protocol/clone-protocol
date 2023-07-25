@@ -119,7 +119,7 @@ pub fn execute(
         }
     }
 
-    check_feed_update(oracle, Clock::get()?.slot).unwrap();
+    check_feed_update(oracle, Clock::get()?.slot)?;
 
     return_error_if_false!(
         pool.committed_onusd_liquidity.to_decimal() > Decimal::ZERO,
