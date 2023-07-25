@@ -81,7 +81,8 @@ export interface CometCollateral {
 export interface AssetInfo {
   onassetMint: PublicKey;
   oracleInfoIndex: BN;
-  overcollateralRatio: RawDecimal;
+  minOvercollateralRatio: RawDecimal;
+  maxLiquidationOvercollateralRatio: RawDecimal;
   ilHealthScoreCoefficient: RawDecimal;
   positionHealthScoreCoefficient: RawDecimal;
   liquidationDiscountRate: RawDecimal;
@@ -95,7 +96,6 @@ export interface Pool {
   treasuryTradingFee: RawDecimal;
   liquidityTradingFee: RawDecimal;
   totalMintedAmount: RawDecimal;
-  suppliedMintCollateralAmount: RawDecimal;
   assetInfo: AssetInfo;
   status: number;
 }

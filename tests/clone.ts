@@ -329,6 +329,7 @@ describe("clone", async () => {
     await cloneClient.initializePool(
       walletPubkey,
       150,
+      200,
       poolTradingFee,
       treasuryTradingFee,
       ilHealthScoreCoefficient,
@@ -466,9 +467,15 @@ describe("clone", async () => {
     assert(oracle.pythAddress.equals(priceFeed), "check price feed");
 
     assert.equal(
-      toNumber(assetInfo.overcollateralRatio),
+      toNumber(assetInfo.minOvercollateralRatio),
       1.5,
-      "stable collateral ratio incorrect"
+      "overcollateral ratio incorrect"
+    );
+
+    assert.equal(
+      toNumber(assetInfo.maxLiquidationOvercollateralRatio),
+      2.0,
+      "max liquidation overcollateral ratio incorrect"
     );
 
     const first_collateral = tokenData.collaterals[1];
@@ -773,11 +780,6 @@ describe("clone", async () => {
       "stored minted amount"
     );
     assert.equal(
-      toNumber(pool.suppliedMintCollateralAmount),
-      usdctoDeposit,
-      "check supplied collateral amount!"
-    );
-    assert.equal(
       toNumber(pool.totalMintedAmount),
       mintAmount,
       "check supplied collateral amount!"
@@ -861,12 +863,6 @@ describe("clone", async () => {
       vault.value!.uiAmount,
       startingVaultAmount - collateralWithdrawal,
       "check usdc vault amount"
-    );
-
-    assert.equal(
-      toNumber(pool.suppliedMintCollateralAmount),
-      0,
-      "check supplied collateral amount!"
     );
     assert.equal(
       toNumber(pool.totalMintedAmount),
@@ -1660,6 +1656,7 @@ describe("clone", async () => {
     await cloneClient.initializePool(
       walletPubkey,
       150,
+      200,
       poolTradingFee,
       treasuryTradingFee,
       ilHealthScoreCoefficient,
@@ -1965,96 +1962,102 @@ describe("clone", async () => {
       .rpc();
   });
 
-  // it("borrow position liquidation", async () => {
-  //   let tokenData = await cloneClient.getTokenData();
-  //   let userMintPositions = await cloneClient.getBorrowPositions();
-  //   let positionIndex = 1;
-  //   let position = userMintPositions.borrowPositions[positionIndex];
-  //   let poolIndex = Number(position.poolIndex);
-  //   let collateralIndex = Number(position.collateralIndex);
-  //   let collateral = tokenData.collaterals[collateralIndex];
-  //   let pool = tokenData.pools[poolIndex];
-  //   let oracle = tokenData.oracles[Number(pool.assetInfo.oracleInfoIndex)];
-  //   let collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-  //     cloneClient.provider,
-  //     collateral.mint
-  //   );
-  //   let onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-  //     cloneClient.provider,
-  //     pool.assetInfo.onassetMint
-  //   );
+  it("borrow position liquidation", async () => {
+    let tokenData = await cloneClient.getTokenData();
+    let userMintPositions = await cloneClient.getBorrowPositions();
+    let positionIndex = 1;
+    let position = userMintPositions.borrowPositions[positionIndex];
+    let poolIndex = Number(position.poolIndex);
+    let collateralIndex = Number(position.collateralIndex);
+    let collateral = tokenData.collaterals[collateralIndex];
+    let pool = tokenData.pools[poolIndex];
+    let oracle = tokenData.oracles[Number(pool.assetInfo.oracleInfoIndex)];
+    let collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      cloneClient.provider,
+      collateral.mint
+    );
+    let onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+      cloneClient.provider,
+      pool.assetInfo.onassetMint
+    );
 
-  //   let updatePricesIx = await cloneClient.updatePricesInstruction();
+    let updatePricesIx = await cloneClient.updatePricesInstruction();
 
-  //   // Mint more onasset to pay for liquidation.
-  //   let ix = await cloneClient.initializeBorrowPositionInstruction(
-  //     onusdTokenAccountInfo.address,
-  //     onassetTokenAccountInfo.address,
-  //     toDevnetScale(19000),
-  //     toDevnetScale(19000 * toNumber(oracle.price) * 1.51),
-  //     poolIndex,
-  //     collateralIndex
-  //   );
-  //   await provider.sendAndConfirm(
-  //     new Transaction().add(updatePricesIx).add(ix)
-  //   );
+    // Mint more onasset to pay for liquidation.
+    let ix = await cloneClient.initializeBorrowPositionInstruction(
+      onusdTokenAccountInfo.address,
+      onassetTokenAccountInfo.address,
+      toDevnetScale(19000),
+      toDevnetScale(19000 * toNumber(oracle.price) * 1.51),
+      poolIndex,
+      collateralIndex
+    );
+    await provider.sendAndConfirm(
+      new Transaction().add(updatePricesIx).add(ix)
+    );
 
-  //   userMintPositions = await cloneClient.getBorrowPositions();
-  //   position = userMintPositions.borrowPositions[positionIndex];
-  //   let numMintPositions = userMintPositions.numPositions.toNumber();
+    userMintPositions = await cloneClient.getBorrowPositions();
+    position = userMintPositions.borrowPositions[positionIndex];
 
-  //   let priceThreshold =
-  //     toNumber(position.collateralAmount) /
-  //     (1.5 * toNumber(position.borrowedOnasset));
+    let priceThreshold =
+      toNumber(position.collateralAmount) /
+      (1.5 * toNumber(position.borrowedOnasset));
 
-  //   await setPrice(pythProgram, priceThreshold * 1.1, oracle.pythAddress);
+    await setPrice(pythProgram, priceThreshold * 1.1, oracle.pythAddress);
 
-  //   await cloneClient.provider.sendAndConfirm!(
-  //     new Transaction()
-  //       .add(await cloneClient.updatePricesInstruction())
-  //       .add(
-  //         await cloneClient.liquidateBorrowPositionInstruction(
-  //           cloneClient.provider.publicKey!,
-  //           positionIndex,
-  //           collateralTokenAccountInfo.address,
-  //           onassetTokenAccountInfo.address
-  //         )
-  //       )
-  //   );
-  //   userMintPositions = await cloneClient.getBorrowPositions();
-  //   assert.equal(
-  //     numMintPositions - 1,
-  //     userMintPositions.numPositions.toNumber(),
-  //     "Liquidation did not finish!"
-  //   );
+    let initialOvercollateralRatio = toNumber(position.collateralAmount) / (toNumber(position.borrowedOnasset) * toNumber(oracle.price))
 
-  //   // Reset params
-  //   await cloneClient.program.methods
-  //     .updatePoolParameters(0, {
-  //       positionHealthScoreCoefficient: {
-  //         value: convertToRawDecimal(healthScoreCoefficient),
-  //       },
-  //     })
-  //     .accounts({
-  //       auth: cloneClient.clone!.admin,
-  //       clone: cloneClient.cloneAddress[0],
-  //       tokenData: cloneClient.clone!.tokenData,
-  //     })
-  //     .rpc();
+    await cloneClient.provider.sendAndConfirm!(
+      new Transaction()
+        .add(await cloneClient.updatePricesInstruction())
+        .add(
+          await cloneClient.liquidateBorrowPositionInstruction(
+            cloneClient.provider.publicKey!,
+            positionIndex,
+            toDevnetScale(19000 * toNumber(oracle.price) * 0.01),
+            collateralTokenAccountInfo.address,
+            onassetTokenAccountInfo.address
+          )
+        )
+    );
+    userMintPositions = await cloneClient.getBorrowPositions();
+    position = userMintPositions.borrowPositions[positionIndex];
+    
+    let finalOvercollateralRatio = toNumber(position.collateralAmount) / (toNumber(position.borrowedOnasset) * toNumber(oracle.price))
 
-  //   await cloneClient.program.methods
-  //     .updatePoolParameters(0, {
-  //       ilHealthScoreCoefficient: {
-  //         value: convertToRawDecimal(ilHealthScoreCoefficient),
-  //       },
-  //     })
-  //     .accounts({
-  //       auth: cloneClient.clone!.admin,
-  //       clone: cloneClient.cloneAddress[0],
-  //       tokenData: cloneClient.clone!.tokenData,
-  //     })
-  //     .rpc();
-  // });
+    assert.isAbove(
+      finalOvercollateralRatio,
+      initialOvercollateralRatio,
+      "Liquidation did not finish!"
+    );
+
+    // Reset params
+    await cloneClient.program.methods
+      .updatePoolParameters(0, {
+        positionHealthScoreCoefficient: {
+          value: convertToRawDecimal(healthScoreCoefficient),
+        },
+      })
+      .accounts({
+        auth: cloneClient.clone!.admin,
+        clone: cloneClient.cloneAddress[0],
+        tokenData: cloneClient.clone!.tokenData,
+      })
+      .rpc();
+
+    await cloneClient.program.methods
+      .updatePoolParameters(0, {
+        ilHealthScoreCoefficient: {
+          value: convertToRawDecimal(ilHealthScoreCoefficient),
+        },
+      })
+      .accounts({
+        auth: cloneClient.clone!.admin,
+        clone: cloneClient.cloneAddress[0],
+        tokenData: cloneClient.clone!.tokenData,
+      })
+      .rpc();
+  });
 
   it("wrap assets and unwrap onassets", async () => {
     const poolIndex = 0;

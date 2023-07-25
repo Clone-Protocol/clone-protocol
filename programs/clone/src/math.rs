@@ -46,9 +46,11 @@ pub fn check_mint_collateral_sufficient(
     } else {
         Decimal::one()
     };
-    if (collateral_price * collateral_amount * collateralization_ratio)
-        / (pool_oracle.price.to_decimal() * asset_amount_borrowed)
-        > min_overcollateral_ratio
+
+    if (asset_amount_borrowed != Decimal::ZERO)
+        && (collateral_price * collateral_amount * collateralization_ratio)
+            / (pool_oracle.price.to_decimal() * asset_amount_borrowed)
+            < min_overcollateral_ratio
     {
         return Err(error!(CloneError::InvalidMintCollateralRatio));
     }

@@ -201,35 +201,31 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
     token_data.pools[borrow_position.pool_index as usize].total_minted_amount =
         RawDecimal::from(new_total_minted_amount);
 
-    // Remove position
+    // Remove position if empty
     if borrow_positions.borrow_positions[borrow_index as usize]
-        .borrowed_onasset
+        .collateral_amount
         .to_decimal()
         == Decimal::ZERO
-        && borrow_positions.borrow_positions[borrow_index as usize]
-            .collateral_amount
-            .to_decimal()
-            == Decimal::ZERO
     {
         borrow_positions.remove(borrow_index as usize);
-    }
-
-    // Throw error if too much was liquidated
-    if (collateral_price
-        * borrow_positions.borrow_positions[borrow_index as usize]
-            .collateral_amount
-            .to_decimal()
-        * collateral.collateralization_ratio.to_decimal())
-        / (pool_oracle.price.to_decimal()
+    } else {
+        // Throw error if too much was liquidated
+        if (collateral_price
             * borrow_positions.borrow_positions[borrow_index as usize]
-                .borrowed_onasset
-                .to_decimal())
-        > pool
-            .asset_info
-            .max_liquidation_overcollateral_ratio
-            .to_decimal()
-    {
-        return Err(error!(CloneError::InvalidMintCollateralRatio));
+                .collateral_amount
+                .to_decimal()
+            * collateral.collateralization_ratio.to_decimal())
+            / (pool_oracle.price.to_decimal()
+                * borrow_positions.borrow_positions[borrow_index as usize]
+                    .borrowed_onasset
+                    .to_decimal())
+            > pool
+                .asset_info
+                .max_liquidation_overcollateral_ratio
+                .to_decimal()
+        {
+            return Err(error!(CloneError::InvalidMintCollateralRatio));
+        }
     }
 
     emit!(BorrowUpdate {

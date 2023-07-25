@@ -163,7 +163,8 @@ export class CloneClient {
 
   public async initializePool(
     admin: PublicKey,
-    overcollateralRatio: number,
+    minOvercollateralRatio: number,
+    MaxLiquidationOvercollateralRatio: number,
     liquidityTradingFee: number,
     treasuryTradingFee: number,
     ilHealthScoreCoefficient: number,
@@ -190,7 +191,8 @@ export class CloneClient {
 
     await this.program.methods
       .initializePool(
-        overcollateralRatio,
+        minOvercollateralRatio,
+        MaxLiquidationOvercollateralRatio,
         liquidityTradingFee,
         treasuryTradingFee,
         toDevnetScale(ilHealthScoreCoefficient),

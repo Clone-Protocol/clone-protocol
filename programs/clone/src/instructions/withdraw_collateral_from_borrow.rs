@@ -102,6 +102,7 @@ pub fn execute(
         new_collateral_amount,
     )
     .unwrap();
+
     // send collateral back to user
     let cpi_accounts = Transfer {
         from: ctx.accounts.vault.to_account_info().clone(),

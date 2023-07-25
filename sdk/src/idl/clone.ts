@@ -455,7 +455,11 @@ export type Clone = {
       ],
       "args": [
         {
-          "name": "overcollateralRatio",
+          "name": "minOvercollateralRatio",
+          "type": "u16"
+        },
+        {
+          "name": "maxLiquidationOvercollateralRatio",
           "type": "u16"
         },
         {
@@ -2054,7 +2058,13 @@ export type Clone = {
             "type": "u64"
           },
           {
-            "name": "overcollateralRatio",
+            "name": "minOvercollateralRatio",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "maxLiquidationOvercollateralRatio",
             "type": {
               "defined": "RawDecimal"
             }
@@ -2147,12 +2157,6 @@ export type Clone = {
           },
           {
             "name": "totalMintedAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "suppliedMintCollateralAmount",
             "type": {
               "defined": "RawDecimal"
             }
@@ -2449,7 +2453,18 @@ export type Clone = {
             ]
           },
           {
-            "name": "OvercollateralRatio",
+            "name": "MinOvercollateralRatio",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "MaxLiquidationOvercollateralRatio",
             "fields": [
               {
                 "name": "value",
@@ -2862,7 +2877,10 @@ export type Clone = {
       "name": "InvalidOracleIndex",
       "msg": "Invalid oracle index"
     }
-  ]
+  ],
+  "metadata": {
+    "address": "F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v"
+  }
 };
 
 export const IDL: Clone = {
@@ -3322,7 +3340,11 @@ export const IDL: Clone = {
       ],
       "args": [
         {
-          "name": "overcollateralRatio",
+          "name": "minOvercollateralRatio",
+          "type": "u16"
+        },
+        {
+          "name": "maxLiquidationOvercollateralRatio",
           "type": "u16"
         },
         {
@@ -4921,7 +4943,13 @@ export const IDL: Clone = {
             "type": "u64"
           },
           {
-            "name": "overcollateralRatio",
+            "name": "minOvercollateralRatio",
+            "type": {
+              "defined": "RawDecimal"
+            }
+          },
+          {
+            "name": "maxLiquidationOvercollateralRatio",
             "type": {
               "defined": "RawDecimal"
             }
@@ -5014,12 +5042,6 @@ export const IDL: Clone = {
           },
           {
             "name": "totalMintedAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "suppliedMintCollateralAmount",
             "type": {
               "defined": "RawDecimal"
             }
@@ -5316,7 +5338,18 @@ export const IDL: Clone = {
             ]
           },
           {
-            "name": "OvercollateralRatio",
+            "name": "MinOvercollateralRatio",
+            "fields": [
+              {
+                "name": "value",
+                "type": {
+                  "defined": "RawDecimal"
+                }
+              }
+            ]
+          },
+          {
+            "name": "MaxLiquidationOvercollateralRatio",
             "fields": [
               {
                 "name": "value",
@@ -5729,5 +5762,8 @@ export const IDL: Clone = {
       "name": "InvalidOracleIndex",
       "msg": "Invalid oracle index"
     }
-  ]
+  ],
+  "metadata": {
+    "address": "F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v"
+  }
 };
