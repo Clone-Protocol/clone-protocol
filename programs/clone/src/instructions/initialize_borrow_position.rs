@@ -74,7 +74,9 @@ pub fn execute(
     let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral = token_data.collaterals[collateral_index as usize];
     let mut collateral_oracle: Option<OracleInfo> = None;
-    if collateral.oracle_info_index != u64::MAX {
+    if collateral_index as usize != ONUSD_COLLATERAL_INDEX
+        && collateral_index as usize != USDC_COLLATERAL_INDEX
+    {
         collateral_oracle = Some(token_data.oracles[collateral.oracle_info_index as usize]);
     }
     let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();

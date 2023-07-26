@@ -8,7 +8,6 @@ use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(
-    max_health_liquidation: u64,
     comet_liquidator_fee: u64,
     borrow_liquidator_fee: u64,
     treasury_address: Pubkey,

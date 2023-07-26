@@ -101,7 +101,9 @@ pub fn execute(
     let collateral_index = comet_collateral.collateral_index as usize;
     let collateral = token_data.collaterals[collateral_index];
     let mut collateral_price = Decimal::one();
-    if collateral.oracle_info_index != u64::MAX {
+    if collateral_index as usize != ONUSD_COLLATERAL_INDEX
+        && collateral_index as usize != USDC_COLLATERAL_INDEX
+    {
         let collateral_oracle = token_data.oracles[collateral.oracle_info_index as usize];
         check_feed_update(collateral_oracle, Clock::get()?.slot)?;
         collateral_price = collateral_oracle.price.to_decimal();
@@ -195,7 +197,7 @@ pub fn execute(
             collateral.vault_comet_supply.to_decimal() - collateral_reward,
             collateral_scale,
         );
-        token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
+        token_data.collaterals[collateral_index as usize].vault_comet_supply =
             RawDecimal::from(vault_comet_supply);
 
         // Transfer collateral to liquidator

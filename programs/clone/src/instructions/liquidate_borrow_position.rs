@@ -74,14 +74,18 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
     let mut borrow_positions = ctx.accounts.borrow_positions.load_mut()?;
     let borrow_position = borrow_positions.borrow_positions[borrow_index as usize];
 
-    let collateral = token_data.collaterals[borrow_position.collateral_index as usize];
-    let pool = token_data.pools[borrow_position.pool_index as usize];
+    let collateral_index = borrow_position.collateral_index as usize;
+    let collateral = token_data.collaterals[collateral_index as usize];
+    let pool_index = borrow_position.collateral_index as usize;
+    let pool = token_data.pools[pool_index as usize];
     let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
 
     let authorized_amount = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
     let mut collateral_price = Decimal::one();
     let mut collateral_oracle: Option<OracleInfo> = None;
-    if collateral.oracle_info_index != u64::MAX {
+    if collateral_index as usize != ONUSD_COLLATERAL_INDEX
+        && collateral_index as usize != USDC_COLLATERAL_INDEX
+    {
         collateral_oracle = Some(token_data.oracles[collateral.oracle_info_index as usize]);
         if let Some(oracle) = &collateral_oracle {
             collateral_price = oracle.price.to_decimal();
@@ -194,7 +198,7 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
         pool.total_minted_amount.to_decimal() - burn_amount,
         CLONE_TOKEN_SCALE,
     );
-    token_data.pools[borrow_position.pool_index as usize].total_minted_amount =
+    token_data.pools[pool_index as usize].total_minted_amount =
         RawDecimal::from(new_total_minted_amount);
 
     // Remove position if empty
@@ -227,17 +231,11 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
-        pool_index: borrow_positions.borrow_positions[borrow_index as usize]
-            .pool_index
-            .try_into()
-            .unwrap(),
+        pool_index: pool_index.try_into().unwrap(),
         is_liquidation: true,
         collateral_supplied: 0,
         collateral_delta: -collateral_reward.to_i64().unwrap(),
-        collateral_index: borrow_positions.borrow_positions[borrow_index as usize]
-            .collateral_index
-            .try_into()
-            .unwrap(),
+        collateral_index: collateral_index.try_into().unwrap(),
         borrowed_amount: 0,
         borrowed_delta: -burn_amount.to_i64().unwrap()
     });

@@ -61,9 +61,13 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
     let pool = token_data.pools[pool_index as usize];
     let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     let borrow_position = borrow_positions.borrow_positions[borrow_index as usize];
-    let collateral = token_data.collaterals[borrow_position.collateral_index as usize];
+    let collateral_index =
+        borrow_positions.borrow_positions[borrow_index as usize].collateral_index;
+    let collateral = token_data.collaterals[collateral_index as usize];
     let mut collateral_oracle: Option<OracleInfo> = None;
-    if collateral.oracle_info_index != u64::MAX {
+    if collateral_index as usize != ONUSD_COLLATERAL_INDEX
+        && collateral_index as usize != USDC_COLLATERAL_INDEX
+    {
         collateral_oracle = Some(token_data.oracles[collateral.oracle_info_index as usize]);
     }
 
@@ -111,10 +115,7 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
-        pool_index: borrow_positions.borrow_positions[borrow_index as usize]
-            .pool_index
-            .try_into()
-            .unwrap(),
+        pool_index: pool_index.try_into().unwrap(),
         is_liquidation: false,
         collateral_supplied: borrow_positions.borrow_positions[borrow_index as usize]
             .collateral_amount
@@ -123,10 +124,7 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
             .try_into()
             .unwrap(),
         collateral_delta: 0,
-        collateral_index: borrow_positions.borrow_positions[borrow_index as usize]
-            .collateral_index
-            .try_into()
-            .unwrap(),
+        collateral_index: collateral_index.try_into().unwrap(),
         borrowed_amount: borrow_positions.borrow_positions[borrow_index as usize]
             .borrowed_onasset
             .to_decimal()

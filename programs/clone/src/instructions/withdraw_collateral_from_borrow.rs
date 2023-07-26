@@ -63,9 +63,12 @@ pub fn execute(
     let pool_index = borrow_positions.borrow_positions[borrow_index as usize].pool_index;
     let pool = token_data.pools[pool_index as usize];
     let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
-    let collateral = token_data.collaterals[borrow_position.collateral_index as usize];
+    let collateral_index = borrow_position.collateral_index;
+    let collateral = token_data.collaterals[collateral_index as usize];
     let mut collateral_oracle: Option<OracleInfo> = None;
-    if collateral.oracle_info_index != u64::MAX {
+    if collateral_index as usize != ONUSD_COLLATERAL_INDEX
+        && collateral_index as usize != USDC_COLLATERAL_INDEX
+    {
         collateral_oracle = Some(token_data.oracles[collateral.oracle_info_index as usize]);
     }
 
@@ -80,9 +83,8 @@ pub fn execute(
         current_vault_mint_supply - amount_value,
         current_vault_mint_supply.scale(),
     );
-    token_data.collaterals
-        [borrow_positions.borrow_positions[borrow_index as usize].collateral_index as usize]
-        .vault_mint_supply = RawDecimal::from(new_vault_mint_supply);
+    token_data.collaterals[collateral_index as usize].vault_mint_supply =
+        RawDecimal::from(new_vault_mint_supply);
 
     // subtract collateral amount from mint data
     let new_collateral_amount = rescale_toward_zero(
@@ -121,17 +123,11 @@ pub fn execute(
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
-        pool_index: borrow_positions.borrow_positions[borrow_index as usize]
-            .pool_index
-            .try_into()
-            .unwrap(),
+        pool_index: pool_index.try_into().unwrap(),
         is_liquidation: false,
         collateral_supplied: new_collateral_amount.mantissa().try_into().unwrap(),
         collateral_delta: -(amount_value.mantissa() as i64),
-        collateral_index: borrow_positions.borrow_positions[borrow_index as usize]
-            .collateral_index
-            .try_into()
-            .unwrap(),
+        collateral_index: collateral_index.try_into().unwrap(),
         borrowed_amount: borrow_positions.borrow_positions[borrow_index as usize]
             .borrowed_onasset
             .to_decimal()

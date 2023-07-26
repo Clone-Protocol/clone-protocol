@@ -2,6 +2,5 @@
   "name": "@clone/sdk",
   "version": "0.0.0",
   "description": "SDK for Clone Protocol",
-  "main": "src/index.ts",
-  "type": "module"
+  "main": "src/index.ts"
 }
