@@ -43,7 +43,6 @@ import {
   fromDevnetNumber,
 } from "./utils";
 import { getHealthScore, getILD } from "../sdk/src/healthscore";
-import { token } from "@coral-xyz/anchor/dist/cjs/utils";
 
 const CLONE_SCALE_CONVERSION = Math.pow(10, -CLONE_TOKEN_SCALE);
 const USDC_SCALE_CONVERSION = Math.pow(10, -7);
@@ -67,7 +66,6 @@ describe("clone", async () => {
 
   const healthScoreCoefficient = 1.059;
   const ilHealthScoreCoefficient = 128.288;
-  const maxHealthLiquidation = 20;
   const liquidatorFee = 500; // in bps
   const poolTradingFee = 200;
   const treasuryTradingFee = 100;
@@ -237,7 +235,6 @@ describe("clone", async () => {
 
   it("clone initialized!", async () => {
     await cloneClient.initializeClone(
-      maxHealthLiquidation,
       liquidatorFee,
       liquidatorFee,
       treasuryAddress.publicKey,

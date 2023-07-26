@@ -57,12 +57,10 @@ pub struct InitializeClone<'info> {
 #[allow(clippy::too_many_arguments)]
 pub fn execute(
     ctx: Context<InitializeClone>,
-    max_health_liquidation: u64,
     comet_liquidator_fee: u64,
     borrow_liquidator_fee: u64,
     treasury_address: Pubkey,
 ) -> Result<()> {
-    return_error_if_false!(max_health_liquidation < 100, CloneError::InvalidValueRange);
     return_error_if_false!(comet_liquidator_fee < 10000, CloneError::InvalidValueRange);
     return_error_if_false!(borrow_liquidator_fee < 10000, CloneError::InvalidValueRange);
     let mut token_data = ctx.accounts.token_data.load_init()?;
@@ -75,7 +73,6 @@ pub fn execute(
     ctx.accounts.clone.treasury_address = treasury_address;
 
     ctx.accounts.clone.liquidation_config = LiquidationConfig {
-        max_health_liquidation: RawDecimal::new(max_health_liquidation.try_into().unwrap(), 0),
         comet_liquidator_fee: RawDecimal::new(comet_liquidator_fee.try_into().unwrap(), BPS_SCALE),
         borrow_liquidator_fee: RawDecimal::new(borrow_liquidator_fee.try_into().unwrap(), BPS_SCALE),
     };

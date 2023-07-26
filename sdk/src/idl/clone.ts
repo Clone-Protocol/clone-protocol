@@ -58,10 +58,6 @@ export type Clone = {
       ],
       "args": [
         {
-          "name": "maxHealthLiquidation",
-          "type": "u64"
-        },
-        {
           "name": "cometLiquidatorFee",
           "type": "u64"
         },
@@ -2034,12 +2030,6 @@ export type Clone = {
             "type": {
               "defined": "RawDecimal"
             }
-          },
-          {
-            "name": "maxHealthLiquidation",
-            "type": {
-              "defined": "RawDecimal"
-            }
           }
         ]
       }
@@ -2338,17 +2328,6 @@ export type Clone = {
           },
           {
             "name": "BorrowLiquidationFee",
-            "fields": [
-              {
-                "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
-              }
-            ]
-          },
-          {
-            "name": "MaxHealthLiquidation",
             "fields": [
               {
                 "name": "value",
@@ -2877,10 +2856,7 @@ export type Clone = {
       "name": "InvalidOracleIndex",
       "msg": "Invalid oracle index"
     }
-  ],
-  "metadata": {
-    "address": "F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v"
-  }
+  ]
 };
 
 export const IDL: Clone = {
@@ -2943,10 +2919,6 @@ export const IDL: Clone = {
       ],
       "args": [
         {
-          "name": "maxHealthLiquidation",
-          "type": "u64"
-        },
-        {
           "name": "cometLiquidatorFee",
           "type": "u64"
         },
@@ -4919,12 +4891,6 @@ export const IDL: Clone = {
             "type": {
               "defined": "RawDecimal"
             }
-          },
-          {
-            "name": "maxHealthLiquidation",
-            "type": {
-              "defined": "RawDecimal"
-            }
           }
         ]
       }
@@ -5223,17 +5189,6 @@ export const IDL: Clone = {
           },
           {
             "name": "BorrowLiquidationFee",
-            "fields": [
-              {
-                "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
-              }
-            ]
-          },
-          {
-            "name": "MaxHealthLiquidation",
             "fields": [
               {
                 "name": "value",
@@ -5762,8 +5717,5 @@ export const IDL: Clone = {
       "name": "InvalidOracleIndex",
       "msg": "Invalid oracle index"
     }
-  ],
-  "metadata": {
-    "address": "F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v"
-  }
+  ]
 };

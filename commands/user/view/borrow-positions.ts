@@ -1,5 +1,9 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient } from "../../../sdk/src/clone";
+import {
+  CloneClient,
+  ONUSD_COLLATERAL_INDEX,
+  USDC_COLLATERAL_INDEX,
+} from "../../../sdk/src/clone";
 import { getMantissa, toNumber } from "../../../sdk/src/decimal";
 import {
   successLog,
@@ -32,27 +36,31 @@ exports.handler = async function () {
       const borrowPosition = borrowPositions.borrowPositions[i];
 
       const pool = tokenData.pools[borrowPosition.poolIndex];
-      const collateral = tokenData.collaterals[borrowPosition.collateralIndex];
+      const collateralIndex = borrowPosition.collateralIndex;
+      const collateral = tokenData.collaterals[collateralIndex];
 
-      const stable = Number(collateral.stable);
+      const hasOracle =
+        collateralIndex !== ONUSD_COLLATERAL_INDEX &&
+        collateralIndex !== USDC_COLLATERAL_INDEX;
       let collateralPrice: number;
-      let minimumCollateralRatio: number;
-      if (stable === 0) {
-        const collateralPoolIndex = Number(collateral.poolIndex);
-
+      if (hasOracle) {
         collateralPrice = getMantissa(
-          tokenData.pools[collateralPoolIndex].assetInfo.price
-        );
-        minimumCollateralRatio = getMantissa(
-          pool.assetInfo.cryptoCollateralRatio
+          tokenData.oracles[collateral.oracleInfoIndex.toNumber()].price
         );
       } else {
         collateralPrice = 1;
-        minimumCollateralRatio = getMantissa(
-          pool.assetInfo.stableCollateralRatio
-        );
       }
-      let onAssetPrice = toNumber(pool.assetInfo.price);
+
+      let minOvercollateralRatio = getMantissa(
+        pool.assetInfo.minOvercollateralRatio
+      );
+      let maxLiquidationOvercollateralRatio = getMantissa(
+        pool.assetInfo.maxLiquidationOvercollateralRatio
+      );
+
+      let onAssetPrice = getMantissa(
+        tokenData.oracles[pool.assetInfo.oracleInfoIndex.toNumber()].price
+      );
 
       const title = `Borrow Position ${i}`;
       const underline = new Array(title.length).fill("-").join("");
@@ -84,7 +92,12 @@ exports.handler = async function () {
             ((toNumber(borrowPosition.collateralAmount) * collateralPrice) /
               (toNumber(borrowPosition.borrowedOnasset) * onAssetPrice))
         )}\n` +
-        `Minimum Collateral Ratio: %${chalk.bold(minimumCollateralRatio)}\n`;
+        `Minimum Overcollateral Ratio: %${chalk.bold(
+          minOvercollateralRatio
+        )}\n` +
+        `Maximum Liquidation Overcollateral Ratio: %${chalk.bold(
+          maxLiquidationOvercollateralRatio
+        )}\n`;
 
       console.log(boxen(assetInfo, assetBoxenOptions));
     }

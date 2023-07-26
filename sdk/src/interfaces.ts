@@ -16,7 +16,6 @@ export interface Clone {
 export interface LiquidationConfig {
   cometLiquidatorFee: RawDecimal;
   borrowLiquidatorFee: RawDecimal;
-  maxHealthLiquidation: RawDecimal;
 }
 
 export interface User {

@@ -10,15 +10,14 @@ import { successLog, errorLog, anchorSetup, getCloneProgram } from "../utils";
 import { Argv } from "yargs";
 
 interface CommandArguments extends Argv {
-  stableCollateralRatio: number;
-  cryptoCollateralRatio: number;
+  minOvercollateralRatio: number;
+  maxLiquidationCollateralRatio: number;
   poolTradingFee: number;
   treasuryTradingFee: number;
-  priceFeed: string;
   ilHealthScoreCoefficient: number;
   healthScoreCoefficient: number;
   liquidationDiscountRate: number;
-  maxOwnershipPct: number;
+  oracleIndex: number;
   underlyingAssetMint: string;
 }
 
@@ -27,13 +26,13 @@ exports.command = "add-pool";
 exports.desc = "Adds a new onAsset pool to Clone";
 exports.builder = (yargs: CommandArguments) => {
   return yargs
-    .option("stable-collateral-ratio", {
-      describe: "The stable collateral ratio",
+    .option("min-overcollateral-ratio", {
+      describe: "The minimum overcollateral ratio for borrow positions",
       type: "number",
       default: 150,
     })
-    .option("crypto-collateral-ratio", {
-      describe: "The crypto collateral ratio",
+    .option("max-liquidation-collateral-ratio", {
+      describe: "The maximum overcollateral ratio for borrow positions after a liquidation",
       type: "number",
       default: 200,
     })
@@ -46,10 +45,6 @@ exports.builder = (yargs: CommandArguments) => {
       describe: "The treasury trading fee",
       type: "number",
       default: 100,
-    })
-    .option("price-feed", {
-      describe: "The price feed",
-      type: "string",
     })
     .option("il-health-score-coefficient", {
       describe: "The IL health score coefficient",
@@ -66,10 +61,9 @@ exports.builder = (yargs: CommandArguments) => {
       type: "number",
       default: 500,
     })
-    .option("max-ownership-pct", {
-      describe: "The maximum ownership percentage",
+    .option("oracle-index", {
+      describe: "The index of the oracle feed for this onAsset",
       type: "number",
-      default: 10,
     })
     .option("underlying-asset-mint", {
       describe: "The underlying asset mint",
@@ -84,20 +78,18 @@ exports.handler = async function (yargs: CommandArguments) {
     let cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
     await cloneClient.loadClone();
 
-    const priceFeed = new PublicKey(yargs.priceFeed);
     const underlyingAssetMint = new PublicKey(yargs.underlyingAssetMint);
 
     await cloneClient.initializePool(
       cloneProgram.provider.publicKey!,
-      yargs.stableCollateralRatio,
-      yargs.cryptoCollateralRatio,
+      yargs.minOvercollateralRatio,
+      yargs.maxLiquidationCollateralRatio,
       yargs.poolTradingFee,
       yargs.treasuryTradingFee,
-      priceFeed,
       yargs.ilHealthScoreCoefficient,
       yargs.healthScoreCoefficient,
       yargs.liquidationDiscountRate,
-      yargs.maxOwnershipPct,
+      yargs.oracleIndex,
       underlyingAssetMint
     );
 

@@ -9,6 +9,7 @@ import {
   AddressLookupTableAccount,
   VersionedTransaction,
 } from "@solana/web3.js";
+import { OracleInfo } from "../generated/clone";
 
 export const sleep = async (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -48,11 +49,11 @@ export const calculateMantissa = (
   return Math.floor(x * Math.pow(10, scale));
 };
 
-export const getPoolLiquidity = (pool: Pool) => {
+export const getPoolLiquidity = (pool: Pool, oracle: OracleInfo) => {
   const poolOnusd =
     toNumber(pool.committedOnusdLiquidity) - toNumber(pool.onusdIld);
   const poolOnasset =
-    toNumber(pool.committedOnusdLiquidity) / toNumber(pool.assetInfo.price) -
+    toNumber(pool.committedOnusdLiquidity) / toNumber(oracle.price) -
     toNumber(pool.onassetIld);
   return {
     poolOnusd,
@@ -128,11 +129,15 @@ export const calculatePoolAmounts = (
   poolOnassetILD: number,
   poolCommittedOnusdLiquidity: number,
   oraclePrice: number
-  ) => {
-    const poolOnusd = floorToDevnetScale(poolCommittedOnusdLiquidity - poolOnusdILD)
-    const poolOnasset = floorToDevnetScale(poolCommittedOnusdLiquidity / oraclePrice - poolOnassetILD)
-    return { poolOnusd, poolOnasset }
-  }
+) => {
+  const poolOnusd = floorToDevnetScale(
+    poolCommittedOnusdLiquidity - poolOnusdILD
+  );
+  const poolOnasset = floorToDevnetScale(
+    poolCommittedOnusdLiquidity / oraclePrice - poolOnassetILD
+  );
+  return { poolOnusd, poolOnasset };
+};
 
 export const calculateSwapExecution = (
   quantity: number,
@@ -146,41 +151,63 @@ export const calculateSwapExecution = (
   oraclePrice: number
 ) => {
   const { poolOnusd, poolOnasset } = calculatePoolAmounts(
-    poolOnusdILD, poolOnassetILD, poolCommittedOnusdLiquidity, oraclePrice
-  )
-  const invariant = poolOnusd * poolOnasset
+    poolOnusdILD,
+    poolOnassetILD,
+    poolCommittedOnusdLiquidity,
+    oraclePrice
+  );
+  const invariant = poolOnusd * poolOnasset;
 
   if (quantityIsInput) {
-    const [inputSide, outputSide] = quantityIsOnusd ? [poolOnusd, poolOnasset] : [poolOnasset, poolOnusd];
+    const [inputSide, outputSide] = quantityIsOnusd
+      ? [poolOnusd, poolOnasset]
+      : [poolOnasset, poolOnusd];
     const outputBeforeFees = floorToDevnetScale(
       outputSide - invariant / (inputSide + quantity)
-    )
-    const liquidityFeesPaid = floorToDevnetScale(outputBeforeFees * liquidityTradingFees)
-    const treasuryFeesPaid = floorToDevnetScale(outputBeforeFees * treasuryTradingFees)
-    const result = floorToDevnetScale(outputBeforeFees - liquidityFeesPaid - treasuryFeesPaid)
+    );
+    const liquidityFeesPaid = floorToDevnetScale(
+      outputBeforeFees * liquidityTradingFees
+    );
+    const treasuryFeesPaid = floorToDevnetScale(
+      outputBeforeFees * treasuryTradingFees
+    );
+    const result = floorToDevnetScale(
+      outputBeforeFees - liquidityFeesPaid - treasuryFeesPaid
+    );
     return {
-      result, liquidityFeesPaid, treasuryFeesPaid
-    }
+      result,
+      liquidityFeesPaid,
+      treasuryFeesPaid,
+    };
   } else {
-    const [outputSide, inputSide] = quantityIsOnusd ? [poolOnusd, poolOnasset] : [poolOnasset, poolOnusd];
+    const [outputSide, inputSide] = quantityIsOnusd
+      ? [poolOnusd, poolOnasset]
+      : [poolOnasset, poolOnusd];
     const outputBeforeFees = floorToDevnetScale(
-      quantity / (1. - liquidityTradingFees - treasuryTradingFees)
-    )
+      quantity / (1 - liquidityTradingFees - treasuryTradingFees)
+    );
     const result = floorToDevnetScale(
       invariant / (outputSide - outputBeforeFees) - inputSide
-    )
-    const liquidityFeesPaid = floorToDevnetScale(outputBeforeFees * liquidityTradingFees)
-    const treasuryFeesPaid = floorToDevnetScale(outputBeforeFees * treasuryTradingFees)
+    );
+    const liquidityFeesPaid = floorToDevnetScale(
+      outputBeforeFees * liquidityTradingFees
+    );
+    const treasuryFeesPaid = floorToDevnetScale(
+      outputBeforeFees * treasuryTradingFees
+    );
     return {
-      result, liquidityFeesPaid, treasuryFeesPaid
-    }
+      result,
+      liquidityFeesPaid,
+      treasuryFeesPaid,
+    };
   }
-}
+};
 
 export const calculateExecutionThreshold = (
   onassetAmount: number,
   isBuy: boolean,
   pool: Pool,
+  oracle: OracleInfo,
   slippage: number
 ): {
   expectedOnusdAmount: number;
@@ -188,7 +215,7 @@ export const calculateExecutionThreshold = (
   expectedPrice: number;
   thresholdPrice: number;
 } => {
-  const { poolOnusd, poolOnasset } = getPoolLiquidity(pool);
+  const { poolOnusd, poolOnasset } = getPoolLiquidity(pool, oracle);
   return calculateExecutionThresholdFromParams(
     onassetAmount,
     isBuy,

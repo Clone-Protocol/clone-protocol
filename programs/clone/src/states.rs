@@ -81,7 +81,6 @@ pub struct LiquidationConfig {
     // 48
     pub comet_liquidator_fee: RawDecimal,   // 16,
     pub borrow_liquidator_fee: RawDecimal,  // 16,
-    pub max_health_liquidation: RawDecimal, // 16
 }
 
 #[account(zero_copy)]

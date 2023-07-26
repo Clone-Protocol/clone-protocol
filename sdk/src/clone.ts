@@ -24,6 +24,8 @@ const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 export const CLONE_TOKEN_SCALE = 8;
 export const MAX_PRICE_SIZE = 128;
+export const ONUSD_COLLATERAL_INDEX = 0;
+export  const USDC_COLLATERAL_INDEX = 1;
 
 export const toScale = (x: number, scale: number): BN => {
   let stringDigits = [];
@@ -71,7 +73,6 @@ export class CloneClient {
     this.program = new Program<CloneProgram>(IDL, this.programId, provider);
   }
   public async initializeClone(
-    maxHealthLiquidation: number,
     cometLiquidatorFee: number,
     borrowLiquidatorFee: number,
     treasuryAddress: PublicKey,
@@ -85,7 +86,6 @@ export class CloneClient {
 
     await this.program.methods
       .initializeClone(
-        new BN(maxHealthLiquidation),
         new BN(cometLiquidatorFee),
         new BN(borrowLiquidatorFee),
         treasuryAddress

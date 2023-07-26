@@ -100,7 +100,7 @@ export const getILD = (
   comet.positions.slice(0, Number(comet.numPositions)).forEach((position) => {
     const pool = tokenData.pools[Number(position.poolIndex)];
     const poolCommittedOnusd = toNumber(pool.committedOnusdLiquidity);
-    const oracle = tokenData.oracles[pool.assetInfo.oracleInfoIndex];
+    const oracle = tokenData.oracles[Number(pool.assetInfo.oracleInfoIndex)];
 
     const L =
       poolCommittedOnusd > 0
@@ -114,7 +114,7 @@ export const getILD = (
       onAssetILD,
       onusdILD,
       oraclePrice: oraclePrices
-        ? oraclePrices[pool.assetInfo.oracleInfoIndex]
+        ? oraclePrices[Number(pool.assetInfo.oracleInfoIndex)]
         : toNumber(oracle.price),
       poolIndex: Number(position.poolIndex),
     });

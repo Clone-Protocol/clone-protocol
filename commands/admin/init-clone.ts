@@ -17,33 +17,21 @@ import {
 import { Argv } from "yargs";
 
 interface CommandArguments extends Argv {
-  ilHealthScoreCutoff: number;
-  ilLiquidationRewardPct: number;
-  maxHealthLiquidation: number;
-  liquidatorFee: number;
+  cometLiquidatorFee: number;
+  borrowLiquidatorFee: number;
 }
 
 exports.command = "init-clone";
 exports.desc = "Initializes the Clone program with optional parameters";
 exports.builder = (yargs: CommandArguments) => {
   return yargs
-    .option("il-health-score-cutoff", {
-      describe: "The impermanent loss health score cutoff",
+    .option("comet-liquidator-fee", {
+      describe: "The fee percentage a liquidator recieves for comet positions",
       type: "number",
-      default: 20,
+      default: 500,
     })
-    .option("il-liquidation-reward-pct", {
-      describe: "The impermanent loss liquidation reward percentage",
-      type: "number",
-      default: 5,
-    })
-    .option("max-health-liquidation", {
-      describe: "The maximum health of a comet after liquidation",
-      type: "number",
-      default: 20,
-    })
-    .option("liquidator-fee", {
-      describe: "The liquidator fee",
+    .option("borrow-liquidator-fee", {
+      describe: "The fee percentage a liquidator recieves for borrow positions",
       type: "number",
       default: 500,
     });
@@ -59,10 +47,8 @@ exports.handler = async function (yargs: CommandArguments) {
     const treasuryAddress = anchor.web3.Keypair.generate();
 
     await cloneClient.initializeClone(
-      yargs.ilHealthScoreCutoff,
-      yargs.ilLiquidationRewardPct,
-      yargs.maxHealthLiquidation,
-      yargs.liquidatorFee,
+      yargs.cometLiquidatorFee,
+      yargs.borrowLiquidatorFee,
       treasuryAddress.publicKey,
       usdc
     );

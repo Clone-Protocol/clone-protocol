@@ -1,11 +1,16 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient } from "../../../sdk/src/clone";
+import {
+  CloneClient,
+  ONUSD_COLLATERAL_INDEX,
+  USDC_COLLATERAL_INDEX,
+} from "../../../sdk/src/clone";
 import { toNumber } from "../../../sdk/src/decimal";
 import {
   successLog,
   errorLog,
   anchorSetup,
   getCloneProgram,
+  getStatus,
 } from "../../utils";
 import chalk from "chalk";
 import boxen from "boxen";
@@ -29,21 +34,25 @@ exports.handler = async function () {
 
     for (let i = 0; i < Number(tokenData.numCollaterals); i++) {
       const collateral = tokenData.collaterals[i];
+      const hasOracle =
+        i !== ONUSD_COLLATERAL_INDEX && i !== USDC_COLLATERAL_INDEX;
 
-      const stable = Number(collateral.stable);
       let oraclePrice: number;
-      let poolIndex: number;
+      let oracleInfoIndexString: string;
       let priceFeedString: string;
-      if (stable === 0) {
-        poolIndex = Number(collateral.poolIndex);
-        oraclePrice = toNumber(tokenData.pools[poolIndex].assetInfo.price);
-        const priceFeed = tokenData.pools[poolIndex].assetInfo.price;
+      if (hasOracle) {
+        const oracleInfoIndex = collateral.oracleInfoIndex.toNumber();
+        oraclePrice = toNumber(tokenData.oracles[oracleInfoIndex].price);
+        const priceFeed = tokenData.oracles[oracleInfoIndex].pythAddress;
+        oracleInfoIndexString = oracleInfoIndex.toString();
         priceFeedString = priceFeed.toString();
       } else {
+        oracleInfoIndexString = "NA";
         oraclePrice = 1;
-        poolIndex = 255;
         priceFeedString = "NA";
       }
+
+      const status = getStatus(collateral.status);
 
       const title = `Collateral ${i}`;
       const underline = new Array(title.length).fill("-").join("");
@@ -71,10 +80,10 @@ exports.handler = async function () {
         `Vault OnUSD Supply: ${chalk.bold(
           toNumber(collateral.vaultOnusdSupply)
         )}\n` +
-        `Stable: ${chalk.bold(stable)}\n` +
         `Oracle Price: $${chalk.bold(oraclePrice)}\n` +
         `Pyth Address: ${chalk.bold(priceFeedString)}\n` +
-        `Pool Index: ${chalk.bold(poolIndex)}\n`;
+        `Oracle Index: ${chalk.bold(oracleInfoIndexString)}\n` +
+        `Status: ${chalk.bold(status)}\n`;
       console.log(boxen(assetInfo, assetBoxenOptions));
     }
 

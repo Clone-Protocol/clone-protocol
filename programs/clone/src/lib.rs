@@ -20,14 +20,12 @@ pub mod clone {
     #[allow(clippy::too_many_arguments)]
     pub fn initialize_clone(
         ctx: Context<InitializeClone>,
-        max_health_liquidation: u64,
         comet_liquidator_fee: u64,
         borrow_liquidator_fee: u64,
         treasury_address: Pubkey,
     ) -> Result<()> {
         instructions::initialize_clone::execute(
             ctx,
-            max_health_liquidation,
             comet_liquidator_fee,
             borrow_liquidator_fee,
             treasury_address,

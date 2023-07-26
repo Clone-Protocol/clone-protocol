@@ -66,6 +66,7 @@ exports.handler = async function (yargs: CommandArguments) {
 
     const tokenData = await cloneClient.getTokenData();
     const pool = tokenData.pools[yargs.poolIndex];
+    const oracle = tokenData.oracles[pool.assetInfo.oracleInfoIndex.toNumber()];
 
     let executionEst = calculateSwapExecution(
       yargs.amount,
@@ -76,7 +77,7 @@ exports.handler = async function (yargs: CommandArguments) {
       toNumber(pool.committedOnusdLiquidity),
       toNumber(pool.liquidityTradingFee),
       toNumber(pool.treasuryTradingFee),
-      toNumber(pool.assetInfo.price)
+      toNumber(oracle.price)
     );
 
     let onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(

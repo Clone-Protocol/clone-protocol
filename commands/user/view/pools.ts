@@ -7,6 +7,7 @@ import {
   errorLog,
   anchorSetup,
   getCloneProgram,
+  getStatus
 } from "../../utils";
 import chalk from "chalk";
 import boxen from "boxen";
@@ -30,6 +31,8 @@ exports.handler = async function () {
 
     for (let i = 0; i < Number(tokenData.numPools); i++) {
       const pool = tokenData.pools[i];
+      const oracle =
+        tokenData.oracles[pool.assetInfo.oracleInfoIndex.toNumber()];
 
       const title = `onAsset Pool ${i}`;
       const underline = new Array(title.length).fill("-").join("");
@@ -43,7 +46,9 @@ exports.handler = async function () {
         backgroundColor: "#CCCCCC",
       };
 
-      let {poolOnusd, poolOnasset} = getPoolLiquidity(pool);
+      let { poolOnusd, poolOnasset } = getPoolLiquidity(pool, oracle);
+
+      const status = getStatus(pool.status);
 
       const assetInfo =
         `${chalk.bold(title)}\n` +
@@ -54,12 +59,18 @@ exports.handler = async function () {
         `onUSD Pool Balance: ${chalk.bold(poolOnusd)}\n` +
         `onAsset ILD: ${chalk.bold(toNumber(pool.onassetIld))}\n` +
         `onUSD ILD: ${chalk.bold(toNumber(pool.onusdIld))}\n` +
-        `Liquidity Trading Fee: %${chalk.bold(toNumber(pool.liquidityTradingFee))}\n` +
-        `Treasury Trading Fee: %${chalk.bold(toNumber(pool.treasuryTradingFee))}\n` +
-        `Oracle Price: $${chalk.bold(toNumber(pool.assetInfo.price))}\n` +
-        `Pyth Address: ${chalk.bold(pool.assetInfo.pythAddress)}\n` +
-        `Underlying Token Address: ${chalk.bold(pool.assetInfo.onassetMint)}\n` +
-        `Deprecated: ${chalk.bold(pool.deprecated)}\n`;
+        `Liquidity Trading Fee: %${chalk.bold(
+          toNumber(pool.liquidityTradingFee)
+        )}\n` +
+        `Treasury Trading Fee: %${chalk.bold(
+          toNumber(pool.treasuryTradingFee)
+        )}\n` +
+        `Oracle Price: $${chalk.bold(toNumber(oracle.price))}\n` +
+        `Pyth Address: ${chalk.bold(oracle.pythAddress)}\n` +
+        `Underlying Token Address: ${chalk.bold(
+          pool.assetInfo.onassetMint
+        )}\n` +
+        `Status: ${chalk.bold(status)}\n`;
       console.log(boxen(assetInfo, assetBoxenOptions));
     }
 

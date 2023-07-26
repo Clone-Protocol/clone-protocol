@@ -5,7 +5,6 @@ use anchor_lang::prelude::*;
 pub enum CloneParameters {
     CometLiquidationFee { value: RawDecimal },
     BorrowLiquidationFee { value: RawDecimal },
-    MaxHealthLiquidation { value: RawDecimal },
     TreasuryAddress { address: Pubkey },
 }
 
@@ -31,9 +30,6 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
         }
         CloneParameters::BorrowLiquidationFee { value } => {
             ctx.accounts.clone.liquidation_config.borrow_liquidator_fee = value;
-        }
-        CloneParameters::MaxHealthLiquidation { value } => {
-            ctx.accounts.clone.liquidation_config.max_health_liquidation = value;
         }
         CloneParameters::TreasuryAddress { address } => {
             ctx.accounts.clone.treasury_address = address;

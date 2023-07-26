@@ -1,5 +1,5 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient } from "../../../sdk/src/clone";
+import { CloneClient, ONUSD_COLLATERAL_INDEX, USDC_COLLATERAL_INDEX } from "../../../sdk/src/clone";
 import { toNumber } from "../../../sdk/src/decimal";
 import { getHealthScore, getILD } from "../../../sdk/src/healthscore";
 import {
@@ -45,14 +45,13 @@ exports.handler = async function () {
 
       const collateral =
         tokenData.collaterals[collateralPosition.collateralIndex];
+      const hasOracle =
+        i !== ONUSD_COLLATERAL_INDEX && i !== USDC_COLLATERAL_INDEX;
 
-      const stable = Number(collateral.stable);
       let collateralPrice: number;
-      if (stable === 0) {
-        const collateralPoolIndex = Number(collateral.poolIndex);
-
+      if (hasOracle) {
         collateralPrice = toNumber(
-          tokenData.pools[collateralPoolIndex].assetInfo.price
+          tokenData.oracles[collateral.oracleInfoIndex.toNumber()].price
         );
       } else {
         collateralPrice = 1;

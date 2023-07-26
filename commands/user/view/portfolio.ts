@@ -49,13 +49,15 @@ exports.handler = async function () {
 
     for (let i = 0; i < Number(tokenData.numPools); i++) {
       const pool = tokenData.pools[i];
+      const oracle =
+        tokenData.oracles[pool.assetInfo.oracleInfoIndex.toNumber()];
 
       let onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
         setup.provider,
         pool.assetInfo.onassetMint
       );
 
-      let { poolOnusd, poolOnasset } = getPoolLiquidity(pool);
+      let { poolOnusd, poolOnasset } = getPoolLiquidity(pool, oracle);
       const quotePrice = poolOnusd / poolOnasset;
       const onassetBalance = fromDevnetScale(
         Number(onassetTokenAccountInfo.amount)

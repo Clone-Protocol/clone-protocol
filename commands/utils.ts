@@ -181,6 +181,32 @@ export const getOrCreateAssociatedTokenAccount = async (
   return account;
 };
 
+export const getStatus = (num: number) => {
+  let status: string;
+
+  switch (num) {
+    case 0:
+      status = "Active";
+      break;
+    case 1:
+      status = "Frozen";
+      break;
+    case 2:
+      status = "Extraction";
+      break;
+    case 3:
+      status = "Liquidation";
+      break;
+    case 4:
+      status = "Deprecation";
+      break;
+    default:
+      status = "Unknown";
+  }
+
+  return status;
+};
+
 export const convertToRawDecimal = (num: number) => {
   let temp = new Decimal(
     BigInt(toDevnetScale(num).toNumber()),
