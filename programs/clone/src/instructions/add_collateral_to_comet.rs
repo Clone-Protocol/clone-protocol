@@ -47,30 +47,20 @@ pub fn execute(
     collateral_index: u8,
     collateral_amount: u64,
 ) -> Result<()> {
-    let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
 
-    // add collateral amount to vault supply
-    token_data.collaterals[collateral_index as usize].vault_comet_supply += collateral_amount;
-
     // find the comet collateral index
-    let mut comet_collateral_index: Option<usize> = None;
-    for (i, collateral) in comet.collaterals[..comet.num_collaterals as usize]
+    let comet_collateral_info = comet.collaterals[..comet.num_collaterals as usize]
         .iter()
         .enumerate()
-    {
-        if collateral.collateral_index == collateral_index as u64 {
-            comet_collateral_index = Some(i);
-            break;
-        }
-    }
+        .find(|(_, comet_collateral)| comet_collateral.collateral_index == collateral_index as u64);
 
     // check to see if a new collateral must be added to the position
-    if let Some(index) = comet_collateral_index {
+    if let Some((index, _)) = comet_collateral_info {
         comet.collaterals[index].collateral_amount += collateral_amount;
     } else {
         comet.add_collateral(CometCollateral {
-            collateral_amount: collateral_amount,
+            collateral_amount,
             collateral_index: collateral_index.into(),
         });
     }

@@ -1,4 +1,4 @@
-use crate::states::*;
+use crate::{error::*, return_error_if_false, states::*};
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 use std::convert::TryInto;
@@ -7,7 +7,8 @@ pub const CLONE_PROGRAM_SEED: &str = "clone";
 
 #[derive(Accounts)]
 #[instruction(
-    liquidator_fee_bps: u16,
+    comet_liquidator_fee_bps: u16,
+    borrow_liquidator_fee_bps: u16,
     treasury_address: Pubkey,
 )]
 pub struct InitializeClone<'info> {
@@ -23,7 +24,7 @@ pub struct InitializeClone<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         init,
-        mint::decimals = 8,
+        mint::decimals = CLONE_TOKEN_SCALE as u8,
         mint::authority = clone,
         payer = admin
     )]
@@ -54,9 +55,18 @@ pub struct InitializeClone<'info> {
 #[allow(clippy::too_many_arguments)]
 pub fn execute(
     ctx: Context<InitializeClone>,
-    liquidator_fee_bps: u16,
+    comet_liquidator_fee_bps: u16,
+    borrow_liquidator_fee_bps: u16,
     treasury_address: Pubkey,
 ) -> Result<()> {
+    return_error_if_false!(
+        comet_liquidator_fee_bps < 10000,
+        CloneError::InvalidValueRange
+    );
+    return_error_if_false!(
+        borrow_liquidator_fee_bps < 10000,
+        CloneError::InvalidValueRange
+    );
     let mut token_data = ctx.accounts.token_data.load_init()?;
 
     // set manager data
@@ -65,16 +75,14 @@ pub fn execute(
     ctx.accounts.clone.admin = *ctx.accounts.admin.to_account_info().key;
     ctx.accounts.clone.bump = *ctx.bumps.get("clone").unwrap();
     ctx.accounts.clone.treasury_address = treasury_address;
-
-    ctx.accounts.clone.liquidator_fee_bps = liquidator_fee_bps;
+    ctx.accounts.clone.comet_liquidator_fee_bps = comet_liquidator_fee_bps;
+    ctx.accounts.clone.borrow_liquidator_fee_bps = borrow_liquidator_fee_bps;
 
     // add onusd as first collateral type
     token_data.append_collateral(Collateral {
         oracle_info_index: u64::MAX,
         mint: *ctx.accounts.onusd_mint.to_account_info().key,
         vault: *ctx.accounts.onusd_vault.to_account_info().key,
-        vault_borrow_supply: 0,
-        vault_comet_supply: 0,
         collateralization_ratio: 100,
         status: 0,
         scale: CLONE_TOKEN_SCALE.into(),
@@ -85,8 +93,6 @@ pub fn execute(
         oracle_info_index: u64::MAX,
         mint: *ctx.accounts.usdc_mint.to_account_info().key,
         vault: *ctx.accounts.usdc_vault.to_account_info().key,
-        vault_borrow_supply: 0,
-        vault_comet_supply: 0,
         collateralization_ratio: 100,
         status: 0,
         scale: usdc_scale.try_into().unwrap(),

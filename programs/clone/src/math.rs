@@ -1,10 +1,12 @@
+use crate::return_error_if_false;
 use crate::states::*;
 use crate::*;
 
 pub fn check_feed_update(oracle_info: OracleInfo, slot: u64) -> Result<()> {
-    if oracle_info.last_update_slot < slot {
-        return Err(CloneError::OutdatedOracle.into());
-    }
+    return_error_if_false!(
+        oracle_info.last_update_slot == slot,
+        CloneError::OutdatedOracle
+    );
     Ok(())
 }
 
@@ -27,18 +29,30 @@ pub fn calculate_liquidity_proportion_from_onusd(
 }
 
 pub fn check_mint_collateral_sufficient(
-    oracle: OracleInfo,
+    pool_oracle: OracleInfo,
+    collateral_oracle: Option<OracleInfo>,
     asset_amount_borrowed: Decimal,
-    collateral_ratio: Decimal,
+    min_overcollateral_ratio: Decimal,
+    collateralization_ratio: Decimal,
     collateral_amount: Decimal,
 ) -> Result<()> {
     let slot = Clock::get().expect("Failed to get slot.").slot;
-    if check_feed_update(oracle, slot).is_err() {
-        return Err(error!(CloneError::OutdatedOracle));
-    }
-    if (oracle.get_price() * asset_amount_borrowed * collateral_ratio) > collateral_amount {
-        return Err(error!(CloneError::InvalidMintCollateralRatio));
-    }
+    check_feed_update(pool_oracle, slot)?;
+    let collateral_price = if let Some(collateral_oracle) = collateral_oracle {
+        check_feed_update(collateral_oracle, slot)?;
+        collateral_oracle.get_price()
+    } else {
+        Decimal::one()
+    };
+
+    return_error_if_false!(
+        (asset_amount_borrowed == Decimal::ZERO)
+            || (collateral_price * collateral_amount * collateralization_ratio)
+                / (pool_oracle.get_price() * asset_amount_borrowed)
+                >= min_overcollateral_ratio,
+        CloneError::InvalidMintCollateralRatio
+    );
+
     Ok(())
 }
 
@@ -105,9 +119,7 @@ pub fn calculate_health_score(comet: &Comet, token_data: &TokenData) -> Result<H
         let pool = token_data.pools[comet_position.pool_index as usize];
         let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
 
-        if check_feed_update(oracle, slot).is_err() {
-            return Err(error!(CloneError::OutdatedOracle));
-        }
+        check_feed_update(oracle, slot)?;
         let (impermanent_loss_term, position_term) =
             calculate_comet_position_loss(token_data, &comet_position)?;
 

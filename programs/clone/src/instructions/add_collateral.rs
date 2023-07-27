@@ -46,8 +46,6 @@ pub fn execute(
         oracle_info_index: oracle_info_index.into(),
         mint: *ctx.accounts.collateral_mint.to_account_info().key,
         vault: *ctx.accounts.vault.to_account_info().key,
-        vault_borrow_supply: 0,
-        vault_comet_supply: 0,
         collateralization_ratio: collateralization_ratio.into(),
         status: 0,
         scale: scale.into(),

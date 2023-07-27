@@ -237,6 +237,7 @@ describe("clone", async () => {
   it("clone initialized!", async () => {
     await cloneClient.initializeClone(
       liquidatorFee,
+      liquidatorFee,
       treasuryAddress.publicKey,
       mockUSDCMint.publicKey
     );
@@ -432,14 +433,15 @@ describe("clone", async () => {
     assert(oracle.pythAddress.equals(priceFeed), "check price feed");
 
     assert.equal(
-      fromScale(assetInfo.stableCollateralRatio, 2),
+      fromScale(assetInfo.minOvercollateralRatio, 2),
       1.5,
-      "stable collateral ratio incorrect"
+      "overcollateral ratio incorrect"
     );
+
     assert.equal(
-      fromScale(assetInfo.cryptoCollateralRatio, 2),
+      fromScale(assetInfo.maxLiquidationOvercollateralRatio, 2),
       2,
-      "crypto collateral ratio incorrect"
+      "max liquidation overcollateral ratio incorrect"
     );
 
     const first_collateral = tokenData.collaterals[1];
@@ -751,11 +753,6 @@ describe("clone", async () => {
       usdctoDeposit,
       "stored collateral amount"
     );
-    assert.equal(
-      fromCloneScale(pool.assetInfo.totalBorrowedAmount),
-      mintAmount,
-      "check supplied collateral amount!"
-    );
   });
 
   it("full withdraw and close borrow position!", async () => {
@@ -840,12 +837,6 @@ describe("clone", async () => {
       vault.value!.uiAmount,
       startingVaultAmount - collateralWithdrawal,
       "check usdc vault amount"
-    );
-
-    assert.equal(
-      fromCloneScale(pool.assetInfo.totalBorrowedAmount),
-      0,
-      "check supplied collateral amount!"
     );
 
     // Recreate original position.
@@ -1998,13 +1989,15 @@ describe("clone", async () => {
 
     let updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
 
+    let oraclePrice = fromScale(oracle.price, oracle.expo);
+
     // Mint more onasset to pay for liquidation.
     let ix = cloneClient.initializeBorrowPositionInstruction(
       tokenData,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       toCloneScale(19000),
-      toCloneScale(19000 * fromScale(oracle.price, oracle.expo) * 1.51),
+      toCloneScale(19000 * oraclePrice * 1.51),
       poolIndex,
       collateralIndex
     );
@@ -2015,14 +2008,16 @@ describe("clone", async () => {
     userAccount = await cloneClient.getUserAccount();
     userborrowPositions = userAccount.borrows;
     position = userborrowPositions.positions[positionIndex];
-    let numborrowPositions = Number(userborrowPositions.numPositions);
+    let collateralAmount = fromScale(position.collateralAmount, collateral.scale);
 
     let priceThreshold =
-      fromScale(position.collateralAmount, collateral.scale) /
+    collateralAmount /
       (1.5 * fromCloneScale(position.borrowedOnasset));
 
     await setPrice(pythProgram, priceThreshold * 1.1, oracle.pythAddress);
-    
+
+    let initialOvercollateralRatio = collateralAmount / (fromCloneScale(position.borrowedOnasset) *  oraclePrice)
+
     await cloneClient.provider.sendAndConfirm!(
       new Transaction()
         .add(
@@ -2032,17 +2027,22 @@ describe("clone", async () => {
             userAccount,
             cloneClient.provider.publicKey!,
             positionIndex,
+            toCloneScale(19000 * oraclePrice * 0.01),
             collateralTokenAccountInfo.address,
             onassetTokenAccountInfo.address
           )
         )
     );
-    return;
     userAccount = await cloneClient.getUserAccount();
     userborrowPositions = userAccount.borrows;
-    assert.equal(
-      numborrowPositions - 1,
-      Number(userborrowPositions.numPositions),
+    position = userborrowPositions.positions[positionIndex];
+    collateralAmount = fromScale(position.collateralAmount, collateral.scale);
+    
+    let finalOvercollateralRatio = collateralAmount / (fromCloneScale(position.borrowedOnasset) * oraclePrice)
+
+    assert.isAbove(
+      finalOvercollateralRatio,
+      initialOvercollateralRatio,
       "Liquidation did not finish!"
     );
 
@@ -2073,7 +2073,6 @@ describe("clone", async () => {
       })
       .rpc();
   });
-  return;
 
   it("wrap assets and unwrap onassets", async () => {
     const poolIndex = 0;

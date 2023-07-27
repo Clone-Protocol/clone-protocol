@@ -56,13 +56,8 @@ pub fn execute(
     let comet_collateral_index = comet_collateral_index as usize;
 
     let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
-    let comet_collateral = comet.collaterals[comet_collateral_index];
-
     let collateral_to_withdraw =
         collateral_amount.min(comet.collaterals[comet_collateral_index].collateral_amount);
-
-    token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply -=
-        collateral_to_withdraw;
 
     // update the collateral amount
     comet.collaterals[comet_collateral_index].collateral_amount -= collateral_to_withdraw;

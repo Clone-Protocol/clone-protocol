@@ -103,19 +103,13 @@ pub fn execute(
     }
     let collateral_scale = collateral.scale as u32;
 
-    if pool.status != Status::Liquidation as u64 {
-        let starting_health_score = calculate_health_score(&comet, &token_data)?;
+    let is_in_liquidation_mode = pool.status == Status::Liquidation as u64;
+    let starting_health_score = calculate_health_score(&comet, &token_data)?;
 
-        return_error_if_false!(
-            !starting_health_score.is_healthy(),
-            CloneError::NotSubjectToLiquidation
-        );
-    } else {
-        return_error_if_false!(
-            check_feed_update(pool_oracle, Clock::get()?.slot).is_ok(),
-            CloneError::OutdatedOracle
-        );
-    }
+    return_error_if_false!(
+        !starting_health_score.is_healthy() || is_in_liquidation_mode,
+        CloneError::NotSubjectToLiquidation
+    );
 
     let mut burn_amount = if pay_onusd_debt {
         ild_share.onusd_ild_share.min(authorized_amount)
@@ -128,7 +122,7 @@ pub fn execute(
     } else {
         pool_oracle.get_price()
     };
-    let liquidator_fee = to_bps_decimal!(ctx.accounts.clone.liquidator_fee_bps);
+    let liquidator_fee = to_bps_decimal!(ctx.accounts.clone.comet_liquidator_fee_bps);
 
     // calculate reward for liquidator
     let mut collateral_reward = rescale_toward_zero(
@@ -182,10 +176,6 @@ pub fn execute(
             ild_rebate_increase.try_into().unwrap(),
         )?;
 
-        // subtract collateral amount from vault supply
-        token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply -=
-            collateral_reward.mantissa() as u64;
-
         // Transfer collateral to liquidator
         let cpi_accounts = Transfer {
             from: ctx.accounts.vault.to_account_info().clone(),
@@ -220,9 +210,7 @@ pub fn execute(
     };
     ctx.accounts.clone.event_counter += 1;
 
-    if comet.positions[comet_position_index as usize].onusd_ild_rebate == 0
-        && comet.positions[comet_position_index as usize].onasset_ild_rebate == 0
-    {
+    if comet.positions[comet_position_index as usize].is_empty() {
         comet.remove_position(comet_position_index as usize);
     }
 

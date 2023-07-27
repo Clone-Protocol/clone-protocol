@@ -59,10 +59,6 @@ pub fn execute(ctx: Context<MintONUSD>, amount: u64) -> Result<()> {
     let onusd_value = to_clone_decimal!(amount);
     let usdc_decimal = rescale_toward_zero(onusd_value, collateral_scale);
 
-    // For minting OnUSD we increase the borrow supply of ONUSDC
-    token_data.collaterals[USDC_COLLATERAL_INDEX].vault_borrow_supply +=
-        usdc_decimal.mantissa() as u64;
-
     // transfer user collateral to vault
     let cpi_accounts = Transfer {
         from: ctx

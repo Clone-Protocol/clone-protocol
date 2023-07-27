@@ -60,25 +60,32 @@ pub fn execute(
 
     let pool_index = borrows.positions[borrow_index as usize].pool_index;
     let pool = token_data.pools[pool_index as usize];
-    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
-    let collateral =
-        token_data.collaterals[borrows.positions[borrow_index as usize].collateral_index as usize];
-    let borrow_position = borrows.positions[borrow_index as usize];
-
+    let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
+    let collateral_index = borrows.positions[borrow_index as usize].collateral_index as usize;
+    let collateral = token_data.collaterals[collateral_index];
+    let collateral_oracle = if collateral_index == ONUSD_COLLATERAL_INDEX
+        || collateral_index == USDC_COLLATERAL_INDEX
+    {
+        None
+    } else {
+        Some(token_data.oracles[collateral.oracle_info_index as usize])
+    };
+    let min_overcollateral_ratio = to_ratio_decimal!(pool.asset_info.min_overcollateral_ratio);
+    let collateralization_ratio = to_ratio_decimal!(collateral.collateralization_ratio);
+    let borrow_position: BorrowPosition = borrows.positions[borrow_index as usize];
+    let asset_amount_borrowed = to_clone_decimal!(borrow_position.borrowed_onasset);
     let amount_to_withdraw = amount.min(borrows.positions[borrow_index as usize].collateral_amount);
-
-    // subtract collateral amount from vault supply
-    token_data.collaterals[borrows.positions[borrow_index as usize].collateral_index as usize]
-        .vault_borrow_supply -= amount_to_withdraw;
 
     // subtract collateral amount from mint data
     borrows.positions[borrow_index as usize].collateral_amount -= amount_to_withdraw;
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
-        oracle,
-        to_clone_decimal!(borrow_position.borrowed_onasset),
-        to_ratio_decimal!(pool.asset_info.stable_collateral_ratio),
+        pool_oracle,
+        collateral_oracle,
+        asset_amount_borrowed,
+        min_overcollateral_ratio,
+        collateralization_ratio,
         Decimal::new(
             borrows.positions[borrow_index as usize]
                 .collateral_amount
@@ -86,8 +93,7 @@ pub fn execute(
                 .unwrap(),
             collateral.scale.try_into().unwrap(),
         ),
-    )
-    .unwrap();
+    )?;
 
     // send collateral back to user
     let cpi_accounts = Transfer {
@@ -125,7 +131,7 @@ pub fn execute(
     ctx.accounts.clone.event_counter += 1;
 
     // check to see if mint is empty, if so remove
-    if borrows.positions[borrow_index as usize].collateral_amount == 0 {
+    if borrows.positions[borrow_index as usize].is_empty() {
         borrows.remove(borrow_index as usize);
     }
 

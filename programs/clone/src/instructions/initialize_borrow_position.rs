@@ -71,9 +71,19 @@ pub fn execute(
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let pool = token_data.pools[pool_index as usize];
-    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
-    let collateral = token_data.collaterals[collateral_index as usize];
+    let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
+    let collateral_index = collateral_index as usize;
+    let collateral = token_data.collaterals[collateral_index];
     let collateral_scale = collateral.scale;
+    let min_overcollateral_ratio = to_ratio_decimal!(pool.asset_info.min_overcollateral_ratio);
+    let collateralization_ratio = to_ratio_decimal!(collateral.collateralization_ratio);
+    let collateral_oracle = if collateral_index == ONUSD_COLLATERAL_INDEX
+        || collateral_index == USDC_COLLATERAL_INDEX
+    {
+        None
+    } else {
+        Some(token_data.oracles[collateral.oracle_info_index as usize])
+    };
 
     let collateral_amount_value = Decimal::new(
         collateral_amount.try_into().unwrap(),
@@ -81,13 +91,13 @@ pub fn execute(
     );
     let onasset_amount_value = to_clone_decimal!(onasset_amount);
 
-    let collateral_ratio = to_ratio_decimal!(pool.asset_info.stable_collateral_ratio);
-
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
-        oracle,
+        pool_oracle,
+        collateral_oracle,
         onasset_amount_value,
-        collateral_ratio,
+        min_overcollateral_ratio,
+        collateralization_ratio,
         collateral_amount_value,
     )?;
 
@@ -133,12 +143,6 @@ pub fn execute(
         pool_index: pool_index.try_into().unwrap(),
         borrowed_onasset: onasset_amount,
     };
-
-    // Update token data
-    token_data.collaterals[collateral_index as usize].vault_borrow_supply += collateral_amount;
-    token_data.pools[pool_index as usize]
-        .asset_info
-        .total_borrowed_amount += onasset_amount;
 
     // increment number of mint positions
     user_account.borrows.num_positions += 1;

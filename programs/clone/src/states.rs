@@ -67,7 +67,8 @@ pub struct Clone {
     pub admin: Pubkey,
     pub auth: [Pubkey; NUM_AUTH],
     pub bump: u8,
-    pub liquidator_fee_bps: u16,
+    pub comet_liquidator_fee_bps: u16,
+    pub borrow_liquidator_fee_bps: u16,
     pub treasury_address: Pubkey,
     pub event_counter: u64,
 }
@@ -115,14 +116,13 @@ impl TokenData {
 #[zero_copy]
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct AssetInfo {
-    // 120
+    // 80
     pub onasset_mint: Pubkey,
     pub oracle_info_index: u64,
-    pub stable_collateral_ratio: u64,
-    pub crypto_collateral_ratio: u64,
     pub il_health_score_coefficient: u64,
     pub position_health_score_coefficient: u64,
-    pub total_borrowed_amount: u64,
+    pub min_overcollateral_ratio: u64,
+    pub max_liquidation_overcollateral_ratio: u64,
 }
 
 #[zero_copy]
@@ -258,8 +258,6 @@ pub struct Collateral {
     pub oracle_info_index: u64,
     pub mint: Pubkey,
     pub vault: Pubkey,
-    pub vault_borrow_supply: u64,
-    pub vault_comet_supply: u64,
     pub collateralization_ratio: u64,
     pub status: u64,
     pub scale: u64,
@@ -432,6 +430,12 @@ pub struct BorrowPosition {
     pub borrowed_onasset: u64,
     pub collateral_amount: u64,
     pub collateral_index: u64,
+}
+
+impl BorrowPosition {
+    pub fn is_empty(&self) -> bool {
+        self.borrowed_onasset == 0 && self.collateral_amount == 0
+    }
 }
 
 impl Default for BorrowPosition {

@@ -58,7 +58,11 @@ export type Clone = {
       ],
       "args": [
         {
-          "name": "liquidatorFeeBps",
+          "name": "cometLiquidatorFeeBps",
+          "type": "u16"
+        },
+        {
+          "name": "borrowLiquidatorFeeBps",
           "type": "u16"
         },
         {
@@ -325,11 +329,11 @@ export type Clone = {
       ],
       "args": [
         {
-          "name": "stableCollateralRatio",
+          "name": "minOvercollateralRatio",
           "type": "u16"
         },
         {
-          "name": "cryptoCollateralRatio",
+          "name": "maxLiquidationOvercollateralRatio",
           "type": "u16"
         },
         {
@@ -651,7 +655,7 @@ export type Clone = {
       "name": "payBorrowDebt",
       "accounts": [
         {
-          "name": "user",
+          "name": "payer",
           "isMut": false,
           "isSigner": true
         },
@@ -667,7 +671,7 @@ export type Clone = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -687,6 +691,10 @@ export type Clone = {
         }
       ],
       "args": [
+        {
+          "name": "user",
+          "type": "publicKey"
+        },
         {
           "name": "borrowIndex",
           "type": "u8"
@@ -717,7 +725,7 @@ export type Clone = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -1058,6 +1066,10 @@ export type Clone = {
         {
           "name": "borrowIndex",
           "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
         }
       ]
     },
@@ -1542,7 +1554,11 @@ export type Clone = {
             "type": "u8"
           },
           {
-            "name": "liquidatorFeeBps",
+            "name": "cometLiquidatorFeeBps",
+            "type": "u16"
+          },
+          {
+            "name": "borrowLiquidatorFeeBps",
             "type": "u16"
           },
           {
@@ -1666,14 +1682,6 @@ export type Clone = {
             "type": "u64"
           },
           {
-            "name": "stableCollateralRatio",
-            "type": "u64"
-          },
-          {
-            "name": "cryptoCollateralRatio",
-            "type": "u64"
-          },
-          {
             "name": "ilHealthScoreCoefficient",
             "type": "u64"
           },
@@ -1682,7 +1690,11 @@ export type Clone = {
             "type": "u64"
           },
           {
-            "name": "totalBorrowedAmount",
+            "name": "minOvercollateralRatio",
+            "type": "u64"
+          },
+          {
+            "name": "maxLiquidationOvercollateralRatio",
             "type": "u64"
           }
         ]
@@ -1774,14 +1786,6 @@ export type Clone = {
           {
             "name": "vault",
             "type": "publicKey"
-          },
-          {
-            "name": "vaultBorrowSupply",
-            "type": "u64"
-          },
-          {
-            "name": "vaultCometSupply",
-            "type": "u64"
           },
           {
             "name": "collateralizationRatio",
@@ -1947,7 +1951,16 @@ export type Clone = {
             ]
           },
           {
-            "name": "LiquidationFee",
+            "name": "CometLiquidationFee",
+            "fields": [
+              {
+                "name": "value",
+                "type": "u16"
+              }
+            ]
+          },
+          {
+            "name": "BorrowLiquidationFee",
             "fields": [
               {
                 "name": "value",
@@ -2044,7 +2057,7 @@ export type Clone = {
             ]
           },
           {
-            "name": "StableCollateralRatio",
+            "name": "MinOvercollateralRatio",
             "fields": [
               {
                 "name": "value",
@@ -2053,7 +2066,7 @@ export type Clone = {
             ]
           },
           {
-            "name": "CryptoCollateralRatio",
+            "name": "MaxLiquidationOvercollateralRatio",
             "fields": [
               {
                 "name": "value",
@@ -2512,7 +2525,11 @@ export const IDL: Clone = {
       ],
       "args": [
         {
-          "name": "liquidatorFeeBps",
+          "name": "cometLiquidatorFeeBps",
+          "type": "u16"
+        },
+        {
+          "name": "borrowLiquidatorFeeBps",
           "type": "u16"
         },
         {
@@ -2779,11 +2796,11 @@ export const IDL: Clone = {
       ],
       "args": [
         {
-          "name": "stableCollateralRatio",
+          "name": "minOvercollateralRatio",
           "type": "u16"
         },
         {
-          "name": "cryptoCollateralRatio",
+          "name": "maxLiquidationOvercollateralRatio",
           "type": "u16"
         },
         {
@@ -3105,7 +3122,7 @@ export const IDL: Clone = {
       "name": "payBorrowDebt",
       "accounts": [
         {
-          "name": "user",
+          "name": "payer",
           "isMut": false,
           "isSigner": true
         },
@@ -3121,7 +3138,7 @@ export const IDL: Clone = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -3141,6 +3158,10 @@ export const IDL: Clone = {
         }
       ],
       "args": [
+        {
+          "name": "user",
+          "type": "publicKey"
+        },
         {
           "name": "borrowIndex",
           "type": "u8"
@@ -3171,7 +3192,7 @@ export const IDL: Clone = {
         },
         {
           "name": "tokenData",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -3512,6 +3533,10 @@ export const IDL: Clone = {
         {
           "name": "borrowIndex",
           "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
         }
       ]
     },
@@ -3996,7 +4021,11 @@ export const IDL: Clone = {
             "type": "u8"
           },
           {
-            "name": "liquidatorFeeBps",
+            "name": "cometLiquidatorFeeBps",
+            "type": "u16"
+          },
+          {
+            "name": "borrowLiquidatorFeeBps",
             "type": "u16"
           },
           {
@@ -4120,14 +4149,6 @@ export const IDL: Clone = {
             "type": "u64"
           },
           {
-            "name": "stableCollateralRatio",
-            "type": "u64"
-          },
-          {
-            "name": "cryptoCollateralRatio",
-            "type": "u64"
-          },
-          {
             "name": "ilHealthScoreCoefficient",
             "type": "u64"
           },
@@ -4136,7 +4157,11 @@ export const IDL: Clone = {
             "type": "u64"
           },
           {
-            "name": "totalBorrowedAmount",
+            "name": "minOvercollateralRatio",
+            "type": "u64"
+          },
+          {
+            "name": "maxLiquidationOvercollateralRatio",
             "type": "u64"
           }
         ]
@@ -4228,14 +4253,6 @@ export const IDL: Clone = {
           {
             "name": "vault",
             "type": "publicKey"
-          },
-          {
-            "name": "vaultBorrowSupply",
-            "type": "u64"
-          },
-          {
-            "name": "vaultCometSupply",
-            "type": "u64"
           },
           {
             "name": "collateralizationRatio",
@@ -4401,7 +4418,16 @@ export const IDL: Clone = {
             ]
           },
           {
-            "name": "LiquidationFee",
+            "name": "CometLiquidationFee",
+            "fields": [
+              {
+                "name": "value",
+                "type": "u16"
+              }
+            ]
+          },
+          {
+            "name": "BorrowLiquidationFee",
             "fields": [
               {
                 "name": "value",
@@ -4498,7 +4524,7 @@ export const IDL: Clone = {
             ]
           },
           {
-            "name": "StableCollateralRatio",
+            "name": "MinOvercollateralRatio",
             "fields": [
               {
                 "name": "value",
@@ -4507,7 +4533,7 @@ export const IDL: Clone = {
             ]
           },
           {
-            "name": "CryptoCollateralRatio",
+            "name": "MaxLiquidationOvercollateralRatio",
             "fields": [
               {
                 "name": "value",

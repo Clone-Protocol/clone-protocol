@@ -45,12 +45,7 @@ pub struct AddCollateralToBorrow<'info> {
 }
 
 pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u64) -> Result<()> {
-    let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let borrows = &mut ctx.accounts.user_account.load_mut()?.borrows;
-
-    let collateral_index = borrows.positions[borrow_index as usize].collateral_index as usize;
-
-    token_data.collaterals[collateral_index].vault_borrow_supply += amount;
 
     // add collateral amount to mint data
     borrows.positions[borrow_index as usize].collateral_amount += amount;

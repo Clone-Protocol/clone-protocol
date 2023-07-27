@@ -5,8 +5,8 @@ use anchor_spl::token::*;
 
 #[derive(Accounts)]
 #[instruction(
-    stable_collateral_ratio: u16,
-    crypto_collateral_ratio: u16,
+    min_overcollateral_ratio: u16,
+    max_liquidation_overcollateral_ratio: u16,
     liquidity_trading_fee: u16,
     treasury_trading_fee: u16,
     il_health_score_coefficient: u64,
@@ -83,8 +83,8 @@ pub struct InitializePool<'info> {
 
 pub fn execute(
     ctx: Context<InitializePool>,
-    stable_collateral_ratio: u16,
-    crypto_collateral_ratio: u16,
+    min_overcollateral_ratio: u16,
+    max_liquidation_overcollateral_ratio: u16,
     liquidity_trading_fee: u16,
     treasury_trading_fee: u16,
     il_health_score_coefficient: u64,
@@ -95,11 +95,11 @@ pub fn execute(
 
     // append pool to list
     token_data.append_pool(Pool {
-        underlying_asset_token_account: *ctx
+        underlying_asset_token_account: ctx
             .accounts
             .underlying_asset_token_account
             .to_account_info()
-            .key,
+            .key(),
         treasury_trading_fee: treasury_trading_fee.into(),
         liquidity_trading_fee: liquidity_trading_fee.into(),
         asset_info: AssetInfo {
@@ -111,23 +111,13 @@ pub fn execute(
         onasset_ild: 0,
     });
     let index = token_data.num_pools - 1;
-    token_data.pools[index as usize].asset_info.onasset_mint =
-        *ctx.accounts.onasset_mint.to_account_info().key;
-    token_data.pools[index as usize]
-        .asset_info
-        .stable_collateral_ratio = stable_collateral_ratio.into();
-    token_data.pools[index as usize]
-        .asset_info
-        .crypto_collateral_ratio = crypto_collateral_ratio.into();
-    token_data.pools[index as usize]
-        .asset_info
-        .il_health_score_coefficient = il_health_score_coefficient;
-    token_data.pools[index as usize]
-        .asset_info
-        .position_health_score_coefficient = position_health_score_coefficient;
-    token_data.pools[index as usize]
-        .asset_info
-        .oracle_info_index = oracle_info_index.into();
+    let asset_info = &mut token_data.pools[index as usize].asset_info;
+    asset_info.onasset_mint = ctx.accounts.onasset_mint.to_account_info().key();
+    asset_info.oracle_info_index = oracle_info_index.into();
+    asset_info.il_health_score_coefficient = il_health_score_coefficient;
+    asset_info.position_health_score_coefficient = position_health_score_coefficient;
+    asset_info.min_overcollateral_ratio = min_overcollateral_ratio.into();
+    asset_info.max_liquidation_overcollateral_ratio = max_liquidation_overcollateral_ratio.into();
 
     Ok(())
 }

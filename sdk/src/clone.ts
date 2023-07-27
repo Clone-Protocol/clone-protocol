@@ -102,7 +102,8 @@ export class CloneClient {
   /// Admin RPC methods ///
 
   public async initializeClone(
-    liquidatorFee: number,
+    cometLiquidatorFee: number,
+    borrowLiquidatorFee: number,
     treasuryAddress: PublicKey,
     usdcMint: PublicKey
   ) {
@@ -112,7 +113,7 @@ export class CloneClient {
     const tokenData = anchor.web3.Keypair.generate();
 
     await this.program.methods
-      .initializeClone(liquidatorFee, treasuryAddress)
+      .initializeClone(cometLiquidatorFee, borrowLiquidatorFee, treasuryAddress)
       .accounts({
         admin: this.provider.publicKey!,
         clone: this.cloneAddress,
@@ -134,8 +135,8 @@ export class CloneClient {
 
   public async initializePool(
     admin: PublicKey,
-    stableCollateralRatio: number,
-    cryptoCollateralRatio: number,
+    minOvercollateralRatio: number,
+    MaxLiquidationOvercollateralRatio: number,
     liquidityTradingFee: number,
     treasuryTradingFee: number,
     ilHealthScoreCoefficient: number,
@@ -161,8 +162,8 @@ export class CloneClient {
 
     await this.program.methods
       .initializePool(
-        stableCollateralRatio,
-        cryptoCollateralRatio,
+        minOvercollateralRatio,
+        MaxLiquidationOvercollateralRatio,
         liquidityTradingFee,
         treasuryTradingFee,
         toCloneScale(ilHealthScoreCoefficient),
@@ -442,7 +443,7 @@ export class CloneClient {
 
     return createPayBorrowDebtInstruction(
       {
-        user: this.provider.publicKey!,
+        payer: this.provider.publicKey!,
         userAccount: userPubkey,
         clone: this.cloneAddress,
         tokenData: this.clone!.tokenData,
@@ -450,7 +451,7 @@ export class CloneClient {
         userOnassetTokenAccount: userOnassetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
-      { borrowIndex, amount: onassetAmount }
+      { user: this.provider.publicKey!, borrowIndex, amount: onassetAmount }
     );
   }
 
@@ -700,6 +701,7 @@ export class CloneClient {
     liquidateeUserAccount: User,
     liquidateeAddress: PublicKey,
     borrowIndex: number,
+    amount: BN,
     liquidatorCollateralTokenAccount: PublicKey,
     liquidatorOnassetTokenAccount: PublicKey
   ): TransactionInstruction {
@@ -722,7 +724,7 @@ export class CloneClient {
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       {
-        borrowIndex,
+        borrowIndex, amount
       }
     );
   }
