@@ -17,7 +17,7 @@ pub struct InitializeUser<'info> {
         bump,
         payer = payer
     )]
-    pub user_account: Box<Account<'info, User>>,
+    pub user_account: AccountLoader<'info, User>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,

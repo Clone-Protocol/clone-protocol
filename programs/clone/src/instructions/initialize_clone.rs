@@ -1,14 +1,13 @@
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
-use rust_decimal::prelude::*;
+use std::convert::TryInto;
 
 pub const CLONE_PROGRAM_SEED: &str = "clone";
 
 #[derive(Accounts)]
 #[instruction(
-    max_health_liquidation: u64,
-    liquidator_fee: u64,
+    liquidator_fee_bps: u16,
     treasury_address: Pubkey,
 )]
 pub struct InitializeClone<'info> {
@@ -74,13 +73,11 @@ pub fn execute(
         oracle_info_index: u64::MAX,
         mint: *ctx.accounts.onusd_mint.to_account_info().key,
         vault: *ctx.accounts.onusd_vault.to_account_info().key,
-        vault_onusd_supply: RawDecimal::new(0, CLONE_TOKEN_SCALE),
-        vault_mint_supply: RawDecimal::new(0, CLONE_TOKEN_SCALE),
-        vault_comet_supply: RawDecimal::new(0, CLONE_TOKEN_SCALE),
-        collateralization_ratio: RawDecimal::from(Decimal::one()),
-        stable: 1,
-        liquidation_discount: RawDecimal::new(0, CLONE_TOKEN_SCALE),
+        vault_borrow_supply: 0,
+        vault_comet_supply: 0,
+        collateralization_ratio: 100,
         status: 0,
+        scale: CLONE_TOKEN_SCALE.into(),
     });
     // add usdc as second collateral type
     let usdc_scale = ctx.accounts.usdc_mint.decimals;
@@ -88,13 +85,11 @@ pub fn execute(
         oracle_info_index: u64::MAX,
         mint: *ctx.accounts.usdc_mint.to_account_info().key,
         vault: *ctx.accounts.usdc_vault.to_account_info().key,
-        vault_onusd_supply: RawDecimal::new(0, usdc_scale.into()),
-        vault_mint_supply: RawDecimal::new(0, usdc_scale.into()),
-        vault_comet_supply: RawDecimal::new(0, usdc_scale.into()),
-        collateralization_ratio: RawDecimal::from(Decimal::one()),
-        stable: 1,
-        liquidation_discount: RawDecimal::new(0, usdc_scale.into()),
+        vault_borrow_supply: 0,
+        vault_comet_supply: 0,
+        collateralization_ratio: 100,
         status: 0,
+        scale: usdc_scale.try_into().unwrap(),
     });
 
     // set token data

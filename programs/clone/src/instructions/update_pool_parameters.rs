@@ -5,14 +5,13 @@ use anchor_lang::prelude::*;
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum PoolParameters {
     Status { value: u64 },
-    TreasuryTradingFee { value: RawDecimal },
-    LiquidityTradingFee { value: RawDecimal },
+    TreasuryTradingFee { value: u64 },
+    LiquidityTradingFee { value: u64 },
     OracleInfoIndex { value: u64 },
-    StableCollateralRatio { value: RawDecimal },
-    CryptoCollateralRatio { value: RawDecimal },
-    IlHealthScoreCoefficient { value: RawDecimal },
-    PositionHealthScoreCoefficient { value: RawDecimal },
-    LiquidationDiscountRate { value: RawDecimal },
+    StableCollateralRatio { value: u64 },
+    CryptoCollateralRatio { value: u64 },
+    IlHealthScoreCoefficient { value: u64 },
+    PositionHealthScoreCoefficient { value: u64 },
 }
 
 #[derive(Accounts)]
@@ -94,9 +93,6 @@ pub fn execute(
         }
         PoolParameters::PositionHealthScoreCoefficient { value } => {
             pool.asset_info.position_health_score_coefficient = value;
-        }
-        PoolParameters::LiquidationDiscountRate { value } => {
-            pool.asset_info.liquidation_discount_rate = value;
         }
     }
     Ok(())

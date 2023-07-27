@@ -29,6 +29,7 @@ pub mod withdraw_collateral_from_comet;
 pub mod withdraw_liquidity_from_comet;
 pub mod wrap_asset;
 
+#[allow(ambiguous_glob_reexports)]
 pub use add_collateral::*;
 pub use add_collateral_to_borrow::*;
 pub use add_collateral_to_comet::*;

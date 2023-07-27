@@ -21,7 +21,6 @@ export type InitializePoolInstructionArgs = {
   treasuryTradingFee: number
   ilHealthScoreCoefficient: beet.bignum
   positionHealthScoreCoefficient: beet.bignum
-  liquidationDiscountRate: beet.bignum
   oracleInfoIndex: number
 }
 /**
@@ -42,7 +41,6 @@ export const initializePoolStruct = new beet.BeetArgsStruct<
     ['treasuryTradingFee', beet.u16],
     ['ilHealthScoreCoefficient', beet.u64],
     ['positionHealthScoreCoefficient', beet.u64],
-    ['liquidationDiscountRate', beet.u64],
     ['oracleInfoIndex', beet.u8],
   ],
   'InitializePoolInstructionArgs'

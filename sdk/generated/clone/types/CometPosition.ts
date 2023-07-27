@@ -6,12 +6,11 @@
  */
 
 import * as beet from '@metaplex-foundation/beet'
-import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 export type CometPosition = {
   poolIndex: beet.bignum
-  committedOnusdLiquidity: RawDecimal
-  onusdIldRebate: RawDecimal
-  onassetIldRebate: RawDecimal
+  committedOnusdLiquidity: beet.bignum
+  onusdIldRebate: beet.bignum
+  onassetIldRebate: beet.bignum
 }
 
 /**
@@ -21,9 +20,9 @@ export type CometPosition = {
 export const cometPositionBeet = new beet.BeetArgsStruct<CometPosition>(
   [
     ['poolIndex', beet.u64],
-    ['committedOnusdLiquidity', rawDecimalBeet],
-    ['onusdIldRebate', rawDecimalBeet],
-    ['onassetIldRebate', rawDecimalBeet],
+    ['committedOnusdLiquidity', beet.u64],
+    ['onusdIldRebate', beet.i64],
+    ['onassetIldRebate', beet.i64],
   ],
   'CometPosition'
 )

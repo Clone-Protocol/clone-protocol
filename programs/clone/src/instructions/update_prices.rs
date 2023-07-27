@@ -77,7 +77,8 @@ pub fn execute<'info>(
         let expo = (-price.expo).try_into().unwrap();
 
         // update price data
-        token_data.oracles[oracle_index].price = RawDecimal::new(price.price, expo);
+        token_data.oracles[oracle_index].price = price.price;
+        token_data.oracles[oracle_index].expo = expo;
         token_data.oracles[oracle_index].last_update_slot = Clock::get()?.slot;
     }
 

@@ -2,6 +2,7 @@ use crate::error::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
+use crate::to_clone_decimal;
 use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -16,9 +17,9 @@ pub struct PayImpermanentLossDebt<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.as_ref()],
         bump,
-        constraint = user_account.comet.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
+        constraint = user_account.load()?.comet.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: Box<Account<'info, User>>,
+    pub user_account: AccountLoader<'info, User>,
     #[account(
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
@@ -28,7 +29,7 @@ pub struct PayImpermanentLossDebt<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         has_one = clone,
-        constraint = token_data.load()?.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
+        constraint = token_data.load()?.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -38,7 +39,7 @@ pub struct PayImpermanentLossDebt<'info> {
     pub onusd_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
+        address = token_data.load()?.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -64,13 +65,11 @@ pub fn execute(
     pay_onusd_debt: bool,
 ) -> Result<()> {
     return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
-    let authorized_amount = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
+    let authorized_amount = to_clone_decimal!(amount);
     let token_data = ctx.accounts.token_data.load()?;
-    let comet = &mut ctx.accounts.user_account.comet;
+    let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
-    let onusd_ild_rebate = comet_position.onusd_ild_rebate.to_decimal();
-    let onasset_ild_rebate = comet_position.onasset_ild_rebate.to_decimal();
     let ild_share = calculate_ild_share(&comet_position, &token_data);
 
     if (pay_onusd_debt && ild_share.onusd_ild_share <= Decimal::ZERO)
@@ -81,10 +80,8 @@ pub fn execute(
 
     let (cpi_accounts, burn_amount) = if pay_onusd_debt {
         let burn_amount = ild_share.onusd_ild_share.min(authorized_amount);
-        comet.positions[comet_position_index as usize].onusd_ild_rebate = RawDecimal::from(
-            rescale_toward_zero(onusd_ild_rebate + burn_amount, CLONE_TOKEN_SCALE),
-        );
-
+        comet.positions[comet_position_index as usize].onusd_ild_rebate +=
+            burn_amount.mantissa() as i64;
         (
             Burn {
                 mint: ctx.accounts.onusd_mint.to_account_info().clone(),
@@ -99,9 +96,8 @@ pub fn execute(
         )
     } else {
         let burn_amount = ild_share.onasset_ild_share.min(authorized_amount);
-        comet.positions[comet_position_index as usize].onasset_ild_rebate = RawDecimal::from(
-            rescale_toward_zero(onasset_ild_rebate + burn_amount, CLONE_TOKEN_SCALE),
-        );
+        comet.positions[comet_position_index as usize].onasset_ild_rebate +=
+            burn_amount.mantissa() as i64;
         (
             Burn {
                 mint: ctx.accounts.onasset_mint.to_account_info().clone(),

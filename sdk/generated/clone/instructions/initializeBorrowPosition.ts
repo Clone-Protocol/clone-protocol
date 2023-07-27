@@ -43,8 +43,8 @@ export const initializeBorrowPositionStruct = new beet.BeetArgsStruct<
  * Accounts required by the _initializeBorrowPosition_ instruction
  *
  * @property [**signer**] user
- * @property [] userAccount
- * @property [] clone
+ * @property [_writable_] userAccount
+ * @property [_writable_] clone
  * @property [_writable_] tokenData
  * @property [_writable_] vault
  * @property [_writable_] userCollateralTokenAccount
@@ -98,12 +98,12 @@ export function createInitializeBorrowPositionInstruction(
     },
     {
       pubkey: accounts.userAccount,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {
       pubkey: accounts.clone,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {

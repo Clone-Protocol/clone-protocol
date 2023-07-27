@@ -40,7 +40,7 @@ export const payBorrowDebtStruct = new beet.BeetArgsStruct<
  *
  * @property [**signer**] user
  * @property [_writable_] userAccount
- * @property [] clone
+ * @property [_writable_] clone
  * @property [_writable_] tokenData
  * @property [_writable_] userOnassetTokenAccount
  * @property [_writable_] onassetMint
@@ -95,7 +95,7 @@ export function createPayBorrowDebtInstruction(
     },
     {
       pubkey: accounts.clone,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {

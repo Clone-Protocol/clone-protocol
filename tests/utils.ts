@@ -11,7 +11,7 @@ import {
 } from "@solana/spl-token";
 import { sleep } from "../sdk/src/utils";
 import { Decimal, toNumber } from "../sdk/src/decimal";
-import { CLONE_TOKEN_SCALE, CloneClient, toDevnetScale } from "../sdk/src/clone";
+import { CLONE_TOKEN_SCALE, CloneClient, toCloneScale } from "../sdk/src/clone";
 import { JupiterAggMock } from "../sdk/src/idl/jupiter_agg_mock";
 import { AnchorProvider } from "@coral-xyz/anchor";
 import { Comet, TokenData } from "../sdk/src/interfaces";
@@ -75,7 +75,7 @@ export const getOrCreateAssociatedTokenAccount = async (
 };
 
 export const convertToRawDecimal = (num: number) => {
-  let temp = new Decimal(BigInt(toDevnetScale(num).toNumber()), BigInt(CLONE_TOKEN_SCALE));
+  let temp = new Decimal(BigInt(toCloneScale(num).toNumber()), BigInt(CLONE_TOKEN_SCALE));
   return temp.toRawDecimal();
 }
 

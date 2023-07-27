@@ -6,7 +6,7 @@ use anchor_lang::prelude::*;
 pub enum CollateralParameters {
     Status { status: u64 },
     OracleInfoIndex { value: u64 },
-    CollateralizationRatio { value: RawDecimal },
+    CollateralizationRatio { value: u64 },
 }
 
 #[derive(Accounts)]

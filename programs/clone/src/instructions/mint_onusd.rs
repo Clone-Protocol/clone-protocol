@@ -1,14 +1,12 @@
-use crate::error::*;
 use crate::math::*;
 use crate::states::*;
-use crate::CLONE_PROGRAM_SEED;
+use crate::{to_clone_decimal, CLONE_PROGRAM_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
-use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction( amount: u64)]
+#[instruction(amount: u64)]
 pub struct MintONUSD<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -56,39 +54,14 @@ pub fn execute(ctx: Context<MintONUSD>, amount: u64) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let collateral = token_data.collaterals[USDC_COLLATERAL_INDEX];
-    let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
-    let user_usdc_amount = Decimal::new(
-        ctx.accounts
-            .user_collateral_token_account
-            .amount
-            .try_into()
-            .unwrap(),
-        collateral_scale,
-    );
+    let collateral_scale = collateral.scale as u32;
 
-    let onusd_value = rescale_toward_zero(
-        Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE).min(user_usdc_amount),
-        CLONE_TOKEN_SCALE,
-    );
+    let onusd_value = to_clone_decimal!(amount);
+    let usdc_decimal = rescale_toward_zero(onusd_value, collateral_scale);
 
-    // check to see if the collateral used to mint onusd is stable
-    let is_stable: Result<bool> = match collateral.stable {
-        0 => Ok(false),
-        1 => Ok(true),
-        _ => Err(error!(CloneError::InvalidBool)),
-    };
-
-    // if collateral is not stable, we throw an error
-    if !(is_stable.unwrap()) {
-        return Err(CloneError::InvalidCollateralType.into());
-    }
-
-    // add collateral amount to vault supply
-    let current_vault_onusd_supply = collateral.vault_onusd_supply.to_decimal();
-    let new_vault_onusd_supply =
-        rescale_toward_zero(current_vault_onusd_supply + onusd_value, collateral_scale);
-    token_data.collaterals[USDC_COLLATERAL_INDEX].vault_onusd_supply =
-        RawDecimal::from(new_vault_onusd_supply);
+    // For minting OnUSD we increase the borrow supply of ONUSDC
+    token_data.collaterals[USDC_COLLATERAL_INDEX].vault_borrow_supply +=
+        usdc_decimal.mantissa() as u64;
 
     // transfer user collateral to vault
     let cpi_accounts = Transfer {
@@ -103,10 +76,7 @@ pub fn execute(ctx: Context<MintONUSD>, amount: u64) -> Result<()> {
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::transfer(
         CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
-        rescale_toward_zero(onusd_value, collateral_scale)
-            .mantissa()
-            .try_into()
-            .unwrap(),
+        usdc_decimal.mantissa().try_into().unwrap(),
     )?;
 
     // mint onusd to user
@@ -122,7 +92,7 @@ pub fn execute(ctx: Context<MintONUSD>, amount: u64) -> Result<()> {
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::mint_to(
         CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
-        onusd_value.mantissa().try_into().unwrap(),
+        amount,
     )?;
 
     Ok(())

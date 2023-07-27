@@ -56,18 +56,14 @@ pub mod clone {
     pub fn add_collateral(
         ctx: Context<AddCollateral>,
         scale: u8,
-        stable: bool,
         collateralization_ratio: u8,
         oracle_info_index: u8,
-        liquidation_discount: u8,
     ) -> Result<()> {
         instructions::add_collateral::execute(
             ctx,
             scale,
-            stable,
             collateralization_ratio,
             oracle_info_index,
-            liquidation_discount,
         )
     }
 
@@ -79,7 +75,6 @@ pub mod clone {
         treasury_trading_fee: u16,
         il_health_score_coefficient: u64,
         position_health_score_coefficient: u64,
-        liquidation_discount_rate: u64,
         oracle_info_index: u8,
     ) -> Result<()> {
         instructions::initialize_pool::execute(
@@ -90,7 +85,6 @@ pub mod clone {
             treasury_trading_fee,
             il_health_score_coefficient,
             position_health_score_coefficient,
-            liquidation_discount_rate,
             oracle_info_index,
         )
     }

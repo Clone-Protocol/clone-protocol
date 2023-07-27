@@ -15,9 +15,9 @@ pub struct CollectLpRewards<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
-        constraint = user_account.comet.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
+        constraint = user_account.load()?.comet.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: Box<Account<'info, User>>,
+    pub user_account: AccountLoader<'info, User>,
     #[account(
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
@@ -27,7 +27,7 @@ pub struct CollectLpRewards<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         has_one = clone,
-        constraint = token_data.load()?.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
+        constraint = token_data.load()?.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -37,7 +37,7 @@ pub struct CollectLpRewards<'info> {
     pub onusd_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
+        address = token_data.load()?.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -61,21 +61,18 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
         bytemuck::bytes_of(&ctx.accounts.clone.bump),
     ][..]];
     let token_data = ctx.accounts.token_data.load()?;
-    let comet = &mut ctx.accounts.user_account.comet;
+    let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
 
-    let onusd_ild_rebate = comet_position.onusd_ild_rebate.to_decimal();
-    let onasset_ild_rebate = comet_position.onasset_ild_rebate.to_decimal();
     let ild_share = calculate_ild_share(&comet_position, &token_data);
 
     if ild_share.onusd_ild_share < Decimal::ZERO {
         let onusd_reward = ild_share.onusd_ild_share.abs();
 
         // Update rebate amount such that the ild_share is now zero.
-        comet.positions[comet_position_index as usize].onusd_ild_rebate = RawDecimal::from(
-            rescale_toward_zero(onusd_ild_rebate - onusd_reward, CLONE_TOKEN_SCALE),
-        );
+        comet.positions[comet_position_index as usize].onusd_ild_rebate -=
+            onusd_reward.mantissa() as i64;
 
         // Mint reward amount to user
         let cpi_accounts = MintTo {
@@ -101,9 +98,8 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
         let onasset_reward = ild_share.onasset_ild_share.abs();
 
         // Update rebate amount such that the ild_share is now zero.
-        comet.positions[comet_position_index as usize].onasset_ild_rebate = RawDecimal::from(
-            rescale_toward_zero(onasset_ild_rebate - onasset_reward, CLONE_TOKEN_SCALE),
-        );
+        comet.positions[comet_position_index as usize].onasset_ild_rebate -=
+            onasset_reward.mantissa() as i64;
 
         // Mint reward amount to user
         let cpi_accounts = MintTo {

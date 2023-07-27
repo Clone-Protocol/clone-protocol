@@ -38,7 +38,7 @@ export const addLiquidityToCometStruct = new beet.BeetArgsStruct<
  * Accounts required by the _addLiquidityToComet_ instruction
  *
  * @property [**signer**] user
- * @property [] userAccount
+ * @property [_writable_] userAccount
  * @property [_writable_] clone
  * @property [_writable_] tokenData
  * @category Instructions
@@ -84,7 +84,7 @@ export function createAddLiquidityToCometInstruction(
     },
     {
       pubkey: accounts.userAccount,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {

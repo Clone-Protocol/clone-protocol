@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
@@ -30,22 +31,24 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
     let clone = &mut ctx.accounts.clone;
     match params {
         CloneParameters::AddAuth { address } => {
-            if let Some(empty_slot) = clone
-                .auth
-                .iter_mut()
-                .find(|slot| **slot == Pubkey::default())
-            {
-                *empty_slot = address;
-            } else {
-                return Err(error!(CloneError::AuthArrayFull));
-            }
+            let auth_array = clone.auth.clone();
+            let empty_slot = auth_array
+                .iter()
+                .enumerate()
+                .find(|(_, slot)| **slot != Pubkey::default());
+
+            return_error_if_false!(empty_slot.is_some(), CloneError::AuthArrayFull);
+            clone.auth[empty_slot.unwrap().0] = address;
         }
         CloneParameters::RemoveAuth { address } => {
-            if let Some(auth_slot) = clone.auth.iter_mut().find(|slot| **slot == address) {
-                *auth_slot = Pubkey::default();
-            } else {
-                return Err(error!(CloneError::AuthNotFound));
-            }
+            let auth_array = clone.auth.clone();
+            let auth_slot = auth_array
+                .iter()
+                .enumerate()
+                .find(|(_, slot)| **slot == address);
+
+            return_error_if_false!(auth_slot.is_some(), CloneError::AuthNotFound);
+            clone.auth[auth_slot.unwrap().0] = Pubkey::default();
         }
         CloneParameters::LiquidationFee { value } => {
             clone.liquidator_fee_bps = value;

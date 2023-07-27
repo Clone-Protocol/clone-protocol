@@ -6,9 +6,8 @@
  */
 
 import * as beet from '@metaplex-foundation/beet'
-import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 export type CometCollateral = {
-  collateralAmount: RawDecimal
+  collateralAmount: beet.bignum
   collateralIndex: beet.bignum
 }
 
@@ -18,7 +17,7 @@ export type CometCollateral = {
  */
 export const cometCollateralBeet = new beet.BeetArgsStruct<CometCollateral>(
   [
-    ['collateralAmount', rawDecimalBeet],
+    ['collateralAmount', beet.u64],
     ['collateralIndex', beet.u64],
   ],
   'CometCollateral'

@@ -37,7 +37,7 @@ export const liquidateBorrowPositionStruct = new beet.BeetArgsStruct<
  * Accounts required by the _liquidateBorrowPosition_ instruction
  *
  * @property [**signer**] liquidator
- * @property [] clone
+ * @property [_writable_] clone
  * @property [_writable_] tokenData
  * @property [] user
  * @property [_writable_] userAccount
@@ -94,7 +94,7 @@ export function createLiquidateBorrowPositionInstruction(
     },
     {
       pubkey: accounts.clone,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {

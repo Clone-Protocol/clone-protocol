@@ -6,11 +6,10 @@
  */
 
 import * as beet from '@metaplex-foundation/beet'
-import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 export type BorrowPosition = {
   poolIndex: beet.bignum
-  borrowedOnasset: RawDecimal
-  collateralAmount: RawDecimal
+  borrowedOnasset: beet.bignum
+  collateralAmount: beet.bignum
   collateralIndex: beet.bignum
 }
 
@@ -21,8 +20,8 @@ export type BorrowPosition = {
 export const borrowPositionBeet = new beet.BeetArgsStruct<BorrowPosition>(
   [
     ['poolIndex', beet.u64],
-    ['borrowedOnasset', rawDecimalBeet],
-    ['collateralAmount', rawDecimalBeet],
+    ['borrowedOnasset', beet.u64],
+    ['collateralAmount', beet.u64],
     ['collateralIndex', beet.u64],
   ],
   'BorrowPosition'

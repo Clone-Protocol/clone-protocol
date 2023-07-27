@@ -240,19 +240,11 @@ export type Clone = {
           "type": "u8"
         },
         {
-          "name": "stable",
-          "type": "bool"
-        },
-        {
           "name": "collateralizationRatio",
           "type": "u8"
         },
         {
           "name": "oracleInfoIndex",
-          "type": "u8"
-        },
-        {
-          "name": "liquidationDiscount",
           "type": "u8"
         }
       ]
@@ -354,10 +346,6 @@ export type Clone = {
         },
         {
           "name": "positionHealthScoreCoefficient",
-          "type": "u64"
-        },
-        {
-          "name": "liquidationDiscountRate",
           "type": "u64"
         },
         {
@@ -501,12 +489,12 @@ export type Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
           "name": "clone",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -674,7 +662,7 @@ export type Clone = {
         },
         {
           "name": "clone",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -719,12 +707,12 @@ export type Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
           "name": "clone",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -769,7 +757,7 @@ export type Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -869,7 +857,7 @@ export type Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1022,7 +1010,7 @@ export type Clone = {
         },
         {
           "name": "clone",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1665,23 +1653,6 @@ export type Clone = {
       }
     },
     {
-      "name": "RawDecimal",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "data",
-            "type": {
-              "array": [
-                "u8",
-                16
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "AssetInfo",
       "type": {
         "kind": "struct",
@@ -1696,33 +1667,23 @@ export type Clone = {
           },
           {
             "name": "stableCollateralRatio",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "cryptoCollateralRatio",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "ilHealthScoreCoefficient",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "positionHealthScoreCoefficient",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
-            "name": "liquidationDiscountRate",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "name": "totalBorrowedAmount",
+            "type": "u64"
           }
         ]
       }
@@ -1738,9 +1699,11 @@ export type Clone = {
           },
           {
             "name": "price",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "i64"
+          },
+          {
+            "name": "expo",
+            "type": "i64"
           },
           {
             "name": "status",
@@ -1764,45 +1727,23 @@ export type Clone = {
           },
           {
             "name": "committedOnusdLiquidity",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "onusdIld",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "i64"
           },
           {
             "name": "onassetIld",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "i64"
           },
           {
             "name": "treasuryTradingFee",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "liquidityTradingFee",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "totalMintedAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "suppliedMintCollateralAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "assetInfo",
@@ -1835,41 +1776,23 @@ export type Clone = {
             "type": "publicKey"
           },
           {
-            "name": "vaultOnusdSupply",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "vaultMintSupply",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "name": "vaultBorrowSupply",
+            "type": "u64"
           },
           {
             "name": "vaultCometSupply",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "stable",
             "type": "u64"
           },
           {
             "name": "collateralizationRatio",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "liquidationDiscount",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "status",
+            "type": "u64"
+          },
+          {
+            "name": "scale",
             "type": "u64"
           }
         ]
@@ -1924,21 +1847,15 @@ export type Clone = {
           },
           {
             "name": "committedOnusdLiquidity",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "onusdIldRebate",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "i64"
           },
           {
             "name": "onassetIldRebate",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "i64"
           }
         ]
       }
@@ -1950,9 +1867,7 @@ export type Clone = {
         "fields": [
           {
             "name": "collateralAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "collateralIndex",
@@ -1995,15 +1910,11 @@ export type Clone = {
           },
           {
             "name": "borrowedOnasset",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "collateralAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "collateralIndex",
@@ -2084,9 +1995,7 @@ export type Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           }
@@ -2112,9 +2021,7 @@ export type Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           },
@@ -2123,9 +2030,7 @@ export type Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           },
@@ -2143,9 +2048,7 @@ export type Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           },
@@ -2154,9 +2057,7 @@ export type Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           },
@@ -2165,9 +2066,7 @@ export type Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           },
@@ -2176,20 +2075,7 @@ export type Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
-              }
-            ]
-          },
-          {
-            "name": "LiquidationDiscountRate",
-            "fields": [
-              {
-                "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           }
@@ -2808,19 +2694,11 @@ export const IDL: Clone = {
           "type": "u8"
         },
         {
-          "name": "stable",
-          "type": "bool"
-        },
-        {
           "name": "collateralizationRatio",
           "type": "u8"
         },
         {
           "name": "oracleInfoIndex",
-          "type": "u8"
-        },
-        {
-          "name": "liquidationDiscount",
           "type": "u8"
         }
       ]
@@ -2922,10 +2800,6 @@ export const IDL: Clone = {
         },
         {
           "name": "positionHealthScoreCoefficient",
-          "type": "u64"
-        },
-        {
-          "name": "liquidationDiscountRate",
           "type": "u64"
         },
         {
@@ -3069,12 +2943,12 @@ export const IDL: Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
           "name": "clone",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -3242,7 +3116,7 @@ export const IDL: Clone = {
         },
         {
           "name": "clone",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -3287,12 +3161,12 @@ export const IDL: Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
           "name": "clone",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -3337,7 +3211,7 @@ export const IDL: Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -3437,7 +3311,7 @@ export const IDL: Clone = {
         },
         {
           "name": "userAccount",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -3590,7 +3464,7 @@ export const IDL: Clone = {
         },
         {
           "name": "clone",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -4233,23 +4107,6 @@ export const IDL: Clone = {
       }
     },
     {
-      "name": "RawDecimal",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "data",
-            "type": {
-              "array": [
-                "u8",
-                16
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "AssetInfo",
       "type": {
         "kind": "struct",
@@ -4264,33 +4121,23 @@ export const IDL: Clone = {
           },
           {
             "name": "stableCollateralRatio",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "cryptoCollateralRatio",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "ilHealthScoreCoefficient",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "positionHealthScoreCoefficient",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
-            "name": "liquidationDiscountRate",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "name": "totalBorrowedAmount",
+            "type": "u64"
           }
         ]
       }
@@ -4306,9 +4153,11 @@ export const IDL: Clone = {
           },
           {
             "name": "price",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "i64"
+          },
+          {
+            "name": "expo",
+            "type": "i64"
           },
           {
             "name": "status",
@@ -4332,45 +4181,23 @@ export const IDL: Clone = {
           },
           {
             "name": "committedOnusdLiquidity",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "onusdIld",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "i64"
           },
           {
             "name": "onassetIld",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "i64"
           },
           {
             "name": "treasuryTradingFee",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "liquidityTradingFee",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "totalMintedAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "suppliedMintCollateralAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "assetInfo",
@@ -4403,41 +4230,23 @@ export const IDL: Clone = {
             "type": "publicKey"
           },
           {
-            "name": "vaultOnusdSupply",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "vaultMintSupply",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "name": "vaultBorrowSupply",
+            "type": "u64"
           },
           {
             "name": "vaultCometSupply",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "stable",
             "type": "u64"
           },
           {
             "name": "collateralizationRatio",
-            "type": {
-              "defined": "RawDecimal"
-            }
-          },
-          {
-            "name": "liquidationDiscount",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "status",
+            "type": "u64"
+          },
+          {
+            "name": "scale",
             "type": "u64"
           }
         ]
@@ -4492,21 +4301,15 @@ export const IDL: Clone = {
           },
           {
             "name": "committedOnusdLiquidity",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "onusdIldRebate",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "i64"
           },
           {
             "name": "onassetIldRebate",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "i64"
           }
         ]
       }
@@ -4518,9 +4321,7 @@ export const IDL: Clone = {
         "fields": [
           {
             "name": "collateralAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "collateralIndex",
@@ -4563,15 +4364,11 @@ export const IDL: Clone = {
           },
           {
             "name": "borrowedOnasset",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "collateralAmount",
-            "type": {
-              "defined": "RawDecimal"
-            }
+            "type": "u64"
           },
           {
             "name": "collateralIndex",
@@ -4652,9 +4449,7 @@ export const IDL: Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           }
@@ -4680,9 +4475,7 @@ export const IDL: Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           },
@@ -4691,9 +4484,7 @@ export const IDL: Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           },
@@ -4711,9 +4502,7 @@ export const IDL: Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           },
@@ -4722,9 +4511,7 @@ export const IDL: Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           },
@@ -4733,9 +4520,7 @@ export const IDL: Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           },
@@ -4744,20 +4529,7 @@ export const IDL: Clone = {
             "fields": [
               {
                 "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
-              }
-            ]
-          },
-          {
-            "name": "LiquidationDiscountRate",
-            "fields": [
-              {
-                "name": "value",
-                "type": {
-                  "defined": "RawDecimal"
-                }
+                "type": "u64"
               }
             ]
           }

@@ -1,13 +1,10 @@
-use crate::error::CloneError;
-use crate::return_error_if_false;
 use crate::states::*;
 use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
-use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(scale: u8, stable: bool, collateralization_ratio: u8, oracle_info_index: u8)]
+#[instruction(scale: u8, collateralization_ratio: u8, oracle_info_index: u8)]
 pub struct AddCollateral<'info> {
     #[account(mut, address = clone.admin)]
     pub admin: Signer<'info>,
@@ -39,20 +36,9 @@ pub struct AddCollateral<'info> {
 pub fn execute(
     ctx: Context<AddCollateral>,
     scale: u8,
-    stable: bool,
     collateralization_ratio: u8,
     oracle_info_index: u8,
-    liquidation_discount: u8,
 ) -> Result<()> {
-    return_error_if_false!(
-        if !stable {
-            collateralization_ratio > 0
-        } else {
-            true
-        },
-        CloneError::NonZeroCollateralizationRatioRequired
-    );
-
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     // append collateral to list
@@ -60,15 +46,11 @@ pub fn execute(
         oracle_info_index: oracle_info_index.into(),
         mint: *ctx.accounts.collateral_mint.to_account_info().key,
         vault: *ctx.accounts.vault.to_account_info().key,
-        vault_onusd_supply: RawDecimal::new(0, scale.into()),
-        vault_mint_supply: RawDecimal::new(0, scale.into()),
-        vault_comet_supply: RawDecimal::new(0, scale.into()),
-        stable: stable as u64,
-        collateralization_ratio: RawDecimal::from_percent(
-            collateralization_ratio.try_into().unwrap(),
-        ),
-        liquidation_discount: RawDecimal::from_percent(liquidation_discount.try_into().unwrap()),
+        vault_borrow_supply: 0,
+        vault_comet_supply: 0,
+        collateralization_ratio: collateralization_ratio.into(),
         status: 0,
+        scale: scale.into(),
     });
 
     Ok(())

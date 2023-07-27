@@ -1,22 +1,19 @@
 use crate::error::CloneError;
-//use crate::instructions::AddCollateralToComet;
-use crate::math::*;
 use crate::states::*;
 use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
-use rust_decimal::prelude::*;
-use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(collateral_index: u8, collateral_amount: u64)]
 pub struct AddCollateralToComet<'info> {
     pub user: Signer<'info>,
     #[account(
+        mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
     )]
-    pub user_account: Box<Account<'info, User>>,
+    pub user_account: AccountLoader<'info, User>,
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
@@ -44,24 +41,6 @@ pub struct AddCollateralToComet<'info> {
     pub user_collateral_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
-impl<'a, 'b, 'c, 'info> From<&AddCollateralToComet<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
-{
-    fn from(
-        accounts: &AddCollateralToComet<'info>,
-    ) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
-            from: accounts
-                .user_collateral_token_account
-                .to_account_info()
-                .clone(),
-            to: accounts.vault.to_account_info().clone(),
-            authority: accounts.user.to_account_info().clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
-    }
-}
 
 pub fn execute(
     ctx: Context<AddCollateralToComet>,
@@ -69,32 +48,10 @@ pub fn execute(
     collateral_amount: u64,
 ) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let comet = &mut ctx.accounts.user_account.comet;
+    let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
 
-    let collateral = token_data.collaterals[collateral_index as usize];
-    let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
-
-    let user_collateral_in_account = Decimal::new(
-        ctx.accounts
-            .user_collateral_token_account
-            .amount
-            .try_into()
-            .unwrap(),
-        collateral_scale,
-    );
-
-    let added_collateral_value =
-        Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale)
-            .min(user_collateral_in_account);
-
-    let current_vault_comet_supply = collateral.vault_comet_supply.to_decimal();
-    let new_vault_comet_supply = rescale_toward_zero(
-        current_vault_comet_supply + added_collateral_value,
-        current_vault_comet_supply.scale(),
-    );
     // add collateral amount to vault supply
-    token_data.collaterals[collateral_index as usize].vault_comet_supply =
-        RawDecimal::from(new_vault_comet_supply);
+    token_data.collaterals[collateral_index as usize].vault_comet_supply += collateral_amount;
 
     // find the comet collateral index
     let mut comet_collateral_index: Option<usize> = None;
@@ -110,19 +67,29 @@ pub fn execute(
 
     // check to see if a new collateral must be added to the position
     if let Some(index) = comet_collateral_index {
-        comet.collaterals[index].collateral_amount = RawDecimal::from(
-            comet.collaterals[index].collateral_amount.to_decimal() + added_collateral_value,
-        );
+        comet.collaterals[index].collateral_amount += collateral_amount;
     } else {
         comet.add_collateral(CometCollateral {
-            collateral_amount: RawDecimal::from(added_collateral_value),
+            collateral_amount: collateral_amount,
             collateral_index: collateral_index.into(),
         });
     }
 
     // send collateral from user to vault
-    let cpi_ctx = CpiContext::from(&*ctx.accounts);
-    token::transfer(cpi_ctx, collateral_amount)?;
+    let cpi_accounts = Transfer {
+        from: ctx
+            .accounts
+            .user_collateral_token_account
+            .to_account_info()
+            .clone(),
+        to: ctx.accounts.vault.to_account_info().clone(),
+        authority: ctx.accounts.user.to_account_info().clone(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+    token::transfer(
+        CpiContext::new(cpi_program, cpi_accounts),
+        collateral_amount,
+    )?;
 
     Ok(())
 }

@@ -1,9 +1,9 @@
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
-use crate::return_error_if_false;
 use crate::states::*;
-use crate::CLONE_PROGRAM_SEED;
+use crate::to_bps_decimal;
+use crate::{return_error_if_false, to_clone_decimal, CLONE_PROGRAM_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use clone_staking::{
@@ -116,10 +116,8 @@ pub fn execute(
         if let Some((lp_fees, treasury_fees)) =
             clone_staking.get_tier_fees(user_staking_account.staked_tokens)
         {
-            override_liquidity_trading_fee =
-                Some(Decimal::new(lp_fees.try_into().unwrap(), BPS_SCALE));
-            override_treasury_trading_fee =
-                Some(Decimal::new(treasury_fees.try_into().unwrap(), BPS_SCALE));
+            override_liquidity_trading_fee = Some(to_bps_decimal!(lp_fees));
+            override_treasury_trading_fee = Some(to_bps_decimal!(treasury_fees));
         }
     }
 
@@ -128,13 +126,10 @@ pub fn execute(
         CloneError::OutdatedOracle
     );
 
-    return_error_if_false!(
-        pool.committed_onusd_liquidity.to_decimal() > Decimal::ZERO,
-        CloneError::PoolEmpty
-    );
+    return_error_if_false!(pool.committed_onusd_liquidity > 0, CloneError::PoolEmpty);
 
-    let user_specified_quantity = Decimal::new(quantity.try_into().unwrap(), CLONE_TOKEN_SCALE);
-    let oracle_price = oracle.price.to_decimal();
+    let user_specified_quantity = to_clone_decimal!(quantity);
+    let oracle_price = oracle.get_price();
     let swap_summary = pool.calculate_swap(
         oracle_price,
         user_specified_quantity,
@@ -152,7 +147,7 @@ pub fn execute(
         CloneError::InvalidTokenAmount
     );
 
-    let threshold = Decimal::new(result_threshold.try_into().unwrap(), CLONE_TOKEN_SCALE);
+    let threshold = to_clone_decimal!(result_threshold);
 
     let (
         input_is_onusd,
@@ -326,19 +321,8 @@ pub fn execute(
             .unwrap(),
     )?;
 
-    let onasset_ild = rescale_toward_zero(
-        token_data.pools[pool_index as usize]
-            .onasset_ild
-            .to_decimal()
-            + onasset_ild_delta,
-        CLONE_TOKEN_SCALE,
-    );
-    token_data.pools[pool_index as usize].onasset_ild = RawDecimal::from(onasset_ild);
-    let onusd_ild = rescale_toward_zero(
-        token_data.pools[pool_index as usize].onusd_ild.to_decimal() + onusd_ild_delta,
-        CLONE_TOKEN_SCALE,
-    );
-    token_data.pools[pool_index as usize].onusd_ild = RawDecimal::from(onusd_ild);
+    token_data.pools[pool_index as usize].onasset_ild += onasset_ild_delta.mantissa() as i64;
+    token_data.pools[pool_index as usize].onusd_ild += onusd_ild_delta.mantissa() as i64;
 
     emit!(SwapEvent {
         event_id: ctx.accounts.clone.event_counter,
@@ -365,14 +349,9 @@ pub fn execute(
     emit!(PoolState {
         event_id: ctx.accounts.clone.event_counter,
         pool_index,
-        onasset_ild: onasset_ild.mantissa().try_into().unwrap(),
-        onusd_ild: onusd_ild.mantissa().try_into().unwrap(),
-        committed_onusd_liquidity: pool
-            .committed_onusd_liquidity
-            .to_decimal()
-            .mantissa()
-            .try_into()
-            .unwrap(),
+        onasset_ild: pool.onasset_ild,
+        onusd_ild: pool.onusd_ild,
+        committed_onusd_liquidity: pool.committed_onusd_liquidity,
         oracle_price: oracle_price.mantissa().try_into().unwrap()
     });
     ctx.accounts.clone.event_counter += 1;

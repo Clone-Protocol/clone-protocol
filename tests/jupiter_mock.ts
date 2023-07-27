@@ -18,7 +18,7 @@ import {
   Transaction,
   Keypair,
 } from "@solana/web3.js";
-import { toDevnetScale } from "../sdk/src/clone";
+import { toCloneScale } from "../sdk/src/clone";
 import { assert } from "chai";
 import { Decimal } from "../sdk/src/decimal";
 

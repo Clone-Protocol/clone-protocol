@@ -11,7 +11,7 @@ pub struct CloseUserAccount<'info> {
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
     )]
-    pub user_account: Box<Account<'info, User>>,
+    pub user_account: AccountLoader<'info, User>,
     /// CHECK: Should be a system owned address.
     #[account(mut)]
     pub destination: AccountInfo<'info>,
@@ -20,7 +20,7 @@ pub struct CloseUserAccount<'info> {
 
 pub fn execute(ctx: Context<CloseUserAccount>) -> Result<()> {
     // remove single pool comet
-    let user_account = ctx.accounts.user_account.clone();
+    let user_account = ctx.accounts.user_account.load()?.clone();
     assert!(user_account.comet.is_empty() && user_account.borrows.is_empty());
 
     ctx.accounts

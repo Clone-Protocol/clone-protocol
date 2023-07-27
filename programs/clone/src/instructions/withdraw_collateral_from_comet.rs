@@ -5,8 +5,6 @@ use crate::states::*;
 use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
-use rust_decimal::prelude::*;
-use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(comet_collateral_index: u8, collateral_amount: u64)]
@@ -16,9 +14,9 @@ pub struct WithdrawCollateralFromComet<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
-        constraint = (comet_collateral_index as u64) < user_account.comet.num_collaterals @ CloneError::InvalidInputPositionIndex
+        constraint = (comet_collateral_index as u64) < user_account.load()?.comet.num_collaterals @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: Box<Account<'info, User>>,
+    pub user_account: AccountLoader<'info, User>,
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
@@ -32,7 +30,7 @@ pub struct WithdrawCollateralFromComet<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        address = token_data.load()?.collaterals[user_account.comet.collaterals[comet_collateral_index as usize].collateral_index as usize].vault,
+        address = token_data.load()?.collaterals[user_account.load()?.comet.collaterals[comet_collateral_index as usize].collateral_index as usize].vault,
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -57,36 +55,20 @@ pub fn execute(
 
     let comet_collateral_index = comet_collateral_index as usize;
 
-    let comet = &mut ctx.accounts.user_account.comet;
+    let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
     let comet_collateral = comet.collaterals[comet_collateral_index];
-    let collateral = token_data.collaterals[comet_collateral.collateral_index as usize];
 
-    let collateral_scale = collateral.vault_comet_supply.to_decimal().scale();
+    let collateral_to_withdraw =
+        collateral_amount.min(comet.collaterals[comet_collateral_index].collateral_amount);
 
-    let subtracted_collateral_value = rescale_toward_zero(
-        Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale)
-            .min(comet_collateral.collateral_amount.to_decimal()),
-        collateral_scale,
-    );
-    // subtract collateral amount from vault supply
-    let vault_comet_supply = rescale_toward_zero(
-        collateral.vault_comet_supply.to_decimal() - subtracted_collateral_value,
-        collateral_scale,
-    );
-    token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply =
-        RawDecimal::from(vault_comet_supply);
+    token_data.collaterals[comet_collateral.collateral_index as usize].vault_comet_supply -=
+        collateral_to_withdraw;
 
     // update the collateral amount
-    let new_collateral_amount = rescale_toward_zero(
-        comet_collateral.collateral_amount.to_decimal() - subtracted_collateral_value,
-        collateral_scale,
-    );
-
-    comet.collaterals[comet_collateral_index].collateral_amount =
-        RawDecimal::from(new_collateral_amount);
+    comet.collaterals[comet_collateral_index].collateral_amount -= collateral_to_withdraw;
 
     // remove collateral if empty
-    if new_collateral_amount.is_zero() {
+    if comet.collaterals[comet_collateral_index].collateral_amount == 0 {
         comet.remove_collateral(comet_collateral_index);
     }
 
@@ -103,7 +85,7 @@ pub fn execute(
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::transfer(
         CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
-        subtracted_collateral_value.mantissa().try_into().unwrap(),
+        collateral_to_withdraw,
     )?;
     let health_score = calculate_health_score(&comet, token_data)?;
 

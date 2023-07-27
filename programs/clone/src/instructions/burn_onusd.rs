@@ -1,6 +1,6 @@
 use crate::math::*;
 use crate::states::*;
-use crate::CLONE_PROGRAM_SEED;
+use crate::{to_clone_decimal, CLONE_PROGRAM_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
 use rust_decimal::prelude::*;
@@ -55,27 +55,12 @@ pub fn execute(ctx: Context<BurnONUSD>, amount: u64) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
     let collateral = token_data.collaterals[USDC_COLLATERAL_INDEX];
 
-    let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
+    let collateral_scale = collateral.scale;
 
-    let user_onusd_amount = Decimal::new(
-        ctx.accounts
-            .user_onusd_token_account
-            .amount
-            .try_into()
-            .unwrap(),
-        CLONE_TOKEN_SCALE,
-    );
+    let user_onusd_amount = to_clone_decimal!(ctx.accounts.user_onusd_token_account.amount);
     let onusd_value =
         Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE).min(user_onusd_amount);
-    let collateral_value = rescale_toward_zero(onusd_value, collateral_scale);
-    // subtract collateral amount to vault supply
-    let current_vault_onusd_supply = collateral.vault_onusd_supply.to_decimal();
-    let new_vault_onusd_supply = rescale_toward_zero(
-        current_vault_onusd_supply - onusd_value,
-        current_vault_onusd_supply.scale(),
-    );
-    token_data.collaterals[USDC_COLLATERAL_INDEX].vault_onusd_supply =
-        RawDecimal::from(new_vault_onusd_supply);
+    let collateral_value = rescale_toward_zero(onusd_value, collateral_scale.try_into().unwrap());
 
     // transfer collateral from vault to user
     let cpi_accounts = Transfer {
