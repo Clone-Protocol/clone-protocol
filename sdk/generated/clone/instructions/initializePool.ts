@@ -15,8 +15,8 @@ import * as web3 from '@solana/web3.js'
  * @category generated
  */
 export type InitializePoolInstructionArgs = {
-  stableCollateralRatio: number
-  cryptoCollateralRatio: number
+  minOvercollateralRatio: number
+  maxLiquidationOvercollateralRatio: number
   liquidityTradingFee: number
   treasuryTradingFee: number
   ilHealthScoreCoefficient: beet.bignum
@@ -35,8 +35,8 @@ export const initializePoolStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['stableCollateralRatio', beet.u16],
-    ['cryptoCollateralRatio', beet.u16],
+    ['minOvercollateralRatio', beet.u16],
+    ['maxLiquidationOvercollateralRatio', beet.u16],
     ['liquidityTradingFee', beet.u16],
     ['treasuryTradingFee', beet.u16],
     ['ilHealthScoreCoefficient', beet.u64],

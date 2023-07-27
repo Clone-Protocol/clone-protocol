@@ -20,8 +20,8 @@ export type PoolParametersRecord = {
   TreasuryTradingFee: { value: beet.bignum }
   LiquidityTradingFee: { value: beet.bignum }
   OracleInfoIndex: { value: beet.bignum }
-  StableCollateralRatio: { value: beet.bignum }
-  CryptoCollateralRatio: { value: beet.bignum }
+  MinOvercollateralRatio: { value: beet.bignum }
+  MaxLiquidationOvercollateralRatio: { value: beet.bignum }
   IlHealthScoreCoefficient: { value: beet.bignum }
   PositionHealthScoreCoefficient: { value: beet.bignum }
 }
@@ -54,14 +54,14 @@ export const isPoolParametersOracleInfoIndex = (
   x: PoolParameters
 ): x is PoolParameters & { __kind: 'OracleInfoIndex' } =>
   x.__kind === 'OracleInfoIndex'
-export const isPoolParametersStableCollateralRatio = (
+export const isPoolParametersMinOvercollateralRatio = (
   x: PoolParameters
-): x is PoolParameters & { __kind: 'StableCollateralRatio' } =>
-  x.__kind === 'StableCollateralRatio'
-export const isPoolParametersCryptoCollateralRatio = (
+): x is PoolParameters & { __kind: 'MinOvercollateralRatio' } =>
+  x.__kind === 'MinOvercollateralRatio'
+export const isPoolParametersMaxLiquidationOvercollateralRatio = (
   x: PoolParameters
-): x is PoolParameters & { __kind: 'CryptoCollateralRatio' } =>
-  x.__kind === 'CryptoCollateralRatio'
+): x is PoolParameters & { __kind: 'MaxLiquidationOvercollateralRatio' } =>
+  x.__kind === 'MaxLiquidationOvercollateralRatio'
 export const isPoolParametersIlHealthScoreCoefficient = (
   x: PoolParameters
 ): x is PoolParameters & { __kind: 'IlHealthScoreCoefficient' } =>
@@ -109,18 +109,20 @@ export const poolParametersBeet = beet.dataEnum<PoolParametersRecord>([
   ],
 
   [
-    'StableCollateralRatio',
-    new beet.BeetArgsStruct<PoolParametersRecord['StableCollateralRatio']>(
+    'MinOvercollateralRatio',
+    new beet.BeetArgsStruct<PoolParametersRecord['MinOvercollateralRatio']>(
       [['value', beet.u64]],
-      'PoolParametersRecord["StableCollateralRatio"]'
+      'PoolParametersRecord["MinOvercollateralRatio"]'
     ),
   ],
 
   [
-    'CryptoCollateralRatio',
-    new beet.BeetArgsStruct<PoolParametersRecord['CryptoCollateralRatio']>(
+    'MaxLiquidationOvercollateralRatio',
+    new beet.BeetArgsStruct<
+      PoolParametersRecord['MaxLiquidationOvercollateralRatio']
+    >(
       [['value', beet.u64]],
-      'PoolParametersRecord["CryptoCollateralRatio"]'
+      'PoolParametersRecord["MaxLiquidationOvercollateralRatio"]'
     ),
   ],
 

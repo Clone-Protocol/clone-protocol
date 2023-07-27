@@ -6,8 +6,9 @@
  */
 
 import * as splToken from '@solana/spl-token'
-import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
+import * as beet from '@metaplex-foundation/beet'
+import * as beetSolana from '@metaplex-foundation/beet-solana'
 
 /**
  * @category Instructions
@@ -15,6 +16,7 @@ import * as web3 from '@solana/web3.js'
  * @category generated
  */
 export type PayBorrowDebtInstructionArgs = {
+  user: web3.PublicKey
   borrowIndex: number
   amount: beet.bignum
 }
@@ -30,6 +32,7 @@ export const payBorrowDebtStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
+    ['user', beetSolana.publicKey],
     ['borrowIndex', beet.u8],
     ['amount', beet.u64],
   ],
@@ -38,10 +41,10 @@ export const payBorrowDebtStruct = new beet.BeetArgsStruct<
 /**
  * Accounts required by the _payBorrowDebt_ instruction
  *
- * @property [**signer**] user
+ * @property [**signer**] payer
  * @property [_writable_] userAccount
  * @property [_writable_] clone
- * @property [_writable_] tokenData
+ * @property [] tokenData
  * @property [_writable_] userOnassetTokenAccount
  * @property [_writable_] onassetMint
  * @category Instructions
@@ -49,7 +52,7 @@ export const payBorrowDebtStruct = new beet.BeetArgsStruct<
  * @category generated
  */
 export type PayBorrowDebtInstructionAccounts = {
-  user: web3.PublicKey
+  payer: web3.PublicKey
   userAccount: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
@@ -84,7 +87,7 @@ export function createPayBorrowDebtInstruction(
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.user,
+      pubkey: accounts.payer,
       isWritable: false,
       isSigner: true,
     },
@@ -100,7 +103,7 @@ export function createPayBorrowDebtInstruction(
     },
     {
       pubkey: accounts.tokenData,
-      isWritable: true,
+      isWritable: false,
       isSigner: false,
     },
     {

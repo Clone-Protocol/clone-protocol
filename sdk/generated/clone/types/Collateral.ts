@@ -12,8 +12,6 @@ export type Collateral = {
   oracleInfoIndex: beet.bignum
   mint: web3.PublicKey
   vault: web3.PublicKey
-  vaultBorrowSupply: beet.bignum
-  vaultCometSupply: beet.bignum
   collateralizationRatio: beet.bignum
   status: beet.bignum
   scale: beet.bignum
@@ -28,8 +26,6 @@ export const collateralBeet = new beet.BeetArgsStruct<Collateral>(
     ['oracleInfoIndex', beet.u64],
     ['mint', beetSolana.publicKey],
     ['vault', beetSolana.publicKey],
-    ['vaultBorrowSupply', beet.u64],
-    ['vaultCometSupply', beet.u64],
     ['collateralizationRatio', beet.u64],
     ['status', beet.u64],
     ['scale', beet.u64],

@@ -16,6 +16,7 @@ import * as web3 from '@solana/web3.js'
  */
 export type LiquidateBorrowPositionInstructionArgs = {
   borrowIndex: number
+  amount: beet.bignum
 }
 /**
  * @category Instructions
@@ -30,6 +31,7 @@ export const liquidateBorrowPositionStruct = new beet.BeetArgsStruct<
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['borrowIndex', beet.u8],
+    ['amount', beet.u64],
   ],
   'LiquidateBorrowPositionInstructionArgs'
 )

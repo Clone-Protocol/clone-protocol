@@ -20,7 +20,8 @@ export type CloneArgs = {
   admin: web3.PublicKey
   auth: web3.PublicKey[] /* size: 10 */
   bump: number
-  liquidatorFeeBps: number
+  cometLiquidatorFeeBps: number
+  borrowLiquidatorFeeBps: number
   treasuryAddress: web3.PublicKey
   eventCounter: beet.bignum
 }
@@ -40,7 +41,8 @@ export class Clone implements CloneArgs {
     readonly admin: web3.PublicKey,
     readonly auth: web3.PublicKey[] /* size: 10 */,
     readonly bump: number,
-    readonly liquidatorFeeBps: number,
+    readonly cometLiquidatorFeeBps: number,
+    readonly borrowLiquidatorFeeBps: number,
     readonly treasuryAddress: web3.PublicKey,
     readonly eventCounter: beet.bignum
   ) {}
@@ -55,7 +57,8 @@ export class Clone implements CloneArgs {
       args.admin,
       args.auth,
       args.bump,
-      args.liquidatorFeeBps,
+      args.cometLiquidatorFeeBps,
+      args.borrowLiquidatorFeeBps,
       args.treasuryAddress,
       args.eventCounter
     )
@@ -169,7 +172,8 @@ export class Clone implements CloneArgs {
       admin: this.admin.toBase58(),
       auth: this.auth,
       bump: this.bump,
-      liquidatorFeeBps: this.liquidatorFeeBps,
+      cometLiquidatorFeeBps: this.cometLiquidatorFeeBps,
+      borrowLiquidatorFeeBps: this.borrowLiquidatorFeeBps,
       treasuryAddress: this.treasuryAddress.toBase58(),
       eventCounter: (() => {
         const x = <{ toNumber: () => number }>this.eventCounter
@@ -203,7 +207,8 @@ export const cloneBeet = new beet.BeetStruct<
     ['admin', beetSolana.publicKey],
     ['auth', beet.uniformFixedSizeArray(beetSolana.publicKey, 10)],
     ['bump', beet.u8],
-    ['liquidatorFeeBps', beet.u16],
+    ['cometLiquidatorFeeBps', beet.u16],
+    ['borrowLiquidatorFeeBps', beet.u16],
     ['treasuryAddress', beetSolana.publicKey],
     ['eventCounter', beet.u64],
   ],

@@ -16,7 +16,8 @@ import * as beetSolana from '@metaplex-foundation/beet-solana'
  * @category generated
  */
 export type InitializeCloneInstructionArgs = {
-  liquidatorFeeBps: number
+  cometLiquidatorFeeBps: number
+  borrowLiquidatorFeeBps: number
   treasuryAddress: web3.PublicKey
 }
 /**
@@ -31,7 +32,8 @@ export const initializeCloneStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['liquidatorFeeBps', beet.u16],
+    ['cometLiquidatorFeeBps', beet.u16],
+    ['borrowLiquidatorFeeBps', beet.u16],
     ['treasuryAddress', beetSolana.publicKey],
   ],
   'InitializeCloneInstructionArgs'

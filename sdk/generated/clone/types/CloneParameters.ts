@@ -20,7 +20,8 @@ import * as beet from '@metaplex-foundation/beet'
 export type CloneParametersRecord = {
   AddAuth: { address: web3.PublicKey }
   RemoveAuth: { address: web3.PublicKey }
-  LiquidationFee: { value: number }
+  CometLiquidationFee: { value: number }
+  BorrowLiquidationFee: { value: number }
   TreasuryAddress: { address: web3.PublicKey }
 }
 
@@ -43,10 +44,14 @@ export const isCloneParametersAddAuth = (
 export const isCloneParametersRemoveAuth = (
   x: CloneParameters
 ): x is CloneParameters & { __kind: 'RemoveAuth' } => x.__kind === 'RemoveAuth'
-export const isCloneParametersLiquidationFee = (
+export const isCloneParametersCometLiquidationFee = (
   x: CloneParameters
-): x is CloneParameters & { __kind: 'LiquidationFee' } =>
-  x.__kind === 'LiquidationFee'
+): x is CloneParameters & { __kind: 'CometLiquidationFee' } =>
+  x.__kind === 'CometLiquidationFee'
+export const isCloneParametersBorrowLiquidationFee = (
+  x: CloneParameters
+): x is CloneParameters & { __kind: 'BorrowLiquidationFee' } =>
+  x.__kind === 'BorrowLiquidationFee'
 export const isCloneParametersTreasuryAddress = (
   x: CloneParameters
 ): x is CloneParameters & { __kind: 'TreasuryAddress' } =>
@@ -74,10 +79,18 @@ export const cloneParametersBeet = beet.dataEnum<CloneParametersRecord>([
   ],
 
   [
-    'LiquidationFee',
-    new beet.BeetArgsStruct<CloneParametersRecord['LiquidationFee']>(
+    'CometLiquidationFee',
+    new beet.BeetArgsStruct<CloneParametersRecord['CometLiquidationFee']>(
       [['value', beet.u16]],
-      'CloneParametersRecord["LiquidationFee"]'
+      'CloneParametersRecord["CometLiquidationFee"]'
+    ),
+  ],
+
+  [
+    'BorrowLiquidationFee',
+    new beet.BeetArgsStruct<CloneParametersRecord['BorrowLiquidationFee']>(
+      [['value', beet.u16]],
+      'CloneParametersRecord["BorrowLiquidationFee"]'
     ),
   ],
 
