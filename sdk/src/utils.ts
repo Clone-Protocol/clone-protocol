@@ -1,4 +1,3 @@
-import { toNumber } from "./decimal";
 import { CLONE_TOKEN_SCALE } from "./clone";
 //import { Pool } from "./interfaces";
 import { Pool } from "../generated/clone";
@@ -178,29 +177,6 @@ export const calculateSwapExecution = (
   }
 }
 
-export const calculateExecutionThreshold = (
-  onassetAmount: number,
-  isBuy: boolean,
-  pool: Pool,
-  slippage: number,
-  oraclePrice: number,
-): {
-  expectedOnusdAmount: number;
-  onusdThresholdAmount: number;
-  expectedPrice: number;
-  thresholdPrice: number;
-} => {
-  const { poolOnusd, poolOnasset } = getPoolLiquidity(pool, oraclePrice);
-  return calculateExecutionThresholdFromParams(
-    onassetAmount,
-    isBuy,
-    poolOnusd,
-    poolOnasset,
-    toNumber(pool.treasuryTradingFee),
-    toNumber(pool.liquidityTradingFee),
-    slippage
-  );
-};
 
 export const calculateExecutionThresholdFromParams = (
   onassetAmount: number,

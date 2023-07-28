@@ -1,132 +1,78 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Program, BN } from "@coral-xyz/anchor";
+import { BN } from "@coral-xyz/anchor";
 import { parsePriceData } from "@pythnetwork/client";
-import { Pyth } from "./idl/pyth";
-
-// export class ChainLinkOracle {
-//   private priceFeed: anchor.web3.Keypair;
-//   private authority: anchor.web3.Keypair;
-//   program: Program<Store>;
-
-//   constructor(program: Program<Store>) {
-//     this.program = program;
-//     this.authority = anchor.web3.Keypair.generate();
-//     this.priceFeed = anchor.web3.Keypair.generate();
-//   }
-
-//   public priceFeedPubkey() {
-//     return this.priceFeed.publicKey;
-//   }
-
-//   public async createChainlinkFeed(
-//     granularity: number,
-//     historical_size: number
-//   ) {
-//     let header_plus_discriminator_size = 192 + 8;
-//     let struct_space = 48 * 2; // Taken from the Transmission size, double it since we store live and historical.
-//     let space = header_plus_discriminator_size + historical_size * struct_space;
-
-//     await this.program.rpc.createFeed(
-//       "chainlink feed",
-//       8,
-//       granularity,
-//       historical_size,
-//       {
-//         accounts: {
-//           feed: this.priceFeedPubkey(),
-//           authority: this.authority.publicKey,
-//         },
-//         signers: [this.authority, this.priceFeed],
-//         instructions: [
-//           anchor.web3.SystemProgram.createAccount({
-//             fromPubkey: this.program.provider.publicKey!,
-//             newAccountPubkey: this.priceFeed.publicKey,
-//             space: space,
-//             lamports:
-//               await this.program.provider.connection.getMinimumBalanceForRentExemption(
-//                 space
-//               ),
-//             programId: this.program.programId,
-//           }),
-//         ],
-//       }
-//     );
-
-//     await this.program.rpc.setWriter(this.authority.publicKey, {
-//       accounts: {
-//         feed: this.priceFeedPubkey(),
-//         owner: this.authority.publicKey,
-//         authority: this.authority.publicKey,
-//       },
-//       signers: [this.authority],
-//     });
-//   }
-
-//   public async submitAnswer(timestamp: BN, answer: BN) {
-//     await this.program.rpc.submit(
-//       { timestamp: timestamp, answer: answer },
-//       {
-//         accounts: {
-//           feed: this.priceFeedPubkey(),
-//           authority: this.authority.publicKey,
-//         },
-//         signers: [this.authority],
-//       }
-//     );
-//   }
-// }
+import {
+  createInitializeInstruction,
+  createSetPriceInstruction,
+} from "../generated/pyth";
+import { PublicKey, Transaction } from "@solana/web3.js";
 
 export const createPriceFeed = async (
-  pythProgram: Program<Pyth>,
+  provider: anchor.AnchorProvider,
+  programId: PublicKey,
   price: number,
   expo: number,
   conf: BN
-) => {
+): Promise<PublicKey> => {
   const priceFeed = anchor.web3.Keypair.generate();
-  await pythProgram.rpc.initialize(new BN(price * 10 ** -expo), expo, conf, {
-    accounts: { price: priceFeed.publicKey },
-    signers: [priceFeed],
-    instructions: [
-      anchor.web3.SystemProgram.createAccount({
-        fromPubkey: pythProgram.provider.publicKey!,
-        newAccountPubkey: priceFeed.publicKey,
-        space: 3312,
-        lamports:
-          await pythProgram.provider.connection.getMinimumBalanceForRentExemption(
-            3312
-          ),
-        programId: pythProgram.programId,
-      }),
-    ],
-  });
+
+  let space = 3312;
+  let tx = new Transaction().add(
+    anchor.web3.SystemProgram.createAccount({
+      fromPubkey: provider.publicKey!,
+      newAccountPubkey: priceFeed.publicKey,
+      space,
+      lamports: await provider.connection.getMinimumBalanceForRentExemption(
+        space
+      ),
+      programId: programId,
+    }),
+    createInitializeInstruction(
+      {
+        price: priceFeed.publicKey,
+      },
+      {
+        price: new BN(price * 10 ** -expo),
+        expo,
+        conf,
+      }
+    )
+  );
+
+  await provider.sendAndConfirm(tx, [priceFeed]);
 
   return priceFeed.publicKey;
 };
 
 export const setPrice = async (
-  pythProgram: Program<Pyth>,
+  //pythProgram: any,
+  provider: anchor.AnchorProvider,
   price: number,
   priceFeed: anchor.web3.PublicKey
 ) => {
-  const priceFeedInfo = await pythProgram.provider.connection.getAccountInfo(
-    priceFeed
-  );
+  const priceFeedInfo = await provider.connection.getAccountInfo(priceFeed);
   if (priceFeedInfo === null) {
     throw new Error("Price feed info null!");
   }
   const data = parsePriceData(priceFeedInfo.data);
-  await pythProgram.rpc.setPrice(new BN(price * 10 ** -data.exponent), {
-    accounts: { price: priceFeed },
-  });
+  let tx = new Transaction().add(
+    createSetPriceInstruction(
+      {
+        price: priceFeed,
+      },
+      {
+        price: new BN(price * 10 ** -data.exponent),
+      }
+    )
+  );
+  await provider.sendAndConfirm(tx);
 };
 
 export const getFeedData = async (
-  pythProgram: Program<Pyth>,
+  provider: anchor.AnchorProvider,
   priceFeed: anchor.web3.PublicKey
 ) => {
-  const priceFeedInfo = await pythProgram.provider.connection.getAccountInfo(
-    priceFeed
-  );
+  const priceFeedInfo = await provider.connection.getAccountInfo(priceFeed);
   if (priceFeedInfo === null) {
     throw new Error("Price feed info null!");
   }

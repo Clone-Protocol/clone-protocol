@@ -1,13 +1,13 @@
 import * as anchor from "@coral-xyz/anchor";
-import * as beet from '@metaplex-foundation/beet'
-import { BN, Program, Provider } from "@coral-xyz/anchor";
+import * as beet from "@metaplex-foundation/beet";
+import { BN, Provider } from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { Clone as CloneProgram, IDL } from "./idl/clone";
 import {
   PublicKey,
   Connection,
   ConfirmOptions,
   TransactionInstruction,
+  Transaction,
 } from "@solana/web3.js";
 import {
   Clone,
@@ -30,11 +30,16 @@ import {
   createLiquidateBorrowPositionInstruction,
   createCollectLpRewardsInstruction,
   createInitializeBorrowPositionInstruction,
+  createInitializePoolInstruction,
+  createAddCollateralInstruction,
+  createInitializeCloneInstruction,
+  UpdatePoolParametersInstructionArgs,
+  createUpdatePoolParametersInstruction,
+  UpdateCollateralParametersInstructionArgs,
+  createUpdateCollateralParametersInstruction,
+  UpdateCloneParametersInstructionArgs,
+  createUpdateCloneParametersInstruction,
 } from "../generated/clone";
-import { Bignum } from "@metaplex-foundation/solita";
-// import {
-//   Clone, User, TokenData
-// } from "./interfaces"
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -65,45 +70,45 @@ export const toCloneScale = (x: number): BN => {
   return toScale(x, CLONE_TOKEN_SCALE);
 };
 
-export const fromScale = (x: beet.bignum | BN, scale: number | beet.bignum | BN) => {
-  return Number(x) * Math.pow(10, -Number(scale))
-}
+export const fromScale = (
+  x: number | beet.bignum | BN | bigint,
+  scale: number | beet.bignum | BN | bigint
+) => {
+  return Number(x) * Math.pow(10, -Number(scale));
+};
 
-export const fromCloneScale = (x: beet.bignum | BN) => {
-  return fromScale(x, CLONE_TOKEN_SCALE)
-}
+export const fromCloneScale = (x: number | beet.bignum | BN | bigint) => {
+  return fromScale(x, CLONE_TOKEN_SCALE);
+};
 
 export class CloneClient {
+  clone: Clone;
+  cloneAddress: PublicKey;
   connection: Connection;
   programId: PublicKey;
-  program: Program<CloneProgram>;
-  clone?: Clone;
-  opts?: ConfirmOptions;
-  cloneAddress: PublicKey;
   provider: Provider;
+  opts?: ConfirmOptions;
 
   public constructor(
-    programId: PublicKey,
     provider: Provider,
+    clone: Clone,
+    programId: PublicKey,
     opts?: ConfirmOptions
   ) {
-    this.connection = provider.connection;
     this.programId = programId;
     this.provider = provider;
+    this.clone = clone;
     this.opts = opts;
-    this.program = new Program<CloneProgram>(IDL, this.programId, provider);
     this.cloneAddress = this.getCloneAddress();
-  }
-
-  public async loadClone() {
-    this.clone = await this.getCloneAccount();
   }
 
   /// Admin RPC methods ///
 
-  public async initializeClone(
-    cometLiquidatorFee: number,
-    borrowLiquidatorFee: number,
+  public static async initializeClone(
+    provider: anchor.AnchorProvider,
+    programId: PublicKey,
+    cometLiquidatorFeeBps: number,
+    borrowLiquidatorFeeBps: number,
     treasuryAddress: PublicKey,
     usdcMint: PublicKey
   ) {
@@ -112,31 +117,54 @@ export class CloneClient {
     const onusdVault = anchor.web3.Keypair.generate();
     const tokenData = anchor.web3.Keypair.generate();
 
-    await this.program.methods
-      .initializeClone(cometLiquidatorFee, borrowLiquidatorFee, treasuryAddress)
-      .accounts({
-        admin: this.provider.publicKey!,
-        clone: this.cloneAddress,
-        onusdMint: onusdMint.publicKey,
-        onusdVault: onusdVault.publicKey,
-        usdcMint: usdcMint,
-        usdcVault: usdcVault.publicKey,
-        tokenData: tokenData.publicKey,
-        rent: RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SYSTEM_PROGRAM_ID,
-      })
-      .preInstructions([
-        await this.program.account.tokenData.createInstruction(tokenData),
-      ])
-      .signers([onusdMint, onusdVault, usdcVault, tokenData])
-      .rpc();
+    const [cloneAddress, _] = PublicKey.findProgramAddressSync(
+      [Buffer.from("clone")],
+      programId
+    );
+
+    // Use SystemProgram to create TokenData account.
+    let tx = new Transaction().add(
+      anchor.web3.SystemProgram.createAccount({
+        fromPubkey: provider.publicKey!,
+        newAccountPubkey: tokenData.publicKey,
+        lamports: await provider.connection.getMinimumBalanceForRentExemption(
+          TokenData.byteSize
+        ),
+        space: TokenData.byteSize,
+        programId: programId,
+      }),
+      createInitializeCloneInstruction(
+        {
+          admin: provider.publicKey!,
+          clone: cloneAddress,
+          onusdMint: onusdMint.publicKey,
+          onusdVault: onusdVault.publicKey,
+          usdcMint: usdcMint,
+          usdcVault: usdcVault.publicKey,
+          tokenData: tokenData.publicKey,
+          rent: RENT_PUBKEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        },
+        {
+          cometLiquidatorFeeBps,
+          borrowLiquidatorFeeBps,
+          treasuryAddress,
+        }
+      )
+    );
+    await provider.sendAndConfirm(tx, [
+      onusdMint,
+      onusdVault,
+      usdcVault,
+      tokenData,
+    ]);
   }
 
   public async initializePool(
     admin: PublicKey,
     minOvercollateralRatio: number,
-    MaxLiquidationOvercollateralRatio: number,
+    maxLiquidationOvercollateralRatio: number,
     liquidityTradingFee: number,
     treasuryTradingFee: number,
     ilHealthScoreCoefficient: number,
@@ -160,63 +188,116 @@ export class CloneClient {
       cometLiquidityTokenAccount,
     ];
 
-    await this.program.methods
-      .initializePool(
-        minOvercollateralRatio,
-        MaxLiquidationOvercollateralRatio,
-        liquidityTradingFee,
-        treasuryTradingFee,
-        toCloneScale(ilHealthScoreCoefficient),
-        toCloneScale(positionHealthScoreCoefficient),
-        oracleIndex
-      )
-      .accounts({
-        admin: admin,
-        clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
-        onusdMint: this.clone!.onusdMint,
-        onusdTokenAccount: onusdTokenAccount.publicKey,
-        onassetMint: onassetMintAccount.publicKey,
-        onassetTokenAccount: onassetTokenAccount.publicKey,
-        underlyingAssetMint: underlyingAssetMint,
-        underlyingAssetTokenAccount: underlyingAssetTokenAccount.publicKey,
-        liquidityTokenMint: liquidityTokenMintAccount.publicKey,
-        cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
-        rent: RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SYSTEM_PROGRAM_ID,
-      })
-      .signers(signers)
-      .rpc();
+    await this.provider.sendAndConfirm(
+      new Transaction().add(
+        createInitializePoolInstruction(
+          {
+            admin: admin,
+            clone: this.cloneAddress,
+            tokenData: this.clone!.tokenData,
+            onusdMint: this.clone!.onusdMint,
+            onusdTokenAccount: onusdTokenAccount.publicKey,
+            onassetMint: onassetMintAccount.publicKey,
+            onassetTokenAccount: onassetTokenAccount.publicKey,
+            underlyingAssetMint: underlyingAssetMint,
+            underlyingAssetTokenAccount: underlyingAssetTokenAccount.publicKey,
+            liquidityTokenMint: liquidityTokenMintAccount.publicKey,
+            cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
+            rent: RENT_PUBKEY,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SYSTEM_PROGRAM_ID,
+          },
+          {
+            minOvercollateralRatio,
+            maxLiquidationOvercollateralRatio,
+            liquidityTradingFee,
+            treasuryTradingFee,
+            ilHealthScoreCoefficient: toCloneScale(ilHealthScoreCoefficient),
+            positionHealthScoreCoefficient: toCloneScale(
+              positionHealthScoreCoefficient
+            ),
+            oracleInfoIndex: oracleIndex,
+          }
+        )
+      ),
+      signers,
+      this.opts
+    );
   }
 
   public async addCollateral(
     admin: PublicKey,
     scale: number,
     collateral_mint: PublicKey,
-    oracleIndex: number,
-    collateralization_ratio: number = 0
+    oracleInfoIndex: number,
+    collateralizationRatio: number = 0
   ) {
     const vaultAccount = anchor.web3.Keypair.generate();
 
-    await this.program.methods
-      .addCollateral(
-        scale,
-        collateralization_ratio,
-        oracleIndex,
-      )
-      .accounts({
-        admin: admin,
+    await this.provider.sendAndConfirm(
+      new Transaction().add(
+        createAddCollateralInstruction(
+          {
+            admin: admin,
+            clone: this.cloneAddress,
+            tokenData: this.clone!.tokenData,
+            collateralMint: collateral_mint,
+            vault: vaultAccount.publicKey,
+            rent: RENT_PUBKEY,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SYSTEM_PROGRAM_ID,
+          },
+          {
+            scale,
+            collateralizationRatio,
+            oracleInfoIndex,
+          }
+        )
+      ),
+      [vaultAccount],
+      this.opts
+    );
+  }
+
+  public async updateCloneParameters(
+    params: UpdateCloneParametersInstructionArgs
+  ) {
+    let ix = createUpdateCloneParametersInstruction(
+      {
+        admin: this.provider.publicKey!,
+        clone: this.cloneAddress,
+      },
+      params
+    );
+    await this.provider.sendAndConfirm(new Transaction().add(ix));
+  }
+
+  public async updatePoolParameters(
+    params: UpdatePoolParametersInstructionArgs
+  ) {
+    let ix = createUpdatePoolParametersInstruction(
+      {
+        auth: this.provider.publicKey!,
         clone: this.cloneAddress,
         tokenData: this.clone!.tokenData,
-        collateralMint: collateral_mint,
-        vault: vaultAccount.publicKey,
-        rent: RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SYSTEM_PROGRAM_ID,
-      })
-      .signers([vaultAccount])
-      .rpc();
+      },
+      params
+    );
+    await this.provider.sendAndConfirm(new Transaction().add(ix));
+  }
+
+  public async updateCollateralParameters(
+    params: UpdateCollateralParametersInstructionArgs
+  ) {
+    let ix = createUpdateCollateralParametersInstruction(
+      {
+        admin: this.provider.publicKey!,
+        clone: this.cloneAddress,
+        tokenData: this.clone!.tokenData,
+      },
+      params
+    );
+    await this.provider.sendAndConfirm(new Transaction().add(ix));
   }
 
   /// Address and account fetching ///
@@ -224,7 +305,7 @@ export class CloneClient {
   public getCloneAddress(): PublicKey {
     const [address, _] = PublicKey.findProgramAddressSync(
       [Buffer.from("clone")],
-      this.program.programId
+      this.programId
     );
     return address;
   }
@@ -232,7 +313,7 @@ export class CloneClient {
   public getUserAddress(address?: PublicKey) {
     const [userPubkey, bump] = PublicKey.findProgramAddressSync(
       [Buffer.from("user"), (address ?? this.provider.publicKey!).toBuffer()],
-      this.program.programId
+      this.programId
     );
     return { userPubkey, bump };
   }
@@ -246,7 +327,6 @@ export class CloneClient {
   }
 
   public async getTokenData(): Promise<TokenData> {
-    //return (await this.program.account.clone.fetch(this.clone!.tokenData)) as TokenData
     return await TokenData.fromAccountAddress(
       this.provider.connection,
       this.clone!.tokenData
@@ -259,7 +339,6 @@ export class CloneClient {
       address = userPubkey;
     }
     return await User.fromAccountAddress(this.provider.connection, address);
-    //return (await this.program.account.user.fetch(address)) as User
   }
 
   /// Instruction creation methods ///
@@ -437,8 +516,9 @@ export class CloneClient {
     borrowIndex: number
   ): TransactionInstruction {
     let assetInfo =
-      tokenData.pools[Number(userAccount.borrows.positions[borrowIndex].poolIndex)]
-        .assetInfo;
+      tokenData.pools[
+        Number(userAccount.borrows.positions[borrowIndex].poolIndex)
+      ].assetInfo;
     const { userPubkey } = this.getUserAddress();
 
     return createPayBorrowDebtInstruction(
@@ -588,7 +668,7 @@ export class CloneClient {
     onusdAmount: BN,
     poolIndex: number
   ): TransactionInstruction {
-    let {userPubkey} = this.getUserAddress();
+    let { userPubkey } = this.getUserAddress();
 
     return createAddLiquidityToCometInstruction(
       {
@@ -724,7 +804,8 @@ export class CloneClient {
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       {
-        borrowIndex, amount
+        borrowIndex,
+        amount,
       }
     );
   }
