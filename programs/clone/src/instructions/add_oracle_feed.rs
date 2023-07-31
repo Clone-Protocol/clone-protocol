@@ -23,8 +23,10 @@ pub struct AddOracleFeed<'info> {
 
 pub fn execute(ctx: Context<AddOracleFeed>, pyth_address: Pubkey) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let mut info = OracleInfo::default();
-    info.pyth_address = pyth_address;
+    let info = OracleInfo {
+        pyth_address,
+        ..Default::default()
+    };
     token_data.append_oracle_info(info);
 
     Ok(())

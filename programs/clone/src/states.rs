@@ -1,47 +1,11 @@
-use std::convert::TryInto;
-
-use crate::math::*;
+use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
+use crate::{to_bps_decimal, to_clone_decimal, to_ratio_decimal};
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
+use std::convert::TryInto;
 
-pub const CLONE_TOKEN_SCALE: u32 = 8;
-pub const ONUSD_COLLATERAL_INDEX: usize = 0;
-pub const USDC_COLLATERAL_INDEX: usize = 1;
-pub const PERCENT_SCALE: u32 = 2;
-pub const RATIO_SCALE: u32 = 2;
-pub const BPS_SCALE: u32 = 4;
-
-#[macro_export]
-macro_rules! to_clone_decimal {
-    ($e:expr) => {{
-        use rust_decimal::Decimal;
-        Decimal::new($e as i64, CLONE_TOKEN_SCALE)
-    }};
-}
-
-#[macro_export]
-macro_rules! to_pct_decimal {
-    ($e:expr) => {{
-        use rust_decimal::Decimal;
-        Decimal::new($e as i64, PERCENT_SCALE)
-    }};
-}
-
-#[macro_export]
-macro_rules! to_ratio_decimal {
-    ($e:expr) => {{
-        use rust_decimal::Decimal;
-        Decimal::new($e as i64, RATIO_SCALE)
-    }};
-}
-
-#[macro_export]
-macro_rules! to_bps_decimal {
-    ($e:expr) => {{
-        use rust_decimal::Decimal;
-        Decimal::new($e as i64, BPS_SCALE)
-    }};
-}
+pub static ONUSD_COLLATERAL_INDEX: usize = 0;
+pub static USDC_COLLATERAL_INDEX: usize = 1;
 
 #[repr(u64)]
 #[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
@@ -137,10 +101,7 @@ pub struct OracleInfo {
 
 impl OracleInfo {
     pub fn get_price(&self) -> Decimal {
-        Decimal::new(
-            self.price.try_into().unwrap(),
-            self.expo.try_into().unwrap(),
-        )
+        Decimal::new(self.price, self.expo.try_into().unwrap())
     }
 }
 
@@ -345,7 +306,7 @@ impl Comet {
     }
 
     pub fn is_empty(&self) -> bool {
-        return self.num_positions == 0 && self.num_collaterals == 0;
+        self.num_positions == 0 && self.num_collaterals == 0
     }
 }
 
@@ -419,7 +380,7 @@ impl BorrowPositions {
     }
 
     pub fn is_empty(&self) -> bool {
-        return self.num_positions == 0;
+        self.num_positions == 0
     }
 }
 

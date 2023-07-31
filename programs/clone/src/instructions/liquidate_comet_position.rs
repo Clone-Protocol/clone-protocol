@@ -1,3 +1,4 @@
+use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
 use crate::error::*;
 use crate::instructions::withdraw_liquidity;
 use crate::math::*;
@@ -88,7 +89,7 @@ pub fn execute(
     let comet_position = comet.positions[comet_position_index as usize];
     let comet_collateral = comet.collaterals[comet_collateral_index as usize];
     let authorized_amount = to_clone_decimal!(amount);
-    let ild_share = calculate_ild_share(&comet_position, &token_data);
+    let ild_share = calculate_ild_share(&comet_position, token_data);
     let pool_index = comet_position.pool_index as usize;
     let pool = token_data.pools[pool_index];
     let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
@@ -104,7 +105,7 @@ pub fn execute(
     let collateral_scale = collateral.scale as u32;
 
     let is_in_liquidation_mode = pool.status == Status::Liquidation as u64;
-    let starting_health_score = calculate_health_score(&comet, &token_data)?;
+    let starting_health_score = calculate_health_score(comet, token_data)?;
 
     return_error_if_false!(
         !starting_health_score.is_healthy() || is_in_liquidation_mode,

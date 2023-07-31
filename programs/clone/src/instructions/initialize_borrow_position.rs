@@ -150,7 +150,7 @@ pub fn execute(
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index,
         is_liquidation: false,
         collateral_supplied: collateral_amount,
         collateral_delta: collateral_amount.try_into().unwrap(),

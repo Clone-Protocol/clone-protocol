@@ -1,4 +1,4 @@
-use crate::math::*;
+use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
 use crate::states::*;
 use crate::{to_clone_decimal, CLONE_PROGRAM_SEED};
 use anchor_lang::prelude::*;

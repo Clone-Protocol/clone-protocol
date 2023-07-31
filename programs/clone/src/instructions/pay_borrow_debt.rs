@@ -78,19 +78,13 @@ pub fn execute(
             .try_into()
             .unwrap(),
         is_liquidation: false,
-        collateral_supplied: borrows.positions[borrow_index as usize]
-            .collateral_amount
-            .try_into()
-            .unwrap(),
+        collateral_supplied: borrows.positions[borrow_index as usize].collateral_amount,
         collateral_delta: 0,
         collateral_index: borrows.positions[borrow_index as usize]
             .collateral_index
             .try_into()
             .unwrap(),
-        borrowed_amount: borrows.positions[borrow_index as usize]
-            .borrowed_onasset
-            .try_into()
-            .unwrap(),
+        borrowed_amount: borrows.positions[borrow_index as usize].borrowed_onasset,
         borrowed_delta: -(amount_value as i64)
     });
     ctx.accounts.clone.event_counter += 1;

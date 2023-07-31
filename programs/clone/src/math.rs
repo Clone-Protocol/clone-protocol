@@ -1,6 +1,9 @@
-use crate::return_error_if_false;
+use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
+use crate::error::*;
 use crate::states::*;
-use crate::*;
+use crate::{return_error_if_false, to_clone_decimal};
+use anchor_lang::prelude::*;
+use rust_decimal::prelude::*;
 
 pub fn check_feed_update(oracle_info: OracleInfo, slot: u64) -> Result<()> {
     return_error_if_false!(
@@ -141,12 +144,6 @@ pub fn calculate_health_score(comet: &Comet, token_data: &TokenData) -> Result<H
         total_il_term,
         total_position_term,
     })
-}
-
-pub fn rescale_toward_zero(decimal: Decimal, scale: u32) -> Decimal {
-    let mut rounded_decimal = decimal.round_dp_with_strategy(scale, RoundingStrategy::ToZero);
-    rounded_decimal.rescale(scale);
-    return rounded_decimal;
 }
 
 pub struct ILDShare {

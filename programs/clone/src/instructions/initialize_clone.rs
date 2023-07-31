@@ -1,3 +1,4 @@
+use crate::decimal::CLONE_TOKEN_SCALE;
 use crate::{error::*, return_error_if_false, states::*};
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;

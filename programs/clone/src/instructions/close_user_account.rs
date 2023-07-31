@@ -20,7 +20,7 @@ pub struct CloseUserAccount<'info> {
 
 pub fn execute(ctx: Context<CloseUserAccount>) -> Result<()> {
     // remove single pool comet
-    let user_account = ctx.accounts.user_account.load()?.clone();
+    let user_account = ctx.accounts.user_account.load()?;
     assert!(user_account.comet.is_empty() && user_account.borrows.is_empty());
 
     ctx.accounts

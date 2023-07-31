@@ -32,7 +32,7 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
     let clone = &mut ctx.accounts.clone;
     match params {
         CloneParameters::AddAuth { address } => {
-            let auth_array = clone.auth.clone();
+            let auth_array = clone.auth;
             let empty_slot = auth_array
                 .iter()
                 .enumerate()
@@ -48,7 +48,7 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
             ctx.accounts.clone.borrow_liquidator_fee_bps = value;
         }
         CloneParameters::RemoveAuth { address } => {
-            let auth_array = clone.auth.clone();
+            let auth_array = clone.auth;
             let auth_slot = auth_array
                 .iter()
                 .enumerate()

@@ -82,7 +82,7 @@ pub fn execute(
         CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
         collateral_to_withdraw,
     )?;
-    let health_score = calculate_health_score(&comet, token_data)?;
+    let health_score = calculate_health_score(comet, token_data)?;
 
     return_error_if_false!(health_score.is_healthy(), CloneError::HealthScoreTooLow);
 

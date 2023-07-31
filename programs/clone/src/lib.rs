@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
-use error::*;
-use rust_decimal::prelude::*;
 
+pub mod decimal;
 pub mod error;
 pub mod events;
 pub mod instructions;

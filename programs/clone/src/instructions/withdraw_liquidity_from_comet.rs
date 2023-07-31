@@ -1,6 +1,6 @@
+use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
 use crate::error::*;
 use crate::events::*;
-use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
 use crate::{to_clone_decimal, CLONE_PROGRAM_SEED, USER_SEED};
@@ -93,8 +93,8 @@ pub fn withdraw_liquidity(
     emit!(PoolState {
         event_id: event_counter,
         pool_index: pool_index.try_into().unwrap(),
-        onasset_ild: pool.onasset_ild as i64,
-        onusd_ild: pool.onusd_ild as i64,
+        onasset_ild: pool.onasset_ild,
+        onusd_ild: pool.onusd_ild,
         committed_onusd_liquidity: pool.committed_onusd_liquidity,
         oracle_price: oracle_price.mantissa().try_into().unwrap()
     });

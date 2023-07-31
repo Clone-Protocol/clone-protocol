@@ -1,9 +1,10 @@
+use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
-use crate::return_error_if_false;
 use crate::states::*;
-use crate::{to_clone_decimal, CLONE_PROGRAM_SEED, USER_SEED};
+use crate::{return_error_if_false, to_clone_decimal};
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
@@ -88,7 +89,7 @@ pub fn execute(ctx: Context<AddLiquidityToComet>, pool_index: u8, onusd_amount: 
     token_data.pools[pool_index as usize].onasset_ild += onasset_ild.mantissa() as i64;
     token_data.pools[pool_index as usize].onusd_ild += onusd_ild.mantissa() as i64;
 
-    let health_score = calculate_health_score(&comet, token_data)?;
+    let health_score = calculate_health_score(comet, token_data)?;
 
     return_error_if_false!(health_score.is_healthy(), CloneError::HealthScoreTooLow);
 

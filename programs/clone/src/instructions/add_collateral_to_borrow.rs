@@ -78,10 +78,7 @@ pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u6
             .collateral_index
             .try_into()
             .unwrap(),
-        borrowed_amount: borrows.positions[borrow_index as usize]
-            .borrowed_onasset
-            .try_into()
-            .unwrap(),
+        borrowed_amount: borrows.positions[borrow_index as usize].borrowed_onasset,
         borrowed_delta: 0
     });
     ctx.accounts.clone.event_counter += 1;
