@@ -1,4 +1,4 @@
-import { Keypair, PublicKey, Transaction, TransactionInstruction } from "@solana/web3.js";
+import { Keypair, PublicKey, Transaction } from "@solana/web3.js";
 import { Provider, BN } from "@coral-xyz/anchor";
 import {
   Account,
@@ -10,11 +10,7 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { sleep } from "../sdk/src/utils";
-import { Decimal, toNumber } from "../sdk/src/decimal";
-import { CLONE_TOKEN_SCALE, CloneClient, toDevnetScale } from "../sdk/src/clone";
-import { JupiterAggMock } from "../sdk/src/idl/jupiter_agg_mock";
-import { AnchorProvider } from "@coral-xyz/anchor";
-import { Comet, TokenData } from "../sdk/src/interfaces";
+import { CLONE_TOKEN_SCALE } from "../sdk/src/clone";
 
 export const CLONE_EXCHANGE_SEED = Buffer.from("Clone");
 export const EXCHANGE_ADMIN = new Keypair();
@@ -55,8 +51,7 @@ export const getOrCreateAssociatedTokenAccount = async (
         )
       );
 
-    await provider.sendAndConfirm!(transaction);
-      await sleep(6000);
+      await provider.sendAndConfirm!(transaction);
       account = await getAccount(
         provider.connection,
         associatedToken,
@@ -73,12 +68,3 @@ export const getOrCreateAssociatedTokenAccount = async (
   }
   return account;
 };
-
-export const convertToRawDecimal = (num: number) => {
-  let temp = new Decimal(BigInt(toDevnetScale(num).toNumber()), BigInt(CLONE_TOKEN_SCALE));
-  return temp.toRawDecimal();
-}
-
-export const fromDevnetNumber = (x: BN | bigint | number): number => {
-  return Number(x) * Math.pow(10, -CLONE_TOKEN_SCALE);
-}

@@ -38,7 +38,7 @@ export const updatePoolParametersStruct = new beet.FixableBeetArgsStruct<
 /**
  * Accounts required by the _updatePoolParameters_ instruction
  *
- * @property [**signer**] admin
+ * @property [**signer**] auth
  * @property [_writable_] clone
  * @property [_writable_] tokenData
  * @category Instructions
@@ -46,7 +46,7 @@ export const updatePoolParametersStruct = new beet.FixableBeetArgsStruct<
  * @category generated
  */
 export type UpdatePoolParametersInstructionAccounts = {
-  admin: web3.PublicKey
+  auth: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
@@ -77,7 +77,7 @@ export function createUpdatePoolParametersInstruction(
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.admin,
+      pubkey: accounts.auth,
       isWritable: false,
       isSigner: true,
     },

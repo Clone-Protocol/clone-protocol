@@ -1,6 +1,7 @@
 use crate::error::*;
 use crate::math::*;
 use crate::states::*;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
@@ -9,31 +10,26 @@ use std::convert::TryInto;
 #[derive(Accounts)]
 #[instruction(comet_position_index: u8)]
 pub struct CollectLpRewards<'info> {
-    #[account(address = comet.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_account.bump,
+        mut,
+        seeds = [USER_SEED.as_ref(), user.key.as_ref()],
+        bump,
+        constraint = user_account.load()?.comet.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: Account<'info, User>,
+    pub user_account: AccountLoader<'info, User>,
     #[account(
         mut,
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         has_one = clone,
-        constraint = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
+        constraint = token_data.load()?.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        mut,
-        constraint = comet.to_account_info().key() == user_account.comet @ CloneError::InvalidAccountLoaderOwner,
-        constraint = comet.load()?.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
-    )]
-    pub comet: AccountLoader<'info, Comet>,
     #[account(
         mut,
         address = clone.onusd_mint
@@ -41,7 +37,7 @@ pub struct CollectLpRewards<'info> {
     pub onusd_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[comet.load()?.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
+        address = token_data.load()?.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -60,23 +56,23 @@ pub struct CollectLpRewards<'info> {
 }
 
 pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Result<()> {
-    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[
+        CLONE_PROGRAM_SEED.as_ref(),
+        bytemuck::bytes_of(&ctx.accounts.clone.bump),
+    ][..]];
     let token_data = ctx.accounts.token_data.load()?;
-    let mut comet = ctx.accounts.comet.load_mut()?;
+    let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
 
-    let onusd_ild_rebate = comet_position.onusd_ild_rebate.to_decimal();
-    let onasset_ild_rebate = comet_position.onasset_ild_rebate.to_decimal();
     let ild_share = calculate_ild_share(&comet_position, &token_data);
 
     if ild_share.onusd_ild_share < Decimal::ZERO {
         let onusd_reward = ild_share.onusd_ild_share.abs();
 
         // Update rebate amount such that the ild_share is now zero.
-        comet.positions[comet_position_index as usize].onusd_ild_rebate = RawDecimal::from(
-            rescale_toward_zero(onusd_ild_rebate - onusd_reward, CLONE_TOKEN_SCALE),
-        );
+        comet.positions[comet_position_index as usize].onusd_ild_rebate -=
+            onusd_reward.mantissa() as i64;
 
         // Mint reward amount to user
         let cpi_accounts = MintTo {
@@ -102,9 +98,8 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
         let onasset_reward = ild_share.onasset_ild_share.abs();
 
         // Update rebate amount such that the ild_share is now zero.
-        comet.positions[comet_position_index as usize].onasset_ild_rebate = RawDecimal::from(
-            rescale_toward_zero(onasset_ild_rebate - onasset_reward, CLONE_TOKEN_SCALE),
-        );
+        comet.positions[comet_position_index as usize].onasset_ild_rebate -=
+            onasset_reward.mantissa() as i64;
 
         // Mint reward amount to user
         let cpi_accounts = MintTo {

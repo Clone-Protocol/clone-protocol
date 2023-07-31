@@ -2,6 +2,7 @@ use crate::error::*;
 use crate::events::*;
 use crate::math::*;
 use crate::states::*;
+use crate::{to_clone_decimal, to_ratio_decimal, CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 use rust_decimal::prelude::*;
@@ -10,15 +11,16 @@ use std::convert::TryInto;
 #[derive(Accounts)]
 #[instruction(pool_index: u8, collateral_index: u8, onasset_amount: u64, collateral_amount: u64)]
 pub struct InitializeBorrowPosition<'info> {
-    #[account(address = borrow_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_account.bump,
+        mut,
+        seeds = [USER_SEED.as_ref(), user.key.as_ref()],
+        bump,
     )]
-    pub user_account: Box<Account<'info, User>>,
+    pub user_account: AccountLoader<'info, User>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        mut,
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data,
     )]
@@ -29,11 +31,6 @@ pub struct InitializeBorrowPosition<'info> {
         constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        mut,
-        address = user_account.borrow_positions,
-    )]
-    pub borrow_positions: AccountLoader<'info, BorrowPositions>,
     #[account(
         mut,
         address = token_data.load()?.collaterals[collateral_index as usize].vault
@@ -67,29 +64,40 @@ pub fn execute(
     onasset_amount: u64,
     collateral_amount: u64,
 ) -> Result<()> {
-    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[
+        CLONE_PROGRAM_SEED.as_ref(),
+        bytemuck::bytes_of(&ctx.accounts.clone.bump),
+    ][..]];
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     let pool = token_data.pools[pool_index as usize];
     let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
-    let collateral = token_data.collaterals[collateral_index as usize];
-    let mut collateral_oracle: Option<OracleInfo> = None;
-    if collateral.oracle_info_index != u64::MAX {
-        collateral_oracle = Some(token_data.oracles[collateral.oracle_info_index as usize]);
-    }
-    let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
+    let collateral_index = collateral_index as usize;
+    let collateral = token_data.collaterals[collateral_index];
+    let collateral_scale = collateral.scale;
+    let min_overcollateral_ratio = to_ratio_decimal!(pool.asset_info.min_overcollateral_ratio);
+    let collateralization_ratio = to_ratio_decimal!(collateral.collateralization_ratio);
+    let collateral_oracle = if collateral_index == ONUSD_COLLATERAL_INDEX
+        || collateral_index == USDC_COLLATERAL_INDEX
+    {
+        None
+    } else {
+        Some(token_data.oracles[collateral.oracle_info_index as usize])
+    };
 
-    let collateral_amount_value =
-        Decimal::new(collateral_amount.try_into().unwrap(), collateral_scale);
-    let onasset_amount_value = Decimal::new(onasset_amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
+    let collateral_amount_value = Decimal::new(
+        collateral_amount.try_into().unwrap(),
+        collateral_scale.try_into().unwrap(),
+    );
+    let onasset_amount_value = to_clone_decimal!(onasset_amount);
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
         pool_oracle,
         collateral_oracle,
         onasset_amount_value,
-        pool.asset_info.min_overcollateral_ratio.to_decimal(),
-        collateral.collateralization_ratio.to_decimal(),
+        min_overcollateral_ratio,
+        collateralization_ratio,
         collateral_amount_value,
     )?;
 
@@ -127,49 +135,28 @@ pub fn execute(
     )?;
 
     // set mint position data
-    let mut borrow_positions = ctx.accounts.borrow_positions.load_mut()?;
-    let num_positions = borrow_positions.num_positions;
-    borrow_positions.borrow_positions[num_positions as usize] = BorrowPosition {
-        authority: *ctx.accounts.user.to_account_info().key,
-        collateral_amount: RawDecimal::from(collateral_amount_value),
+    let user_account = &mut ctx.accounts.user_account.load_mut()?;
+    let num_positions = user_account.borrows.num_positions;
+    user_account.borrows.positions[num_positions as usize] = BorrowPosition {
+        collateral_amount,
         collateral_index: collateral_index.try_into().unwrap(),
         pool_index: pool_index.try_into().unwrap(),
-        borrowed_onasset: RawDecimal::from(onasset_amount_value),
+        borrowed_onasset: onasset_amount,
     };
 
-    let current_vault_mint_supply = collateral.vault_mint_supply.to_decimal();
-    let new_vault_mint_supply = rescale_toward_zero(
-        current_vault_mint_supply + collateral_amount_value,
-        collateral_scale,
-    );
-    // add collateral amount to vault supply
-    token_data.collaterals[collateral_index as usize].vault_mint_supply =
-        RawDecimal::from(new_vault_mint_supply);
-
-    // Update token data
-    let total_minted_amount = rescale_toward_zero(
-        token_data.pools[pool_index as usize]
-            .total_minted_amount
-            .to_decimal()
-            + onasset_amount_value,
-        CLONE_TOKEN_SCALE,
-    );
-    token_data.pools[pool_index as usize].total_minted_amount =
-        RawDecimal::from(total_minted_amount);
-
     // increment number of mint positions
-    borrow_positions.num_positions += 1;
+    user_account.borrows.num_positions += 1;
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index,
         is_liquidation: false,
-        collateral_supplied: collateral_amount_value.mantissa().try_into().unwrap(),
-        collateral_delta: collateral_amount_value.mantissa().try_into().unwrap(),
+        collateral_supplied: collateral_amount,
+        collateral_delta: collateral_amount.try_into().unwrap(),
         collateral_index: collateral_index.try_into().unwrap(),
-        borrowed_amount: onasset_amount_value.mantissa().try_into().unwrap(),
-        borrowed_delta: onasset_amount_value.mantissa().try_into().unwrap()
+        borrowed_amount: onasset_amount,
+        borrowed_delta: onasset_amount.try_into().unwrap()
     });
     ctx.accounts.clone.event_counter += 1;
 

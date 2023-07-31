@@ -8,17 +8,13 @@
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
-import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 export type Collateral = {
   oracleInfoIndex: beet.bignum
   mint: web3.PublicKey
   vault: web3.PublicKey
-  vaultOnusdSupply: RawDecimal
-  vaultMintSupply: RawDecimal
-  vaultCometSupply: RawDecimal
-  stable: beet.bignum
-  collateralizationRatio: RawDecimal
-  liquidationDiscount: RawDecimal
+  collateralizationRatio: beet.bignum
+  status: beet.bignum
+  scale: beet.bignum
 }
 
 /**
@@ -30,12 +26,9 @@ export const collateralBeet = new beet.BeetArgsStruct<Collateral>(
     ['oracleInfoIndex', beet.u64],
     ['mint', beetSolana.publicKey],
     ['vault', beetSolana.publicKey],
-    ['vaultOnusdSupply', rawDecimalBeet],
-    ['vaultMintSupply', rawDecimalBeet],
-    ['vaultCometSupply', rawDecimalBeet],
-    ['stable', beet.u64],
-    ['collateralizationRatio', rawDecimalBeet],
-    ['liquidationDiscount', rawDecimalBeet],
+    ['collateralizationRatio', beet.u64],
+    ['status', beet.u64],
+    ['scale', beet.u64],
   ],
   'Collateral'
 )

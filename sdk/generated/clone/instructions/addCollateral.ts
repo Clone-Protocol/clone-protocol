@@ -16,10 +16,8 @@ import * as web3 from '@solana/web3.js'
  */
 export type AddCollateralInstructionArgs = {
   scale: number
-  stable: boolean
   collateralizationRatio: number
   oracleInfoIndex: number
-  liquidationDiscount: number
 }
 /**
  * @category Instructions
@@ -34,10 +32,8 @@ export const addCollateralStruct = new beet.BeetArgsStruct<
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['scale', beet.u8],
-    ['stable', beet.bool],
     ['collateralizationRatio', beet.u8],
     ['oracleInfoIndex', beet.u8],
-    ['liquidationDiscount', beet.u8],
   ],
   'AddCollateralInstructionArgs'
 )

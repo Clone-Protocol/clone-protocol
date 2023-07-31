@@ -8,15 +8,13 @@
 import * as web3 from '@solana/web3.js'
 import * as beet from '@metaplex-foundation/beet'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
-import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 export type AssetInfo = {
   onassetMint: web3.PublicKey
   oracleInfoIndex: beet.bignum
-  stableCollateralRatio: RawDecimal
-  cryptoCollateralRatio: RawDecimal
-  ilHealthScoreCoefficient: RawDecimal
-  positionHealthScoreCoefficient: RawDecimal
-  liquidationDiscountRate: RawDecimal
+  ilHealthScoreCoefficient: beet.bignum
+  positionHealthScoreCoefficient: beet.bignum
+  minOvercollateralRatio: beet.bignum
+  maxLiquidationOvercollateralRatio: beet.bignum
 }
 
 /**
@@ -27,11 +25,10 @@ export const assetInfoBeet = new beet.BeetArgsStruct<AssetInfo>(
   [
     ['onassetMint', beetSolana.publicKey],
     ['oracleInfoIndex', beet.u64],
-    ['stableCollateralRatio', rawDecimalBeet],
-    ['cryptoCollateralRatio', rawDecimalBeet],
-    ['ilHealthScoreCoefficient', rawDecimalBeet],
-    ['positionHealthScoreCoefficient', rawDecimalBeet],
-    ['liquidationDiscountRate', rawDecimalBeet],
+    ['ilHealthScoreCoefficient', beet.u64],
+    ['positionHealthScoreCoefficient', beet.u64],
+    ['minOvercollateralRatio', beet.u64],
+    ['maxLiquidationOvercollateralRatio', beet.u64],
   ],
   'AssetInfo'
 )

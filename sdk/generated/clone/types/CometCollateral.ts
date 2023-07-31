@@ -5,13 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from '@solana/web3.js'
 import * as beet from '@metaplex-foundation/beet'
-import * as beetSolana from '@metaplex-foundation/beet-solana'
-import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 export type CometCollateral = {
-  authority: web3.PublicKey
-  collateralAmount: RawDecimal
+  collateralAmount: beet.bignum
   collateralIndex: beet.bignum
 }
 
@@ -21,8 +17,7 @@ export type CometCollateral = {
  */
 export const cometCollateralBeet = new beet.BeetArgsStruct<CometCollateral>(
   [
-    ['authority', beetSolana.publicKey],
-    ['collateralAmount', rawDecimalBeet],
+    ['collateralAmount', beet.u64],
     ['collateralIndex', beet.u64],
   ],
   'CometCollateral'

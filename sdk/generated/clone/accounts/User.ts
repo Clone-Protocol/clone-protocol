@@ -6,8 +6,10 @@
  */
 
 import * as web3 from '@solana/web3.js'
-import * as beetSolana from '@metaplex-foundation/beet-solana'
 import * as beet from '@metaplex-foundation/beet'
+import * as beetSolana from '@metaplex-foundation/beet-solana'
+import { BorrowPositions, borrowPositionsBeet } from '../types/BorrowPositions'
+import { Comet, cometBeet } from '../types/Comet'
 
 /**
  * Arguments used to create {@link User}
@@ -15,10 +17,8 @@ import * as beet from '@metaplex-foundation/beet'
  * @category generated
  */
 export type UserArgs = {
-  authority: web3.PublicKey
-  borrowPositions: web3.PublicKey
-  comet: web3.PublicKey
-  bump: number
+  borrows: BorrowPositions
+  comet: Comet
 }
 
 export const userDiscriminator = [159, 117, 95, 227, 239, 151, 58, 236]
@@ -31,17 +31,15 @@ export const userDiscriminator = [159, 117, 95, 227, 239, 151, 58, 236]
  */
 export class User implements UserArgs {
   private constructor(
-    readonly authority: web3.PublicKey,
-    readonly borrowPositions: web3.PublicKey,
-    readonly comet: web3.PublicKey,
-    readonly bump: number
+    readonly borrows: BorrowPositions,
+    readonly comet: Comet
   ) {}
 
   /**
    * Creates a {@link User} instance from the provided args.
    */
   static fromArgs(args: UserArgs) {
-    return new User(args.authority, args.borrowPositions, args.comet, args.bump)
+    return new User(args.borrows, args.comet)
   }
 
   /**
@@ -147,10 +145,8 @@ export class User implements UserArgs {
    */
   pretty() {
     return {
-      authority: this.authority.toBase58(),
-      borrowPositions: this.borrowPositions.toBase58(),
-      comet: this.comet.toBase58(),
-      bump: this.bump,
+      borrows: this.borrows,
+      comet: this.comet,
     }
   }
 }
@@ -167,10 +163,8 @@ export const userBeet = new beet.BeetStruct<
 >(
   [
     ['accountDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['authority', beetSolana.publicKey],
-    ['borrowPositions', beetSolana.publicKey],
-    ['comet', beetSolana.publicKey],
-    ['bump', beet.u8],
+    ['borrows', borrowPositionsBeet],
+    ['comet', cometBeet],
   ],
   User.fromArgs,
   'User'

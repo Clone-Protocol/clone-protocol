@@ -1,14 +1,12 @@
-import { TokenData, Comet } from "./interfaces";
-import { toNumber } from "./decimal";
 import {
-  TokenData as SolitaTokenData,
-  Comet as SolitaComet,
-  CometPosition,
-} from "../generated/clone/index";
+  TokenData,
+  Comet,
+} from "../generated/clone";
+import { fromCloneScale, fromScale } from "./clone";
 
 export const getEffectiveUSDCollateralValue = (
-  tokenData: TokenData | SolitaTokenData,
-  comet: Comet | SolitaComet
+  tokenData: TokenData,
+  comet: Comet
 ) => {
   // Iterate through collaterals.
   let effectiveUSDCollateral = 0;
@@ -16,16 +14,19 @@ export const getEffectiveUSDCollateralValue = (
   comet.collaterals
     .slice(0, Number(comet.numCollaterals))
     .forEach((cometCollateral) => {
+      let collateralIndex = Number(cometCollateral.collateralIndex)
       const collateral =
-        tokenData.collaterals[Number(cometCollateral.collateralIndex)];
-      if (Number(collateral.stable) === 1) {
-        effectiveUSDCollateral += toNumber(cometCollateral.collateralAmount);
+        tokenData.collaterals[collateralIndex];
+      const collateralAmount = fromScale(cometCollateral.collateralAmount, collateral.scale);
+      
+      if (collateralIndex === 0 || collateralIndex === 1) {
+        effectiveUSDCollateral += collateralAmount
       } else {
         const oracle = tokenData.oracles[Number(collateral.oracleInfoIndex)];
-        const oraclePrice = toNumber(oracle.price);
+        const oraclePrice = fromScale(oracle.price, oracle.expo);
         effectiveUSDCollateral +=
-          (oraclePrice * toNumber(cometCollateral.collateralAmount)) /
-          toNumber(collateral.collateralizationRatio);
+          (oraclePrice * collateralAmount) /
+          fromScale(collateral.collateralizationRatio, 2);
       }
     });
 
@@ -33,8 +34,8 @@ export const getEffectiveUSDCollateralValue = (
 };
 
 export const getHealthScore = (
-  tokenData: TokenData | SolitaTokenData,
-  comet: Comet | SolitaComet,
+  tokenData: TokenData,
+  comet: Comet,
   oraclePrices?: number[]
 ): {
   healthScore: number;
@@ -51,15 +52,15 @@ export const getHealthScore = (
     comet.positions
       .slice(0, Number(comet.numPositions))
       .map((position, index) => {
-        const positionCommitted = toNumber(position.committedOnusdLiquidity);
+        const positionCommitted = fromCloneScale(position.committedOnusdLiquidity);
         const { onAssetILD, onusdILD, poolIndex, oraclePrice } =
           positionILD[index];
         const pool = tokenData.pools[poolIndex];
 
-        let ilHealthScoreCoefficient = toNumber(
+        let ilHealthScoreCoefficient = fromCloneScale(
           pool.assetInfo.ilHealthScoreCoefficient
         );
-        let poolHealthScoreCoefficient = toNumber(
+        let poolHealthScoreCoefficient = fromCloneScale(
           pool.assetInfo.positionHealthScoreCoefficient
         );
 
@@ -81,8 +82,8 @@ export const getHealthScore = (
 };
 
 export const getILD = (
-  tokenData: TokenData | SolitaTokenData,
-  comet: Comet | SolitaComet,
+  tokenData: TokenData,
+  comet: Comet,
   oraclePrices?: number[]
 ): {
   onAssetILD: number;
@@ -99,23 +100,23 @@ export const getILD = (
 
   comet.positions.slice(0, Number(comet.numPositions)).forEach((position) => {
     const pool = tokenData.pools[Number(position.poolIndex)];
-    const poolCommittedOnusd = toNumber(pool.committedOnusdLiquidity);
+    const poolCommittedOnusd = fromCloneScale(pool.committedOnusdLiquidity);
     const oracle = tokenData.oracles[pool.assetInfo.oracleInfoIndex];
 
     const L =
       poolCommittedOnusd > 0
-        ? toNumber(position.committedOnusdLiquidity) / poolCommittedOnusd
+        ? fromCloneScale(position.committedOnusdLiquidity) / poolCommittedOnusd
         : 0;
     const onusdILD =
-      L * toNumber(pool.onusdIld) - toNumber(position.onusdIldRebate);
+      L * fromCloneScale(pool.onusdIld) - fromCloneScale(position.onusdIldRebate);
     const onAssetILD =
-      L * toNumber(pool.onassetIld) - toNumber(position.onassetIldRebate);
+      L * fromCloneScale(pool.onassetIld) - fromCloneScale(position.onassetIldRebate);
     results.push({
       onAssetILD,
       onusdILD,
       oraclePrice: oraclePrices
         ? oraclePrices[pool.assetInfo.oracleInfoIndex]
-        : toNumber(oracle.price),
+        : fromScale(oracle.price, oracle.expo),
       poolIndex: Number(position.poolIndex),
     });
   });

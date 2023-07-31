@@ -1,9 +1,7 @@
-use crate::error::CloneError;
-use crate::return_error_if_false;
 use crate::states::*;
+use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
-use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(
@@ -13,14 +11,13 @@ use std::convert::TryInto;
     treasury_trading_fee: u16,
     il_health_score_coefficient: u64,
     position_health_score_coefficient: u64,
-    liquidation_discount_rate: u64,
     oracle_info_index: u8,
 )]
 pub struct InitializePool<'info> {
     #[account(mut, address = clone.admin)]
     pub admin: Signer<'info>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data,
         has_one = admin
@@ -92,63 +89,35 @@ pub fn execute(
     treasury_trading_fee: u16,
     il_health_score_coefficient: u64,
     position_health_score_coefficient: u64,
-    liquidation_discount_rate: u64,
     oracle_info_index: u8,
 ) -> Result<()> {
-    // ensure valid health score coefficient
-    return_error_if_false!(
-        liquidation_discount_rate < 10000,
-        CloneError::InvalidValueRange
-    );
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
 
     // append pool to list
     token_data.append_pool(Pool {
-        underlying_asset_token_account: *ctx
+        underlying_asset_token_account: ctx
             .accounts
             .underlying_asset_token_account
             .to_account_info()
-            .key,
-        treasury_trading_fee: RawDecimal::from_bps(treasury_trading_fee.into()),
-        liquidity_trading_fee: RawDecimal::from_bps(liquidity_trading_fee.into()),
-        total_minted_amount: RawDecimal::default(),
+            .key(),
+        treasury_trading_fee: treasury_trading_fee.into(),
+        liquidity_trading_fee: liquidity_trading_fee.into(),
         asset_info: AssetInfo {
             ..Default::default()
         },
         status: 0,
-        committed_onusd_liquidity: RawDecimal::default(),
-        onusd_ild: RawDecimal::default(),
-        onasset_ild: RawDecimal::default(),
+        committed_onusd_liquidity: 0,
+        onusd_ild: 0,
+        onasset_ild: 0,
     });
     let index = token_data.num_pools - 1;
-    token_data.pools[index as usize].asset_info.onasset_mint =
-        *ctx.accounts.onasset_mint.to_account_info().key;
-    token_data.pools[index as usize]
-        .asset_info
-        .min_overcollateral_ratio = RawDecimal::from_percent(min_overcollateral_ratio);
-    token_data.pools[index as usize]
-        .asset_info
-        .max_liquidation_overcollateral_ratio =
-        RawDecimal::from_percent(max_liquidation_overcollateral_ratio);
-    token_data.pools[index as usize]
-        .asset_info
-        .il_health_score_coefficient = RawDecimal::new(
-        il_health_score_coefficient.try_into().unwrap(),
-        CLONE_TOKEN_SCALE,
-    );
-    token_data.pools[index as usize]
-        .asset_info
-        .position_health_score_coefficient = RawDecimal::new(
-        position_health_score_coefficient.try_into().unwrap(),
-        CLONE_TOKEN_SCALE,
-    );
-    token_data.pools[index as usize]
-        .asset_info
-        .liquidation_discount_rate =
-        RawDecimal::new(liquidation_discount_rate.try_into().unwrap(), BPS_SCALE);
-    token_data.pools[index as usize]
-        .asset_info
-        .oracle_info_index = oracle_info_index as u64;
+    let asset_info = &mut token_data.pools[index as usize].asset_info;
+    asset_info.onasset_mint = ctx.accounts.onasset_mint.to_account_info().key();
+    asset_info.oracle_info_index = oracle_info_index.into();
+    asset_info.il_health_score_coefficient = il_health_score_coefficient;
+    asset_info.position_health_score_coefficient = position_health_score_coefficient;
+    asset_info.min_overcollateral_ratio = min_overcollateral_ratio.into();
+    asset_info.max_liquidation_overcollateral_ratio = max_liquidation_overcollateral_ratio.into();
 
     Ok(())
 }

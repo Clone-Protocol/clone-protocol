@@ -8,10 +8,10 @@
 import * as web3 from '@solana/web3.js'
 import * as beet from '@metaplex-foundation/beet'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
-import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 export type OracleInfo = {
   pythAddress: web3.PublicKey
-  price: RawDecimal
+  price: beet.bignum
+  expo: beet.bignum
   status: beet.bignum
   lastUpdateSlot: beet.bignum
 }
@@ -23,7 +23,8 @@ export type OracleInfo = {
 export const oracleInfoBeet = new beet.BeetArgsStruct<OracleInfo>(
   [
     ['pythAddress', beetSolana.publicKey],
-    ['price', rawDecimalBeet],
+    ['price', beet.i64],
+    ['expo', beet.i64],
     ['status', beet.u64],
     ['lastUpdateSlot', beet.u64],
   ],

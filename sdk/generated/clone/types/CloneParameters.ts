@@ -8,7 +8,6 @@
 import * as web3 from '@solana/web3.js'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
 import * as beet from '@metaplex-foundation/beet'
-import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 /**
  * This type is used to derive the {@link CloneParameters} type as well as the de/serializer.
  * However don't refer to it in your code but use the {@link CloneParameters} type instead.
@@ -19,8 +18,10 @@ import { RawDecimal, rawDecimalBeet } from './RawDecimal'
  * @private
  */
 export type CloneParametersRecord = {
-  LiquidationFee: { value: RawDecimal }
-  MaxHealthLiquidation: { value: RawDecimal }
+  AddAuth: { address: web3.PublicKey }
+  RemoveAuth: { address: web3.PublicKey }
+  CometLiquidationFee: { value: number }
+  BorrowLiquidationFee: { value: number }
   TreasuryAddress: { address: web3.PublicKey }
 }
 
@@ -37,14 +38,20 @@ export type CloneParametersRecord = {
  */
 export type CloneParameters = beet.DataEnumKeyAsKind<CloneParametersRecord>
 
-export const isCloneParametersLiquidationFee = (
+export const isCloneParametersAddAuth = (
   x: CloneParameters
-): x is CloneParameters & { __kind: 'LiquidationFee' } =>
-  x.__kind === 'LiquidationFee'
-export const isCloneParametersMaxHealthLiquidation = (
+): x is CloneParameters & { __kind: 'AddAuth' } => x.__kind === 'AddAuth'
+export const isCloneParametersRemoveAuth = (
   x: CloneParameters
-): x is CloneParameters & { __kind: 'MaxHealthLiquidation' } =>
-  x.__kind === 'MaxHealthLiquidation'
+): x is CloneParameters & { __kind: 'RemoveAuth' } => x.__kind === 'RemoveAuth'
+export const isCloneParametersCometLiquidationFee = (
+  x: CloneParameters
+): x is CloneParameters & { __kind: 'CometLiquidationFee' } =>
+  x.__kind === 'CometLiquidationFee'
+export const isCloneParametersBorrowLiquidationFee = (
+  x: CloneParameters
+): x is CloneParameters & { __kind: 'BorrowLiquidationFee' } =>
+  x.__kind === 'BorrowLiquidationFee'
 export const isCloneParametersTreasuryAddress = (
   x: CloneParameters
 ): x is CloneParameters & { __kind: 'TreasuryAddress' } =>
@@ -56,18 +63,34 @@ export const isCloneParametersTreasuryAddress = (
  */
 export const cloneParametersBeet = beet.dataEnum<CloneParametersRecord>([
   [
-    'LiquidationFee',
-    new beet.BeetArgsStruct<CloneParametersRecord['LiquidationFee']>(
-      [['value', rawDecimalBeet]],
-      'CloneParametersRecord["LiquidationFee"]'
+    'AddAuth',
+    new beet.BeetArgsStruct<CloneParametersRecord['AddAuth']>(
+      [['address', beetSolana.publicKey]],
+      'CloneParametersRecord["AddAuth"]'
     ),
   ],
 
   [
-    'MaxHealthLiquidation',
-    new beet.BeetArgsStruct<CloneParametersRecord['MaxHealthLiquidation']>(
-      [['value', rawDecimalBeet]],
-      'CloneParametersRecord["MaxHealthLiquidation"]'
+    'RemoveAuth',
+    new beet.BeetArgsStruct<CloneParametersRecord['RemoveAuth']>(
+      [['address', beetSolana.publicKey]],
+      'CloneParametersRecord["RemoveAuth"]'
+    ),
+  ],
+
+  [
+    'CometLiquidationFee',
+    new beet.BeetArgsStruct<CloneParametersRecord['CometLiquidationFee']>(
+      [['value', beet.u16]],
+      'CloneParametersRecord["CometLiquidationFee"]'
+    ),
+  ],
+
+  [
+    'BorrowLiquidationFee',
+    new beet.BeetArgsStruct<CloneParametersRecord['BorrowLiquidationFee']>(
+      [['value', beet.u16]],
+      'CloneParametersRecord["BorrowLiquidationFee"]'
     ),
   ],
 

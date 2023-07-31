@@ -1,12 +1,13 @@
+use crate::return_error_if_false;
+use crate::CLONE_PROGRAM_SEED;
 use crate::{error::CloneError, states::*};
 use anchor_lang::prelude::*;
-use crate::return_error_if_false;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum CollateralParameters {
     Status { status: u64 },
     OracleInfoIndex { value: u64 },
-    CollateralizationRatio { value: RawDecimal },
+    CollateralizationRatio { value: u64 },
 }
 
 #[derive(Accounts)]
@@ -19,7 +20,7 @@ pub struct UpdateCollateralParameters<'info> {
     pub admin: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data
     )]

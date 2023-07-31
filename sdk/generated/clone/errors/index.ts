@@ -12,13 +12,33 @@ const createErrorFromCodeLookup: Map<number, () => ErrorWithCode> = new Map()
 const createErrorFromNameLookup: Map<string, () => ErrorWithCode> = new Map()
 
 /**
+ * Unauthorized: 'Unauthorized'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class UnauthorizedError extends Error {
+  readonly code: number = 0x1770
+  readonly name: string = 'Unauthorized'
+  constructor() {
+    super('Unauthorized')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, UnauthorizedError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x1770, () => new UnauthorizedError())
+createErrorFromNameLookup.set('Unauthorized', () => new UnauthorizedError())
+
+/**
  * InvalidMintCollateralRatio: 'Invalid Mint Collateral Ratio'
  *
  * @category Errors
  * @category generated
  */
 export class InvalidMintCollateralRatioError extends Error {
-  readonly code: number = 0x1770
+  readonly code: number = 0x1771
   readonly name: string = 'InvalidMintCollateralRatio'
   constructor() {
     super('Invalid Mint Collateral Ratio')
@@ -29,7 +49,7 @@ export class InvalidMintCollateralRatioError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x1770,
+  0x1771,
   () => new InvalidMintCollateralRatioError()
 )
 createErrorFromNameLookup.set(
@@ -44,7 +64,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class CollateralNotFoundError extends Error {
-  readonly code: number = 0x1771
+  readonly code: number = 0x1772
   readonly name: string = 'CollateralNotFound'
   constructor() {
     super('Collateral Not Found')
@@ -54,7 +74,7 @@ export class CollateralNotFoundError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1771, () => new CollateralNotFoundError())
+createErrorFromCodeLookup.set(0x1772, () => new CollateralNotFoundError())
 createErrorFromNameLookup.set(
   'CollateralNotFound',
   () => new CollateralNotFoundError()
@@ -67,7 +87,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class PoolNotFoundError extends Error {
-  readonly code: number = 0x1772
+  readonly code: number = 0x1773
   readonly name: string = 'PoolNotFound'
   constructor() {
     super('Pool Not Found')
@@ -77,7 +97,7 @@ export class PoolNotFoundError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1772, () => new PoolNotFoundError())
+createErrorFromCodeLookup.set(0x1773, () => new PoolNotFoundError())
 createErrorFromNameLookup.set('PoolNotFound', () => new PoolNotFoundError())
 
 /**
@@ -87,7 +107,7 @@ createErrorFromNameLookup.set('PoolNotFound', () => new PoolNotFoundError())
  * @category generated
  */
 export class InvalidCollateralTypeError extends Error {
-  readonly code: number = 0x1773
+  readonly code: number = 0x1774
   readonly name: string = 'InvalidCollateralType'
   constructor() {
     super('Invalid Collateral Type')
@@ -97,7 +117,7 @@ export class InvalidCollateralTypeError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1773, () => new InvalidCollateralTypeError())
+createErrorFromCodeLookup.set(0x1774, () => new InvalidCollateralTypeError())
 createErrorFromNameLookup.set(
   'InvalidCollateralType',
   () => new InvalidCollateralTypeError()
@@ -110,7 +130,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidTokenAmountError extends Error {
-  readonly code: number = 0x1774
+  readonly code: number = 0x1775
   readonly name: string = 'InvalidTokenAmount'
   constructor() {
     super('Invalid Token Amount')
@@ -120,7 +140,7 @@ export class InvalidTokenAmountError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1774, () => new InvalidTokenAmountError())
+createErrorFromCodeLookup.set(0x1775, () => new InvalidTokenAmountError())
 createErrorFromNameLookup.set(
   'InvalidTokenAmount',
   () => new InvalidTokenAmountError()
@@ -133,7 +153,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidBoolError extends Error {
-  readonly code: number = 0x1775
+  readonly code: number = 0x1776
   readonly name: string = 'InvalidBool'
   constructor() {
     super('Invalid Bool')
@@ -143,7 +163,7 @@ export class InvalidBoolError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1775, () => new InvalidBoolError())
+createErrorFromCodeLookup.set(0x1776, () => new InvalidBoolError())
 createErrorFromNameLookup.set('InvalidBool', () => new InvalidBoolError())
 
 /**
@@ -153,7 +173,7 @@ createErrorFromNameLookup.set('InvalidBool', () => new InvalidBoolError())
  * @category generated
  */
 export class OutdatedOracleError extends Error {
-  readonly code: number = 0x1776
+  readonly code: number = 0x1777
   readonly name: string = 'OutdatedOracle'
   constructor() {
     super('Outdated Oracle')
@@ -163,7 +183,7 @@ export class OutdatedOracleError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1776, () => new OutdatedOracleError())
+createErrorFromCodeLookup.set(0x1777, () => new OutdatedOracleError())
 createErrorFromNameLookup.set('OutdatedOracle', () => new OutdatedOracleError())
 
 /**
@@ -173,7 +193,7 @@ createErrorFromNameLookup.set('OutdatedOracle', () => new OutdatedOracleError())
  * @category generated
  */
 export class NonStablesNotSupportedError extends Error {
-  readonly code: number = 0x1777
+  readonly code: number = 0x1778
   readonly name: string = 'NonStablesNotSupported'
   constructor() {
     super('Non-stables Not Supported')
@@ -183,36 +203,36 @@ export class NonStablesNotSupportedError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1777, () => new NonStablesNotSupportedError())
+createErrorFromCodeLookup.set(0x1778, () => new NonStablesNotSupportedError())
 createErrorFromNameLookup.set(
   'NonStablesNotSupported',
   () => new NonStablesNotSupportedError()
 )
 
 /**
- * MintPositionUnableToLiquidate: 'Mint Position Unable to Liquidate'
+ * BorrowPositionUnableToLiquidate: 'Mint Position Unable to Liquidate'
  *
  * @category Errors
  * @category generated
  */
-export class MintPositionUnableToLiquidateError extends Error {
-  readonly code: number = 0x1778
-  readonly name: string = 'MintPositionUnableToLiquidate'
+export class BorrowPositionUnableToLiquidateError extends Error {
+  readonly code: number = 0x1779
+  readonly name: string = 'BorrowPositionUnableToLiquidate'
   constructor() {
     super('Mint Position Unable to Liquidate')
     if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, MintPositionUnableToLiquidateError)
+      Error.captureStackTrace(this, BorrowPositionUnableToLiquidateError)
     }
   }
 }
 
 createErrorFromCodeLookup.set(
-  0x1778,
-  () => new MintPositionUnableToLiquidateError()
+  0x1779,
+  () => new BorrowPositionUnableToLiquidateError()
 )
 createErrorFromNameLookup.set(
-  'MintPositionUnableToLiquidate',
-  () => new MintPositionUnableToLiquidateError()
+  'BorrowPositionUnableToLiquidate',
+  () => new BorrowPositionUnableToLiquidateError()
 )
 
 /**
@@ -222,7 +242,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class HealthScoreTooLowError extends Error {
-  readonly code: number = 0x1779
+  readonly code: number = 0x177a
   readonly name: string = 'HealthScoreTooLow'
   constructor() {
     super('Health Score Too Low')
@@ -232,7 +252,7 @@ export class HealthScoreTooLowError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1779, () => new HealthScoreTooLowError())
+createErrorFromCodeLookup.set(0x177a, () => new HealthScoreTooLowError())
 createErrorFromNameLookup.set(
   'HealthScoreTooLow',
   () => new HealthScoreTooLowError()
@@ -245,7 +265,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidInputCollateralAccountError extends Error {
-  readonly code: number = 0x177a
+  readonly code: number = 0x177b
   readonly name: string = 'InvalidInputCollateralAccount'
   constructor() {
     super('Invalid input collateral account')
@@ -256,7 +276,7 @@ export class InvalidInputCollateralAccountError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x177a,
+  0x177b,
   () => new InvalidInputCollateralAccountError()
 )
 createErrorFromNameLookup.set(
@@ -271,7 +291,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidAccountLoaderOwnerError extends Error {
-  readonly code: number = 0x177b
+  readonly code: number = 0x177c
   readonly name: string = 'InvalidAccountLoaderOwner'
   constructor() {
     super('Invalid Account loader owner')
@@ -282,7 +302,7 @@ export class InvalidAccountLoaderOwnerError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x177b,
+  0x177c,
   () => new InvalidAccountLoaderOwnerError()
 )
 createErrorFromNameLookup.set(
@@ -297,7 +317,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidInputPositionIndexError extends Error {
-  readonly code: number = 0x177c
+  readonly code: number = 0x177d
   readonly name: string = 'InvalidInputPositionIndex'
   constructor() {
     super('Invalid input position index')
@@ -308,7 +328,7 @@ export class InvalidInputPositionIndexError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x177c,
+  0x177d,
   () => new InvalidInputPositionIndexError()
 )
 createErrorFromNameLookup.set(
@@ -323,7 +343,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidTokenAccountBalanceError extends Error {
-  readonly code: number = 0x177d
+  readonly code: number = 0x177e
   readonly name: string = 'InvalidTokenAccountBalance'
   constructor() {
     super('Invalid token account balance')
@@ -334,7 +354,7 @@ export class InvalidTokenAccountBalanceError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x177d,
+  0x177e,
   () => new InvalidTokenAccountBalanceError()
 )
 createErrorFromNameLookup.set(
@@ -349,7 +369,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InequalityComparisonViolatedError extends Error {
-  readonly code: number = 0x177e
+  readonly code: number = 0x177f
   readonly name: string = 'InequalityComparisonViolated'
   constructor() {
     super('Inequality comparison violated')
@@ -360,7 +380,7 @@ export class InequalityComparisonViolatedError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x177e,
+  0x177f,
   () => new InequalityComparisonViolatedError()
 )
 createErrorFromNameLookup.set(
@@ -375,7 +395,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class CometNotEmptyError extends Error {
-  readonly code: number = 0x177f
+  readonly code: number = 0x1780
   readonly name: string = 'CometNotEmpty'
   constructor() {
     super('Comet Not Empty')
@@ -385,7 +405,7 @@ export class CometNotEmptyError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x177f, () => new CometNotEmptyError())
+createErrorFromCodeLookup.set(0x1780, () => new CometNotEmptyError())
 createErrorFromNameLookup.set('CometNotEmpty', () => new CometNotEmptyError())
 
 /**
@@ -395,7 +415,7 @@ createErrorFromNameLookup.set('CometNotEmpty', () => new CometNotEmptyError())
  * @category generated
  */
 export class NotSubjectToLiquidationError extends Error {
-  readonly code: number = 0x1780
+  readonly code: number = 0x1781
   readonly name: string = 'NotSubjectToLiquidation'
   constructor() {
     super('Not Subject to Liquidation')
@@ -405,7 +425,7 @@ export class NotSubjectToLiquidationError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1780, () => new NotSubjectToLiquidationError())
+createErrorFromCodeLookup.set(0x1781, () => new NotSubjectToLiquidationError())
 createErrorFromNameLookup.set(
   'NotSubjectToLiquidation',
   () => new NotSubjectToLiquidationError()
@@ -418,7 +438,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class LiquidationAmountTooLargeError extends Error {
-  readonly code: number = 0x1781
+  readonly code: number = 0x1782
   readonly name: string = 'LiquidationAmountTooLarge'
   constructor() {
     super('Liquidation amount too large')
@@ -429,7 +449,7 @@ export class LiquidationAmountTooLargeError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x1781,
+  0x1782,
   () => new LiquidationAmountTooLargeError()
 )
 createErrorFromNameLookup.set(
@@ -444,7 +464,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class NoRemainingAccountsSuppliedError extends Error {
-  readonly code: number = 0x1782
+  readonly code: number = 0x1783
   readonly name: string = 'NoRemainingAccountsSupplied'
   constructor() {
     super('No remaining accounts supplied')
@@ -455,7 +475,7 @@ export class NoRemainingAccountsSuppliedError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x1782,
+  0x1783,
   () => new NoRemainingAccountsSuppliedError()
 )
 createErrorFromNameLookup.set(
@@ -470,7 +490,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class NonZeroCollateralizationRatioRequiredError extends Error {
-  readonly code: number = 0x1783
+  readonly code: number = 0x1784
   readonly name: string = 'NonZeroCollateralizationRatioRequired'
   constructor() {
     super('Non-zero collateralization ratio required')
@@ -481,7 +501,7 @@ export class NonZeroCollateralizationRatioRequiredError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x1783,
+  0x1784,
   () => new NonZeroCollateralizationRatioRequiredError()
 )
 createErrorFromNameLookup.set(
@@ -496,7 +516,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class IncorrectOracleAddressError extends Error {
-  readonly code: number = 0x1784
+  readonly code: number = 0x1785
   readonly name: string = 'IncorrectOracleAddress'
   constructor() {
     super('Incorrect oracle address provided')
@@ -506,7 +526,7 @@ export class IncorrectOracleAddressError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1784, () => new IncorrectOracleAddressError())
+createErrorFromCodeLookup.set(0x1785, () => new IncorrectOracleAddressError())
 createErrorFromNameLookup.set(
   'IncorrectOracleAddress',
   () => new IncorrectOracleAddressError()
@@ -519,7 +539,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidValueRangeError extends Error {
-  readonly code: number = 0x1785
+  readonly code: number = 0x1786
   readonly name: string = 'InvalidValueRange'
   constructor() {
     super('Value is in an incorrect range')
@@ -529,7 +549,7 @@ export class InvalidValueRangeError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1785, () => new InvalidValueRangeError())
+createErrorFromCodeLookup.set(0x1786, () => new InvalidValueRangeError())
 createErrorFromNameLookup.set(
   'InvalidValueRange',
   () => new InvalidValueRangeError()
@@ -542,7 +562,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidAssetStabilityError extends Error {
-  readonly code: number = 0x1786
+  readonly code: number = 0x1787
   readonly name: string = 'InvalidAssetStability'
   constructor() {
     super('Asset stable requirement violated')
@@ -552,7 +572,7 @@ export class InvalidAssetStabilityError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1786, () => new InvalidAssetStabilityError())
+createErrorFromCodeLookup.set(0x1787, () => new InvalidAssetStabilityError())
 createErrorFromNameLookup.set(
   'InvalidAssetStability',
   () => new InvalidAssetStabilityError()
@@ -565,7 +585,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class SlippageToleranceExceededError extends Error {
-  readonly code: number = 0x1787
+  readonly code: number = 0x1788
   readonly name: string = 'SlippageToleranceExceeded'
   constructor() {
     super('Slippage tolerance exceeded')
@@ -576,7 +596,7 @@ export class SlippageToleranceExceededError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x1787,
+  0x1788,
   () => new SlippageToleranceExceededError()
 )
 createErrorFromNameLookup.set(
@@ -591,7 +611,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class RequireOnlyonUSDCollateralError extends Error {
-  readonly code: number = 0x1788
+  readonly code: number = 0x1789
   readonly name: string = 'RequireOnlyonUSDCollateral'
   constructor() {
     super('Collateral must be all in onUSD')
@@ -602,7 +622,7 @@ export class RequireOnlyonUSDCollateralError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x1788,
+  0x1789,
   () => new RequireOnlyonUSDCollateralError()
 )
 createErrorFromNameLookup.set(
@@ -617,7 +637,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class RequireAllPositionsClosedError extends Error {
-  readonly code: number = 0x1789
+  readonly code: number = 0x178a
   readonly name: string = 'RequireAllPositionsClosed'
   constructor() {
     super('Positions must be all closed')
@@ -628,7 +648,7 @@ export class RequireAllPositionsClosedError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x1789,
+  0x178a,
   () => new RequireAllPositionsClosedError()
 )
 createErrorFromNameLookup.set(
@@ -643,7 +663,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class FailedToLoadPythError extends Error {
-  readonly code: number = 0x178a
+  readonly code: number = 0x178b
   readonly name: string = 'FailedToLoadPyth'
   constructor() {
     super('Failed to Load Pyth Price Feed')
@@ -653,31 +673,34 @@ export class FailedToLoadPythError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x178a, () => new FailedToLoadPythError())
+createErrorFromCodeLookup.set(0x178b, () => new FailedToLoadPythError())
 createErrorFromNameLookup.set(
   'FailedToLoadPyth',
   () => new FailedToLoadPythError()
 )
 
 /**
- * PoolDeprecated: 'Pool Deprecated'
+ * StatusPreventsAction: 'Status Prevents Action'
  *
  * @category Errors
  * @category generated
  */
-export class PoolDeprecatedError extends Error {
-  readonly code: number = 0x178b
-  readonly name: string = 'PoolDeprecated'
+export class StatusPreventsActionError extends Error {
+  readonly code: number = 0x178c
+  readonly name: string = 'StatusPreventsAction'
   constructor() {
-    super('Pool Deprecated')
+    super('Status Prevents Action')
     if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, PoolDeprecatedError)
+      Error.captureStackTrace(this, StatusPreventsActionError)
     }
   }
 }
 
-createErrorFromCodeLookup.set(0x178b, () => new PoolDeprecatedError())
-createErrorFromNameLookup.set('PoolDeprecated', () => new PoolDeprecatedError())
+createErrorFromCodeLookup.set(0x178c, () => new StatusPreventsActionError())
+createErrorFromNameLookup.set(
+  'StatusPreventsAction',
+  () => new StatusPreventsActionError()
+)
 
 /**
  * PoolEmpty: 'Pool is empty'
@@ -686,7 +709,7 @@ createErrorFromNameLookup.set('PoolDeprecated', () => new PoolDeprecatedError())
  * @category generated
  */
 export class PoolEmptyError extends Error {
-  readonly code: number = 0x178c
+  readonly code: number = 0x178d
   readonly name: string = 'PoolEmpty'
   constructor() {
     super('Pool is empty')
@@ -696,7 +719,7 @@ export class PoolEmptyError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x178c, () => new PoolEmptyError())
+createErrorFromCodeLookup.set(0x178d, () => new PoolEmptyError())
 createErrorFromNameLookup.set('PoolEmpty', () => new PoolEmptyError())
 
 /**
@@ -706,7 +729,7 @@ createErrorFromNameLookup.set('PoolEmpty', () => new PoolEmptyError())
  * @category generated
  */
 export class NoLiquidityToWithdrawError extends Error {
-  readonly code: number = 0x178d
+  readonly code: number = 0x178e
   readonly name: string = 'NoLiquidityToWithdraw'
   constructor() {
     super('No liquidity to withdraw')
@@ -716,11 +739,71 @@ export class NoLiquidityToWithdrawError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x178d, () => new NoLiquidityToWithdrawError())
+createErrorFromCodeLookup.set(0x178e, () => new NoLiquidityToWithdrawError())
 createErrorFromNameLookup.set(
   'NoLiquidityToWithdraw',
   () => new NoLiquidityToWithdrawError()
 )
+
+/**
+ * InvalidStatus: 'Invalid Status'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class InvalidStatusError extends Error {
+  readonly code: number = 0x178f
+  readonly name: string = 'InvalidStatus'
+  constructor() {
+    super('Invalid Status')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, InvalidStatusError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x178f, () => new InvalidStatusError())
+createErrorFromNameLookup.set('InvalidStatus', () => new InvalidStatusError())
+
+/**
+ * AuthArrayFull: 'Auth Array Full'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class AuthArrayFullError extends Error {
+  readonly code: number = 0x1790
+  readonly name: string = 'AuthArrayFull'
+  constructor() {
+    super('Auth Array Full')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, AuthArrayFullError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x1790, () => new AuthArrayFullError())
+createErrorFromNameLookup.set('AuthArrayFull', () => new AuthArrayFullError())
+
+/**
+ * AuthNotFound: 'Auth Not Found'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class AuthNotFoundError extends Error {
+  readonly code: number = 0x1791
+  readonly name: string = 'AuthNotFound'
+  constructor() {
+    super('Auth Not Found')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, AuthNotFoundError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x1791, () => new AuthNotFoundError())
+createErrorFromNameLookup.set('AuthNotFound', () => new AuthNotFoundError())
 
 /**
  * InvalidOracleIndex: 'Invalid oracle index'
@@ -729,7 +812,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidOracleIndexError extends Error {
-  readonly code: number = 0x178e
+  readonly code: number = 0x1792
   readonly name: string = 'InvalidOracleIndex'
   constructor() {
     super('Invalid oracle index')
@@ -739,7 +822,7 @@ export class InvalidOracleIndexError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x178e, () => new InvalidOracleIndexError())
+createErrorFromCodeLookup.set(0x1792, () => new InvalidOracleIndexError())
 createErrorFromNameLookup.set(
   'InvalidOracleIndex',
   () => new InvalidOracleIndexError()

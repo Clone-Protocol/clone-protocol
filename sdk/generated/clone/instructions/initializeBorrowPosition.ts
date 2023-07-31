@@ -43,10 +43,9 @@ export const initializeBorrowPositionStruct = new beet.BeetArgsStruct<
  * Accounts required by the _initializeBorrowPosition_ instruction
  *
  * @property [**signer**] user
- * @property [] userAccount
- * @property [] clone
+ * @property [_writable_] userAccount
+ * @property [_writable_] clone
  * @property [_writable_] tokenData
- * @property [_writable_] borrowPositions
  * @property [_writable_] vault
  * @property [_writable_] userCollateralTokenAccount
  * @property [_writable_] onassetMint
@@ -60,7 +59,6 @@ export type InitializeBorrowPositionInstructionAccounts = {
   userAccount: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
-  borrowPositions: web3.PublicKey
   vault: web3.PublicKey
   userCollateralTokenAccount: web3.PublicKey
   onassetMint: web3.PublicKey
@@ -100,21 +98,16 @@ export function createInitializeBorrowPositionInstruction(
     },
     {
       pubkey: accounts.userAccount,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.clone,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.tokenData,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.borrowPositions,
+      pubkey: accounts.clone,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.tokenData,
       isWritable: true,
       isSigner: false,
     },
