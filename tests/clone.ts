@@ -273,15 +273,7 @@ describe("tests", async () => {
       })
       .signers([mockAssetMint])
       .rpc();
-
-    await cloneProgram.methods
-      .addOracleFeed(priceFeed)
-      .accounts({
-        admin: walletPubkey,
-        clone: cloneClient.cloneAddress,
-        tokenData: cloneClient.clone?.tokenData,
-      })
-      .rpc();
+    await cloneClient.addOracleInfo(priceFeed);
   });
 
   it("pool initialized!", async () => {
@@ -1580,14 +1572,7 @@ describe("tests", async () => {
       jupiterAddress
     );
 
-    await cloneProgram.methods
-      .addOracleFeed(priceFeed2)
-      .accounts({
-        admin: walletPubkey,
-        clone: cloneClient.cloneAddress,
-        tokenData: cloneClient.clone?.tokenData,
-      })
-      .rpc();
+    await cloneClient.addOracleInfo(priceFeed2);
 
     await cloneClient.initializePool(
       150,
@@ -2054,20 +2039,17 @@ describe("tests", async () => {
     let amount = toCloneScale(5);
 
     // Wrap to onasset
-    await cloneProgram.methods
-      .wrapAsset(amount, poolIndex)
-      .accounts({
-        user: cloneClient.provider.publicKey!,
-        tokenData: cloneClient.clone!.tokenData,
-        underlyingAssetTokenAccount: pool.underlyingAssetTokenAccount!,
-        assetMint: jupiterData.assetMints[0],
-        userAssetTokenAccount: mockAssetAssociatedTokenAccount.address,
-        onassetMint: pool.assetInfo.onassetMint,
-        userOnassetTokenAccount: onassetAssociatedTokenAccount.address,
-        clone: cloneClient.cloneAddress,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .rpc();
+    let tx = new Transaction().add(
+      cloneClient.wrapAssetInstruction(
+        tokenData,
+        amount,
+        poolIndex,
+        jupiterData.assetMints[0],
+        mockAssetAssociatedTokenAccount.address,
+        onassetAssociatedTokenAccount.address
+      )
+    );
+    await provider.sendAndConfirm(tx);
 
     mockAssetAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
@@ -2090,20 +2072,17 @@ describe("tests", async () => {
     );
 
     // Unwrap to asset
-    await cloneProgram.methods
-      .unwrapOnasset(amount, poolIndex)
-      .accounts({
-        user: cloneClient.provider.publicKey!,
-        tokenData: cloneClient.clone!.tokenData,
-        underlyingAssetTokenAccount: pool.underlyingAssetTokenAccount!,
-        assetMint: jupiterData.assetMints[0],
-        userAssetTokenAccount: mockAssetAssociatedTokenAccount.address,
-        onassetMint: pool.assetInfo.onassetMint,
-        userOnassetTokenAccount: onassetAssociatedTokenAccount.address,
-        clone: cloneClient.cloneAddress,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .rpc();
+    tx = new Transaction().add(
+      cloneClient.unwrapOnassetInstruction(
+        tokenData,
+        amount,
+        poolIndex,
+        jupiterData.assetMints[0],
+        mockAssetAssociatedTokenAccount.address,
+        onassetAssociatedTokenAccount.address
+      )
+    );
+    await provider.sendAndConfirm(tx);
 
     mockAssetAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,

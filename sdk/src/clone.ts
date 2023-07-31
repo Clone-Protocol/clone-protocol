@@ -40,6 +40,8 @@ import {
   UpdateCloneParametersInstructionArgs,
   createUpdateCloneParametersInstruction,
   createAddOracleFeedInstruction,
+  createWrapAssetInstruction,
+  createUnwrapOnassetInstruction,
 } from "../generated/clone";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
@@ -259,20 +261,20 @@ export class CloneClient {
     );
   }
 
-  public async addOracleInfo(
-    pythFeedAddress: PublicKey
-  ) {
+  public async addOracleInfo(pythFeedAddress: PublicKey) {
     let tx = new Transaction().add(
-      createAddOracleFeedInstruction({
-      admin: this.provider.publicKey!,
-      clone: this.cloneAddress,
-      tokenData: this.clone.tokenData,
-    },
-    {
-      pythAddress: pythFeedAddress
-    })
-    )
-    await this.provider.sendAndConfirm(tx)
+      createAddOracleFeedInstruction(
+        {
+          admin: this.provider.publicKey!,
+          clone: this.cloneAddress,
+          tokenData: this.clone.tokenData,
+        },
+        {
+          pythAddress: pythFeedAddress,
+        }
+      )
+    );
+    await this.provider.sendAndConfirm(tx);
   }
 
   public async updateCloneParameters(
@@ -431,6 +433,62 @@ export class CloneClient {
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       { amount }
+    );
+  }
+
+  public wrapAssetInstruction(
+    tokenData: TokenData,
+    amount: BN,
+    poolIndex: number,
+    assetMint: PublicKey,
+    userAssetTokenAccount: PublicKey,
+    userOnassetTokenAccount: PublicKey
+  ): TransactionInstruction {
+    const pool = tokenData.pools[poolIndex];
+    return createWrapAssetInstruction(
+      {
+        user: this.provider.publicKey!,
+        tokenData: this.clone!.tokenData,
+        underlyingAssetTokenAccount: pool.underlyingAssetTokenAccount!,
+        assetMint,
+        userAssetTokenAccount,
+        onassetMint: pool.assetInfo.onassetMint,
+        userOnassetTokenAccount,
+        clone: this.cloneAddress,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      },
+      {
+        amount,
+        poolIndex,
+      }
+    );
+  }
+
+  public unwrapOnassetInstruction(
+    tokenData: TokenData,
+    amount: BN,
+    poolIndex: number,
+    assetMint: PublicKey,
+    userAssetTokenAccount: PublicKey,
+    userOnassetTokenAccount: PublicKey
+  ): TransactionInstruction {
+    const pool = tokenData.pools[poolIndex];
+    return createUnwrapOnassetInstruction(
+      {
+        user: this.provider.publicKey!,
+        tokenData: this.clone!.tokenData,
+        underlyingAssetTokenAccount: pool.underlyingAssetTokenAccount!,
+        assetMint,
+        userAssetTokenAccount,
+        onassetMint: pool.assetInfo.onassetMint,
+        userOnassetTokenAccount,
+        clone: this.cloneAddress,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      },
+      {
+        amount,
+        poolIndex,
+      }
     );
   }
 
