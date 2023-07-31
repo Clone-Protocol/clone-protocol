@@ -15,7 +15,6 @@ import * as web3 from '@solana/web3.js'
  * @category generated
  */
 export type MintUsdcInstructionArgs = {
-  nonce: number
   amount: beet.bignum
 }
 /**
@@ -30,7 +29,6 @@ export const mintUsdcStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['nonce', beet.u8],
     ['amount', beet.u64],
   ],
   'MintUsdcInstructionArgs'

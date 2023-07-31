@@ -22,8 +22,11 @@ import {
   toScale,
 } from "../sdk/src/clone";
 import { createPriceFeed, setPrice, getFeedData } from "../sdk/src/oracle";
-import { calculateSwapExecution, sleep } from "../sdk/src/utils";
-import { getOrCreateAssociatedTokenAccount } from "./utils";
+import {
+  calculateSwapExecution,
+  sleep,
+  getOrCreateAssociatedTokenAccount,
+} from "../sdk/src/utils";
 import { getHealthScore, getILD } from "../sdk/src/healthscore";
 import { Clone as CloneAccount } from "../sdk/generated/clone";
 
@@ -68,7 +71,7 @@ describe("tests", async () => {
     cloneProgram.programId
   );
   const mockAssetMint = anchor.web3.Keypair.generate();
-  let [jupiterAddress, jupiterNonce] = PublicKey.findProgramAddressSync(
+  let [jupiterAddress, _jupiterNonce] = PublicKey.findProgramAddressSync(
     [Buffer.from("jupiter")],
     jupiterProgram.programId
   );
@@ -287,7 +290,6 @@ describe("tests", async () => {
     );
 
     await cloneClient.initializePool(
-      walletPubkey,
       150,
       200,
       poolTradingFee,
@@ -371,7 +373,7 @@ describe("tests", async () => {
       mockUSDCMint.publicKey
     );
     await jupiterProgram.methods
-      .mintUsdc(jupiterNonce, usdcMintAmount)
+      .mintUsdc(usdcMintAmount)
       .accounts({
         usdcMint: mockUSDCMint.publicKey,
         usdcTokenAccount: mockUSDCTokenAccountInfo.address,
@@ -456,7 +458,7 @@ describe("tests", async () => {
       );
 
     await jupiterProgram.methods
-      .mintAsset(jupiterNonce, 0, new BN(assetMintAmount * 100000000))
+      .mintAsset(0, new BN(assetMintAmount * 100000000))
       .accounts({
         assetMint: mockAssetMint.publicKey,
         assetTokenAccount: mockAssetAssociatedTokenAddress.address,
@@ -500,7 +502,7 @@ describe("tests", async () => {
     let onUSDtoMint = 5000000;
 
     let ixUsdcMint = await jupiterProgram.methods
-      .mintUsdc(jupiterNonce, toScale(onUSDtoMint, 7))
+      .mintUsdc(toScale(onUSDtoMint, 7))
       .accounts({
         usdcMint: usdcMint,
         usdcTokenAccount: usdcAssociatedTokenAddress,
@@ -556,7 +558,7 @@ describe("tests", async () => {
     );
 
     await jupiterProgram.methods
-      .mintUsdc(jupiterNonce, new BN(10000 * 10000000))
+      .mintUsdc(new BN(10000 * 10000000))
       .accounts({
         usdcMint: usdcMint,
         usdcTokenAccount: usdcAssociatedTokenAddress,
@@ -567,7 +569,7 @@ describe("tests", async () => {
 
     // Swap 10 asset out.
     await jupiterProgram.methods
-      .swap(jupiterNonce, 0, false, true, toCloneScale(10))
+      .swap(0, false, true, toCloneScale(10))
       .accounts({
         user: jupiterProgram.provider.publicKey!,
         jupiterAccount: jupiterAddress,
@@ -1588,7 +1590,6 @@ describe("tests", async () => {
       .rpc();
 
     await cloneClient.initializePool(
-      walletPubkey,
       150,
       200,
       poolTradingFee,
@@ -2033,7 +2034,7 @@ describe("tests", async () => {
     );
     // Get asset from jupiter
     await jupiterProgram.methods
-      .mintAsset(jupiterNonce, 0, new BN(10 * 100000000))
+      .mintAsset(0, new BN(10 * 100000000))
       .accounts({
         assetMint: jupiterData.assetMints[0],
         assetTokenAccount: mockAssetAssociatedTokenAccount.address,

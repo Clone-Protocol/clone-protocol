@@ -9,6 +9,16 @@ import {
   AddressLookupTableAccount,
   VersionedTransaction,
 } from "@solana/web3.js";
+import {
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddress,
+  getAccount,
+  Account,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TokenAccountNotFoundError,
+} from "@solana/spl-token";
+import { Provider } from "@coral-xyz/anchor";
 
 export const sleep = async (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -49,8 +59,7 @@ export const calculateMantissa = (
 };
 
 export const getPoolLiquidity = (pool: Pool, oraclePrice: number) => {
-  const poolOnusd =
-    Number(pool.committedOnusdLiquidity - pool.onusdIld);
+  const poolOnusd = Number(pool.committedOnusdLiquidity - pool.onusdIld);
   const poolOnasset =
     Number(pool.committedOnusdLiquidity) / oraclePrice -
     Number(pool.onassetIld);
@@ -128,11 +137,15 @@ export const calculatePoolAmounts = (
   poolOnassetILD: number,
   poolCommittedOnusdLiquidity: number,
   oraclePrice: number
-  ) => {
-    const poolOnusd = floortoCloneScale(poolCommittedOnusdLiquidity - poolOnusdILD)
-    const poolOnasset = floortoCloneScale(poolCommittedOnusdLiquidity / oraclePrice - poolOnassetILD)
-    return { poolOnusd, poolOnasset }
-  }
+) => {
+  const poolOnusd = floortoCloneScale(
+    poolCommittedOnusdLiquidity - poolOnusdILD
+  );
+  const poolOnasset = floortoCloneScale(
+    poolCommittedOnusdLiquidity / oraclePrice - poolOnassetILD
+  );
+  return { poolOnusd, poolOnasset };
+};
 
 export const calculateSwapExecution = (
   quantity: number,
@@ -146,37 +159,57 @@ export const calculateSwapExecution = (
   oraclePrice: number
 ) => {
   const { poolOnusd, poolOnasset } = calculatePoolAmounts(
-    poolOnusdILD, poolOnassetILD, poolCommittedOnusdLiquidity, oraclePrice
-  )
-  const invariant = poolOnusd * poolOnasset
+    poolOnusdILD,
+    poolOnassetILD,
+    poolCommittedOnusdLiquidity,
+    oraclePrice
+  );
+  const invariant = poolOnusd * poolOnasset;
 
   if (quantityIsInput) {
-    const [inputSide, outputSide] = quantityIsOnusd ? [poolOnusd, poolOnasset] : [poolOnasset, poolOnusd];
+    const [inputSide, outputSide] = quantityIsOnusd
+      ? [poolOnusd, poolOnasset]
+      : [poolOnasset, poolOnusd];
     const outputBeforeFees = floortoCloneScale(
       outputSide - invariant / (inputSide + quantity)
-    )
-    const liquidityFeesPaid = floortoCloneScale(outputBeforeFees * liquidityTradingFees)
-    const treasuryFeesPaid = floortoCloneScale(outputBeforeFees * treasuryTradingFees)
-    const result = floortoCloneScale(outputBeforeFees - liquidityFeesPaid - treasuryFeesPaid)
+    );
+    const liquidityFeesPaid = floortoCloneScale(
+      outputBeforeFees * liquidityTradingFees
+    );
+    const treasuryFeesPaid = floortoCloneScale(
+      outputBeforeFees * treasuryTradingFees
+    );
+    const result = floortoCloneScale(
+      outputBeforeFees - liquidityFeesPaid - treasuryFeesPaid
+    );
     return {
-      result, liquidityFeesPaid, treasuryFeesPaid
-    }
+      result,
+      liquidityFeesPaid,
+      treasuryFeesPaid,
+    };
   } else {
-    const [outputSide, inputSide] = quantityIsOnusd ? [poolOnusd, poolOnasset] : [poolOnasset, poolOnusd];
+    const [outputSide, inputSide] = quantityIsOnusd
+      ? [poolOnusd, poolOnasset]
+      : [poolOnasset, poolOnusd];
     const outputBeforeFees = floortoCloneScale(
-      quantity / (1. - liquidityTradingFees - treasuryTradingFees)
-    )
+      quantity / (1 - liquidityTradingFees - treasuryTradingFees)
+    );
     const result = floortoCloneScale(
       invariant / (outputSide - outputBeforeFees) - inputSide
-    )
-    const liquidityFeesPaid = floortoCloneScale(outputBeforeFees * liquidityTradingFees)
-    const treasuryFeesPaid = floortoCloneScale(outputBeforeFees * treasuryTradingFees)
+    );
+    const liquidityFeesPaid = floortoCloneScale(
+      outputBeforeFees * liquidityTradingFees
+    );
+    const treasuryFeesPaid = floortoCloneScale(
+      outputBeforeFees * treasuryTradingFees
+    );
     return {
-      result, liquidityFeesPaid, treasuryFeesPaid
-    }
+      result,
+      liquidityFeesPaid,
+      treasuryFeesPaid,
+    };
   }
-}
-
+};
 
 export const calculateExecutionThresholdFromParams = (
   onassetAmount: number,
@@ -250,4 +283,57 @@ export const createVersionedTx = (
   // create a v0 transaction from the v0 message
   const transactionV0 = new VersionedTransaction(messageV0);
   return transactionV0;
+};
+
+export const getOrCreateAssociatedTokenAccount = async (
+  provider: Provider,
+  mint: PublicKey,
+  owner?: PublicKey,
+  ownerOffCurve?: boolean
+): Promise<Account> => {
+  const associatedToken = await getAssociatedTokenAddress(
+    mint,
+    owner !== undefined ? owner : provider.publicKey!,
+    ownerOffCurve !== undefined ? ownerOffCurve : false,
+    TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  );
+
+  let account: Account;
+  try {
+    account = await getAccount(
+      provider.connection,
+      associatedToken,
+      "recent",
+      TOKEN_PROGRAM_ID
+    );
+  } catch (error: unknown) {
+    if (error instanceof TokenAccountNotFoundError) {
+      const transaction = new Transaction().add(
+        createAssociatedTokenAccountInstruction(
+          provider.publicKey!,
+          associatedToken,
+          owner ? owner : provider.publicKey!,
+          mint,
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      );
+
+      await provider.sendAndConfirm!(transaction);
+      account = await getAccount(
+        provider.connection,
+        associatedToken,
+        "recent",
+        TOKEN_PROGRAM_ID
+      );
+    } else {
+      throw error;
+    }
+  }
+
+  if (!account) {
+    throw Error("Could not create account!");
+  }
+  return account;
 };

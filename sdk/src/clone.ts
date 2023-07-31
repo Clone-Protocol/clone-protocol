@@ -39,6 +39,7 @@ import {
   createUpdateCollateralParametersInstruction,
   UpdateCloneParametersInstructionArgs,
   createUpdateCloneParametersInstruction,
+  createAddOracleFeedInstruction,
 } from "../generated/clone";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
@@ -162,11 +163,10 @@ export class CloneClient {
   }
 
   public async initializePool(
-    admin: PublicKey,
     minOvercollateralRatio: number,
     maxLiquidationOvercollateralRatio: number,
-    liquidityTradingFee: number,
-    treasuryTradingFee: number,
+    liquidityTradingFeeBps: number,
+    treasuryTradingFeeBps: number,
     ilHealthScoreCoefficient: number,
     positionHealthScoreCoefficient: number,
     oracleIndex: number,
@@ -192,7 +192,7 @@ export class CloneClient {
       new Transaction().add(
         createInitializePoolInstruction(
           {
-            admin: admin,
+            admin: this.provider.publicKey!,
             clone: this.cloneAddress,
             tokenData: this.clone!.tokenData,
             onusdMint: this.clone!.onusdMint,
@@ -210,8 +210,8 @@ export class CloneClient {
           {
             minOvercollateralRatio,
             maxLiquidationOvercollateralRatio,
-            liquidityTradingFee,
-            treasuryTradingFee,
+            liquidityTradingFee: liquidityTradingFeeBps,
+            treasuryTradingFee: treasuryTradingFeeBps,
             ilHealthScoreCoefficient: toCloneScale(ilHealthScoreCoefficient),
             positionHealthScoreCoefficient: toCloneScale(
               positionHealthScoreCoefficient
@@ -257,6 +257,22 @@ export class CloneClient {
       [vaultAccount],
       this.opts
     );
+  }
+
+  public async addOracleInfo(
+    pythFeedAddress: PublicKey
+  ) {
+    let tx = new Transaction().add(
+      createAddOracleFeedInstruction({
+      admin: this.provider.publicKey!,
+      clone: this.cloneAddress,
+      tokenData: this.clone.tokenData,
+    },
+    {
+      pythAddress: pythFeedAddress
+    })
+    )
+    await this.provider.sendAndConfirm(tx)
   }
 
   public async updateCloneParameters(

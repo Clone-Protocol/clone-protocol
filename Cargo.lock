@@ -504,7 +504,6 @@ dependencies = [
  "anchor-spl",
  "bytemuck",
  "clone-staking",
- "jupiter-agg-mock",
  "pyth",
  "pyth-client",
  "pyth-sdk-solana",
