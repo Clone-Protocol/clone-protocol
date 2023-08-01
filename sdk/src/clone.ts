@@ -87,7 +87,6 @@ export const fromCloneScale = (x: number | beet.bignum | BN | bigint) => {
 export class CloneClient {
   clone: Clone;
   cloneAddress: PublicKey;
-  connection: Connection;
   programId: PublicKey;
   provider: Provider;
   opts?: ConfirmOptions;
@@ -156,7 +155,7 @@ export class CloneClient {
         }
       )
     );
-    await provider.sendAndConfirm(tx, [
+    await provider.sendAndConfirm!(tx, [
       onusdMint,
       onusdVault,
       usdcVault,
@@ -190,7 +189,7 @@ export class CloneClient {
       cometLiquidityTokenAccount,
     ];
 
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(
         createInitializePoolInstruction(
           {
@@ -236,7 +235,7 @@ export class CloneClient {
   ) {
     const vaultAccount = anchor.web3.Keypair.generate();
 
-    await this.provider.sendAndConfirm(
+    await this.provider.sendAndConfirm!(
       new Transaction().add(
         createAddCollateralInstruction(
           {
@@ -274,7 +273,7 @@ export class CloneClient {
         }
       )
     );
-    await this.provider.sendAndConfirm(tx);
+    await this.provider.sendAndConfirm!(tx);
   }
 
   public async updateCloneParameters(
@@ -287,7 +286,7 @@ export class CloneClient {
       },
       params
     );
-    await this.provider.sendAndConfirm(new Transaction().add(ix));
+    await this.provider.sendAndConfirm!(new Transaction().add(ix));
   }
 
   public async updatePoolParameters(
@@ -301,7 +300,7 @@ export class CloneClient {
       },
       params
     );
-    await this.provider.sendAndConfirm(new Transaction().add(ix));
+    await this.provider.sendAndConfirm!(new Transaction().add(ix));
   }
 
   public async updateCollateralParameters(
@@ -315,7 +314,7 @@ export class CloneClient {
       },
       params
     );
-    await this.provider.sendAndConfirm(new Transaction().add(ix));
+    await this.provider.sendAndConfirm!(new Transaction().add(ix));
   }
 
   /// Address and account fetching ///
