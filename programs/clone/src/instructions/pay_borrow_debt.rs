@@ -31,11 +31,11 @@ pub struct PayBorrowDebt<'info> {
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        constraint = user_onasset_token_account.amount >= amount @ CloneError::InvalidTokenAccountBalance,
+        constraint = payer_onasset_token_account.amount >= amount @ CloneError::InvalidTokenAccountBalance,
         associated_token::mint = onasset_mint,
-        associated_token::authority = user
+        associated_token::authority = payer
     )]
-    pub user_onasset_token_account: Account<'info, TokenAccount>,
+    pub payer_onasset_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
         address = token_data.load()?.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].asset_info.onasset_mint,
@@ -59,7 +59,7 @@ pub fn execute(
         mint: ctx.accounts.onasset_mint.to_account_info().clone(),
         from: ctx
             .accounts
-            .user_onasset_token_account
+            .payer_onasset_token_account
             .to_account_info()
             .clone(),
         authority: ctx.accounts.payer.to_account_info().clone(),
