@@ -37,14 +37,14 @@ export const initializeUserStruct = new beet.BeetArgsStruct<
 /**
  * Accounts required by the _initializeUser_ instruction
  *
- * @property [_writable_, **signer**] user
+ * @property [_writable_, **signer**] payer
  * @property [_writable_] userAccount
  * @category Instructions
  * @category InitializeUser
  * @category generated
  */
 export type InitializeUserInstructionAccounts = {
-  user: web3.PublicKey
+  payer: web3.PublicKey
   userAccount: web3.PublicKey
   rent?: web3.PublicKey
   tokenProgram?: web3.PublicKey
@@ -77,7 +77,7 @@ export function createInitializeUserInstruction(
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.user,
+      pubkey: accounts.payer,
       isWritable: true,
       isSigner: true,
     },

@@ -1,14 +1,16 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient, ONUSD_COLLATERAL_INDEX, USDC_COLLATERAL_INDEX } from "../../../sdk/src/clone";
-import { toNumber } from "../../../sdk/src/decimal";
+import {
+  ONUSD_COLLATERAL_INDEX,
+  USDC_COLLATERAL_INDEX,
+} from "../../../sdk/src/clone";
 import { getHealthScore, getILD } from "../../../sdk/src/healthscore";
 import {
   successLog,
   errorLog,
-  fromDevnetScale,
+  fromCloneScale,
   anchorSetup,
-  getCloneProgram,
-  getPythProgram,
+  getCloneData,
+  getCloneClient,
 } from "../../utils";
 
 import chalk from "chalk";
@@ -19,17 +21,21 @@ exports.desc = "View your comet position";
 exports.builder = {};
 exports.handler = async function () {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
-
-    let ix = await cloneClient.updatePricesInstruction();
-    await setup.provider.sendAndConfirm(new Transaction().add(ix));
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
     const tokenData = await cloneClient.getTokenData();
-    const comet = await cloneClient.getComet();
+
+    let ix = cloneClient.updatePricesInstruction(tokenData);
+    await provider.sendAndConfirm(new Transaction().add(ix));
+
+    const user = await cloneClient.getUserAccount();
+    const comet = user.comet;
 
     const assetBoxenOptions: boxen.Options = {
       padding: 1,
@@ -44,14 +50,14 @@ exports.handler = async function () {
       const collateralPosition = comet.collaterals[i];
 
       const collateral =
-        tokenData.collaterals[collateralPosition.collateralIndex];
+        tokenData.collaterals[Number(collateralPosition.collateralIndex)];
       const hasOracle =
         i !== ONUSD_COLLATERAL_INDEX && i !== USDC_COLLATERAL_INDEX;
 
       let collateralPrice: number;
       if (hasOracle) {
-        collateralPrice = toNumber(
-          tokenData.oracles[collateral.oracleInfoIndex.toNumber()].price
+        collateralPrice = Number(
+          tokenData.oracles[Number(collateral.oracleInfoIndex)].price
         );
       } else {
         collateralPrice = 1;
@@ -67,11 +73,11 @@ exports.handler = async function () {
           collateralPosition.collateralIndex
         )}\n` +
         `Collateral Amount: ${chalk.bold(
-          toNumber(collateralPosition.collateralAmount)
+          Number(collateralPosition.collateralAmount)
         )}\n` +
         `Collateral Oracle Price: ${chalk.bold(collateralPrice)}\n` +
         `Position Value: $${chalk.bold(
-          toNumber(collateralPosition.collateralAmount) * collateralPrice
+          Number(collateralPosition.collateralAmount) * collateralPrice
         )}\n`;
 
       console.log(boxen(assetInfo, assetBoxenOptions));
@@ -89,10 +95,10 @@ exports.handler = async function () {
         `${chalk.bold(title)}\n` +
         `${underline}\n` +
         `onAsset Pool Index: ${chalk.bold(
-          fromDevnetScale(position.poolIndex)
+          fromCloneScale(Number(position.poolIndex))
         )}\n` +
         `onUSD Liquidity Committed: ${chalk.bold(
-          toNumber(position.committedOnusdLiquidity)
+          Number(position.committedOnusdLiquidity)
         )}\n` +
         `onUSD Impermanent Loss Debt: ${chalk.bold(ild.onusdILD)}\n` +
         `onAsset Impermanent Loss Debt: ${chalk.bold(ild.onAssetILD)}\n`;

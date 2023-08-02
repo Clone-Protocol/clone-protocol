@@ -1,12 +1,12 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient, toScale } from "../../../sdk/src/clone";
-import { toDecimal } from "../../../sdk/src/decimal";
+import { toScale } from "../../../sdk/src/clone";
 import { BN } from "@coral-xyz/anchor";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneProgram,
+  getCloneData,
+  getCloneClient,
   getOrCreateAssociatedTokenAccount,
 } from "../../utils";
 import { Argv } from "yargs";
@@ -31,29 +31,32 @@ exports.builder = (yargs: CommandArguments) => {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
     const tokenData = await cloneClient.getTokenData();
 
     const collateral = tokenData.collaterals[yargs.collateralIndex];
 
     const collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      setup.provider,
+      provider,
       collateral.mint
     );
 
-    const amount = new BN(`${toScale(yargs.amount, Number(toDecimal(collateral.vaultMintSupply).scale()))}`);
+    const amount = new BN(`${toScale(yargs.amount, Number(collateral.scale))}`);
 
-    let ix = await cloneClient.addCollateralToCometInstruction(
+    let ix = cloneClient.addCollateralToCometInstruction(
+      tokenData,
       collateralTokenAccountInfo.address,
       amount,
       yargs.collateralIndex
     );
-    await setup.provider.sendAndConfirm(new Transaction().add(ix));
+    await provider.sendAndConfirm(new Transaction().add(ix));
 
     successLog(`${yargs.amount} Collateral Added!`);
   } catch (error: any) {

@@ -1,24 +1,24 @@
 use crate::error::*;
 use crate::events::*;
-use crate::math::*;
 use crate::states::*;
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
-use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(borrow_index: u8, amount: u64)]
 pub struct AddCollateralToBorrow<'info> {
-    #[account(address = borrow_positions.load()?.owner)]
     pub user: Signer<'info>,
     #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_account.bump,
+        mut,
+        seeds = [USER_SEED.as_ref(), user.key.as_ref()],
+        bump,
+        constraint = (borrow_index as u64) < user_account.load()?.borrows.num_positions @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: Account<'info, User>,
+    pub user_account: AccountLoader<'info, User>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data,
     )]
@@ -26,18 +26,12 @@ pub struct AddCollateralToBorrow<'info> {
     #[account(
         mut,
         has_one = clone,
-        constraint = token_data.load()?.collaterals[borrow_positions.load()?.borrow_positions[borrow_index as usize].collateral_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
+        constraint = token_data.load()?.collaterals[user_account.load()?.borrows.positions[borrow_index as usize].collateral_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
         mut,
-        address = user_account.borrow_positions,
-        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ CloneError::InvalidInputPositionIndex
-    )]
-    pub borrow_positions: AccountLoader<'info, BorrowPositions>,
-    #[account(
-        mut,
-        address = token_data.load()?.collaterals[borrow_positions.load()?.borrow_positions[borrow_index as usize].collateral_index as usize].vault
+        address = token_data.load()?.collaterals[user_account.load()?.borrows.positions[borrow_index as usize].collateral_index as usize].vault
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -51,37 +45,10 @@ pub struct AddCollateralToBorrow<'info> {
 }
 
 pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u64) -> Result<()> {
-    let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let borrow_positions = &mut ctx.accounts.borrow_positions.load_mut()?;
-
-    let collateral = token_data.collaterals
-        [borrow_positions.borrow_positions[borrow_index as usize].collateral_index as usize];
-    let mint_position = borrow_positions.borrow_positions[borrow_index as usize];
-
-    let amount_value = Decimal::new(
-        amount.try_into().unwrap(),
-        collateral.vault_mint_supply.to_decimal().scale(),
-    );
-
-    // add collateral amount to vault supply
-    let current_vault_mint_supply = collateral.vault_mint_supply.to_decimal();
-    let new_vault_mint_supply = rescale_toward_zero(
-        current_vault_mint_supply + amount_value,
-        current_vault_mint_supply.scale(),
-    );
-
-    token_data.collaterals
-        [borrow_positions.borrow_positions[borrow_index as usize].collateral_index as usize]
-        .vault_mint_supply = RawDecimal::from(new_vault_mint_supply);
+    let borrows = &mut ctx.accounts.user_account.load_mut()?.borrows;
 
     // add collateral amount to mint data
-    let current_collateral_amount = mint_position.collateral_amount.to_decimal();
-    let new_collateral_amount = rescale_toward_zero(
-        current_collateral_amount + amount_value,
-        current_collateral_amount.scale(),
-    );
-    borrow_positions.borrow_positions[borrow_index as usize].collateral_amount =
-        RawDecimal::from(new_collateral_amount);
+    borrows.positions[borrow_index as usize].collateral_amount += amount;
 
     // send collateral to vault
     let cpi_accounts = Transfer {
@@ -100,23 +67,18 @@ pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u6
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
-        pool_index: borrow_positions.borrow_positions[borrow_index as usize]
+        pool_index: borrows.positions[borrow_index as usize]
             .pool_index
             .try_into()
             .unwrap(),
         is_liquidation: false,
-        collateral_supplied: new_collateral_amount.mantissa().try_into().unwrap(),
-        collateral_delta: amount_value.mantissa().try_into().unwrap(),
-        collateral_index: borrow_positions.borrow_positions[borrow_index as usize]
+        collateral_supplied: borrows.positions[borrow_index as usize].collateral_amount,
+        collateral_delta: amount.try_into().unwrap(),
+        collateral_index: borrows.positions[borrow_index as usize]
             .collateral_index
             .try_into()
             .unwrap(),
-        borrowed_amount: borrow_positions.borrow_positions[borrow_index as usize]
-            .borrowed_onasset
-            .to_decimal()
-            .mantissa()
-            .try_into()
-            .unwrap(),
+        borrowed_amount: borrows.positions[borrow_index as usize].borrowed_onasset,
         borrowed_delta: 0
     });
     ctx.accounts.clone.event_counter += 1;

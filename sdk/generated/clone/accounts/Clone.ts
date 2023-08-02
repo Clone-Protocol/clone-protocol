@@ -8,10 +8,6 @@
 import * as web3 from '@solana/web3.js'
 import * as beet from '@metaplex-foundation/beet'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
-import {
-  LiquidationConfig,
-  liquidationConfigBeet,
-} from '../types/LiquidationConfig'
 
 /**
  * Arguments used to create {@link Clone}
@@ -22,8 +18,10 @@ export type CloneArgs = {
   onusdMint: web3.PublicKey
   tokenData: web3.PublicKey
   admin: web3.PublicKey
+  auth: web3.PublicKey[] /* size: 10 */
   bump: number
-  liquidationConfig: LiquidationConfig
+  cometLiquidatorFeeBps: number
+  borrowLiquidatorFeeBps: number
   treasuryAddress: web3.PublicKey
   eventCounter: beet.bignum
 }
@@ -41,8 +39,10 @@ export class Clone implements CloneArgs {
     readonly onusdMint: web3.PublicKey,
     readonly tokenData: web3.PublicKey,
     readonly admin: web3.PublicKey,
+    readonly auth: web3.PublicKey[] /* size: 10 */,
     readonly bump: number,
-    readonly liquidationConfig: LiquidationConfig,
+    readonly cometLiquidatorFeeBps: number,
+    readonly borrowLiquidatorFeeBps: number,
     readonly treasuryAddress: web3.PublicKey,
     readonly eventCounter: beet.bignum
   ) {}
@@ -55,8 +55,10 @@ export class Clone implements CloneArgs {
       args.onusdMint,
       args.tokenData,
       args.admin,
+      args.auth,
       args.bump,
-      args.liquidationConfig,
+      args.cometLiquidatorFeeBps,
+      args.borrowLiquidatorFeeBps,
       args.treasuryAddress,
       args.eventCounter
     )
@@ -168,8 +170,10 @@ export class Clone implements CloneArgs {
       onusdMint: this.onusdMint.toBase58(),
       tokenData: this.tokenData.toBase58(),
       admin: this.admin.toBase58(),
+      auth: this.auth,
       bump: this.bump,
-      liquidationConfig: this.liquidationConfig,
+      cometLiquidatorFeeBps: this.cometLiquidatorFeeBps,
+      borrowLiquidatorFeeBps: this.borrowLiquidatorFeeBps,
       treasuryAddress: this.treasuryAddress.toBase58(),
       eventCounter: (() => {
         const x = <{ toNumber: () => number }>this.eventCounter
@@ -201,8 +205,10 @@ export const cloneBeet = new beet.BeetStruct<
     ['onusdMint', beetSolana.publicKey],
     ['tokenData', beetSolana.publicKey],
     ['admin', beetSolana.publicKey],
+    ['auth', beet.uniformFixedSizeArray(beetSolana.publicKey, 10)],
     ['bump', beet.u8],
-    ['liquidationConfig', liquidationConfigBeet],
+    ['cometLiquidatorFeeBps', beet.u16],
+    ['borrowLiquidatorFeeBps', beet.u16],
     ['treasuryAddress', beetSolana.publicKey],
     ['eventCounter', beet.u64],
   ],

@@ -1,14 +1,10 @@
-//For viewing Mock Jupiter data
-import * as anchor from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
 import { getFeedData } from "../../sdk/src/oracle";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getMockJupiterProgram,
-  getPythProgram,
-  getMockAssetPriceFeed,
+  getMockJupiterData,
+  getJupiterAccount,
 } from "../utils";
 import chalk from "chalk";
 import boxen from "boxen";
@@ -19,17 +15,10 @@ exports.desc =
 exports.builder = {};
 exports.handler = async function () {
   try {
-    const setup = anchorSetup();
+    const provider = anchorSetup();
+    const [__, jupiterAddress] = getMockJupiterData();
 
-    const jupiterProgram = getMockJupiterProgram(setup.provider);
-    const pythProgram = getPythProgram(setup.provider);
-
-    let [jupiterAddress, _] = await PublicKey.findProgramAddress(
-      [anchor.utils.bytes.utf8.encode("jupiter")],
-      jupiterProgram.programId
-    );
-
-    const jupiter = await jupiterProgram.account.jupiter.fetch(jupiterAddress);
+    const jupiter = await getJupiterAccount(provider, jupiterAddress);
 
     const assetBoxenOptions: boxen.Options = {
       padding: 1,
@@ -47,15 +36,9 @@ exports.handler = async function () {
     console.log(boxen(assetInfo, assetBoxenOptions));
 
     for (let i = 0; i < jupiter.nAssets; i++) {
-      const priceFeed = await getMockAssetPriceFeed(
-        setup.network,
-        setup.provider,
-        i
-      );
-
       const mint = jupiter.assetMints[i];
-      const priceFeedAddress = jupiter.oracles[i];
-      const feedData = await getFeedData(pythProgram, priceFeed);
+      const priceFeed = jupiter.oracles[i];
+      const feedData = await getFeedData(provider, priceFeed);
       const price = feedData.aggregate.price;
       const exponent = feedData.exponent;
 
@@ -66,7 +49,7 @@ exports.handler = async function () {
         `${chalk.bold(title)}\n` +
         `${underline}\n` +
         `Mint: ${chalk.bold(mint)}\n` +
-        `Price Feed Address: ${chalk.bold(priceFeedAddress)}\n` +
+        `Price Feed Address: ${chalk.bold(priceFeed)}\n` +
         `Price: ${chalk.bold(price)}\n` +
         `Exponent: ${chalk.bold(exponent)}\n`;
       console.log(boxen(assetInfo, assetBoxenOptions));

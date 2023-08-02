@@ -1,9 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Program, BN } from "@coral-xyz/anchor";
-import { Clone } from "../sdk/src/idl/clone";
-import { Pyth } from "../sdk/src/idl/pyth";
-import { JupiterAggMock } from "../sdk/src/idl/jupiter_agg_mock";
-import { CloneStaking } from "../sdk/src/idl/clone_staking";
+import { BN } from "@coral-xyz/anchor";
 import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -15,48 +11,38 @@ import {
   createInitializeMintInstruction,
   createMintToCheckedInstruction,
 } from "@solana/spl-token";
-import {
-  PublicKey,
-  Transaction,
-  AddressLookupTableProgram,
-  SystemProgram,
-} from "@solana/web3.js";
+import { PublicKey, Transaction, SystemProgram } from "@solana/web3.js";
 import { assert } from "chai";
 import {
   CLONE_TOKEN_SCALE,
   CloneClient,
-  toDevnetScale,
+  fromCloneScale,
+  fromScale,
+  toCloneScale,
   toScale,
 } from "../sdk/src/clone";
 import { createPriceFeed, setPrice, getFeedData } from "../sdk/src/oracle";
 import {
-  calculateExecutionThreshold,
   calculateSwapExecution,
-  createTx,
-  createVersionedTx,
   sleep,
-} from "../sdk/src/utils";
-import { getMantissa, toNumber } from "../sdk/src/decimal";
-import {
-  convertToRawDecimal,
   getOrCreateAssociatedTokenAccount,
-  fromDevnetNumber,
-} from "./utils";
+} from "../sdk/src/utils";
 import { getHealthScore, getILD } from "../sdk/src/healthscore";
+import { Clone as CloneAccount } from "../sdk/generated/clone";
+import { PoolParameters } from "../sdk/generated/clone";
 
 const CLONE_SCALE_CONVERSION = Math.pow(10, -CLONE_TOKEN_SCALE);
 const USDC_SCALE_CONVERSION = Math.pow(10, -7);
 
-describe("clone", async () => {
+describe("tests", async () => {
   const provider = anchor.AnchorProvider.local();
   anchor.setProvider(provider);
-  let cloneProgram = anchor.workspace.Clone as Program<Clone>;
-  let pythProgram = anchor.workspace.Pyth as Program<Pyth>;
-  let walletPubkey = cloneProgram.provider.publicKey!;
-  let jupiterProgram = anchor.workspace
-    .JupiterAggMock as Program<JupiterAggMock>;
-  let cloneStakingProgram = anchor.workspace
-    .CloneStaking as Program<CloneStaking>;
+  let walletPubkey = provider.publicKey!;
+
+  let cloneProgram = anchor.workspace.Clone;
+  let pythProgram = anchor.workspace.Pyth;
+  let jupiterProgram = anchor.workspace.JupiterAggMock;
+  let cloneStakingProgram = anchor.workspace.CloneStaking;
 
   const mockUSDCMint = anchor.web3.Keypair.generate();
   const treasuryAddress = anchor.web3.Keypair.generate();
@@ -75,15 +61,18 @@ describe("clone", async () => {
     treasuryTradingFeeBps: 10,
   };
 
-  let priceFeed;
+  let priceFeed: PublicKey;
   let mockUSDCTokenAccountInfo;
   let onusdTokenAccountInfo;
   let onassetTokenAccountInfo;
-  let cloneClient = new CloneClient(cloneProgram.programId, provider);
-  let lookupTableAddress;
+  let cloneClient: CloneClient;
 
+  const [cloneAccountAddress, ___] = PublicKey.findProgramAddressSync(
+    [Buffer.from("clone")],
+    cloneProgram.programId
+  );
   const mockAssetMint = anchor.web3.Keypair.generate();
-  let [jupiterAddress, jupiterNonce] = PublicKey.findProgramAddressSync(
+  let [jupiterAddress, _jupiterNonce] = PublicKey.findProgramAddressSync(
     [Buffer.from("jupiter")],
     jupiterProgram.programId
   );
@@ -106,9 +95,18 @@ describe("clone", async () => {
     cloneStakingProgram.programId
   );
 
+  it("to scale test", () => {
+    assert.isTrue(toCloneScale(28.15561224).toString() === "2815561224");
+    assert.isTrue(toCloneScale(28.15561224999).toString() === "2815561224");
+    assert.isTrue(toCloneScale(28.1556).toString() === "2815560000");
+    assert.isTrue(toCloneScale(2815561224).toString() === "281556122400000000");
+    assert.isTrue(toCloneScale(0.2815561224).toString() === "28155612");
+    assert.isTrue(toCloneScale(28.05561224).toString() === "2805561224");
+  });
+
   it("initialize staking program + initialize tier + add stake", async () => {
     let tx = new Transaction().add(
-      // create mint account
+      // create cln mint account
       SystemProgram.createAccount({
         fromPubkey: walletPubkey,
         newAccountPubkey: clnTokenMint.publicKey,
@@ -116,12 +114,12 @@ describe("clone", async () => {
         lamports: await getMinimumBalanceForRentExemptMint(provider.connection),
         programId: TOKEN_PROGRAM_ID,
       }),
-      // init mint account
+      // init clone mint account
       createInitializeMintInstruction(
-        clnTokenMint.publicKey, // mint pubkey
-        CLONE_TOKEN_SCALE, // decimals
-        walletPubkey, // mint authority
-        null // freeze authority (you can use `null` to disable it. when you disable it, you can't turn it on again)
+        clnTokenMint.publicKey,
+        CLONE_TOKEN_SCALE,
+        walletPubkey,
+        null
       )
     );
     await provider.sendAndConfirm(tx, [clnTokenMint]);
@@ -134,7 +132,7 @@ describe("clone", async () => {
     );
 
     await cloneStakingProgram.methods
-      .initialize(new BN(100))
+      .initialize(new BN(24))
       .accounts({
         admin: provider.publicKey!,
         cloneStaking: cloneStakingAddress,
@@ -207,17 +205,6 @@ describe("clone", async () => {
     );
   });
 
-  it("to scale test", () => {
-    assert.isTrue(toDevnetScale(28.15561224).toString() === "2815561224");
-    assert.isTrue(toDevnetScale(28.15561224999).toString() === "2815561224");
-    assert.isTrue(toDevnetScale(28.1556).toString() === "2815560000");
-    assert.isTrue(
-      toDevnetScale(2815561224).toString() === "281556122400000000"
-    );
-    assert.isTrue(toDevnetScale(0.2815561224).toString() === "28155612");
-    assert.isTrue(toDevnetScale(28.05561224).toString() === "2805561224");
-  });
-
   it("mock jupiter agg initialized + mock usdc initialized + mock asset initialized!", async () => {
     await jupiterProgram.methods
       .initialize()
@@ -234,49 +221,25 @@ describe("clone", async () => {
   });
 
   it("clone initialized!", async () => {
-    await cloneClient.initializeClone(
+    await CloneClient.initializeClone(
+      provider,
+      cloneProgram.programId,
       liquidatorFee,
       liquidatorFee,
       treasuryAddress.publicKey,
       mockUSDCMint.publicKey
     );
-
-    await cloneClient.loadClone();
+    let account = await CloneAccount.fromAccountAddress(
+      provider.connection,
+      cloneAccountAddress
+    );
+    cloneClient = new CloneClient(provider, account, cloneProgram.programId);
   });
 
   it("user initialized!", async () => {
-    let tx = new Transaction();
-    tx.add(await cloneClient.initializeUserInstruction());
+    let tx = new Transaction().add(cloneClient.initializeUserInstruction());
 
-    const borrowAccountKeypair = anchor.web3.Keypair.generate();
-    tx.add(
-      await cloneClient.initializeBorrowPositionsAccountInstruction(
-        borrowAccountKeypair
-      )
-    );
-
-    const cometAccountKeypair = anchor.web3.Keypair.generate();
-    tx.add(await cloneClient.initializeCometInstruction(cometAccountKeypair));
-
-    await cloneClient.provider.sendAndConfirm!(tx, [
-      borrowAccountKeypair,
-      cometAccountKeypair,
-    ]);
-
-    let userAccountData = await cloneClient.getUserAccount();
-
-    assert(
-      userAccountData.authority.equals(cloneClient.provider.publicKey!),
-      "check authority address"
-    );
-    assert(
-      userAccountData.borrowPositions.equals(borrowAccountKeypair.publicKey),
-      "check mint position address"
-    );
-    assert(
-      userAccountData.comet.equals(cometAccountKeypair.publicKey),
-      "check comet address"
-    );
+    await cloneClient.provider.sendAndConfirm!(tx);
   });
 
   it("change feed price + mock asset created", async () => {
@@ -284,15 +247,19 @@ describe("clone", async () => {
     const expo = -7;
     const conf = new BN((price / 10) * 10 ** -expo);
 
-    priceFeed = await createPriceFeed(pythProgram, price, expo, conf);
-    let currentPrice = (await getFeedData(pythProgram, priceFeed)).aggregate
-      .price;
+    priceFeed = await createPriceFeed(
+      provider,
+      pythProgram.programId,
+      price,
+      expo,
+      conf
+    );
+    let currentPrice = (await getFeedData(provider, priceFeed)).aggregate.price;
     assert.equal(currentPrice, price, "check initial price");
 
     price = 5;
-    await setPrice(pythProgram, price, priceFeed);
-    let updatedPrice = (await getFeedData(pythProgram, priceFeed)).aggregate
-      .price;
+    await setPrice(provider, price, priceFeed);
+    let updatedPrice = (await getFeedData(provider, priceFeed)).aggregate.price;
     assert.equal(updatedPrice, price, "check updated price");
 
     await jupiterProgram.methods
@@ -307,15 +274,7 @@ describe("clone", async () => {
       })
       .signers([mockAssetMint])
       .rpc();
-
-    await cloneProgram.methods
-      .addOracleFeed(priceFeed)
-      .accounts({
-        admin: walletPubkey,
-        clone: cloneClient.cloneAddress[0],
-        tokenData: cloneClient.clone?.tokenData,
-      })
-      .rpc();
+    await cloneClient.addOracleInfo(priceFeed);
   });
 
   it("pool initialized!", async () => {
@@ -324,130 +283,34 @@ describe("clone", async () => {
     );
 
     await cloneClient.initializePool(
-      walletPubkey,
       150,
       200,
       poolTradingFee,
       treasuryTradingFee,
       ilHealthScoreCoefficient,
       healthScoreCoefficient,
-      500,
       0,
       jupiterData.assetMints[0]
     );
 
     let tokenData = await cloneClient.getTokenData();
-    assert.equal(tokenData.numPools.toNumber(), 1);
+    assert.equal(Number(tokenData.numPools), 1);
   });
-
   it("non-stable mock asset added as a collateral!", async () => {
-    await cloneClient.addCollateral(
-      walletPubkey,
-      8,
-      false,
-      mockAssetMint.publicKey,
-      0,
-      200,
-      70
-    );
+    await cloneClient.addCollateral(8, mockAssetMint.publicKey, 0, 200);
 
     let tokenData = await cloneClient.getTokenData();
-    assert.equal(tokenData.collaterals[2].stable.toNumber(), 0);
+    assert.equal(Number(tokenData.numCollaterals), 3);
   });
 
-  // it("create address lookup table", async () => {
-  //   const slot = await cloneClient.provider.connection.getSlot("finalized");
-  //   const thisPubKey = cloneClient.provider.publicKey!;
-  //   const [cloneAddress, _] = await cloneClient.getCloneAddress();
-  //   const userInfo = await cloneClient.getUserAddress();
-  //   const userAccount = await cloneClient.getUserAccount();
-  //   const tokenData = await cloneClient.getTokenData();
-  //   const pool = tokenData.pools[0];
-  //   const collateral = tokenData.collaterals[0];
-  //   onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-  //     cloneClient.provider,
-  //     tokenData.pools[0].assetInfo.onassetMint
-  //   );
-  //   onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-  //     cloneClient.provider,
-  //     cloneClient.clone!.onusdMint
-  //   );
-  //   mockUSDCTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-  //     cloneClient.provider,
-  //     mockUSDCMint.publicKey
-  //   );
-  //   let lookupTableInst;
-  //   [lookupTableInst, lookupTableAddress] =
-  //     AddressLookupTableProgram.createLookupTable({
-  //       authority: thisPubKey,
-  //       payer: thisPubKey,
-  //       recentSlot: slot,
-  //     });
-
-  //   const extendInstruction = AddressLookupTableProgram.extendLookupTable({
-  //     payer: thisPubKey,
-  //     authority: thisPubKey,
-  //     lookupTable: lookupTableAddress,
-  //     addresses: [
-  //       anchor.web3.SystemProgram.programId,
-  //       TOKEN_PROGRAM_ID,
-  //       cloneAddress,
-  //       cloneClient.clone!.admin,
-  //       cloneClient.clone!.tokenData,
-  //       cloneClient.clone!.treasuryAddress,
-  //       cloneClient.clone!.onusdMint,
-  //       userInfo.userPubkey,
-  //       userAccount.borrowPositions,
-  //       userAccount.comet,
-  //       userAccount.authority,
-  //       pool.assetInfo.onassetMint,
-  //       pool.underlyingAssetTokenAccount,
-  //       collateral.mint,
-  //       collateral.vault,
-  //       onassetTokenAccountInfo.address,
-  //       onusdTokenAccountInfo.address,
-  //       mockUSDCTokenAccountInfo.address,
-  //       mockUSDCMint.publicKey,
-  //     ],
-  //   });
-
-  //   let tx = new Transaction();
-  //   tx.add(lookupTableInst).add(extendInstruction);
-
-  //   await cloneClient.provider.sendAndConfirm!(tx);
-
-  //   let jupiterAccount = await jupiterProgram.account.jupiter.fetch(
-  //     jupiterAddress
-  //   );
-
-  //   await cloneClient.provider.sendAndConfirm!(
-  //     new Transaction().add(
-  //       AddressLookupTableProgram.extendLookupTable({
-  //         payer: thisPubKey,
-  //         authority: thisPubKey,
-  //         lookupTable: lookupTableAddress,
-  //         addresses: [
-  //           jupiterAddress,
-  //           jupiterAccount.assetMints[0],
-  //           jupiterAccount.oracles[0],
-  //           jupiterProgram.programId,
-  //         ],
-  //       })
-  //     )
-  //   );
-  // });
-
   it("token data initialization check", async () => {
-    const tokenData = await cloneClient.getTokenData();
+    let tokenData = await cloneClient.getTokenData();
     const oracle = tokenData.oracles[0];
 
-    assert(
-      tokenData.clone.equals(cloneClient.cloneAddress[0]),
-      "wrong manager!"
-    );
-    assert.equal(tokenData.numPools.toNumber(), 1, "num pools incorrect");
+    assert(tokenData.clone.equals(cloneClient.cloneAddress), "wrong manager!");
+    assert.equal(Number(tokenData.numPools), 1, "num pools incorrect");
     assert.equal(
-      tokenData.numCollaterals.toNumber(),
+      Number(tokenData.numCollaterals),
       3,
       "num collaterals incorrect"
     );
@@ -464,14 +327,14 @@ describe("clone", async () => {
     assert(oracle.pythAddress.equals(priceFeed), "check price feed");
 
     assert.equal(
-      toNumber(assetInfo.minOvercollateralRatio),
+      fromScale(assetInfo.minOvercollateralRatio, 2),
       1.5,
       "overcollateral ratio incorrect"
     );
 
     assert.equal(
-      toNumber(assetInfo.maxLiquidationOvercollateralRatio),
-      2.0,
+      fromScale(assetInfo.maxLiquidationOvercollateralRatio, 2),
+      2,
       "max liquidation overcollateral ratio incorrect"
     );
 
@@ -485,7 +348,8 @@ describe("clone", async () => {
   });
 
   it("price updated!", async () => {
-    let ix = await cloneClient.updatePricesInstruction();
+    let tokenData = await cloneClient.getTokenData();
+    let ix = cloneClient.updatePricesInstruction(tokenData);
     await provider.sendAndConfirm(new Transaction().add(ix));
   });
 
@@ -496,7 +360,7 @@ describe("clone", async () => {
       mockUSDCMint.publicKey
     );
     await jupiterProgram.methods
-      .mintUsdc(jupiterNonce, usdcMintAmount)
+      .mintUsdc(usdcMintAmount)
       .accounts({
         usdcMint: mockUSDCMint.publicKey,
         usdcTokenAccount: mockUSDCTokenAccountInfo.address,
@@ -517,6 +381,7 @@ describe("clone", async () => {
   });
 
   it("onusd minted!", async () => {
+    let tokenData = await cloneClient.getTokenData();
     onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
       cloneClient.clone!.onusdMint
@@ -528,8 +393,9 @@ describe("clone", async () => {
 
     const mintAmount = 1000000;
     const USDC_SCALE = 7;
-    let ix = await cloneClient.mintOnusdInstruction(
-      toDevnetScale(mintAmount),
+    let ix = cloneClient.mintOnusdInstruction(
+      tokenData,
+      toCloneScale(mintAmount),
       onusdTokenAccountInfo.address,
       mockUSDCTokenAccountInfo.address
     );
@@ -560,9 +426,9 @@ describe("clone", async () => {
       "check USDC amount"
     );
 
-    const tokenData = await cloneClient.getTokenData();
+    tokenData = await cloneClient.getTokenData();
 
-    const vault = await cloneClient.connection.getTokenAccountBalance(
+    const vault = await provider.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
       "recent"
     );
@@ -579,7 +445,7 @@ describe("clone", async () => {
       );
 
     await jupiterProgram.methods
-      .mintAsset(jupiterNonce, 0, new BN(assetMintAmount * 100000000))
+      .mintAsset(0, new BN(assetMintAmount * 100000000))
       .accounts({
         assetMint: mockAssetMint.publicKey,
         assetTokenAccount: mockAssetAssociatedTokenAddress.address,
@@ -600,6 +466,8 @@ describe("clone", async () => {
   });
 
   it("jupiter USDC mint -> wrap for onUSD", async () => {
+    let tokenData = await cloneClient.getTokenData();
+
     onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
       cloneClient.clone!.onusdMint
@@ -621,7 +489,7 @@ describe("clone", async () => {
     let onUSDtoMint = 5000000;
 
     let ixUsdcMint = await jupiterProgram.methods
-      .mintUsdc(jupiterNonce, toScale(onUSDtoMint, 7))
+      .mintUsdc(toScale(onUSDtoMint, 7))
       .accounts({
         usdcMint: usdcMint,
         usdcTokenAccount: usdcAssociatedTokenAddress,
@@ -629,8 +497,9 @@ describe("clone", async () => {
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .instruction();
-    let wrapIx = await cloneClient.mintOnusdInstruction(
-      toDevnetScale(onUSDtoMint),
+    let wrapIx = cloneClient.mintOnusdInstruction(
+      tokenData,
+      toCloneScale(onUSDtoMint),
       onusdTokenAccountInfo.address,
       usdcAssociatedTokenAddress
     );
@@ -676,7 +545,7 @@ describe("clone", async () => {
     );
 
     await jupiterProgram.methods
-      .mintUsdc(jupiterNonce, new BN(10000 * 10000000))
+      .mintUsdc(new BN(10000 * 10000000))
       .accounts({
         usdcMint: usdcMint,
         usdcTokenAccount: usdcAssociatedTokenAddress,
@@ -687,7 +556,7 @@ describe("clone", async () => {
 
     // Swap 10 asset out.
     await jupiterProgram.methods
-      .swap(jupiterNonce, 0, false, true, toDevnetScale(10))
+      .swap(0, false, true, toCloneScale(10))
       .accounts({
         user: jupiterProgram.provider.publicKey!,
         jupiterAccount: jupiterAddress,
@@ -703,7 +572,7 @@ describe("clone", async () => {
   let mintAmount = 200000;
   let usdctoDeposit = 20000000;
 
-  it("onasset minted!", async () => {
+  it("onasset borrowed!", async () => {
     let tokenData = await cloneClient.getTokenData();
     let pool = tokenData.pools[0];
 
@@ -720,12 +589,13 @@ describe("clone", async () => {
     const startingMockUSDC =
       Number(mockUSDCTokenAccountInfo.amount) * Math.pow(10, -7);
 
-    let updatePricesIx = await cloneClient.updatePricesInstruction();
+    let updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
 
-    let ix = await cloneClient.initializeBorrowPositionInstruction(
+    let ix = cloneClient.initializeBorrowPositionInstruction(
+      tokenData,
       mockUSDCTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
-      toDevnetScale(mintAmount),
+      toCloneScale(mintAmount),
       toScale(usdctoDeposit, 7),
       0,
       1
@@ -757,36 +627,32 @@ describe("clone", async () => {
       "check USDC amount"
     );
 
-    let vault = await cloneClient.connection.getTokenAccountBalance(
+    let vault = await provider.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
       "recent"
     );
     assert.equal(vault.value!.uiAmount, 26000000, "check usdc vault amount");
 
-    const mintPosition = (await cloneClient.getBorrowPositions())
-      .borrowPositions[0];
+    let userAccount = await cloneClient.getUserAccount();
+
+    const borrowPosition = userAccount.borrows.positions[0];
 
     assert.equal(
-      toNumber(mintPosition.borrowedOnasset),
+      fromCloneScale(borrowPosition.borrowedOnasset),
       mintAmount,
       "stored minted amount"
     );
     assert.equal(
-      toNumber(mintPosition.collateralAmount),
+      fromScale(borrowPosition.collateralAmount, 7),
       usdctoDeposit,
-      "stored minted amount"
-    );
-    assert.equal(
-      toNumber(pool.totalMintedAmount),
-      mintAmount,
-      "check supplied collateral amount!"
+      "stored collateral amount"
     );
   });
 
-  it("full withdraw and close mint position!", async () => {
+  it("full withdraw and close borrow position!", async () => {
     let tokenData = await cloneClient.getTokenData();
     let pool = tokenData.pools[0];
-    let vault = await cloneClient.connection.getTokenAccountBalance(
+    let vault = await provider.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
       "recent"
     );
@@ -802,24 +668,33 @@ describe("clone", async () => {
     const startingUsdcAmount =
       Number(mockUSDCTokenAccountInfo.amount) * USDC_SCALE_CONVERSION;
     let borrowIndex = 0;
-    let borrowPositions = await cloneClient.getBorrowPositions();
-    let borrowPosition = borrowPositions.borrowPositions[0];
+    let userAccount = await cloneClient.getUserAccount();
+    let borrowPosition = userAccount.borrows.positions[borrowIndex];
+    let collateral =
+      tokenData.collaterals[Number(borrowPosition.collateralIndex)];
 
-    const collateralWithdrawal = toNumber(borrowPosition.collateralAmount);
-    const payBorrowDebtIx = await cloneClient.payBorrowDebtInstruction(
+    const collateralWithdrawal = fromScale(
+      borrowPosition.collateralAmount,
+      collateral.scale
+    );
+    const payBorrowDebtIx = cloneClient.payBorrowDebtInstruction(
+      tokenData,
+      userAccount,
       onassetTokenAccountInfo.address,
-      new BN(getMantissa(borrowPosition.borrowedOnasset)),
+      new BN(borrowPosition.borrowedOnasset),
       borrowIndex
     );
 
     const withdrawCollateralFromBorrowIx =
-      await cloneClient.withdrawCollateralFromBorrowInstruction(
+      cloneClient.withdrawCollateralFromBorrowInstruction(
+        tokenData,
+        userAccount,
         borrowIndex,
         mockUSDCTokenAccountInfo.address,
-        new BN(getMantissa(borrowPosition.collateralAmount))
+        new BN(borrowPosition.collateralAmount)
       );
 
-    const updatePricesIx = await cloneClient.updatePricesInstruction();
+    const updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
 
     let tx = new Transaction();
     tx.add(updatePricesIx)
@@ -847,11 +722,12 @@ describe("clone", async () => {
     );
     assert.equal(
       Number(mockUSDCTokenAccountInfo.amount) * USDC_SCALE_CONVERSION,
-      startingUsdcAmount + toNumber(borrowPosition.collateralAmount),
+      startingUsdcAmount +
+        fromScale(borrowPosition.collateralAmount, collateral.scale),
       "check USDC amount"
     );
 
-    vault = await cloneClient.connection.getTokenAccountBalance(
+    vault = await provider.connection.getTokenAccountBalance(
       tokenData.collaterals[1].vault,
       "recent"
     );
@@ -861,17 +737,13 @@ describe("clone", async () => {
       startingVaultAmount - collateralWithdrawal,
       "check usdc vault amount"
     );
-    assert.equal(
-      toNumber(pool.totalMintedAmount),
-      0,
-      "check supplied collateral amount!"
-    );
 
     // Recreate original position.
-    let ix = await cloneClient.initializeBorrowPositionInstruction(
+    let ix = cloneClient.initializeBorrowPositionInstruction(
+      tokenData,
       mockUSDCTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
-      toDevnetScale(mintAmount),
+      toCloneScale(mintAmount),
       toScale(usdctoDeposit, 7),
       0,
       1
@@ -882,6 +754,8 @@ describe("clone", async () => {
   });
 
   it("mint collateral added!", async () => {
+    let tokenData = await cloneClient.getTokenData();
+    let userAccount = await cloneClient.getUserAccount();
     mockUSDCTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
       mockUSDCMint.publicKey
@@ -890,14 +764,16 @@ describe("clone", async () => {
       Number(mockUSDCTokenAccountInfo.amount) * USDC_SCALE_CONVERSION;
     let additionalCollateral = 100;
 
-    let ix = await cloneClient.addCollateralToBorrowInstruction(
+    let ix = cloneClient.addCollateralToBorrowInstruction(
+      tokenData,
+      userAccount,
       0,
       mockUSDCTokenAccountInfo.address,
       toScale(additionalCollateral, 7)
     );
     await provider.sendAndConfirm(new Transaction().add(ix));
 
-    const tokenData = await cloneClient.getTokenData();
+    tokenData = await cloneClient.getTokenData();
     const pool = tokenData.pools[0];
 
     mockUSDCTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
@@ -914,6 +790,7 @@ describe("clone", async () => {
 
   it("more onasset minted!", async () => {
     const tokenData = await cloneClient.getTokenData();
+    const userAccount = await cloneClient.getUserAccount();
 
     const pool = tokenData.pools[0];
     onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
@@ -923,12 +800,14 @@ describe("clone", async () => {
     const startingBalance =
       Number(onassetTokenAccountInfo.amount) * CLONE_SCALE_CONVERSION;
 
-    let updatePricesIx = await cloneClient.updatePricesInstruction();
+    let updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
     let moreToBorrow = 0.05;
 
-    let ix = await cloneClient.borrowMoreInstruction(
+    let ix = cloneClient.borrowMoreInstruction(
+      tokenData,
+      userAccount,
       onassetTokenAccountInfo.address,
-      toDevnetScale(moreToBorrow),
+      toCloneScale(moreToBorrow),
       0
     );
     await provider.sendAndConfirm(
@@ -950,7 +829,8 @@ describe("clone", async () => {
 
   it("comet collateral added!", async () => {
     const collateralToAdd = 100000;
-    let comet = await cloneClient.getComet();
+    let userAccount = await cloneClient.getUserAccount();
+    let comet = userAccount.comet;
     const tokenData = await cloneClient.getTokenData();
     const collateral = tokenData.collaterals[0];
     onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
@@ -958,27 +838,29 @@ describe("clone", async () => {
       cloneClient.clone!.onusdMint
     );
 
-    const startingOnusdWallet = fromDevnetNumber(onusdTokenAccountInfo.amount);
-    let vault = await cloneClient.connection.getTokenAccountBalance(
+    const startingOnusdWallet = fromCloneScale(onusdTokenAccountInfo.amount);
+    let vault = await provider.connection.getTokenAccountBalance(
       collateral.vault,
       "recent"
     );
     const startingVaultBalance = vault.value!.uiAmount;
 
-    let ix = await cloneClient.addCollateralToCometInstruction(
+    let ix = cloneClient.addCollateralToCometInstruction(
+      tokenData,
       onusdTokenAccountInfo.address,
-      toDevnetScale(collateralToAdd),
+      toCloneScale(collateralToAdd),
       0
     );
     await provider.sendAndConfirm(new Transaction().add(ix));
 
-    comet = await cloneClient.getComet();
+    userAccount = await cloneClient.getUserAccount();
+    comet = userAccount.comet;
 
     onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
       cloneClient.clone!.onusdMint
     );
-    const endingOnusdWallet = fromDevnetNumber(onusdTokenAccountInfo.amount);
+    const endingOnusdWallet = fromCloneScale(onusdTokenAccountInfo.amount);
 
     assert.equal(
       startingOnusdWallet - endingOnusdWallet,
@@ -986,7 +868,7 @@ describe("clone", async () => {
       "check user onUSD"
     );
 
-    vault = await cloneClient.connection.getTokenAccountBalance(
+    vault = await provider.connection.getTokenAccountBalance(
       collateral.vault,
       "recent"
     );
@@ -1006,14 +888,15 @@ describe("clone", async () => {
     const nonStableCollateral = tokenData.collaterals[2];
 
     // Add non-stable collateral
-    ix = await cloneClient.addCollateralToCometInstruction(
+    ix = cloneClient.addCollateralToCometInstruction(
+      tokenData,
       mockAssetAssociatedTokenAddress.address,
-      toDevnetScale(100),
+      toCloneScale(100),
       2
     );
     await provider.sendAndConfirm(new Transaction().add(ix));
 
-    const nonStableVault = await cloneClient.connection.getTokenAccountBalance(
+    const nonStableVault = await provider.connection.getTokenAccountBalance(
       nonStableCollateral.vault,
       "recent"
     );
@@ -1024,17 +907,19 @@ describe("clone", async () => {
       "check non-stable vault balance"
     );
 
-    comet = await cloneClient.getComet();
+    userAccount = await cloneClient.getUserAccount();
+    comet = userAccount.comet;
 
-    assert.equal(comet.numCollaterals.toNumber(), 2, "check num collaterals");
+    assert.equal(Number(comet.numCollaterals), 2, "check num collaterals");
   });
 
   it("comet collateral withdrawn!", async () => {
-    let comet = await cloneClient.getComet();
+    let userAccount = await cloneClient.getUserAccount();
+    let comet = userAccount.comet;
     let tokenData = await cloneClient.getTokenData();
     const collateral = tokenData.collaterals[0];
 
-    let vault = await cloneClient.connection.getTokenAccountBalance(
+    let vault = await provider.connection.getTokenAccountBalance(
       collateral.vault,
       "recent"
     );
@@ -1042,29 +927,32 @@ describe("clone", async () => {
       cloneClient.provider,
       cloneClient.clone!.onusdMint
     );
-    const startingOnusdWallet = fromDevnetNumber(onusdTokenAccountInfo.amount);
+    const startingOnusdWallet = fromCloneScale(onusdTokenAccountInfo.amount);
     const collateralToWithdraw = 10000;
     const startingVaultBalance = vault.value.uiAmount!;
 
-    let ix = await cloneClient.withdrawCollateralFromCometInstruction(
+    let ix = cloneClient.withdrawCollateralFromCometInstruction(
+      tokenData,
+      userAccount,
       onusdTokenAccountInfo.address,
-      toDevnetScale(collateralToWithdraw),
+      toCloneScale(collateralToWithdraw),
       0
     );
     await provider.sendAndConfirm(new Transaction().add(ix));
 
-    vault = await cloneClient.connection.getTokenAccountBalance(
+    vault = await provider.connection.getTokenAccountBalance(
       collateral.vault,
       "recent"
     );
 
-    comet = await cloneClient.getComet();
+    userAccount = await cloneClient.getUserAccount();
+    comet = userAccount.comet;
 
     onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
       cloneClient.clone!.onusdMint
     );
-    const endingOnusdWallet = fromDevnetNumber(onusdTokenAccountInfo.amount);
+    const endingOnusdWallet = fromCloneScale(onusdTokenAccountInfo.amount);
 
     assert.equal(
       endingOnusdWallet - startingOnusdWallet,
@@ -1077,7 +965,7 @@ describe("clone", async () => {
       collateralToWithdraw,
       "check vault balance"
     );
-    assert.equal(comet.numCollaterals.toNumber(), 2, "check num collaterals");
+    assert.equal(Number(comet.numCollaterals), 2, "check num collaterals");
   });
 
   it("comet liquidity added!", async () => {
@@ -1089,10 +977,10 @@ describe("clone", async () => {
     const initialPool = tokenData.pools[0];
     const liquidityToAdd = 1000000;
 
-    let updatePricesIx = await cloneClient.updatePricesInstruction();
+    let updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
 
-    let ix = await cloneClient.addLiquidityToCometInstruction(
-      toDevnetScale(liquidityToAdd),
+    let ix = cloneClient.addLiquidityToCometInstruction(
+      toCloneScale(liquidityToAdd),
       0
     );
     await provider.sendAndConfirm(
@@ -1103,8 +991,8 @@ describe("clone", async () => {
     const finalPool = tokenData.pools[0];
 
     assert.closeTo(
-      toNumber(finalPool.committedOnusdLiquidity) -
-        toNumber(initialPool.committedOnusdLiquidity),
+      fromCloneScale(finalPool.committedOnusdLiquidity) -
+        fromCloneScale(initialPool.committedOnusdLiquidity),
       liquidityToAdd,
       1e-6,
       "check lp supply pool balance"
@@ -1112,38 +1000,35 @@ describe("clone", async () => {
   });
 
   it("comet health check", async () => {
-    let comet = await cloneClient.getComet();
+    let userAccount = await cloneClient.getUserAccount();
+    let comet = userAccount.comet;
     let tokenData = await cloneClient.getTokenData();
     let healthScore = getHealthScore(tokenData, comet);
 
     assert.closeTo(healthScore.healthScore, 88, 1, "check health score.");
-    await cloneClient.program.methods
-      .updatePoolParameters(0, {
-        positionHealthScoreCoefficient: {
-          value: convertToRawDecimal(healthScoreCoefficient * 2),
-        },
-      })
-      .accounts({
-        auth: cloneClient.clone!.admin,
-        clone: cloneClient.cloneAddress[0],
-        tokenData: cloneClient.clone!.tokenData,
-      })
-      .rpc();
 
-    await cloneClient.program.methods
-      .updatePoolParameters(0, {
-        ilHealthScoreCoefficient: {
-          value: convertToRawDecimal(ilHealthScoreCoefficient * 2),
-        },
-      })
-      .accounts({
-        auth: cloneClient.clone!.admin,
-        clone: cloneClient.cloneAddress[0],
-        tokenData: cloneClient.clone!.tokenData,
-      })
-      .rpc();
+    let params: PoolParameters = {
+      __kind: "PositionHealthScoreCoefficient",
+      value: toCloneScale(healthScoreCoefficient * 2),
+    };
 
-    comet = await cloneClient.getComet();
+    await cloneClient.updatePoolParameters({
+      index: 0,
+      params: params,
+    });
+
+    params = {
+      __kind: "IlHealthScoreCoefficient",
+      value: toCloneScale(ilHealthScoreCoefficient * 2),
+    };
+
+    await cloneClient.updatePoolParameters({
+      index: 0,
+      params: params,
+    });
+
+    userAccount = await cloneClient.getUserAccount();
+    comet = userAccount.comet;
     tokenData = await cloneClient.getTokenData();
 
     healthScore = getHealthScore(tokenData, comet);
@@ -1152,10 +1037,11 @@ describe("clone", async () => {
 
   it("comet liquidity withdrawn!", async () => {
     const tokenData = await cloneClient.getTokenData();
-    let comet = await cloneClient.getComet();
+    let userAccount = await cloneClient.getUserAccount();
+    let comet = userAccount.comet;
     const positionIndex = 0;
     let position = comet.positions[positionIndex];
-    const poolIndex = position.poolIndex;
+    const poolIndex = Number(position.poolIndex);
     const pool = tokenData.pools[poolIndex];
     const withdrawAmount = 10;
 
@@ -1163,22 +1049,23 @@ describe("clone", async () => {
       cloneClient.provider,
       cloneClient.clone!.onusdMint
     );
-    const startingOnusdAmount = fromDevnetNumber(onusdTokenAccountInfo.amount);
+    const startingOnusdAmount = fromCloneScale(onusdTokenAccountInfo.amount);
     let onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
       pool.assetInfo.onassetMint
     );
-    const startingOnassetAmount = fromDevnetNumber(
+    const startingOnassetAmount = fromCloneScale(
       onassetTokenAccountInfo.amount
     );
 
-    let ix = await cloneClient.withdrawLiquidityFromCometInstruction(
-      toDevnetScale(withdrawAmount),
+    let ix = cloneClient.withdrawLiquidityFromCometInstruction(
+      toCloneScale(withdrawAmount),
       positionIndex
     );
     await provider.sendAndConfirm(new Transaction().add(ix));
 
-    comet = await cloneClient.getComet();
+    userAccount = await cloneClient.getUserAccount();
+    comet = userAccount.comet;
     position = comet.positions[positionIndex];
 
     onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
@@ -1191,13 +1078,13 @@ describe("clone", async () => {
     );
 
     assert.isAtLeast(
-      fromDevnetNumber(onusdTokenAccountInfo.amount),
+      fromCloneScale(onusdTokenAccountInfo.amount),
       startingOnusdAmount,
       "check onusd user balance"
     );
 
     assert.isAtLeast(
-      fromDevnetNumber(onassetTokenAccountInfo.amount),
+      fromCloneScale(onassetTokenAccountInfo.amount),
       startingOnassetAmount,
       "check onasset user balance"
     );
@@ -1271,26 +1158,26 @@ describe("clone", async () => {
       treasuryOnusdAssociatedTokenAddress,
       "recent"
     );
-    let updatePriceIx = await cloneClient.updatePricesInstruction();
+    let updatePriceIx = cloneClient.updatePricesInstruction(tokenData);
     const amountToBuy = 10000;
     let executionEst = calculateSwapExecution(
       amountToBuy,
       false,
       false,
-      toNumber(pool.onusdIld),
-      toNumber(pool.onassetIld),
-      toNumber(pool.committedOnusdLiquidity),
-      toNumber(pool.liquidityTradingFee),
-      toNumber(pool.treasuryTradingFee),
-      toNumber(oracle.price)
+      fromCloneScale(pool.onusdIld),
+      fromCloneScale(pool.onassetIld),
+      fromCloneScale(pool.committedOnusdLiquidity),
+      fromScale(pool.liquidityTradingFee, 4),
+      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
-    let buyIx = await cloneClient.swapInstruction(
+    let buyIx = cloneClient.swapInstruction(
       poolIndex,
-      toDevnetScale(amountToBuy),
+      toCloneScale(amountToBuy),
       false,
       false,
-      toDevnetScale(executionEst.result * 1.005),
+      toCloneScale(executionEst.result * 1.005),
       pool.assetInfo.onassetMint,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
@@ -1340,20 +1227,20 @@ describe("clone", async () => {
       onusdToConvert,
       true,
       true,
-      toNumber(pool.onusdIld),
-      toNumber(pool.onassetIld),
-      toNumber(pool.committedOnusdLiquidity),
-      toNumber(pool.liquidityTradingFee),
-      toNumber(pool.treasuryTradingFee),
-      toNumber(oracle.price)
+      fromCloneScale(pool.onusdIld),
+      fromCloneScale(pool.onassetIld),
+      fromCloneScale(pool.committedOnusdLiquidity),
+      fromScale(pool.liquidityTradingFee, 4),
+      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
-    let convertIx = await cloneClient.swapInstruction(
+    let convertIx = cloneClient.swapInstruction(
       poolIndex,
-      toDevnetScale(onusdToConvert),
+      toCloneScale(onusdToConvert),
       true,
       true,
-      toDevnetScale(executionEst.result * 0.995),
+      toCloneScale(executionEst.result * 0.995),
       pool.assetInfo.onassetMint,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
@@ -1406,35 +1293,37 @@ describe("clone", async () => {
     );
     let startingOnassetBalance =
       Number(onassetTokenAccountInfo.amount) * CLONE_SCALE_CONVERSION;
-    let updatePriceIx = await cloneClient.updatePricesInstruction();
+    let updatePriceIx = cloneClient.updatePricesInstruction(tokenData);
     let amountToSell = 10000;
     // Test with user CLN stake tier 0.
     let executionEst = calculateSwapExecution(
       amountToSell,
       true,
       false,
-      toNumber(pool.onusdIld),
-      toNumber(pool.onassetIld),
-      toNumber(pool.committedOnusdLiquidity),
+      fromCloneScale(pool.onusdIld),
+      fromCloneScale(pool.onassetIld),
+      fromCloneScale(pool.committedOnusdLiquidity),
       tier0.lpTradingFeeBps * 1e-4,
       tier0.treasuryTradingFeeBps * 1e-4,
-      toNumber(oracle.price)
+      fromScale(oracle.price, oracle.expo)
     );
     // Sell specifying input (onAsset)
-    let sellIx = await cloneClient.swapInstruction(
+    let sellIx = cloneClient.swapInstruction(
       poolIndex,
-      toDevnetScale(amountToSell),
+      toCloneScale(amountToSell),
       true,
       false,
-      toDevnetScale(executionEst.result * 0.995),
+      toCloneScale(executionEst.result * 0.995),
       pool.assetInfo.onassetMint,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       treasuryOnusdTokenAccount.address,
       treasuryOnassetTokenAccount.address,
-      cloneStakingProgram.programId,
-      cloneStakingAddress,
-      userStakingAddress
+      {
+        cloneStaking: cloneStakingAddress,
+        cloneStakingProgram: cloneStakingProgram.programId,
+        userStakingAccount: userStakingAddress,
+      }
     );
 
     await provider.sendAndConfirm(
@@ -1477,20 +1366,20 @@ describe("clone", async () => {
       onusdToRecieve,
       false,
       true,
-      toNumber(pool.onusdIld),
-      toNumber(pool.onassetIld),
-      toNumber(pool.committedOnusdLiquidity),
-      toNumber(pool.liquidityTradingFee),
-      toNumber(pool.treasuryTradingFee),
-      toNumber(oracle.price)
+      fromCloneScale(pool.onusdIld),
+      fromCloneScale(pool.onassetIld),
+      fromCloneScale(pool.committedOnusdLiquidity),
+      fromScale(pool.liquidityTradingFee, 4),
+      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
-    let convertIx = await cloneClient.swapInstruction(
+    let convertIx = cloneClient.swapInstruction(
       poolIndex,
-      toDevnetScale(onusdToRecieve),
+      toCloneScale(onusdToRecieve),
       false,
       true,
-      toDevnetScale(executionEst.result * 1.005),
+      toCloneScale(executionEst.result * 1.005),
       pool.assetInfo.onassetMint,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
@@ -1526,11 +1415,13 @@ describe("clone", async () => {
   });
 
   it("pay ILD + claim rewards", async () => {
-    let comet = await cloneClient.getComet();
+    let userAccount = await cloneClient.getUserAccount();
+    let comet = userAccount.comet;
     let tokenData = await cloneClient.getTokenData();
     let cometPositionIndex = 0;
     let ildInfo = getILD(tokenData, comet)[cometPositionIndex];
-    let pool = tokenData.pools[comet.positions[cometPositionIndex].poolIndex];
+    let pool =
+      tokenData.pools[Number(comet.positions[cometPositionIndex].poolIndex)];
 
     onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
@@ -1547,30 +1438,36 @@ describe("clone", async () => {
       Number(onassetTokenAccountInfo.amount) * CLONE_SCALE_CONVERSION;
 
     // Pay ILD
-    let payILDIx0 = await cloneClient.payCometILDInstruction(
+    let payILDIx0 = cloneClient.payCometILDInstruction(
+      tokenData,
+      userAccount,
       cometPositionIndex,
-      toDevnetScale(ildInfo.onAssetILD),
+      toCloneScale(ildInfo.onAssetILD),
       false,
       onassetTokenAccountInfo.address,
       onusdTokenAccountInfo.address
     );
 
-    let payILDIx1 = await cloneClient.payCometILDInstruction(
+    let payILDIx1 = cloneClient.payCometILDInstruction(
+      tokenData,
+      userAccount,
       cometPositionIndex,
-      toDevnetScale(ildInfo.onusdILD),
+      toCloneScale(ildInfo.onusdILD),
       true,
       onassetTokenAccountInfo.address,
       onusdTokenAccountInfo.address
     );
 
     // Collect rewards and pay down ILD
-    let collectRewardIx = await cloneClient.claimLpRewardsInstruction(
+    let collectRewardIx = cloneClient.collectLpRewardsInstruction(
+      tokenData,
+      userAccount,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       cometPositionIndex
     );
 
-    let updatePricesIx = await cloneClient.updatePricesInstruction();
+    let updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
 
     await provider.sendAndConfirm!(
       new Transaction().add(
@@ -1581,7 +1478,8 @@ describe("clone", async () => {
       )
     );
 
-    comet = await cloneClient.getComet();
+    userAccount = await cloneClient.getUserAccount();
+    comet = userAccount.comet;
     tokenData = await cloneClient.getTokenData();
     let finalIldInfo = getILD(tokenData, comet)[cometPositionIndex];
 
@@ -1619,8 +1517,14 @@ describe("clone", async () => {
     const expo = -7;
     const conf = new BN((price / 10) * 10 ** -expo);
 
-    let priceFeed2 = await createPriceFeed(pythProgram, price, expo, conf);
-    let currentPrice = (await getFeedData(pythProgram, priceFeed2)).aggregate
+    let priceFeed2 = await createPriceFeed(
+      provider,
+      pythProgram.programId,
+      price,
+      expo,
+      conf
+    );
+    let currentPrice = (await getFeedData(provider, priceFeed2)).aggregate
       .price;
     assert.equal(currentPrice, price, "check initial price");
 
@@ -1641,24 +1545,15 @@ describe("clone", async () => {
       jupiterAddress
     );
 
-    await cloneProgram.methods
-      .addOracleFeed(priceFeed2)
-      .accounts({
-        admin: walletPubkey,
-        clone: cloneClient.cloneAddress[0],
-        tokenData: cloneClient.clone?.tokenData,
-      })
-      .rpc();
+    await cloneClient.addOracleInfo(priceFeed2);
 
     await cloneClient.initializePool(
-      walletPubkey,
       150,
       200,
       poolTradingFee,
       treasuryTradingFee,
       ilHealthScoreCoefficient,
       healthScoreCoefficient,
-      500,
       1,
       jupiterData.assetMints[1]
     );
@@ -1672,21 +1567,19 @@ describe("clone", async () => {
     let tokenData = await cloneClient.getTokenData();
     const liquidityToAdd = 1000000;
 
-    let updatePricesIx = await cloneClient.updatePricesInstruction();
+    let updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
 
-    let addLiquidityPoolZeroIx =
-      await cloneClient.addLiquidityToCometInstruction(
-        toDevnetScale(liquidityToAdd),
-        0
-      );
+    let addLiquidityPoolZeroIx = cloneClient.addLiquidityToCometInstruction(
+      toCloneScale(liquidityToAdd),
+      0
+    );
     await provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(addLiquidityPoolZeroIx)
     );
-    let addLiquidityPoolOneIx =
-      await cloneClient.addLiquidityToCometInstruction(
-        toDevnetScale(liquidityToAdd),
-        1
-      );
+    let addLiquidityPoolOneIx = cloneClient.addLiquidityToCometInstruction(
+      toCloneScale(liquidityToAdd),
+      1
+    );
     await provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(addLiquidityPoolOneIx)
     );
@@ -1726,20 +1619,20 @@ describe("clone", async () => {
       amountToBuy,
       false,
       false,
-      toNumber(pool.onusdIld),
-      toNumber(pool.onassetIld),
-      toNumber(pool.committedOnusdLiquidity),
-      toNumber(pool.liquidityTradingFee),
-      toNumber(pool.treasuryTradingFee),
-      toNumber(oracle.price)
+      fromCloneScale(pool.onusdIld),
+      fromCloneScale(pool.onassetIld),
+      fromCloneScale(pool.committedOnusdLiquidity),
+      fromScale(pool.liquidityTradingFee, 4),
+      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
-    let buyIx = await cloneClient.swapInstruction(
+    let buyIx = cloneClient.swapInstruction(
       poolIndex,
-      toDevnetScale(amountToBuy),
+      toCloneScale(amountToBuy),
       false,
       false,
-      toDevnetScale(executionEst.result * 1.005),
+      toCloneScale(executionEst.result * 1.005),
       pool.assetInfo.onassetMint,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
@@ -1757,11 +1650,14 @@ describe("clone", async () => {
       cloneClient.provider,
       collateral.mint
     );
-    let comet = await cloneClient.getComet();
+    let userAccount = await cloneClient.getUserAccount();
+    let comet = userAccount.comet;
 
     let startingHealthScore = getHealthScore(tokenData, comet);
 
-    let liquidationIx = await cloneClient.liquidateCometPositionInstruction(
+    let liquidationIx = cloneClient.liquidateCometPositionInstruction(
+      tokenData,
+      userAccount,
       cloneClient.provider.publicKey!,
       0,
       0,
@@ -1776,7 +1672,8 @@ describe("clone", async () => {
     );
 
     tokenData = await cloneClient.getTokenData();
-    comet = await cloneClient.getComet();
+    userAccount = await cloneClient.getUserAccount();
+    comet = userAccount.comet;
     let healthScore = getHealthScore(tokenData, comet);
 
     assert.isAbove(
@@ -1794,7 +1691,7 @@ describe("clone", async () => {
     let oracle = tokenData.oracles[Number(pool.assetInfo.oracleInfoIndex)];
 
     // change status to frozen
-    await cloneClient.program.methods
+    await cloneProgram.methods
       .updatePoolParameters(poolIndex, {
         status: {
           value: new BN(1),
@@ -1802,12 +1699,12 @@ describe("clone", async () => {
       })
       .accounts({
         auth: cloneClient.clone!.admin,
-        clone: cloneClient.cloneAddress[0],
+        clone: cloneClient.cloneAddress,
         tokenData: cloneClient.clone!.tokenData,
       })
       .rpc();
 
-    let updatePricesIx = await cloneClient.updatePricesInstruction();
+    let updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
 
     onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
@@ -1857,20 +1754,20 @@ describe("clone", async () => {
       amountToBuy,
       false,
       false,
-      toNumber(pool.onusdIld),
-      toNumber(pool.onassetIld),
-      toNumber(pool.committedOnusdLiquidity),
-      toNumber(pool.liquidityTradingFee),
-      toNumber(pool.treasuryTradingFee),
-      toNumber(oracle.price)
+      fromCloneScale(pool.onusdIld),
+      fromCloneScale(pool.onassetIld),
+      fromCloneScale(pool.committedOnusdLiquidity),
+      fromScale(pool.liquidityTradingFee, 4),
+      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
-    let buyIx = await cloneClient.swapInstruction(
+    let buyIx = cloneClient.swapInstruction(
       poolIndex,
-      toDevnetScale(amountToBuy),
+      toCloneScale(amountToBuy),
       false,
       false,
-      toDevnetScale(executionEst.result * 1.005),
+      toCloneScale(executionEst.result * 1.005),
       pool.assetInfo.onassetMint,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
@@ -1891,9 +1788,10 @@ describe("clone", async () => {
 
   it("comet liquidated due to Liquidation status!", async () => {
     let tokenData = await cloneClient.getTokenData();
+    let userAccount = await cloneClient.getUserAccount();
 
     // change status to liquidation
-    await cloneClient.program.methods
+    await cloneProgram.methods
       .updatePoolParameters(1, {
         status: {
           value: new BN(3),
@@ -1901,7 +1799,7 @@ describe("clone", async () => {
       })
       .accounts({
         auth: cloneClient.clone!.admin,
-        clone: cloneClient.cloneAddress[0],
+        clone: cloneClient.cloneAddress,
         tokenData: cloneClient.clone!.tokenData,
       })
       .rpc();
@@ -1921,9 +1819,11 @@ describe("clone", async () => {
       collateral.mint
     );
 
-    let updatePricesIx = await cloneClient.updatePricesInstruction();
+    let updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
 
-    let liquidationIx = await cloneClient.liquidateCometPositionInstruction(
+    let liquidationIx = cloneClient.liquidateCometPositionInstruction(
+      tokenData,
+      userAccount,
       cloneClient.provider.publicKey!,
       1,
       0,
@@ -1939,13 +1839,14 @@ describe("clone", async () => {
     );
 
     tokenData = await cloneClient.getTokenData();
-    let comet = await cloneClient.getComet();
+    userAccount = await cloneClient.getUserAccount();
+    let comet = userAccount.comet;
     let healthScore = getHealthScore(tokenData, comet);
 
     assert.closeTo(healthScore.healthScore, 100, 1, "check health score.");
 
     // change status to active
-    await cloneClient.program.methods
+    await cloneProgram.methods
       .updatePoolParameters(1, {
         status: {
           value: new BN(0),
@@ -1953,7 +1854,7 @@ describe("clone", async () => {
       })
       .accounts({
         auth: cloneClient.clone!.admin,
-        clone: cloneClient.cloneAddress[0],
+        clone: cloneClient.cloneAddress,
         tokenData: cloneClient.clone!.tokenData,
       })
       .rpc();
@@ -1961,9 +1862,10 @@ describe("clone", async () => {
 
   it("borrow position liquidation", async () => {
     let tokenData = await cloneClient.getTokenData();
-    let userMintPositions = await cloneClient.getBorrowPositions();
+    let userAccount = await cloneClient.getUserAccount();
+    let userborrowPositions = userAccount.borrows;
     let positionIndex = 1;
-    let position = userMintPositions.borrowPositions[positionIndex];
+    let position = userborrowPositions.positions[positionIndex];
     let poolIndex = Number(position.poolIndex);
     let collateralIndex = Number(position.collateralIndex);
     let collateral = tokenData.collaterals[collateralIndex];
@@ -1978,14 +1880,17 @@ describe("clone", async () => {
       pool.assetInfo.onassetMint
     );
 
-    let updatePricesIx = await cloneClient.updatePricesInstruction();
+    let updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
+
+    let oraclePrice = fromScale(oracle.price, oracle.expo);
 
     // Mint more onasset to pay for liquidation.
-    let ix = await cloneClient.initializeBorrowPositionInstruction(
+    let ix = cloneClient.initializeBorrowPositionInstruction(
+      tokenData,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
-      toDevnetScale(19000),
-      toDevnetScale(19000 * toNumber(oracle.price) * 1.51),
+      toCloneScale(19000),
+      toCloneScale(19000 * oraclePrice * 1.51),
       poolIndex,
       collateralIndex
     );
@@ -1993,34 +1898,45 @@ describe("clone", async () => {
       new Transaction().add(updatePricesIx).add(ix)
     );
 
-    userMintPositions = await cloneClient.getBorrowPositions();
-    position = userMintPositions.borrowPositions[positionIndex];
+    userAccount = await cloneClient.getUserAccount();
+    userborrowPositions = userAccount.borrows;
+    position = userborrowPositions.positions[positionIndex];
+    let collateralAmount = fromScale(
+      position.collateralAmount,
+      collateral.scale
+    );
 
     let priceThreshold =
-      toNumber(position.collateralAmount) /
-      (1.5 * toNumber(position.borrowedOnasset));
+      collateralAmount / (1.5 * fromCloneScale(position.borrowedOnasset));
 
-    await setPrice(pythProgram, priceThreshold * 1.1, oracle.pythAddress);
+    await setPrice(provider, priceThreshold * 1.1, oracle.pythAddress);
 
-    let initialOvercollateralRatio = toNumber(position.collateralAmount) / (toNumber(position.borrowedOnasset) * toNumber(oracle.price))
+    let initialOvercollateralRatio =
+      collateralAmount /
+      (fromCloneScale(position.borrowedOnasset) * oraclePrice);
 
     await cloneClient.provider.sendAndConfirm!(
-      new Transaction()
-        .add(await cloneClient.updatePricesInstruction())
-        .add(
-          await cloneClient.liquidateBorrowPositionInstruction(
-            cloneClient.provider.publicKey!,
-            positionIndex,
-            toDevnetScale(19000 * toNumber(oracle.price) * 0.01),
-            collateralTokenAccountInfo.address,
-            onassetTokenAccountInfo.address
-          )
+      new Transaction().add(
+        cloneClient.updatePricesInstruction(tokenData),
+        cloneClient.liquidateBorrowPositionInstruction(
+          tokenData,
+          userAccount,
+          cloneClient.provider.publicKey!,
+          positionIndex,
+          toCloneScale(19000 * oraclePrice * 0.01),
+          collateralTokenAccountInfo.address,
+          onassetTokenAccountInfo.address
         )
+      )
     );
-    userMintPositions = await cloneClient.getBorrowPositions();
-    position = userMintPositions.borrowPositions[positionIndex];
-    
-    let finalOvercollateralRatio = toNumber(position.collateralAmount) / (toNumber(position.borrowedOnasset) * toNumber(oracle.price))
+    userAccount = await cloneClient.getUserAccount();
+    userborrowPositions = userAccount.borrows;
+    position = userborrowPositions.positions[positionIndex];
+    collateralAmount = fromScale(position.collateralAmount, collateral.scale);
+
+    let finalOvercollateralRatio =
+      collateralAmount /
+      (fromCloneScale(position.borrowedOnasset) * oraclePrice);
 
     assert.isAbove(
       finalOvercollateralRatio,
@@ -2029,28 +1945,28 @@ describe("clone", async () => {
     );
 
     // Reset params
-    await cloneClient.program.methods
+    await cloneProgram.methods
       .updatePoolParameters(0, {
         positionHealthScoreCoefficient: {
-          value: convertToRawDecimal(healthScoreCoefficient),
+          value: toCloneScale(healthScoreCoefficient),
         },
       })
       .accounts({
         auth: cloneClient.clone!.admin,
-        clone: cloneClient.cloneAddress[0],
+        clone: cloneClient.cloneAddress,
         tokenData: cloneClient.clone!.tokenData,
       })
       .rpc();
 
-    await cloneClient.program.methods
+    await cloneProgram.methods
       .updatePoolParameters(0, {
         ilHealthScoreCoefficient: {
-          value: convertToRawDecimal(ilHealthScoreCoefficient),
+          value: toCloneScale(ilHealthScoreCoefficient),
         },
       })
       .accounts({
         auth: cloneClient.clone!.admin,
-        clone: cloneClient.cloneAddress[0],
+        clone: cloneClient.cloneAddress,
         tokenData: cloneClient.clone!.tokenData,
       })
       .rpc();
@@ -2076,7 +1992,7 @@ describe("clone", async () => {
     );
     // Get asset from jupiter
     await jupiterProgram.methods
-      .mintAsset(jupiterNonce, 0, new BN(10 * 100000000))
+      .mintAsset(0, new BN(10 * 100000000))
       .accounts({
         assetMint: jupiterData.assetMints[0],
         assetTokenAccount: mockAssetAssociatedTokenAccount.address,
@@ -2093,24 +2009,20 @@ describe("clone", async () => {
     let startingAssetBalance = Number(mockAssetAssociatedTokenAccount.amount);
     let startingOnassetBalance = Number(onassetAssociatedTokenAccount.amount);
 
-    let amount = toDevnetScale(5);
-    let [cloneAddress, bump] = await cloneClient.getCloneAddress();
+    let amount = toCloneScale(5);
 
     // Wrap to onasset
-    await cloneProgram.methods
-      .wrapAsset(amount, poolIndex)
-      .accounts({
-        user: cloneClient.provider.publicKey!,
-        tokenData: cloneClient.clone!.tokenData,
-        underlyingAssetTokenAccount: pool.underlyingAssetTokenAccount!,
-        assetMint: jupiterData.assetMints[0],
-        userAssetTokenAccount: mockAssetAssociatedTokenAccount.address,
-        onassetMint: pool.assetInfo.onassetMint,
-        userOnassetTokenAccount: onassetAssociatedTokenAccount.address,
-        clone: cloneClient.cloneAddress[0],
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .rpc();
+    let tx = new Transaction().add(
+      cloneClient.wrapAssetInstruction(
+        tokenData,
+        amount,
+        poolIndex,
+        jupiterData.assetMints[0],
+        mockAssetAssociatedTokenAccount.address,
+        onassetAssociatedTokenAccount.address
+      )
+    );
+    await provider.sendAndConfirm(tx);
 
     mockAssetAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
@@ -2133,20 +2045,17 @@ describe("clone", async () => {
     );
 
     // Unwrap to asset
-    await cloneProgram.methods
-      .unwrapOnasset(amount, poolIndex)
-      .accounts({
-        user: cloneClient.provider.publicKey!,
-        tokenData: cloneClient.clone!.tokenData,
-        underlyingAssetTokenAccount: pool.underlyingAssetTokenAccount!,
-        assetMint: jupiterData.assetMints[0],
-        userAssetTokenAccount: mockAssetAssociatedTokenAccount.address,
-        onassetMint: pool.assetInfo.onassetMint,
-        userOnassetTokenAccount: onassetAssociatedTokenAccount.address,
-        clone: cloneAddress,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .rpc();
+    tx = new Transaction().add(
+      cloneClient.unwrapOnassetInstruction(
+        tokenData,
+        amount,
+        poolIndex,
+        jupiterData.assetMints[0],
+        mockAssetAssociatedTokenAccount.address,
+        onassetAssociatedTokenAccount.address
+      )
+    );
+    await provider.sendAndConfirm(tx);
 
     mockAssetAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,

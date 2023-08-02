@@ -5,16 +5,12 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from '@solana/web3.js'
 import * as beet from '@metaplex-foundation/beet'
-import * as beetSolana from '@metaplex-foundation/beet-solana'
-import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 export type BorrowPosition = {
-  authority: web3.PublicKey
-  collateralAmount: RawDecimal
   poolIndex: beet.bignum
+  borrowedOnasset: beet.bignum
+  collateralAmount: beet.bignum
   collateralIndex: beet.bignum
-  borrowedOnasset: RawDecimal
 }
 
 /**
@@ -23,11 +19,10 @@ export type BorrowPosition = {
  */
 export const borrowPositionBeet = new beet.BeetArgsStruct<BorrowPosition>(
   [
-    ['authority', beetSolana.publicKey],
-    ['collateralAmount', rawDecimalBeet],
     ['poolIndex', beet.u64],
+    ['borrowedOnasset', beet.u64],
+    ['collateralAmount', beet.u64],
     ['collateralIndex', beet.u64],
-    ['borrowedOnasset', rawDecimalBeet],
   ],
   'BorrowPosition'
 )

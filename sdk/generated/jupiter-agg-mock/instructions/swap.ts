@@ -15,7 +15,6 @@ import * as web3 from '@solana/web3.js'
  * @category generated
  */
 export type SwapInstructionArgs = {
-  nonce: number
   assetIndex: number
   isAmountInput: boolean
   isAmountAsset: boolean
@@ -33,7 +32,6 @@ export const swapStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['nonce', beet.u8],
     ['assetIndex', beet.u8],
     ['isAmountInput', beet.bool],
     ['isAmountAsset', beet.bool],

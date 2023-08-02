@@ -1,11 +1,12 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient, toDevnetScale } from "../../../sdk/src/clone";
+import { toCloneScale } from "../../../sdk/src/clone";
 import { BN } from "@coral-xyz/anchor";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneProgram,
+  getCloneData,
+  getCloneClient,
 } from "../../utils";
 import { Argv } from "yargs";
 
@@ -29,26 +30,31 @@ exports.builder = (yargs: CommandArguments) => {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
+    const tokenData = await cloneClient.getTokenData();
 
-    let updatePricesIx = await cloneClient.updatePricesInstruction()
-    ;
-    const amount = new BN(`${toDevnetScale(yargs.amount)}`);
+    let updatePricesIx = await cloneClient.updatePricesInstruction(tokenData);
+    const amount = new BN(`${toCloneScale(yargs.amount)}`);
 
-    let ix = await cloneClient.withdrawLiquidityFromCometInstruction(
-        amount,
-        yargs.poolIndex
-      );
-      await setup.provider.sendAndConfirm(
-        new Transaction().add(updatePricesIx).add(ix)
-      );
+    let ix = cloneClient.withdrawLiquidityFromCometInstruction(
+      amount,
+      yargs.poolIndex
+    );
+    await provider.sendAndConfirm(
+      new Transaction().add(updatePricesIx).add(ix)
+    );
 
     successLog(`${yargs.amount} onUSD Liquidity Withdrawn!`);
   } catch (error: any) {
-    errorLog(`Failed to withdraw liquidity from comet position:\n${error.message}`);
+    errorLog(
+      `Failed to withdraw liquidity from comet position:\n${error.message}`
+    );
   }
 };

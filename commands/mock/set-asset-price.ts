@@ -3,8 +3,8 @@ import {
   successLog,
   errorLog,
   anchorSetup,
-  getPythProgram,
-  getMockAssetPriceFeed,
+  getMockJupiterData,
+  getJupiterAccount,
 } from "../utils";
 import { Argv } from "yargs";
 
@@ -28,16 +28,12 @@ exports.builder = (yargs: CommandArguments) => {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    const pythProgram = getPythProgram(setup.provider);
+    const provider = anchorSetup();
+    const [__, jupiterAddress] = getMockJupiterData();
+    const jupiter = await getJupiterAccount(provider, jupiterAddress);
+    const priceFeed = jupiter.oracles[yargs.index];
 
-    const priceFeed = await getMockAssetPriceFeed(
-      setup.network,
-      setup.provider,
-      yargs.index
-    );
-
-    await setPrice(pythProgram, yargs.price, priceFeed);
+    await setPrice(provider, yargs.price, priceFeed);
 
     successLog(`Mock Asset ${yargs.index} price set to $${yargs.price}`);
   } catch (error: any) {

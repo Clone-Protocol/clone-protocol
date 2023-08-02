@@ -1,12 +1,13 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient, toDevnetScale } from "../../sdk/src/clone";
+import { toCloneScale } from "../../sdk/src/clone";
 import { BN } from "@coral-xyz/anchor";
 import {
   successLog,
   errorLog,
   anchorSetup,
   getUSDC,
-  getCloneProgram,
+  getCloneData,
+  getCloneClient,
   getOrCreateAssociatedTokenAccount,
 } from "../utils";
 import { Argv } from "yargs";
@@ -25,12 +26,15 @@ exports.builder = (yargs: CommandArguments) => {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
-
+    const tokenData = await cloneClient.getTokenData();
     const usdcMint = await getUSDC();
 
     const usdcTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
@@ -42,13 +46,14 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneClient.clone!.onusdMint
     );
 
-    const amount = new BN(`${toDevnetScale(yargs.amount)}`);
-    let ix = await cloneClient.mintOnusdInstruction(
+    const amount = new BN(`${toCloneScale(yargs.amount)}`);
+    let ix = cloneClient.mintOnusdInstruction(
+      tokenData,
       amount,
       onUSDTokenAccountInfo.address,
       usdcTokenAccountInfo.address
     );
-    await setup.provider.sendAndConfirm(new Transaction().add(ix));
+    await provider.sendAndConfirm(new Transaction().add(ix));
 
     successLog(`${yargs.amount} onUSD Minted!`);
   } catch (error: any) {

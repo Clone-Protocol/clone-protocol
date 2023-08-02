@@ -1,35 +1,29 @@
 import * as anchor from "@coral-xyz/anchor";
-import { CloneClient } from "../../sdk/src/clone";
 import { Transaction } from "@solana/web3.js";
-import { successLog, errorLog, anchorSetup, getCloneProgram } from "../utils";
+import {
+  successLog,
+  errorLog,
+  anchorSetup,
+  getCloneData,
+  getCloneClient,
+} from "../utils";
 
 exports.command = "init";
 exports.desc = "Initializes your user account, necessary to provide liquidity";
 exports.builder = () => {};
 exports.handler = async function () {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-
-    let tx = new Transaction();
-    tx.add(await cloneClient.initializeUserInstruction());
-
-    const borrowAccountKeypair = anchor.web3.Keypair.generate();
-    tx.add(
-      await cloneClient.initializeBorrowPositionsAccountInstruction(
-        borrowAccountKeypair
-      )
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
     );
 
-    const cometAccountKeypair = anchor.web3.Keypair.generate();
-    tx.add(await cloneClient.initializeCometInstruction(cometAccountKeypair));
-
-    await cloneClient.provider.sendAndConfirm!(tx, [
-      borrowAccountKeypair,
-      cometAccountKeypair,
-    ]);
+    await cloneClient.provider.sendAndConfirm!(
+      new Transaction().add(cloneClient.initializeUserInstruction())
+    );
 
     successLog("User Account Initialized!");
   } catch (error: any) {

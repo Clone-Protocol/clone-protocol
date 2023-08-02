@@ -1,4 +1,5 @@
 use crate::states::*;
+use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -7,7 +8,7 @@ pub struct AddOracleFeed<'info> {
     #[account(address = clone.admin)]
     pub admin: Signer<'info>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data,
         has_one = admin
@@ -22,8 +23,10 @@ pub struct AddOracleFeed<'info> {
 
 pub fn execute(ctx: Context<AddOracleFeed>, pyth_address: Pubkey) -> Result<()> {
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let mut info = OracleInfo::default();
-    info.pyth_address = pyth_address;
+    let info = OracleInfo {
+        pyth_address,
+        ..Default::default()
+    };
     token_data.append_oracle_info(info);
 
     Ok(())

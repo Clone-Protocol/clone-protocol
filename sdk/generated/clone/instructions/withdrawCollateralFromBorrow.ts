@@ -39,10 +39,9 @@ export const withdrawCollateralFromBorrowStruct = new beet.BeetArgsStruct<
  * Accounts required by the _withdrawCollateralFromBorrow_ instruction
  *
  * @property [**signer**] user
- * @property [] userAccount
+ * @property [_writable_] userAccount
  * @property [] clone
  * @property [_writable_] tokenData
- * @property [_writable_] borrowPositions
  * @property [_writable_] vault
  * @property [_writable_] userCollateralTokenAccount
  * @category Instructions
@@ -54,7 +53,6 @@ export type WithdrawCollateralFromBorrowInstructionAccounts = {
   userAccount: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
-  borrowPositions: web3.PublicKey
   vault: web3.PublicKey
   userCollateralTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
@@ -93,7 +91,7 @@ export function createWithdrawCollateralFromBorrowInstruction(
     },
     {
       pubkey: accounts.userAccount,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {
@@ -103,11 +101,6 @@ export function createWithdrawCollateralFromBorrowInstruction(
     },
     {
       pubkey: accounts.tokenData,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.borrowPositions,
       isWritable: true,
       isSigner: false,
     },

@@ -6,15 +6,16 @@ import {
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
 } from "@solana/spl-token";
-import { CloneClient } from "../../sdk/src/clone";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneProgram,
+  getCloneData,
   getUSDC,
+  getCloneClient,
 } from "../utils";
 import { Argv } from "yargs";
+import { CloneClient } from "../../sdk/src/clone";
 
 interface CommandArguments extends Argv {
   cometLiquidatorFee: number;
@@ -38,22 +39,26 @@ exports.builder = (yargs: CommandArguments) => {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
     const usdc = await getUSDC();
-
-    let cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
 
     const treasuryAddress = anchor.web3.Keypair.generate();
 
-    await cloneClient.initializeClone(
+    await CloneClient.initializeClone(
+      provider,
+      cloneProgramID,
       yargs.cometLiquidatorFee,
       yargs.borrowLiquidatorFee,
       treasuryAddress.publicKey,
       usdc
     );
 
-    await cloneClient.loadClone();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
     const treasuryOnusdAssociatedTokenAddress = await getAssociatedTokenAddress(
       cloneClient.clone!.onusdMint,
@@ -65,8 +70,8 @@ exports.handler = async function (yargs: CommandArguments) {
 
     await cloneClient.provider.sendAndConfirm!(
       new Transaction().add(
-        await createAssociatedTokenAccountInstruction(
-          cloneClient.provider.publicKey!,
+        createAssociatedTokenAccountInstruction(
+          provider.publicKey!,
           treasuryOnusdAssociatedTokenAddress,
           treasuryAddress.publicKey,
           cloneClient.clone!.onusdMint,

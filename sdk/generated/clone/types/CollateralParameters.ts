@@ -6,7 +6,6 @@
  */
 
 import * as beet from '@metaplex-foundation/beet'
-import { RawDecimal, rawDecimalBeet } from './RawDecimal'
 /**
  * This type is used to derive the {@link CollateralParameters} type as well as the de/serializer.
  * However don't refer to it in your code but use the {@link CollateralParameters} type instead.
@@ -17,8 +16,9 @@ import { RawDecimal, rawDecimalBeet } from './RawDecimal'
  * @private
  */
 export type CollateralParametersRecord = {
+  Status: { status: beet.bignum }
   OracleInfoIndex: { value: beet.bignum }
-  CollateralizationRatio: { value: RawDecimal }
+  CollateralizationRatio: { value: beet.bignum }
 }
 
 /**
@@ -35,6 +35,9 @@ export type CollateralParametersRecord = {
 export type CollateralParameters =
   beet.DataEnumKeyAsKind<CollateralParametersRecord>
 
+export const isCollateralParametersStatus = (
+  x: CollateralParameters
+): x is CollateralParameters & { __kind: 'Status' } => x.__kind === 'Status'
 export const isCollateralParametersOracleInfoIndex = (
   x: CollateralParameters
 ): x is CollateralParameters & { __kind: 'OracleInfoIndex' } =>
@@ -51,6 +54,14 @@ export const isCollateralParametersCollateralizationRatio = (
 export const collateralParametersBeet =
   beet.dataEnum<CollateralParametersRecord>([
     [
+      'Status',
+      new beet.BeetArgsStruct<CollateralParametersRecord['Status']>(
+        [['status', beet.u64]],
+        'CollateralParametersRecord["Status"]'
+      ),
+    ],
+
+    [
       'OracleInfoIndex',
       new beet.BeetArgsStruct<CollateralParametersRecord['OracleInfoIndex']>(
         [['value', beet.u64]],
@@ -63,7 +74,7 @@ export const collateralParametersBeet =
       new beet.BeetArgsStruct<
         CollateralParametersRecord['CollateralizationRatio']
       >(
-        [['value', rawDecimalBeet]],
+        [['value', beet.u64]],
         'CollateralParametersRecord["CollateralizationRatio"]'
       ),
     ],

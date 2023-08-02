@@ -5,18 +5,22 @@ import {
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
 } from "@solana/spl-token";
-import { CloneClient } from "../../sdk/src/clone";
-import { successLog, errorLog, anchorSetup, getCloneProgram } from "../utils";
+import {
+  successLog,
+  errorLog,
+  anchorSetup,
+  getCloneData,
+  getCloneClient,
+} from "../utils";
 import { Argv } from "yargs";
 
 interface CommandArguments extends Argv {
   minOvercollateralRatio: number;
   maxLiquidationCollateralRatio: number;
-  poolTradingFee: number;
-  treasuryTradingFee: number;
+  liquidityTradingFeeBps: number;
+  treasuryTradingFeeBps: number;
   ilHealthScoreCoefficient: number;
   healthScoreCoefficient: number;
-  liquidationDiscountRate: number;
   oracleIndex: number;
   underlyingAssetMint: string;
 }
@@ -32,16 +36,17 @@ exports.builder = (yargs: CommandArguments) => {
       default: 150,
     })
     .option("max-liquidation-collateral-ratio", {
-      describe: "The maximum overcollateral ratio for borrow positions after a liquidation",
+      describe:
+        "The maximum overcollateral ratio for borrow positions after a liquidation",
       type: "number",
       default: 200,
     })
-    .option("pool-trading-fee", {
-      describe: "The pool trading fee",
+    .option("liquidity-trading-fee-bps", {
+      describe: "The liquidity trading fee",
       type: "number",
       default: 200,
     })
-    .option("treasury-trading-fee", {
+    .option("treasury-trading-fee-bps", {
       describe: "The treasury trading fee",
       type: "number",
       default: 100,
@@ -56,11 +61,6 @@ exports.builder = (yargs: CommandArguments) => {
       type: "number",
       default: 1.059,
     })
-    .option("liquidation-discount-rate", {
-      describe: "The liquidation discount rate",
-      type: "number",
-      default: 500,
-    })
     .option("oracle-index", {
       describe: "The index of the oracle feed for this onAsset",
       type: "number",
@@ -72,23 +72,23 @@ exports.builder = (yargs: CommandArguments) => {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    let cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
     const underlyingAssetMint = new PublicKey(yargs.underlyingAssetMint);
 
     await cloneClient.initializePool(
-      cloneProgram.provider.publicKey!,
       yargs.minOvercollateralRatio,
       yargs.maxLiquidationCollateralRatio,
-      yargs.poolTradingFee,
-      yargs.treasuryTradingFee,
+      yargs.liquidityTradingFeeBps,
+      yargs.treasuryTradingFeeBps,
       yargs.ilHealthScoreCoefficient,
       yargs.healthScoreCoefficient,
-      yargs.liquidationDiscountRate,
       yargs.oracleIndex,
       underlyingAssetMint
     );
@@ -107,7 +107,7 @@ exports.handler = async function (yargs: CommandArguments) {
 
     await cloneClient.provider.sendAndConfirm!(
       new Transaction().add(
-        await createAssociatedTokenAccountInstruction(
+        createAssociatedTokenAccountInstruction(
           cloneClient.provider.publicKey!,
           treasuryOnAssetAssociatedTokenAddress,
           cloneClient.clone!.treasuryAddress,

@@ -37,10 +37,10 @@ pub mod jupiter_agg_mock {
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         let jupiter_account = &mut ctx.accounts.jupiter_account.load_init()?;
         jupiter_account.usdc_mint = *ctx.accounts.usdc_mint.to_account_info().key;
-        if let Some(bump) = ctx.bumps.get("jupiter") {
-            jupiter_account.bump = *bump;
-        }
-        //jupiter_account.bump = *ctx.bumps.get("jupiter").expect("Couldn't find bump");
+        jupiter_account.bump = *ctx
+            .bumps
+            .get("jupiter_account")
+            .expect("Couldn't find bump");
         Ok(())
     }
 
@@ -50,13 +50,9 @@ pub mod jupiter_agg_mock {
         Ok(())
     }
 
-    pub fn mint_asset(
-        ctx: Context<MintAsset>,
-        nonce: u8,
-        _asset_index: u8,
-        amount: u64,
-    ) -> Result<()> {
-        let seeds = &[&[b"jupiter", bytemuck::bytes_of(&nonce)][..]];
+    pub fn mint_asset(ctx: Context<MintAsset>, _asset_index: u8, amount: u64) -> Result<()> {
+        let jupiter = ctx.accounts.jupiter_account.load()?;
+        let seeds = &[&[b"jupiter", bytemuck::bytes_of(&jupiter.bump)][..]];
 
         let cpi_accounts = MintTo {
             mint: ctx.accounts.asset_mint.to_account_info().clone(),
@@ -73,8 +69,9 @@ pub mod jupiter_agg_mock {
         Ok(())
     }
 
-    pub fn mint_usdc(ctx: Context<MintUsdc>, nonce: u8, amount: u64) -> Result<()> {
-        let seeds = &[&[b"jupiter", bytemuck::bytes_of(&nonce)][..]];
+    pub fn mint_usdc(ctx: Context<MintUsdc>, amount: u64) -> Result<()> {
+        let jupiter = ctx.accounts.jupiter_account.load()?;
+        let seeds = &[&[b"jupiter", bytemuck::bytes_of(&jupiter.bump)][..]];
 
         let cpi_accounts = MintTo {
             mint: ctx.accounts.usdc_mint.to_account_info().clone(),
@@ -97,13 +94,13 @@ pub mod jupiter_agg_mock {
 
     pub fn swap(
         ctx: Context<Swap>,
-        nonce: u8,
         _asset_index: u8,
         is_amount_input: bool,
         is_amount_asset: bool,
         amount: u64,
     ) -> Result<()> {
-        let seeds = &[&[b"jupiter", bytemuck::bytes_of(&nonce)][..]];
+        let jupiter = ctx.accounts.jupiter_account.load()?;
+        let seeds = &[&[b"jupiter", bytemuck::bytes_of(&jupiter.bump)][..]];
 
         // Get oracle price
         let price_feed = load_price_from_pyth(&ctx.accounts.pyth_oracle)?;
@@ -325,7 +322,7 @@ pub struct CreateAsset<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(nonce: u8, asset_index: u8, amount: u64)]
+#[instruction(asset_index: u8, amount: u64)]
 pub struct MintAsset<'info> {
     #[account(
         mut,
@@ -336,14 +333,14 @@ pub struct MintAsset<'info> {
     pub asset_token_account: Account<'info, TokenAccount>,
     #[account(
         seeds = [b"jupiter".as_ref()],
-        bump = nonce,
+        bump,
     )]
     pub jupiter_account: AccountLoader<'info, Jupiter>,
     pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
-#[instruction(nonce: u8, amount: u64)]
+#[instruction(amount: u64)]
 pub struct MintUsdc<'info> {
     #[account(mut)]
     pub usdc_mint: Account<'info, Mint>,
@@ -351,19 +348,19 @@ pub struct MintUsdc<'info> {
     pub usdc_token_account: Account<'info, TokenAccount>,
     #[account(
         seeds = [b"jupiter".as_ref()],
-        bump = nonce,
+        bump,
     )]
     pub jupiter_account: AccountLoader<'info, Jupiter>,
     pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
-#[instruction(nonce: u8, asset_index: u8, buy: bool, amount: u64)]
+#[instruction(asset_index: u8, buy: bool, amount: u64)]
 pub struct Swap<'info> {
     pub user: Signer<'info>,
     #[account(
         seeds = [b"jupiter".as_ref()],
-        bump = nonce,
+        bump,
     )]
     pub jupiter_account: AccountLoader<'info, Jupiter>,
     #[account(mut,
@@ -393,28 +390,6 @@ pub struct Swap<'info> {
     pub pyth_oracle: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
 }
-
-// TODO: Write a wrapper around this.
-// pub struct RaydiumSwap<'info> {
-//     pub token_program: AccountInfo<'info>,
-//     pub ammId: Account<'info, TokenAccount>,
-//     pub ammAuthority: Account<'info, TokenAccount>,
-//     pub ammOpenOrders: Account<'info, TokenAccount>,
-//     pub ammTargetOrders: Account<'info, TokenAccount>,
-//     pub poolCoinTokenAccount: Account<'info, TokenAccount>,
-//     pub poolPcTokenAccount: Account<'info, TokenAccount>,
-//     pub serumProgramId: Account<'info, TokenAccount>,
-//     pub serumMarket: Account<'info, TokenAccount>,
-//     pub serumBids: Account<'info, TokenAccount>,
-//     pub serumAsks: Account<'info, TokenAccount>,
-//     pub serumEventQueue: Account<'info, TokenAccount>,
-//     pub serumCoinVaultAccount: Account<'info, TokenAccount>,
-//     pub serumPcVaultAccount: Account<'info, TokenAccount>,
-//     pub serumVaultSigner: Account<'info, TokenAccount>,
-//     pub userSourceTokenAccount: Account<'info, TokenAccount>,
-//     pub userDestinationTokenAccount: Account<'info, TokenAccount>,
-//     pub userSourceOwner: Account<'info, TokenAccount>,
-// }
 
 /// States
 #[zero_copy]

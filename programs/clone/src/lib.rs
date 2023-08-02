@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
-use error::*;
-use rust_decimal::prelude::*;
 
+pub mod decimal;
 pub mod error;
 pub mod events;
 pub mod instructions;
@@ -20,24 +19,16 @@ pub mod clone {
     #[allow(clippy::too_many_arguments)]
     pub fn initialize_clone(
         ctx: Context<InitializeClone>,
-        comet_liquidator_fee: u64,
-        borrow_liquidator_fee: u64,
+        comet_liquidator_fee_bps: u16,
+        borrow_liquidator_fee_bps: u16,
         treasury_address: Pubkey,
     ) -> Result<()> {
         instructions::initialize_clone::execute(
             ctx,
-            comet_liquidator_fee,
-            borrow_liquidator_fee,
+            comet_liquidator_fee_bps,
+            borrow_liquidator_fee_bps,
             treasury_address,
         )
-    }
-
-    pub fn add_auth(ctx: Context<AddAuth>, auth: Pubkey) -> Result<()> {
-        instructions::add_auth::execute(ctx, auth)
-    }
-
-    pub fn remove_auth(ctx: Context<RemoveAuth>, auth: Pubkey) -> Result<()> {
-        instructions::remove_auth::execute(ctx, auth)
     }
 
     pub fn update_clone_parameters(
@@ -67,29 +58,17 @@ pub mod clone {
         instructions::initialize_user::execute(ctx, authority)
     }
 
-    pub fn initialize_borrow_positions(ctx: Context<InitializeBorrowPositions>) -> Result<()> {
-        instructions::initialize_borrow_positions::execute(ctx)
-    }
-
-    pub fn initialize_comet(ctx: Context<InitializeComet>) -> Result<()> {
-        instructions::initialize_comet::execute(ctx)
-    }
-
     pub fn add_collateral(
         ctx: Context<AddCollateral>,
         scale: u8,
-        stable: bool,
         collateralization_ratio: u8,
         oracle_info_index: u8,
-        liquidation_discount: u8,
     ) -> Result<()> {
         instructions::add_collateral::execute(
             ctx,
             scale,
-            stable,
             collateralization_ratio,
             oracle_info_index,
-            liquidation_discount,
         )
     }
 
@@ -101,7 +80,6 @@ pub mod clone {
         treasury_trading_fee: u16,
         il_health_score_coefficient: u64,
         position_health_score_coefficient: u64,
-        liquidation_discount_rate: u64,
         oracle_info_index: u8,
     ) -> Result<()> {
         instructions::initialize_pool::execute(
@@ -112,7 +90,6 @@ pub mod clone {
             treasury_trading_fee,
             il_health_score_coefficient,
             position_health_score_coefficient,
-            liquidation_discount_rate,
             oracle_info_index,
         )
     }
@@ -208,12 +185,12 @@ pub mod clone {
     pub fn withdraw_liquidity_from_comet(
         ctx: Context<WithdrawLiquidityFromComet>,
         comet_position_index: u8,
-        liquidity_token_amount: u64,
+        onusd_amount: u64,
     ) -> Result<()> {
         instructions::withdraw_liquidity_from_comet::execute(
             ctx,
             comet_position_index,
-            liquidity_token_amount,
+            onusd_amount,
         )
     }
 
@@ -262,14 +239,6 @@ pub mod clone {
             amount,
             pay_onusd_debt,
         )
-    }
-
-    pub fn close_comet_account(ctx: Context<CloseCometAccount>) -> Result<()> {
-        instructions::close_comet_account::execute(ctx)
-    }
-
-    pub fn close_borrow_positions_account(ctx: Context<CloseBorrowPositionsAccount>) -> Result<()> {
-        instructions::close_borrow_positions_account::execute(ctx)
     }
 
     pub fn close_user_account(ctx: Context<CloseUserAccount>) -> Result<()> {

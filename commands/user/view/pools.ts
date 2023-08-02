@@ -1,13 +1,12 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient } from "../../../sdk/src/clone";
 import { getPoolLiquidity } from "../../../sdk/src/utils";
-import { toNumber } from "../../../sdk/src/decimal";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneProgram,
-  getStatus
+  getCloneData,
+  getCloneClient,
+  getStatus,
 } from "../../utils";
 import chalk from "chalk";
 import boxen from "boxen";
@@ -17,22 +16,22 @@ exports.desc = "View all pools on Clone";
 exports.builder = {};
 exports.handler = async function () {
   try {
-    const setup = anchorSetup();
-
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
-
-    let ix = await cloneClient.updatePricesInstruction();
-    await setup.provider.sendAndConfirm(new Transaction().add(ix));
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
     const tokenData = await cloneClient.getTokenData();
 
+    let ix = cloneClient.updatePricesInstruction(tokenData);
+    await provider.sendAndConfirm(new Transaction().add(ix));
+
     for (let i = 0; i < Number(tokenData.numPools); i++) {
       const pool = tokenData.pools[i];
-      const oracle =
-        tokenData.oracles[pool.assetInfo.oracleInfoIndex.toNumber()];
+      const oracle = tokenData.oracles[Number(pool.assetInfo.oracleInfoIndex)];
 
       const title = `onAsset Pool ${i}`;
       const underline = new Array(title.length).fill("-").join("");
@@ -46,9 +45,12 @@ exports.handler = async function () {
         backgroundColor: "#CCCCCC",
       };
 
-      let { poolOnusd, poolOnasset } = getPoolLiquidity(pool, oracle);
+      let { poolOnusd, poolOnasset } = getPoolLiquidity(
+        pool,
+        Number(oracle.price)
+      );
 
-      const status = getStatus(pool.status);
+      const status = getStatus(Number(pool.status));
 
       const assetInfo =
         `${chalk.bold(title)}\n` +
@@ -57,15 +59,15 @@ exports.handler = async function () {
         //this will change to called quotePrice function on sdk/utils
         `Quote Price: $${chalk.bold(poolOnusd / poolOnasset)}\n` +
         `onUSD Pool Balance: ${chalk.bold(poolOnusd)}\n` +
-        `onAsset ILD: ${chalk.bold(toNumber(pool.onassetIld))}\n` +
-        `onUSD ILD: ${chalk.bold(toNumber(pool.onusdIld))}\n` +
+        `onAsset ILD: ${chalk.bold(Number(pool.onassetIld))}\n` +
+        `onUSD ILD: ${chalk.bold(Number(pool.onusdIld))}\n` +
         `Liquidity Trading Fee: %${chalk.bold(
-          toNumber(pool.liquidityTradingFee)
+          Number(pool.liquidityTradingFee)
         )}\n` +
         `Treasury Trading Fee: %${chalk.bold(
-          toNumber(pool.treasuryTradingFee)
+          Number(pool.treasuryTradingFee)
         )}\n` +
-        `Oracle Price: $${chalk.bold(toNumber(oracle.price))}\n` +
+        `Oracle Price: $${chalk.bold(Number(oracle.price))}\n` +
         `Pyth Address: ${chalk.bold(oracle.pythAddress)}\n` +
         `Underlying Token Address: ${chalk.bold(
           pool.assetInfo.onassetMint

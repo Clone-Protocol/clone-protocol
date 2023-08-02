@@ -1,6 +1,7 @@
 use crate::error::*;
 use crate::return_error_if_false;
 use crate::states::*;
+use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 
@@ -9,7 +10,7 @@ use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 pub struct WrapAsset<'info> {
     pub user: Signer<'info>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data
     )]
@@ -56,7 +57,10 @@ pub fn execute(ctx: Context<WrapAsset>, amount: u64, pool_index: u8) -> Result<(
         CloneError::PoolNotFound
     );
 
-    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[
+        CLONE_PROGRAM_SEED.as_ref(),
+        bytemuck::bytes_of(&ctx.accounts.clone.bump),
+    ][..]];
 
     // transfer user collateral to vault
     let cpi_accounts = Transfer {

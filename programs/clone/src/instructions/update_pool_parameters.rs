@@ -1,18 +1,17 @@
 use crate::{error::CloneError, states::*};
+use crate::{return_error_if_false, CLONE_PROGRAM_SEED};
 use anchor_lang::prelude::*;
-use crate::return_error_if_false;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
 pub enum PoolParameters {
     Status { value: u64 },
-    TreasuryTradingFee { value: RawDecimal },
-    LiquidityTradingFee { value: RawDecimal },
+    TreasuryTradingFee { value: u64 },
+    LiquidityTradingFee { value: u64 },
     OracleInfoIndex { value: u64 },
-    MinOvercollateralRatio { value: RawDecimal },
-    MaxLiquidationOvercollateralRatio { value: RawDecimal },
-    IlHealthScoreCoefficient { value: RawDecimal },
-    PositionHealthScoreCoefficient { value: RawDecimal },
-    LiquidationDiscountRate { value: RawDecimal },
+    MinOvercollateralRatio { value: u64 },
+    MaxLiquidationOvercollateralRatio { value: u64 },
+    IlHealthScoreCoefficient { value: u64 },
+    PositionHealthScoreCoefficient { value: u64 },
 }
 
 #[derive(Accounts)]
@@ -24,7 +23,7 @@ pub struct UpdatePoolParameters<'info> {
     pub auth: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"clone".as_ref()],
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data
     )]
@@ -54,14 +53,24 @@ pub fn execute(
         .iter()
         .any(|auth| *auth == *ctx.accounts.auth.key);
 
-
-    return_error_if_false!(is_admin || is_auth, CloneError::Unauthorized);
+    // Always allow admin, auth only if Status is updated to Frozen
+    return_error_if_false!(
+        if is_admin {
+            true
+        } else if is_auth {
+            if let PoolParameters::Status { value } = params {
+                value == (Status::Frozen as u64)
+            } else {
+                false
+            }
+        } else {
+            false
+        },
+        CloneError::Unauthorized
+    );
 
     match params {
         PoolParameters::Status { value } => {
-            // Only allow auth users to change the status to 'Frozen'
-            return_error_if_false!(is_admin || value == Status::Frozen as u64, CloneError::Unauthorized);
-            return_error_if_false!(value <= Status::Deprecation as u64, CloneError::InvalidStatus);
             pool.status = value;
         }
         PoolParameters::TreasuryTradingFee { value } => {
@@ -84,9 +93,6 @@ pub fn execute(
         }
         PoolParameters::PositionHealthScoreCoefficient { value } => {
             pool.asset_info.position_health_score_coefficient = value;
-        }
-        PoolParameters::LiquidationDiscountRate { value } => {
-            pool.asset_info.liquidation_discount_rate = value;
         }
     }
     Ok(())

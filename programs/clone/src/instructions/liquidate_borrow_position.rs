@@ -1,8 +1,11 @@
+use crate::decimal::rescale_toward_zero;
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
+use crate::to_ratio_decimal;
+use crate::{to_bps_decimal, to_clone_decimal, CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
@@ -13,7 +16,8 @@ use std::convert::TryInto;
 pub struct LiquidateBorrowPosition<'info> {
     pub liquidator: Signer<'info>,
     #[account(
-        seeds = [b"clone".as_ref()],
+        mut,
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = token_data
     )]
@@ -21,35 +25,26 @@ pub struct LiquidateBorrowPosition<'info> {
     #[account(
         mut,
         has_one = clone,
-        constraint = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
+        constraint = token_data.load()?.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     /// CHECK: Only used for address validation.
-    #[account(
-        address = user_account.authority
-    )]
     pub user: AccountInfo<'info>,
     #[account(
-        seeds = [b"user".as_ref(), user.key.as_ref()],
-        bump = user_account.bump,
-        has_one = borrow_positions
+        mut,
+        seeds = [USER_SEED.as_ref(), user.key.as_ref()],
+        bump,
+        constraint = (borrow_index as u64) < user_account.load()?.borrows.num_positions @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: Box<Account<'info, User>>,
+    pub user_account: AccountLoader<'info, User>,
     #[account(
         mut,
-        address = token_data.load()?.pools[borrow_positions.load()?.borrow_positions[borrow_index as usize].pool_index as usize].asset_info.onasset_mint,
+        address = token_data.load()?.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        owner = *user_account.to_account_info().owner,
-        constraint = (borrow_index as u64) < borrow_positions.load()?.num_positions @ CloneError::InvalidInputPositionIndex
-    )]
-    pub borrow_positions: AccountLoader<'info, BorrowPositions>,
-    #[account(
-        mut,
-        address = token_data.load()?.collaterals[borrow_positions.load()?.borrow_positions[borrow_index as usize].collateral_index as usize].vault,
-        constraint = vault.mint == token_data.load()?.collaterals[borrow_positions.load()?.borrow_positions[borrow_index as usize].collateral_index as usize].mint
+        address = token_data.load()?.collaterals[user_account.load()?.borrows.positions[borrow_index as usize].collateral_index as usize].vault,
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -71,72 +66,64 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
     let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
 
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let mut borrow_positions = ctx.accounts.borrow_positions.load_mut()?;
-    let borrow_position = borrow_positions.borrow_positions[borrow_index as usize];
 
-    let collateral_index = borrow_position.collateral_index as usize;
-    let collateral = token_data.collaterals[collateral_index as usize];
-    let pool_index = borrow_position.collateral_index as usize;
-    let pool = token_data.pools[pool_index as usize];
+    let borrows = &mut ctx.accounts.user_account.load_mut()?.borrows;
+    let borrow_position = borrows.positions[borrow_index as usize];
+    let pool_index = borrow_position.pool_index as usize;
+    let pool = token_data.pools[pool_index];
     let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
-
-    let authorized_amount = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
-    let mut collateral_price = Decimal::one();
-    let mut collateral_oracle: Option<OracleInfo> = None;
-    if collateral_index as usize != ONUSD_COLLATERAL_INDEX
-        && collateral_index as usize != USDC_COLLATERAL_INDEX
+    let collateral_index = borrow_position.collateral_index as usize;
+    let collateral = token_data.collaterals[collateral_index];
+    let collateral_oracle = if collateral_index == ONUSD_COLLATERAL_INDEX
+        || collateral_index == USDC_COLLATERAL_INDEX
     {
-        collateral_oracle = Some(token_data.oracles[collateral.oracle_info_index as usize]);
-        if let Some(oracle) = &collateral_oracle {
-            collateral_price = oracle.price.to_decimal();
-        }
-    }
-    let collateral_scale = collateral.vault_mint_supply.to_decimal().scale();
-
-    let burn_amount = borrow_position
-        .borrowed_onasset
-        .to_decimal()
-        .min(authorized_amount);
-
-    if pool.status != Status::Liquidation as u64 {
-        return_error_if_false!(
-            !check_mint_collateral_sufficient(
-                pool_oracle,
-                collateral_oracle,
-                borrow_position.borrowed_onasset.to_decimal(),
-                pool.asset_info.min_overcollateral_ratio.to_decimal(),
-                collateral.collateralization_ratio.to_decimal(),
-                borrow_position.collateral_amount.to_decimal(),
-            )
-            .is_ok(),
-            CloneError::BorrowPositionUnableToLiquidate
-        );
+        None
     } else {
-        check_feed_update(pool_oracle, Clock::get()?.slot)?;
-        if let Some(oracle) = collateral_oracle {
-            check_feed_update(oracle, Clock::get()?.slot)?;
-        }
-    }
+        Some(
+            token_data.oracles[token_data.collaterals[collateral_index].oracle_info_index as usize],
+        )
+    };
+    let min_overcollateral_ratio = to_ratio_decimal!(pool.asset_info.min_overcollateral_ratio);
+    let collateralization_ratio = to_ratio_decimal!(collateral.collateralization_ratio);
 
-    let mut collateral_reward = rescale_toward_zero(
-        (Decimal::one()
-            + ctx
-                .accounts
-                .clone
-                .liquidation_config
-                .comet_liquidator_fee
-                .to_decimal())
-            * burn_amount
-            * pool_oracle.price.to_decimal()
-            / collateral_price,
-        collateral_scale,
+    let burn_amount = amount.min(borrow_position.borrowed_onasset);
+    let collateral_position_amount = Decimal::new(
+        borrow_position.collateral_amount.try_into().unwrap(),
+        collateral.scale.try_into().unwrap(),
     );
 
-    // Decrease reward if not enough collateral
-    collateral_reward = borrow_position
-        .collateral_amount
-        .to_decimal()
-        .min(collateral_reward);
+    // This call checks that the oracles are updated
+    let is_undercollateralized = check_mint_collateral_sufficient(
+        pool_oracle,
+        collateral_oracle,
+        to_clone_decimal!(borrow_position.borrowed_onasset),
+        min_overcollateral_ratio,
+        collateralization_ratio,
+        collateral_position_amount,
+    )
+    .is_err();
+    let is_in_liquidation_mode = pool.status == Status::Liquidation as u64;
+
+    return_error_if_false!(
+        is_undercollateralized || is_in_liquidation_mode,
+        CloneError::BorrowPositionUnableToLiquidate
+    );
+
+    let borrow_liquidation_fee_rate = to_bps_decimal!(ctx.accounts.clone.borrow_liquidator_fee_bps);
+    let collateral_price = if let Some(oracle) = collateral_oracle {
+        oracle.get_price()
+    } else {
+        Decimal::ONE
+    };
+
+    let collateral_reward = rescale_toward_zero(
+        (Decimal::one() + borrow_liquidation_fee_rate)
+            * to_clone_decimal!(burn_amount)
+            * pool_oracle.get_price()
+            / collateral_price,
+        collateral.scale.try_into().unwrap(),
+    )
+    .min(collateral_position_amount);
 
     // Burn the onAsset from the liquidator
     let cpi_accounts = Burn {
@@ -153,10 +140,7 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
         cpi_accounts,
     );
 
-    token::burn(
-        burn_liquidator_onasset_context,
-        burn_amount.mantissa().try_into().unwrap(),
-    )?;
+    token::burn(burn_liquidator_onasset_context, burn_amount)?;
 
     // Send the user the collateral reward
     let cpi_accounts = Transfer {
@@ -173,57 +157,35 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
         cpi_accounts,
         seeds,
     );
-
     token::transfer(
         send_collateral_context,
         collateral_reward.mantissa().try_into().unwrap(),
     )?;
 
     // Update data
-    let new_borrowed_amount = rescale_toward_zero(
-        borrow_position.borrowed_onasset.to_decimal() - burn_amount,
-        CLONE_TOKEN_SCALE,
-    );
-    borrow_positions.borrow_positions[borrow_index as usize].borrowed_onasset =
-        RawDecimal::from(new_borrowed_amount);
-
-    let new_collateral_amount = rescale_toward_zero(
-        borrow_position.collateral_amount.to_decimal() - collateral_reward,
-        CLONE_TOKEN_SCALE,
-    );
-    borrow_positions.borrow_positions[borrow_index as usize].collateral_amount =
-        RawDecimal::from(new_collateral_amount);
-
-    let new_total_minted_amount = rescale_toward_zero(
-        pool.total_minted_amount.to_decimal() - burn_amount,
-        CLONE_TOKEN_SCALE,
-    );
-    token_data.pools[pool_index as usize].total_minted_amount =
-        RawDecimal::from(new_total_minted_amount);
+    borrows.positions[borrow_index as usize].borrowed_onasset -= burn_amount;
+    borrows.positions[borrow_index as usize].collateral_amount -=
+        collateral_reward.mantissa() as u64;
 
     // Remove position if empty
-    if borrow_positions.borrow_positions[borrow_index as usize]
-        .collateral_amount
-        .to_decimal()
-        == Decimal::ZERO
-    {
-        borrow_positions.remove(borrow_index as usize);
+    if borrows.positions[borrow_index as usize].is_empty() {
+        borrows.remove(borrow_index as usize);
     } else {
-        // Throw error if too much was liquidated
+        let borrowed_onasset =
+            to_clone_decimal!(borrows.positions[borrow_index as usize].borrowed_onasset);
+        let collateral_amount = Decimal::new(
+            borrows.positions[borrow_index as usize]
+                .collateral_amount
+                .try_into()
+                .unwrap(),
+            collateral.scale.try_into().unwrap(),
+        );
+        let max_liquidation_overcollateral_ratio =
+            to_ratio_decimal!(pool.asset_info.max_liquidation_overcollateral_ratio);
         return_error_if_false!(
-            collateral_price
-                * borrow_positions.borrow_positions[borrow_index as usize]
-                    .collateral_amount
-                    .to_decimal()
-                * collateral.collateralization_ratio.to_decimal()
-                / (pool_oracle.price.to_decimal()
-                    * borrow_positions.borrow_positions[borrow_index as usize]
-                        .borrowed_onasset
-                        .to_decimal())
-                <= pool
-                    .asset_info
-                    .max_liquidation_overcollateral_ratio
-                    .to_decimal(),
+            collateral_amount * collateral_price * collateralization_ratio
+                / (pool_oracle.get_price() * borrowed_onasset)
+                <= max_liquidation_overcollateral_ratio,
             CloneError::InvalidMintCollateralRatio
         );
     }
@@ -233,11 +195,11 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
         user_address: ctx.accounts.user.key(),
         pool_index: pool_index.try_into().unwrap(),
         is_liquidation: true,
-        collateral_supplied: 0,
-        collateral_delta: -collateral_reward.to_i64().unwrap(),
+        collateral_supplied: borrows.positions[borrow_index as usize].collateral_amount,
+        collateral_delta: -(collateral_reward.mantissa() as i64),
         collateral_index: collateral_index.try_into().unwrap(),
-        borrowed_amount: 0,
-        borrowed_delta: -burn_amount.to_i64().unwrap()
+        borrowed_amount: borrows.positions[borrow_index as usize].borrowed_onasset,
+        borrowed_delta: -(burn_amount as i64)
     });
     ctx.accounts.clone.event_counter += 1;
 
