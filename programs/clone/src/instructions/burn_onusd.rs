@@ -57,8 +57,7 @@ pub fn execute(ctx: Context<BurnONUSD>, amount: u64) -> Result<()> {
 
     let collateral_scale = collateral.scale;
 
-    let onusd_value =
-        Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
+    let onusd_value = Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
     let collateral_value = rescale_toward_zero(onusd_value, collateral_scale.try_into().unwrap());
 
     // transfer collateral from vault to user
