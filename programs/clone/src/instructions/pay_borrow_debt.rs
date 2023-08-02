@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::events::*;
 use crate::states::*;
-use crate::{CLONE_PROGRAM_SEED, USER_SEED};
+use crate::{return_error_if_false, CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use std::convert::TryInto;
@@ -50,6 +50,7 @@ pub fn execute(
     borrow_index: u8,
     amount: u64,
 ) -> Result<()> {
+    return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
     let borrows = &mut ctx.accounts.user_account.load_mut()?.borrows;
     let borrow_position = borrows.positions[borrow_index as usize];
     let amount_value = amount.min(borrow_position.borrowed_onasset);
