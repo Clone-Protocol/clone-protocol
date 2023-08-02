@@ -211,8 +211,8 @@ export class CloneClient {
           {
             minOvercollateralRatio,
             maxLiquidationOvercollateralRatio,
-            liquidityTradingFee: liquidityTradingFeeBps,
-            treasuryTradingFee: treasuryTradingFeeBps,
+            liquidityTradingFeeBps,
+            treasuryTradingFeeBps,
             ilHealthScoreCoefficient: toCloneScale(ilHealthScoreCoefficient),
             positionHealthScoreCoefficient: toCloneScale(
               positionHealthScoreCoefficient

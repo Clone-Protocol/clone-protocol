@@ -1194,8 +1194,8 @@ describe("tests", async () => {
       fromCloneScale(pool.onusdIld),
       fromCloneScale(pool.onassetIld),
       fromCloneScale(pool.committedOnusdLiquidity),
-      fromScale(pool.liquidityTradingFee, 4),
-      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(pool.liquidityTradingFeeBps, 4),
+      fromScale(pool.treasuryTradingFeeBps, 4),
       fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
@@ -1257,8 +1257,8 @@ describe("tests", async () => {
       fromCloneScale(pool.onusdIld),
       fromCloneScale(pool.onassetIld),
       fromCloneScale(pool.committedOnusdLiquidity),
-      fromScale(pool.liquidityTradingFee, 4),
-      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(pool.liquidityTradingFeeBps, 4),
+      fromScale(pool.treasuryTradingFeeBps, 4),
       fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
@@ -1396,8 +1396,8 @@ describe("tests", async () => {
       fromCloneScale(pool.onusdIld),
       fromCloneScale(pool.onassetIld),
       fromCloneScale(pool.committedOnusdLiquidity),
-      fromScale(pool.liquidityTradingFee, 4),
-      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(pool.liquidityTradingFeeBps, 4),
+      fromScale(pool.treasuryTradingFeeBps, 4),
       fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
@@ -1649,8 +1649,8 @@ describe("tests", async () => {
       fromCloneScale(pool.onusdIld),
       fromCloneScale(pool.onassetIld),
       fromCloneScale(pool.committedOnusdLiquidity),
-      fromScale(pool.liquidityTradingFee, 4),
-      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(pool.liquidityTradingFeeBps, 4),
+      fromScale(pool.treasuryTradingFeeBps, 4),
       fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
@@ -1784,8 +1784,8 @@ describe("tests", async () => {
       fromCloneScale(pool.onusdIld),
       fromCloneScale(pool.onassetIld),
       fromCloneScale(pool.committedOnusdLiquidity),
-      fromScale(pool.liquidityTradingFee, 4),
-      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(pool.liquidityTradingFeeBps, 4),
+      fromScale(pool.treasuryTradingFeeBps, 4),
       fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output

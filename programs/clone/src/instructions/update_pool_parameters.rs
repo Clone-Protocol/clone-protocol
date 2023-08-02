@@ -74,10 +74,10 @@ pub fn execute(
             pool.status = value;
         }
         PoolParameters::TreasuryTradingFee { value } => {
-            pool.treasury_trading_fee = value;
+            pool.treasury_trading_fee_bps = value;
         }
         PoolParameters::LiquidityTradingFee { value } => {
-            pool.liquidity_trading_fee = value;
+            pool.liquidity_trading_fee_bps = value;
         }
         PoolParameters::OracleInfoIndex { value } => {
             pool.asset_info.oracle_info_index = value;

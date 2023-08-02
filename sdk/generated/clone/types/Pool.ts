@@ -14,8 +14,8 @@ export type Pool = {
   committedOnusdLiquidity: beet.bignum
   onusdIld: beet.bignum
   onassetIld: beet.bignum
-  treasuryTradingFee: beet.bignum
-  liquidityTradingFee: beet.bignum
+  treasuryTradingFeeBps: beet.bignum
+  liquidityTradingFeeBps: beet.bignum
   assetInfo: AssetInfo
   status: beet.bignum
 }
@@ -30,8 +30,8 @@ export const poolBeet = new beet.BeetArgsStruct<Pool>(
     ['committedOnusdLiquidity', beet.u64],
     ['onusdIld', beet.i64],
     ['onassetIld', beet.i64],
-    ['treasuryTradingFee', beet.u64],
-    ['liquidityTradingFee', beet.u64],
+    ['treasuryTradingFeeBps', beet.u64],
+    ['liquidityTradingFeeBps', beet.u64],
     ['assetInfo', assetInfoBeet],
     ['status', beet.u64],
   ],
