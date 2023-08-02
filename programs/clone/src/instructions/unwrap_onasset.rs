@@ -1,6 +1,8 @@
+use crate::decimal::rescale_toward_zero;
 use crate::error::*;
 use crate::return_error_if_false;
 use crate::states::*;
+use crate::to_clone_decimal;
 use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
@@ -57,6 +59,10 @@ pub fn execute(ctx: Context<UnwrapOnAsset>, amount: u64, pool_index: u8) -> Resu
         CloneError::PoolNotFound
     );
 
+    let underlying_mint_scale = ctx.accounts.asset_mint.decimals as u32;
+    let unwrapped_amount =
+        rescale_toward_zero(to_clone_decimal!(amount), underlying_mint_scale).mantissa() as u64;
+
     let seeds = &[&[
         CLONE_PROGRAM_SEED.as_ref(),
         bytemuck::bytes_of(&ctx.accounts.clone.bump),
@@ -91,7 +97,7 @@ pub fn execute(ctx: Context<UnwrapOnAsset>, amount: u64, pool_index: u8) -> Resu
     };
     token::transfer(
         CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
-        amount,
+        unwrapped_amount,
     )?;
 
     Ok(())

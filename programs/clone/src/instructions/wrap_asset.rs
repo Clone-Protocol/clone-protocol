@@ -1,9 +1,12 @@
+use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
 use crate::error::*;
 use crate::return_error_if_false;
 use crate::states::*;
 use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
+use rust_decimal::prelude::*;
+use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(amount: u64, pool_index: u8)]
@@ -56,6 +59,12 @@ pub fn execute(ctx: Context<WrapAsset>, amount: u64, pool_index: u8) -> Result<(
         (pool_index as u64) < token_data.num_pools,
         CloneError::PoolNotFound
     );
+    let underlying_mint_scale = ctx.accounts.asset_mint.decimals as u32;
+    let onasset_amount = rescale_toward_zero(
+        Decimal::new(amount.try_into().unwrap(), underlying_mint_scale),
+        CLONE_TOKEN_SCALE,
+    )
+    .mantissa() as u64;
 
     let seeds = &[&[
         CLONE_PROGRAM_SEED.as_ref(),
@@ -100,7 +109,7 @@ pub fn execute(ctx: Context<WrapAsset>, amount: u64, pool_index: u8) -> Result<(
             cpi_accounts,
             seeds,
         ),
-        amount,
+        onasset_amount,
     )?;
 
     Ok(())

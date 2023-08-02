@@ -112,8 +112,8 @@ pub struct Pool {
     pub committed_onusd_liquidity: u64,
     pub onusd_ild: i64,
     pub onasset_ild: i64,
-    pub treasury_trading_fee: u64,
-    pub liquidity_trading_fee: u64,
+    pub treasury_trading_fee_bps: u64,
+    pub liquidity_trading_fee_bps: u64,
     pub asset_info: AssetInfo,
     pub status: u64,
 }
@@ -150,8 +150,8 @@ impl Pool {
     ) -> SwapSummary {
         let (pool_onusd, pool_onasset) = self.calculate_jit_pool(oracle_price);
         let invariant = pool_onasset * pool_onusd;
-        let default_liquidity_trading_fee = to_bps_decimal!(self.liquidity_trading_fee);
-        let default_treasury_trading_fee = to_bps_decimal!(self.treasury_trading_fee);
+        let default_liquidity_trading_fee = to_bps_decimal!(self.liquidity_trading_fee_bps);
+        let default_treasury_trading_fee = to_bps_decimal!(self.treasury_trading_fee_bps);
         let liquidity_trading_fee =
             override_liquidity_trading_fee.unwrap_or(default_liquidity_trading_fee);
         let treasury_trading_fee =

@@ -41,6 +41,7 @@ pub fn withdraw_liquidity(
     user: Pubkey,
     event_counter: u64,
 ) -> Result<()> {
+    return_error_if_false!(onusd_amount > 0, CloneError::InvalidTokenAmount);
     let comet_position = comet.positions[comet_position_index as usize];
     let pool_index = comet_position.pool_index;
     let pool = token_data.pools[pool_index as usize];
