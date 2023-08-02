@@ -1,6 +1,6 @@
 use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
 use crate::states::*;
-use crate::{to_clone_decimal, CLONE_PROGRAM_SEED};
+use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
 use rust_decimal::prelude::*;
@@ -57,9 +57,8 @@ pub fn execute(ctx: Context<BurnONUSD>, amount: u64) -> Result<()> {
 
     let collateral_scale = collateral.scale;
 
-    let user_onusd_amount = to_clone_decimal!(ctx.accounts.user_onusd_token_account.amount);
     let onusd_value =
-        Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE).min(user_onusd_amount);
+        Decimal::new(amount.try_into().unwrap(), CLONE_TOKEN_SCALE);
     let collateral_value = rescale_toward_zero(onusd_value, collateral_scale.try_into().unwrap());
 
     // transfer collateral from vault to user
