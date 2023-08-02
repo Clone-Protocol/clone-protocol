@@ -1,4 +1,3 @@
-use std::convert::TryInto;
 use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
 use crate::error::*;
 use crate::return_error_if_false;
@@ -7,6 +6,7 @@ use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 use rust_decimal::prelude::*;
+use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(amount: u64, pool_index: u8)]
