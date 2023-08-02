@@ -63,6 +63,7 @@ pub struct LiquidateBorrowPosition<'info> {
 }
 
 pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: u64) -> Result<()> {
+    return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
     let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
 
     let token_data = &mut ctx.accounts.token_data.load_mut()?;
