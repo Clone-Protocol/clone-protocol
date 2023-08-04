@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::events::*;
 use crate::states::*;
-use crate::{CLONE_PROGRAM_SEED, USER_SEED};
+use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use std::convert::TryInto;
@@ -20,12 +20,12 @@ pub struct AddCollateralToBorrow<'info> {
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
-        has_one = token_data,
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone,
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
         constraint = token_data.load()?.collaterals[user_account.load()?.borrows.positions[borrow_index as usize].collateral_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,

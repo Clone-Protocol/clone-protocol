@@ -5,81 +5,72 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
- * @category AddCollateral
+ * @category ReallocateTokenData
  * @category generated
  */
-export type AddCollateralInstructionArgs = {
-  collateralizationRatio: number
-  oracleInfoIndex: number
+export type ReallocateTokenDataInstructionArgs = {
+  len: number
 }
 /**
  * @category Instructions
- * @category AddCollateral
+ * @category ReallocateTokenData
  * @category generated
  */
-export const addCollateralStruct = new beet.BeetArgsStruct<
-  AddCollateralInstructionArgs & {
+export const reallocateTokenDataStruct = new beet.BeetArgsStruct<
+  ReallocateTokenDataInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['collateralizationRatio', beet.u8],
-    ['oracleInfoIndex', beet.u8],
+    ['len', beet.u16],
   ],
-  'AddCollateralInstructionArgs'
+  'ReallocateTokenDataInstructionArgs'
 )
 /**
- * Accounts required by the _addCollateral_ instruction
+ * Accounts required by the _reallocateTokenData_ instruction
  *
  * @property [_writable_, **signer**] admin
  * @property [] clone
  * @property [_writable_] tokenData
- * @property [] collateralMint
- * @property [] vault
  * @category Instructions
- * @category AddCollateral
+ * @category ReallocateTokenData
  * @category generated
  */
-export type AddCollateralInstructionAccounts = {
+export type ReallocateTokenDataInstructionAccounts = {
   admin: web3.PublicKey
   clone: web3.PublicKey
   tokenData: web3.PublicKey
-  collateralMint: web3.PublicKey
-  vault: web3.PublicKey
-  rent?: web3.PublicKey
-  tokenProgram?: web3.PublicKey
   systemProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const addCollateralInstructionDiscriminator = [
-  127, 82, 121, 42, 161, 176, 249, 206,
+export const reallocateTokenDataInstructionDiscriminator = [
+  87, 235, 125, 144, 229, 65, 67, 170,
 ]
 
 /**
- * Creates a _AddCollateral_ instruction.
+ * Creates a _ReallocateTokenData_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category AddCollateral
+ * @category ReallocateTokenData
  * @category generated
  */
-export function createAddCollateralInstruction(
-  accounts: AddCollateralInstructionAccounts,
-  args: AddCollateralInstructionArgs,
+export function createReallocateTokenDataInstruction(
+  accounts: ReallocateTokenDataInstructionAccounts,
+  args: ReallocateTokenDataInstructionArgs,
   programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
-  const [data] = addCollateralStruct.serialize({
-    instructionDiscriminator: addCollateralInstructionDiscriminator,
+  const [data] = reallocateTokenDataStruct.serialize({
+    instructionDiscriminator: reallocateTokenDataInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
@@ -96,26 +87,6 @@ export function createAddCollateralInstruction(
     {
       pubkey: accounts.tokenData,
       isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.collateralMint,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.vault,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.rent ?? web3.SYSVAR_RENT_PUBKEY,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
-      isWritable: false,
       isSigner: false,
     },
     {

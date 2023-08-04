@@ -1,6 +1,6 @@
 use crate::return_error_if_false;
-use crate::CLONE_PROGRAM_SEED;
 use crate::{error::CloneError, states::*};
+use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED};
 use anchor_lang::prelude::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
@@ -19,15 +19,14 @@ pub struct UpdateCollateralParameters<'info> {
     #[account(address = clone.admin)]
     pub admin: Signer<'info>,
     #[account(
-        mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
-        has_one = token_data
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone,
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
         constraint = (index as u64) < token_data.load()?.num_collaterals @ CloneError::CollateralNotFound,
     )]
     pub token_data: AccountLoader<'info, TokenData>,

@@ -4,7 +4,7 @@ use crate::events::*;
 use crate::math::*;
 use crate::states::*;
 use crate::to_bps_decimal;
-use crate::{return_error_if_false, to_clone_decimal, CLONE_PROGRAM_SEED};
+use crate::{return_error_if_false, to_clone_decimal, CLONE_PROGRAM_SEED, TOKEN_DATA_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use clone_staking::{
@@ -29,12 +29,12 @@ pub struct Swap<'info> {
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
-        has_one = token_data
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone,
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
         constraint = (pool_index as u64) < token_data.load()?.num_pools @ CloneError::InvalidInputPositionIndex,
         constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction,
     )]

@@ -31,6 +31,14 @@ pub mod clone {
         )
     }
 
+    pub fn initialize_token_data(ctx: Context<InitializeTokenData>) -> Result<()> {
+        instructions::initialize_token_data::execute(ctx)
+    }
+
+    pub fn reallocate_token_data(ctx: Context<ReallocateTokenData>, len: u16) -> Result<()> {
+        instructions::reallocate_token_data::execute(ctx, len)
+    }
+
     pub fn update_clone_parameters(
         ctx: Context<UpdateCloneParameters>,
         params: CloneParameters,
@@ -60,16 +68,10 @@ pub mod clone {
 
     pub fn add_collateral(
         ctx: Context<AddCollateral>,
-        scale: u8,
         collateralization_ratio: u8,
         oracle_info_index: u8,
     ) -> Result<()> {
-        instructions::add_collateral::execute(
-            ctx,
-            scale,
-            collateralization_ratio,
-            oracle_info_index,
-        )
+        instructions::add_collateral::execute(ctx, collateralization_ratio, oracle_info_index)
     }
 
     pub fn initialize_pool(

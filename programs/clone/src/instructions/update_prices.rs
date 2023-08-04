@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::return_error_if_false;
 use crate::states::*;
-use crate::CLONE_PROGRAM_SEED;
+use crate::TOKEN_DATA_SEED;
 use anchor_lang::prelude::*;
 use pyth_sdk_solana::Price;
 use std::convert::TryInto;
@@ -44,14 +44,9 @@ pub struct OracleIndices {
 #[instruction(oracle_indices: OracleIndices)]
 pub struct UpdatePrices<'info> {
     #[account(
-        seeds = [CLONE_PROGRAM_SEED.as_ref()],
-        bump = clone.bump,
-        has_one = token_data
-    )]
-    pub clone: Box<Account<'info, Clone>>,
-    #[account(
         mut,
-        has_one = clone
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
 }

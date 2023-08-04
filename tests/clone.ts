@@ -55,6 +55,7 @@ describe("tests", async () => {
   let jupiterProgramId = anchor.workspace.JupiterAggMock.programId;
   let cloneStakingProgramId = anchor.workspace.CloneStaking.programId;
 
+  const onusdMint = anchor.web3.Keypair.generate();
   const mockUSDCMint = anchor.web3.Keypair.generate();
   const treasuryAddress = anchor.web3.Keypair.generate();
   const clnTokenMint = anchor.web3.Keypair.generate();
@@ -244,19 +245,47 @@ describe("tests", async () => {
   });
 
   it("clone initialized!", async () => {
+    let tx = new Transaction().add(
+      // create onusd mint account
+      SystemProgram.createAccount({
+        fromPubkey: walletPubkey,
+        newAccountPubkey: onusdMint.publicKey,
+        space: MINT_SIZE,
+        lamports: await getMinimumBalanceForRentExemptMint(provider.connection),
+        programId: TOKEN_PROGRAM_ID,
+      }),
+      // init clone mint account
+      createInitializeMintInstruction(
+        onusdMint.publicKey,
+        CLONE_TOKEN_SCALE,
+        cloneAccountAddress,
+        null
+      )
+    );
+    await provider.sendAndConfirm(tx, [onusdMint]);
     await CloneClient.initializeClone(
       provider,
       cloneProgramId,
       liquidatorFee,
       liquidatorFee,
       treasuryAddress.publicKey,
-      mockUSDCMint.publicKey
+      mockUSDCMint.publicKey,
+      onusdMint.publicKey
     );
     let account = await CloneAccount.fromAccountAddress(
       provider.connection,
       cloneAccountAddress
     );
     cloneClient = new CloneClient(provider, account, cloneProgramId);
+  });
+
+  it("add onusd and usdc collaterals", async () => {
+    await cloneClient.addCollateral(onusdMint.publicKey, 100);
+
+    await cloneClient.addCollateral(mockUSDCMint.publicKey, 100);
+
+    let tokenData = await cloneClient.getTokenData();
+    assert.equal(Number(tokenData.numCollaterals), 2);
   });
 
   it("user initialized!", async () => {
@@ -326,13 +355,7 @@ describe("tests", async () => {
     assert.equal(Number(tokenData.numPools), 1);
   });
   it("non-stable mock asset added as a collateral!", async () => {
-    await cloneClient.addCollateral(
-      walletPubkey,
-      8,
-      mockAssetMint.publicKey,
-      0,
-      200
-    );
+    await cloneClient.addCollateral(mockAssetMint.publicKey, 200, 0);
 
     let tokenData = await cloneClient.getTokenData();
     assert.equal(Number(tokenData.numCollaterals), 3);
@@ -342,7 +365,6 @@ describe("tests", async () => {
     let tokenData = await cloneClient.getTokenData();
     const oracle = tokenData.oracles[0];
 
-    assert(tokenData.clone.equals(cloneClient.cloneAddress), "wrong manager!");
     assert.equal(Number(tokenData.numPools), 1, "num pools incorrect");
     assert.equal(
       Number(tokenData.numCollaterals),

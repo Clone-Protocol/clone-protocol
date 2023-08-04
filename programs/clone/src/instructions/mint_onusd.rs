@@ -1,6 +1,6 @@
 use crate::decimal::rescale_toward_zero;
 use crate::states::*;
-use crate::{to_clone_decimal, CLONE_PROGRAM_SEED};
+use crate::{to_clone_decimal, CLONE_PROGRAM_SEED, TOKEN_DATA_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 use std::convert::TryInto;
@@ -11,14 +11,14 @@ pub struct MintONUSD<'info> {
     pub user: Signer<'info>,
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
-        bump = clone.bump,
-        has_one = onusd_mint,
-        has_one = token_data
+        bump,
+        has_one = onusd_mint
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
