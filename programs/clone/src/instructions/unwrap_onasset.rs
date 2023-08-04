@@ -3,7 +3,7 @@ use crate::error::*;
 use crate::return_error_if_false;
 use crate::states::*;
 use crate::to_clone_decimal;
-use crate::CLONE_PROGRAM_SEED;
+use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
 
@@ -13,12 +13,12 @@ pub struct UnwrapOnAsset<'info> {
     pub user: Signer<'info>,
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
-        bump = clone.bump,
-        has_one = token_data
+        bump
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
-        has_one = clone,
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
         constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u64 ||
         token_data.load()?.pools[pool_index as usize].status == Status::Deprecation as u64 @ CloneError::StatusPreventsAction,
     )]

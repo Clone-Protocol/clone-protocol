@@ -1,5 +1,5 @@
 use crate::states::*;
-use crate::CLONE_PROGRAM_SEED;
+use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -10,13 +10,13 @@ pub struct AddOracleFeed<'info> {
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
-        has_one = token_data,
         has_one = admin
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
 }

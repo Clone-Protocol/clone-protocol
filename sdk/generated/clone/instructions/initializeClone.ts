@@ -43,11 +43,8 @@ export const initializeCloneStruct = new beet.BeetArgsStruct<
  *
  * @property [_writable_, **signer**] admin
  * @property [_writable_] clone
- * @property [_writable_, **signer**] onusdMint
- * @property [_writable_, **signer**] onusdVault
+ * @property [] onusdMint
  * @property [] usdcMint
- * @property [_writable_, **signer**] usdcVault
- * @property [_writable_] tokenData
  * @category Instructions
  * @category InitializeClone
  * @category generated
@@ -56,10 +53,7 @@ export type InitializeCloneInstructionAccounts = {
   admin: web3.PublicKey
   clone: web3.PublicKey
   onusdMint: web3.PublicKey
-  onusdVault: web3.PublicKey
   usdcMint: web3.PublicKey
-  usdcVault: web3.PublicKey
-  tokenData: web3.PublicKey
   rent?: web3.PublicKey
   tokenProgram?: web3.PublicKey
   systemProgram?: web3.PublicKey
@@ -102,27 +96,12 @@ export function createInitializeCloneInstruction(
     },
     {
       pubkey: accounts.onusdMint,
-      isWritable: true,
-      isSigner: true,
-    },
-    {
-      pubkey: accounts.onusdVault,
-      isWritable: true,
-      isSigner: true,
-    },
-    {
-      pubkey: accounts.usdcMint,
       isWritable: false,
       isSigner: false,
     },
     {
-      pubkey: accounts.usdcVault,
-      isWritable: true,
-      isSigner: true,
-    },
-    {
-      pubkey: accounts.tokenData,
-      isWritable: true,
+      pubkey: accounts.usdcMint,
+      isWritable: false,
       isSigner: false,
     },
     {

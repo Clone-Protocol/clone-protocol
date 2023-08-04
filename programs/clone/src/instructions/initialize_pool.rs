@@ -1,5 +1,6 @@
+use crate::decimal::CLONE_TOKEN_SCALE;
 use crate::states::*;
-use crate::CLONE_PROGRAM_SEED;
+use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 
@@ -19,13 +20,13 @@ pub struct InitializePool<'info> {
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
-        has_one = token_data,
         has_one = admin
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
@@ -33,51 +34,22 @@ pub struct InitializePool<'info> {
     )]
     pub onusd_mint: Box<Account<'info, Mint>>,
     #[account(
-        init,
-        token::mint = onusd_mint,
-        token::authority = clone,
-        payer = admin
-    )]
-    pub onusd_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        init,
-        mint::decimals = 8,
+        mint::decimals = CLONE_TOKEN_SCALE as u8,
         mint::authority = clone,
-        payer = admin
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
-        init,
         token::mint = onasset_mint,
         token::authority = clone,
-        payer = admin
     )]
     pub onasset_token_account: Box<Account<'info, TokenAccount>>,
     /// CHECK: External mint address, can only be selected by admin.
     pub underlying_asset_mint: Box<Account<'info, Mint>>,
     #[account(
-        init,
         token::mint = underlying_asset_mint,
         token::authority = clone,
-        payer = admin
     )]
     pub underlying_asset_token_account: Box<Account<'info, TokenAccount>>,
-    #[account(
-        init,
-        mint::decimals = 8,
-        mint::authority = clone,
-        payer = admin
-    )]
-    pub liquidity_token_mint: Box<Account<'info, Mint>>,
-    #[account(
-        init,
-        token::mint = liquidity_token_mint,
-        token::authority = clone,
-        payer = admin
-    )]
-    pub comet_liquidity_token_account: Box<Account<'info, TokenAccount>>,
-    pub rent: Sysvar<'info, Rent>,
-    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 

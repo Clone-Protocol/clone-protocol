@@ -1,31 +1,29 @@
 use crate::states::*;
-use crate::CLONE_PROGRAM_SEED;
+use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 
 #[derive(Accounts)]
-#[instruction(scale: u8, collateralization_ratio: u8, oracle_info_index: u8)]
+#[instruction(collateralization_ratio: u8, oracle_info_index: u8)]
 pub struct AddCollateral<'info> {
     #[account(mut, address = clone.admin)]
     pub admin: Signer<'info>,
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
-        bump = clone.bump,
-        has_one = token_data,
+        bump,
         has_one = admin
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     pub collateral_mint: Account<'info, Mint>,
     #[account(
-        init,
         token::mint = collateral_mint,
         token::authority = clone,
-        payer = admin
     )]
     pub vault: Account<'info, TokenAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -35,7 +33,6 @@ pub struct AddCollateral<'info> {
 
 pub fn execute(
     ctx: Context<AddCollateral>,
-    scale: u8,
     collateralization_ratio: u8,
     oracle_info_index: u8,
 ) -> Result<()> {
@@ -48,7 +45,7 @@ pub fn execute(
         vault: *ctx.accounts.vault.to_account_info().key,
         collateralization_ratio: collateralization_ratio.into(),
         status: 0,
-        scale: scale.into(),
+        scale: ctx.accounts.collateral_mint.decimals.into(),
     });
 
     Ok(())

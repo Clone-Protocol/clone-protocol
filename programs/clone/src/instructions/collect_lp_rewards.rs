@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::math::*;
 use crate::states::*;
-use crate::{CLONE_PROGRAM_SEED, USER_SEED};
+use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
@@ -22,11 +22,11 @@ pub struct CollectLpRewards<'info> {
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
-        has_one = token_data
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
-        has_one = clone,
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
         constraint = token_data.load()?.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
     )]
     pub token_data: AccountLoader<'info, TokenData>,

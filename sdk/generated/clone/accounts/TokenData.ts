@@ -5,8 +5,8 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from '@solana/web3.js'
 import * as beet from '@metaplex-foundation/beet'
+import * as web3 from '@solana/web3.js'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
 import { Pool, poolBeet } from '../types/Pool'
 import { Collateral, collateralBeet } from '../types/Collateral'
@@ -18,7 +18,6 @@ import { OracleInfo, oracleInfoBeet } from '../types/OracleInfo'
  * @category generated
  */
 export type TokenDataArgs = {
-  clone: web3.PublicKey
   numPools: beet.bignum
   numCollaterals: beet.bignum
   numOracles: beet.bignum
@@ -37,7 +36,6 @@ export const tokenDataDiscriminator = [10, 136, 199, 13, 59, 103, 129, 70]
  */
 export class TokenData implements TokenDataArgs {
   private constructor(
-    readonly clone: web3.PublicKey,
     readonly numPools: beet.bignum,
     readonly numCollaterals: beet.bignum,
     readonly numOracles: beet.bignum,
@@ -51,7 +49,6 @@ export class TokenData implements TokenDataArgs {
    */
   static fromArgs(args: TokenDataArgs) {
     return new TokenData(
-      args.clone,
       args.numPools,
       args.numCollaterals,
       args.numOracles,
@@ -164,7 +161,6 @@ export class TokenData implements TokenDataArgs {
    */
   pretty() {
     return {
-      clone: this.clone.toBase58(),
       numPools: (() => {
         const x = <{ toNumber: () => number }>this.numPools
         if (typeof x.toNumber === 'function') {
@@ -217,7 +213,6 @@ export const tokenDataBeet = new beet.BeetStruct<
 >(
   [
     ['accountDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['clone', beetSolana.publicKey],
     ['numPools', beet.u64],
     ['numCollaterals', beet.u64],
     ['numOracles', beet.u64],
