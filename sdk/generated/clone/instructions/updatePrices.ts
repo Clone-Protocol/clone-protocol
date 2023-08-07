@@ -36,14 +36,12 @@ export const updatePricesStruct = new beet.BeetArgsStruct<
 /**
  * Accounts required by the _updatePrices_ instruction
  *
- * @property [] clone
  * @property [_writable_] tokenData
  * @category Instructions
  * @category UpdatePrices
  * @category generated
  */
 export type UpdatePricesInstructionAccounts = {
-  clone: web3.PublicKey
   tokenData: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
@@ -72,11 +70,6 @@ export function createUpdatePricesInstruction(
     ...args,
   })
   const keys: web3.AccountMeta[] = [
-    {
-      pubkey: accounts.clone,
-      isWritable: false,
-      isSigner: false,
-    },
     {
       pubkey: accounts.tokenData,
       isWritable: true,

@@ -2,7 +2,7 @@ use crate::error::*;
 use crate::events::*;
 use crate::math::*;
 use crate::states::*;
-use crate::{to_clone_decimal, to_ratio_decimal, CLONE_PROGRAM_SEED, USER_SEED};
+use crate::{to_clone_decimal, to_ratio_decimal, CLONE_PROGRAM_SEED, TOKEN_DATA_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
@@ -22,12 +22,12 @@ pub struct BorrowMore<'info> {
     #[account(
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
-        bump = clone.bump,
-        has_one = token_data,
+        bump,
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
-        has_one = clone,
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
         constraint = token_data.load()?.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction,
     )]
     pub token_data: AccountLoader<'info, TokenData>,

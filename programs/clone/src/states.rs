@@ -27,7 +27,6 @@ pub const NUM_AUTH: usize = 10;
 #[derive(Default)]
 pub struct Clone {
     pub onusd_mint: Pubkey,
-    pub token_data: Pubkey,
     pub admin: Pubkey,
     pub auth: [Pubkey; NUM_AUTH],
     pub bump: u8,
@@ -39,7 +38,6 @@ pub struct Clone {
 
 #[account(zero_copy)]
 pub struct TokenData {
-    pub clone: Pubkey,
     pub num_pools: u64,
     pub num_collaterals: u64,
     pub num_oracles: u64,
@@ -51,7 +49,6 @@ pub struct TokenData {
 impl Default for TokenData {
     fn default() -> Self {
         Self {
-            clone: Pubkey::default(),
             num_pools: 0,
             num_collaterals: 0,
             num_oracles: 0,

@@ -1,14 +1,23 @@
 import * as anchor from "@coral-xyz/anchor";
 import * as beet from "@metaplex-foundation/beet";
 import { BN, Provider } from "@coral-xyz/anchor";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   PublicKey,
   Connection,
   ConfirmOptions,
   TransactionInstruction,
   Transaction,
+  SystemProgram,
 } from "@solana/web3.js";
+import {
+  TOKEN_PROGRAM_ID,
+  MINT_SIZE,
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddress,
+  createInitializeMintInstruction,
+  getMinimumBalanceForRentExemptMint,
+  getAccount,
+} from "@solana/spl-token";
 import {
   Clone,
   User,
@@ -42,7 +51,10 @@ import {
   createAddOracleFeedInstruction,
   createWrapAssetInstruction,
   createUnwrapOnassetInstruction,
+  createInitializeTokenDataInstruction,
+  createReallocateTokenDataInstruction,
 } from "../generated/clone";
+import { getOrCreateAssociatedTokenAccount } from "./utils";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -89,6 +101,7 @@ export const fromCloneScale = (x: number | beet.bignum | BN | bigint) => {
 export class CloneClient {
   clone: Clone;
   cloneAddress: PublicKey;
+  tokenDataAddress: PublicKey;
   programId: PublicKey;
   provider: Provider;
   opts?: ConfirmOptions;
@@ -104,6 +117,7 @@ export class CloneClient {
     this.clone = clone;
     this.opts = opts;
     this.cloneAddress = this.getCloneAddress();
+    this.tokenDataAddress = this.getTokenDataAddress();
   }
 
   /// Admin RPC methods ///
@@ -114,38 +128,26 @@ export class CloneClient {
     cometLiquidatorFeeBps: number,
     borrowLiquidatorFeeBps: number,
     treasuryAddress: PublicKey,
-    usdcMint: PublicKey
+    usdcMint: PublicKey,
+    onusdMint: PublicKey
   ) {
-    const usdcVault = anchor.web3.Keypair.generate();
-    const onusdMint = anchor.web3.Keypair.generate();
-    const onusdVault = anchor.web3.Keypair.generate();
-    const tokenData = anchor.web3.Keypair.generate();
-
     const [cloneAddress, _] = PublicKey.findProgramAddressSync(
       [Buffer.from("clone")],
+      programId
+    );
+    const [tokenDataAddress, __] = PublicKey.findProgramAddressSync(
+      [Buffer.from("token-data")],
       programId
     );
 
     // Use SystemProgram to create TokenData account.
     let tx = new Transaction().add(
-      anchor.web3.SystemProgram.createAccount({
-        fromPubkey: provider.publicKey!,
-        newAccountPubkey: tokenData.publicKey,
-        lamports: await provider.connection.getMinimumBalanceForRentExemption(
-          TokenData.byteSize
-        ),
-        space: TokenData.byteSize,
-        programId: programId,
-      }),
       createInitializeCloneInstruction(
         {
           admin: provider.publicKey!,
           clone: cloneAddress,
-          onusdMint: onusdMint.publicKey,
-          onusdVault: onusdVault.publicKey,
-          usdcMint: usdcMint,
-          usdcVault: usdcVault.publicKey,
-          tokenData: tokenData.publicKey,
+          onusdMint,
+          usdcMint,
           rent: RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
@@ -155,14 +157,26 @@ export class CloneClient {
           borrowLiquidatorFeeBps,
           treasuryAddress,
         }
+      ),
+      createInitializeTokenDataInstruction({
+        admin: provider.publicKey!,
+        clone: cloneAddress,
+        tokenData: tokenDataAddress,
+        systemProgram: SYSTEM_PROGRAM_ID,
+      }),
+      createReallocateTokenDataInstruction(
+        {
+          admin: provider.publicKey!,
+          clone: cloneAddress,
+          tokenData: tokenDataAddress,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        },
+        {
+          len: 16408 + 8,
+        }
       )
     );
-    await provider.sendAndConfirm!(tx, [
-      onusdMint,
-      onusdVault,
-      usdcVault,
-      tokenData,
-    ]);
+    await provider.sendAndConfirm!(tx);
   }
 
   public async initializePool(
@@ -175,21 +189,53 @@ export class CloneClient {
     oracleIndex: number,
     underlyingAssetMint: PublicKey
   ) {
-    const onusdTokenAccount = anchor.web3.Keypair.generate();
-    const onassetMintAccount = anchor.web3.Keypair.generate();
-    const onassetTokenAccount = anchor.web3.Keypair.generate();
-    const underlyingAssetTokenAccount = anchor.web3.Keypair.generate();
-    const liquidityTokenMintAccount = anchor.web3.Keypair.generate();
-    const cometLiquidityTokenAccount = anchor.web3.Keypair.generate();
+    const onassetMint = anchor.web3.Keypair.generate();
+    const onassetTokenAccount = await getAssociatedTokenAddress(
+      onassetMint.publicKey,
+      this.cloneAddress,
+      true
+    );
+    const underlyingAssetTokenAccount = await getAssociatedTokenAddress(
+      underlyingAssetMint,
+      this.cloneAddress,
+      true
+    );
 
-    let signers = [
-      onusdTokenAccount,
-      onassetMintAccount,
-      onassetTokenAccount,
-      underlyingAssetTokenAccount,
-      liquidityTokenMintAccount,
-      cometLiquidityTokenAccount,
-    ];
+    await this.provider.sendAndConfirm!(
+      new Transaction().add(
+        // create onusd mint account
+        SystemProgram.createAccount({
+          fromPubkey: this.provider.publicKey!,
+          newAccountPubkey: onassetMint.publicKey,
+          space: MINT_SIZE,
+          lamports: await getMinimumBalanceForRentExemptMint(
+            this.provider.connection
+          ),
+          programId: TOKEN_PROGRAM_ID,
+        }),
+        // init clone mint account
+        createInitializeMintInstruction(
+          onassetMint.publicKey,
+          CLONE_TOKEN_SCALE,
+          this.cloneAddress,
+          null
+        ),
+        createAssociatedTokenAccountInstruction(
+          this.provider.publicKey!,
+          onassetTokenAccount,
+          this.cloneAddress,
+          onassetMint.publicKey
+        ),
+        createAssociatedTokenAccountInstruction(
+          this.provider.publicKey!,
+          underlyingAssetTokenAccount,
+          this.cloneAddress,
+          underlyingAssetMint
+        )
+      ),
+      [onassetMint],
+      this.opts
+    );
 
     await this.provider.sendAndConfirm!(
       new Transaction().add(
@@ -197,17 +243,12 @@ export class CloneClient {
           {
             admin: this.provider.publicKey!,
             clone: this.cloneAddress,
-            tokenData: this.clone!.tokenData,
+            tokenData: this.tokenDataAddress,
             onusdMint: this.clone!.onusdMint,
-            onusdTokenAccount: onusdTokenAccount.publicKey,
-            onassetMint: onassetMintAccount.publicKey,
-            onassetTokenAccount: onassetTokenAccount.publicKey,
-            underlyingAssetMint: underlyingAssetMint,
-            underlyingAssetTokenAccount: underlyingAssetTokenAccount.publicKey,
-            liquidityTokenMint: liquidityTokenMintAccount.publicKey,
-            cometLiquidityTokenAccount: cometLiquidityTokenAccount.publicKey,
-            rent: RENT_PUBKEY,
-            tokenProgram: TOKEN_PROGRAM_ID,
+            onassetMint: onassetMint.publicKey,
+            onassetTokenAccount,
+            underlyingAssetMint,
+            underlyingAssetTokenAccount,
             systemProgram: SYSTEM_PROGRAM_ID,
           },
           {
@@ -223,42 +264,44 @@ export class CloneClient {
           }
         )
       ),
-      signers,
+      [],
       this.opts
     );
   }
 
   public async addCollateral(
-    scale: number,
-    collateral_mint: PublicKey,
-    oracleInfoIndex: number,
-    collateralizationRatio: number = 0
+    collateralMint: PublicKey,
+    collateralizationRatio: number = 0,
+    oracleInfoIndex: number = 255
   ) {
-    const vaultAccount = anchor.web3.Keypair.generate();
-
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(
-        createAddCollateralInstruction(
-          {
-            admin: this.provider.publicKey!,
-            clone: this.cloneAddress,
-            tokenData: this.clone!.tokenData,
-            collateralMint: collateral_mint,
-            vault: vaultAccount.publicKey,
-            rent: RENT_PUBKEY,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            systemProgram: SYSTEM_PROGRAM_ID,
-          },
-          {
-            scale,
-            collateralizationRatio,
-            oracleInfoIndex,
-          }
-        )
-      ),
-      [vaultAccount],
-      this.opts
+    const vaultAccount = await getOrCreateAssociatedTokenAccount(
+      this.provider,
+      collateralMint,
+      this.cloneAddress,
+      true
     );
+    let tx = new Transaction();
+
+    tx.add(
+      createAddCollateralInstruction(
+        {
+          admin: this.provider.publicKey!,
+          clone: this.cloneAddress,
+          tokenData: this.tokenDataAddress,
+          collateralMint,
+          vault: vaultAccount.address,
+          rent: RENT_PUBKEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        },
+        {
+          collateralizationRatio,
+          oracleInfoIndex,
+        }
+      )
+    );
+
+    await this.provider.sendAndConfirm!(tx, [], this.opts);
   }
 
   public async addOracleInfo(pythFeedAddress: PublicKey) {
@@ -267,7 +310,7 @@ export class CloneClient {
         {
           admin: this.provider.publicKey!,
           clone: this.cloneAddress,
-          tokenData: this.clone.tokenData,
+          tokenData: this.tokenDataAddress,
         },
         {
           pythAddress: pythFeedAddress,
@@ -297,7 +340,7 @@ export class CloneClient {
       {
         auth: this.provider.publicKey!,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
       },
       params
     );
@@ -311,7 +354,7 @@ export class CloneClient {
       {
         admin: this.provider.publicKey!,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
       },
       params
     );
@@ -328,6 +371,14 @@ export class CloneClient {
     return address;
   }
 
+  public getTokenDataAddress(): PublicKey {
+    const [address, _] = PublicKey.findProgramAddressSync(
+      [Buffer.from("token-data")],
+      this.programId
+    );
+    return address;
+  }
+
   public getUserAddress(address?: PublicKey) {
     const [userPubkey, bump] = PublicKey.findProgramAddressSync(
       [Buffer.from("user"), (address ?? this.provider.publicKey!).toBuffer()],
@@ -337,7 +388,6 @@ export class CloneClient {
   }
 
   public async getCloneAccount(): Promise<Clone> {
-    //return (await this.program.account.clone.fetch(this.cloneAddress)) as Clone
     return await Clone.fromAccountAddress(
       this.provider.connection,
       this.cloneAddress
@@ -347,7 +397,7 @@ export class CloneClient {
   public async getTokenData(): Promise<TokenData> {
     return await TokenData.fromAccountAddress(
       this.provider.connection,
-      this.clone!.tokenData
+      this.tokenDataAddress
     );
   }
 
@@ -407,8 +457,7 @@ export class CloneClient {
 
     return createUpdatePricesInstruction(
       {
-        clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         anchorRemainingAccounts,
       },
       { indices: { indices: indices } }
@@ -425,7 +474,7 @@ export class CloneClient {
       {
         user: this.provider.publicKey!,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         usdcVault: tokenData.collaterals[1].vault,
         onusdMint: this.clone!.onusdMint,
         userOnusdTokenAccount: userOnusdTokenAccount,
@@ -448,7 +497,7 @@ export class CloneClient {
     return createWrapAssetInstruction(
       {
         user: this.provider.publicKey!,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         underlyingAssetTokenAccount: pool.underlyingAssetTokenAccount!,
         assetMint,
         userAssetTokenAccount,
@@ -476,7 +525,7 @@ export class CloneClient {
     return createUnwrapOnassetInstruction(
       {
         user: this.provider.publicKey!,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         underlyingAssetTokenAccount: pool.underlyingAssetTokenAccount!,
         assetMint,
         userAssetTokenAccount,
@@ -508,7 +557,7 @@ export class CloneClient {
         user: this.provider.publicKey!,
         userAccount: userPubkey,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         vault: tokenData.collaterals[collateralIndex].vault,
         userCollateralTokenAccount: userCollateralTokenAccount,
         onassetMint: tokenData.pools[poolIndex].assetInfo.onassetMint,
@@ -538,7 +587,7 @@ export class CloneClient {
         user: this.provider.publicKey!,
         userAccount: userPubkey,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         vault:
           tokenData.collaterals[
             Number(userAccount.borrows.positions[borrowIndex].collateralIndex)
@@ -567,7 +616,7 @@ export class CloneClient {
         user: this.provider.publicKey!,
         userAccount: userPubkey,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         vault:
           tokenData.collaterals[
             Number(userAccount.borrows.positions[borrowIndex].collateralIndex)
@@ -600,7 +649,7 @@ export class CloneClient {
         payer: this.provider.publicKey!,
         userAccount: userPubkey,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         onassetMint: assetInfo.onassetMint,
         payerOnassetTokenAccount: userOnassetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -626,7 +675,7 @@ export class CloneClient {
         user: this.provider.publicKey!,
         userAccount: userPubkey,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         onassetMint: assetInfo.onassetMint,
         userOnassetTokenAccount: userOnassetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -662,7 +711,7 @@ export class CloneClient {
       {
         user: this.provider.publicKey!,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         userOnassetTokenAccount: userOnassetTokenAddress,
         userOnusdTokenAccount: userOnusdTokenAddress,
         treasuryOnusdTokenAccount: treasuryOnusdTokenAddress,
@@ -696,8 +745,7 @@ export class CloneClient {
       {
         user: this.provider.publicKey!,
         userAccount: userPubkey,
-        clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         vault: tokenData.collaterals[collateralIndex].vault,
         userCollateralTokenAccount: userCollateralTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -723,7 +771,7 @@ export class CloneClient {
         user: this.provider.publicKey!,
         userAccount: userPubkey,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         vault:
           tokenData.collaterals[
             Number(userAccount.comet.collaterals[cometCollateralIndex].collateralIndex)
@@ -749,7 +797,7 @@ export class CloneClient {
         user: this.provider.publicKey!,
         userAccount: userPubkey,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
       },
       { poolIndex, onusdAmount }
     );
@@ -766,7 +814,7 @@ export class CloneClient {
         user: this.provider.publicKey!,
         userAccount: userPubkey,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
       },
       { cometPositionIndex, onusdAmount: onusdWithdrawal }
     );
@@ -789,7 +837,7 @@ export class CloneClient {
         payer: this.provider.publicKey!,
         userAccount: userPubkey,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         onusdMint: this.clone!.onusdMint,
         onassetMint:
           tokenData.pools[Number(cometPosition.poolIndex)].assetInfo.onassetMint,
@@ -832,7 +880,7 @@ export class CloneClient {
         user: liquidateeAddress,
         userAccount: userPubkey,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         onusdMint: this.clone!.onusdMint,
         onassetMint: pool.assetInfo.onassetMint,
         liquidatorOnusdTokenAccount: liquidatorOnusdTokenAccount,
@@ -868,7 +916,7 @@ export class CloneClient {
       {
         liquidator: this.provider.publicKey!,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         userAccount: userPubkey,
         user: liquidateeAddress,
         onassetMint: pool.assetInfo.onassetMint,
@@ -902,7 +950,7 @@ export class CloneClient {
         user: this.provider.publicKey!,
         userAccount: userPubkey,
         clone: this.cloneAddress,
-        tokenData: this.clone!.tokenData,
+        tokenData: this.tokenDataAddress,
         onusdMint: this.clone!.onusdMint,
         onassetMint: pool.assetInfo.onassetMint,
         userOnusdTokenAccount: userOnusdTokenAccount,

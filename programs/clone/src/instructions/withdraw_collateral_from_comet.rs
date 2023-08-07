@@ -2,7 +2,7 @@ use crate::error::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
-use crate::{CLONE_PROGRAM_SEED, USER_SEED};
+use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 
@@ -20,12 +20,12 @@ pub struct WithdrawCollateralFromComet<'info> {
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
-        has_one = token_data,
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone,
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(

@@ -4,7 +4,8 @@ use crate::instructions::withdraw_liquidity;
 use crate::math::*;
 use crate::states::*;
 use crate::{
-    return_error_if_false, to_bps_decimal, to_clone_decimal, CLONE_PROGRAM_SEED, USER_SEED,
+    return_error_if_false, to_bps_decimal, to_clone_decimal, CLONE_PROGRAM_SEED, TOKEN_DATA_SEED,
+    USER_SEED,
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -29,11 +30,11 @@ pub struct LiquidateCometPosition<'info> {
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
-        has_one = token_data
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
-        has_one = clone,
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
         constraint = token_data.load()?.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].status == Status::Active as u64 ||
         token_data.load()?.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].status == Status::Liquidation as u64 @ CloneError::StatusPreventsAction
     )]

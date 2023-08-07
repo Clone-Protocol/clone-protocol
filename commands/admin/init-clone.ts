@@ -1,10 +1,13 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Transaction } from "@solana/web3.js";
+import { Transaction, SystemProgram } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
+  MINT_SIZE,
+  getMinimumBalanceForRentExemptMint,
+  createInitializeMintInstruction,
 } from "@solana/spl-token";
 import {
   successLog,
@@ -15,7 +18,7 @@ import {
   getCloneClient,
 } from "../utils";
 import { Argv } from "yargs";
-import { CloneClient } from "../../sdk/src/clone";
+import { CloneClient, CLONE_TOKEN_SCALE } from "../../sdk/src/clone";
 
 interface CommandArguments extends Argv {
   cometLiquidatorFee: number;
@@ -41,9 +44,29 @@ exports.handler = async function (yargs: CommandArguments) {
   try {
     const provider = anchorSetup();
     const [cloneProgramID, cloneAccountAddress] = getCloneData();
-    const usdc = await getUSDC();
+    const usdc = getUSDC();
 
     const treasuryAddress = anchor.web3.Keypair.generate();
+    const onusdMint = anchor.web3.Keypair.generate();
+
+    let tx = new Transaction().add(
+      // create onusd mint account
+      SystemProgram.createAccount({
+        fromPubkey: provider.publicKey,
+        newAccountPubkey: onusdMint.publicKey,
+        space: MINT_SIZE,
+        lamports: await getMinimumBalanceForRentExemptMint(provider.connection),
+        programId: TOKEN_PROGRAM_ID,
+      }),
+      // init clone mint account
+      createInitializeMintInstruction(
+        onusdMint.publicKey,
+        CLONE_TOKEN_SCALE,
+        cloneAccountAddress,
+        null
+      )
+    );
+    await provider.sendAndConfirm(tx, [onusdMint]);
 
     await CloneClient.initializeClone(
       provider,
@@ -51,7 +74,8 @@ exports.handler = async function (yargs: CommandArguments) {
       yargs.cometLiquidatorFee,
       yargs.borrowLiquidatorFee,
       treasuryAddress.publicKey,
-      usdc
+      usdc,
+      onusdMint.publicKey
     );
 
     const cloneClient = await getCloneClient(

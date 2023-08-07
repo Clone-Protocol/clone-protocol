@@ -51,7 +51,6 @@ exports.handler = async function (yargs: CommandArguments) {
 
     const collateralMint = new PublicKey(yargs.collateralPubkey);
     await cloneClient.addCollateral(
-      yargs.scale,
       collateralMint,
       yargs.oracleInfoIndex,
       yargs.collateralizationRatio

@@ -16,7 +16,6 @@ import * as beetSolana from '@metaplex-foundation/beet-solana'
  */
 export type CloneArgs = {
   onusdMint: web3.PublicKey
-  tokenData: web3.PublicKey
   admin: web3.PublicKey
   auth: web3.PublicKey[] /* size: 10 */
   bump: number
@@ -37,7 +36,6 @@ export const cloneDiscriminator = [20, 243, 87, 121, 2, 202, 130, 130]
 export class Clone implements CloneArgs {
   private constructor(
     readonly onusdMint: web3.PublicKey,
-    readonly tokenData: web3.PublicKey,
     readonly admin: web3.PublicKey,
     readonly auth: web3.PublicKey[] /* size: 10 */,
     readonly bump: number,
@@ -53,7 +51,6 @@ export class Clone implements CloneArgs {
   static fromArgs(args: CloneArgs) {
     return new Clone(
       args.onusdMint,
-      args.tokenData,
       args.admin,
       args.auth,
       args.bump,
@@ -168,7 +165,6 @@ export class Clone implements CloneArgs {
   pretty() {
     return {
       onusdMint: this.onusdMint.toBase58(),
-      tokenData: this.tokenData.toBase58(),
       admin: this.admin.toBase58(),
       auth: this.auth,
       bump: this.bump,
@@ -203,7 +199,6 @@ export const cloneBeet = new beet.BeetStruct<
   [
     ['accountDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['onusdMint', beetSolana.publicKey],
-    ['tokenData', beetSolana.publicKey],
     ['admin', beetSolana.publicKey],
     ['auth', beet.uniformFixedSizeArray(beetSolana.publicKey, 10)],
     ['bump', beet.u8],

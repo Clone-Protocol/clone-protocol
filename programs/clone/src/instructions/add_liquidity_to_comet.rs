@@ -4,7 +4,7 @@ use crate::events::*;
 use crate::math::*;
 use crate::states::*;
 use crate::{return_error_if_false, to_clone_decimal};
-use crate::{CLONE_PROGRAM_SEED, USER_SEED};
+use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
@@ -22,13 +22,13 @@ pub struct AddLiquidityToComet<'info> {
     #[account(
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
-        bump = clone.bump,
-        has_one = token_data,
+        bump,
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone,
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
         constraint = (pool_index as u64) < token_data.load()?.num_pools @ CloneError::InvalidInputPositionIndex,
         constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
     )]

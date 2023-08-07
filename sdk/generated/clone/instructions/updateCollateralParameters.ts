@@ -42,7 +42,7 @@ export const updateCollateralParametersStruct = new beet.FixableBeetArgsStruct<
  * Accounts required by the _updateCollateralParameters_ instruction
  *
  * @property [**signer**] admin
- * @property [_writable_] clone
+ * @property [] clone
  * @property [_writable_] tokenData
  * @category Instructions
  * @category UpdateCollateralParameters
@@ -87,7 +87,7 @@ export function createUpdateCollateralParametersInstruction(
     },
     {
       pubkey: accounts.clone,
-      isWritable: true,
+      isWritable: false,
       isSigner: false,
     },
     {

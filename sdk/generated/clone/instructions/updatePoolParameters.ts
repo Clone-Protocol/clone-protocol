@@ -39,7 +39,7 @@ export const updatePoolParametersStruct = new beet.FixableBeetArgsStruct<
  * Accounts required by the _updatePoolParameters_ instruction
  *
  * @property [**signer**] auth
- * @property [_writable_] clone
+ * @property [] clone
  * @property [_writable_] tokenData
  * @category Instructions
  * @category UpdatePoolParameters
@@ -83,7 +83,7 @@ export function createUpdatePoolParametersInstruction(
     },
     {
       pubkey: accounts.clone,
-      isWritable: true,
+      isWritable: false,
       isSigner: false,
     },
     {

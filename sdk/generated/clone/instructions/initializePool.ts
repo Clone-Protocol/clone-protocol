@@ -5,7 +5,6 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
 
@@ -52,13 +51,10 @@ export const initializePoolStruct = new beet.BeetArgsStruct<
  * @property [] clone
  * @property [_writable_] tokenData
  * @property [] onusdMint
- * @property [_writable_, **signer**] onusdTokenAccount
- * @property [_writable_, **signer**] onassetMint
- * @property [_writable_, **signer**] onassetTokenAccount
+ * @property [] onassetMint
+ * @property [] onassetTokenAccount
  * @property [] underlyingAssetMint
- * @property [_writable_, **signer**] underlyingAssetTokenAccount
- * @property [_writable_, **signer**] liquidityTokenMint
- * @property [_writable_, **signer**] cometLiquidityTokenAccount
+ * @property [] underlyingAssetTokenAccount
  * @category Instructions
  * @category InitializePool
  * @category generated
@@ -68,15 +64,10 @@ export type InitializePoolInstructionAccounts = {
   clone: web3.PublicKey
   tokenData: web3.PublicKey
   onusdMint: web3.PublicKey
-  onusdTokenAccount: web3.PublicKey
   onassetMint: web3.PublicKey
   onassetTokenAccount: web3.PublicKey
   underlyingAssetMint: web3.PublicKey
   underlyingAssetTokenAccount: web3.PublicKey
-  liquidityTokenMint: web3.PublicKey
-  cometLiquidityTokenAccount: web3.PublicKey
-  rent?: web3.PublicKey
-  tokenProgram?: web3.PublicKey
   systemProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
@@ -126,19 +117,14 @@ export function createInitializePoolInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.onusdTokenAccount,
-      isWritable: true,
-      isSigner: true,
-    },
-    {
       pubkey: accounts.onassetMint,
-      isWritable: true,
-      isSigner: true,
+      isWritable: false,
+      isSigner: false,
     },
     {
       pubkey: accounts.onassetTokenAccount,
-      isWritable: true,
-      isSigner: true,
+      isWritable: false,
+      isSigner: false,
     },
     {
       pubkey: accounts.underlyingAssetMint,
@@ -147,26 +133,6 @@ export function createInitializePoolInstruction(
     },
     {
       pubkey: accounts.underlyingAssetTokenAccount,
-      isWritable: true,
-      isSigner: true,
-    },
-    {
-      pubkey: accounts.liquidityTokenMint,
-      isWritable: true,
-      isSigner: true,
-    },
-    {
-      pubkey: accounts.cometLiquidityTokenAccount,
-      isWritable: true,
-      isSigner: true,
-    },
-    {
-      pubkey: accounts.rent ?? web3.SYSVAR_RENT_PUBKEY,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
       isWritable: false,
       isSigner: false,
     },

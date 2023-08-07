@@ -1,6 +1,6 @@
 use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
 use crate::states::*;
-use crate::CLONE_PROGRAM_SEED;
+use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
 use rust_decimal::prelude::*;
@@ -14,12 +14,12 @@ pub struct BurnONUSD<'info> {
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
         has_one = onusd_mint,
-        has_one = token_data
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        has_one = clone
+        seeds = [TOKEN_DATA_SEED.as_ref()],
+        bump,
     )]
     pub token_data: AccountLoader<'info, TokenData>,
     #[account(
