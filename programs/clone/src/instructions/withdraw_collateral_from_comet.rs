@@ -47,6 +47,8 @@ pub fn execute(
     comet_collateral_index: u8,
     collateral_amount: u64,
 ) -> Result<()> {
+    return_error_if_false!(collateral_amount > 0, CloneError::InvalidTokenAmount);
+
     let seeds = &[&[
         CLONE_PROGRAM_SEED.as_ref(),
         bytemuck::bytes_of(&ctx.accounts.clone.bump),

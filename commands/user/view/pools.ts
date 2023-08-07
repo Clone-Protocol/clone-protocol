@@ -62,10 +62,10 @@ exports.handler = async function () {
         `onAsset ILD: ${chalk.bold(Number(pool.onassetIld))}\n` +
         `onUSD ILD: ${chalk.bold(Number(pool.onusdIld))}\n` +
         `Liquidity Trading Fee: %${chalk.bold(
-          Number(pool.liquidityTradingFee)
+          Number(pool.liquidityTradingFeeBps)
         )}\n` +
         `Treasury Trading Fee: %${chalk.bold(
-          Number(pool.treasuryTradingFee)
+          Number(pool.treasuryTradingFeeBps)
         )}\n` +
         `Oracle Price: $${chalk.bold(Number(oracle.price))}\n` +
         `Pyth Address: ${chalk.bold(oracle.pythAddress)}\n` +

@@ -105,7 +105,7 @@ exports.handler = async function (yargs: CommandArguments) {
         ASSOCIATED_TOKEN_PROGRAM_ID
       );
 
-    await cloneClient.provider.sendAndConfirm!(
+    await provider.sendAndConfirm!(
       new Transaction().add(
         createAssociatedTokenAccountInstruction(
           cloneClient.provider.publicKey!,

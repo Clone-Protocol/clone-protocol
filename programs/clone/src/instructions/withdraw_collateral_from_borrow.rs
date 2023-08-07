@@ -1,6 +1,7 @@
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use crate::{to_clone_decimal, to_ratio_decimal, CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
@@ -51,6 +52,7 @@ pub fn execute(
     borrow_index: u8,
     amount: u64,
 ) -> Result<()> {
+    return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
     let seeds = &[&[
         CLONE_PROGRAM_SEED.as_ref(),
         bytemuck::bytes_of(&ctx.accounts.clone.bump),

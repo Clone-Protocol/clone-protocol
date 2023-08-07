@@ -28,8 +28,20 @@ import {
   getOrCreateAssociatedTokenAccount,
 } from "../sdk/src/utils";
 import { getHealthScore, getILD } from "../sdk/src/healthscore";
-import { Clone as CloneAccount } from "../sdk/generated/clone";
-import { PoolParameters } from "../sdk/generated/clone";
+import {
+  Clone as CloneAccount,
+  PoolParameters,
+  createUpdatePoolParametersInstruction,
+} from "../sdk/generated/clone";
+import {
+  Jupiter,
+  createCreateAssetInstruction,
+  createInitializeInstruction,
+  createMintAssetInstruction,
+  createMintUsdcInstruction,
+  createSwapInstruction,
+} from "../sdk/generated/jupiter-agg-mock";
+import * as CloneStaking from "../sdk/generated/clone-staking";
 
 const CLONE_SCALE_CONVERSION = Math.pow(10, -CLONE_TOKEN_SCALE);
 const USDC_SCALE_CONVERSION = Math.pow(10, -7);
@@ -39,10 +51,10 @@ describe("tests", async () => {
   anchor.setProvider(provider);
   let walletPubkey = provider.publicKey!;
 
-  let cloneProgram = anchor.workspace.Clone;
-  let pythProgram = anchor.workspace.Pyth;
-  let jupiterProgram = anchor.workspace.JupiterAggMock;
-  let cloneStakingProgram = anchor.workspace.CloneStaking;
+  let cloneProgramId = anchor.workspace.Clone.programId;
+  let pythProgramId = anchor.workspace.Pyth.programId;
+  let jupiterProgramId = anchor.workspace.JupiterAggMock.programId;
+  let cloneStakingProgramId = anchor.workspace.CloneStaking.programId;
 
   const mockUSDCMint = anchor.web3.Keypair.generate();
   const treasuryAddress = anchor.web3.Keypair.generate();
@@ -69,17 +81,17 @@ describe("tests", async () => {
 
   const [cloneAccountAddress, ___] = PublicKey.findProgramAddressSync(
     [Buffer.from("clone")],
-    cloneProgram.programId
+    cloneProgramId
   );
   const mockAssetMint = anchor.web3.Keypair.generate();
   let [jupiterAddress, _jupiterNonce] = PublicKey.findProgramAddressSync(
     [Buffer.from("jupiter")],
-    jupiterProgram.programId
+    jupiterProgramId
   );
 
   const [cloneStakingAddress, _] = PublicKey.findProgramAddressSync(
     [Buffer.from("clone-staking")],
-    cloneStakingProgram.programId
+    cloneStakingProgramId
   );
   const clnTokenVault = await getAssociatedTokenAddress(
     clnTokenMint.publicKey,
@@ -92,7 +104,7 @@ describe("tests", async () => {
   );
   const [userStakingAddress, __] = PublicKey.findProgramAddressSync(
     [Buffer.from("user"), walletPubkey.toBuffer()],
-    cloneStakingProgram.programId
+    cloneStakingProgramId
   );
 
   it("to scale test", () => {
@@ -124,43 +136,52 @@ describe("tests", async () => {
     );
     await provider.sendAndConfirm(tx, [clnTokenMint]);
 
-    let ix = createAssociatedTokenAccountInstruction(
-      provider.publicKey!,
-      clnTokenVault,
-      cloneStakingAddress,
-      clnTokenMint.publicKey
-    );
+    // let ix = createAssociatedTokenAccountInstruction(
+    //   provider.publicKey!,
+    //   clnTokenVault,
+    //   cloneStakingAddress,
+    //   clnTokenMint.publicKey
+    // );
 
-    await cloneStakingProgram.methods
-      .initialize(new BN(24))
-      .accounts({
-        admin: provider.publicKey!,
-        cloneStaking: cloneStakingAddress,
-        clnTokenMint: clnTokenMint.publicKey,
-        clnTokenVault: clnTokenVault,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .preInstructions([ix])
-      .rpc();
-
-    // Adding Tier.
-    await cloneStakingProgram.methods
-      .updateStakingParams({
-        tier: {
-          numTiers: 1,
-          index: 0,
-          stakeRequirement: tier0.minStakeRequirement,
-          lpTradingFeeBps: tier0.lpTradingFeeBps,
-          treasuryTradingFeeBps: tier0.treasuryTradingFeeBps,
+    tx = new Transaction().add(
+      createAssociatedTokenAccountInstruction(
+        provider.publicKey!,
+        clnTokenVault,
+        cloneStakingAddress,
+        clnTokenMint.publicKey
+      ),
+      CloneStaking.createInitializeInstruction(
+        {
+          admin: provider.publicKey!,
+          cloneStaking: cloneStakingAddress,
+          clnTokenMint: clnTokenMint.publicKey,
+          clnTokenVault: clnTokenVault,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
         },
-      })
-      .accounts({
-        admin: provider.publicKey!,
-        cloneStaking: cloneStakingAddress,
-      })
-      .rpc();
+        {
+          stakingPeriodSlots: new BN(24),
+        }
+      ),
+      CloneStaking.createUpdateStakingParamsInstruction(
+        {
+          admin: provider.publicKey!,
+          cloneStaking: cloneStakingAddress,
+        },
+        {
+          params: {
+            __kind: "Tier",
+            numTiers: 1,
+            index: 0,
+            stakeRequirement: tier0.minStakeRequirement,
+            lpTradingFeeBps: tier0.lpTradingFeeBps,
+            treasuryTradingFeeBps: tier0.treasuryTradingFeeBps,
+          },
+        }
+      )
+    );
+    await provider.sendAndConfirm(tx);
 
     // Mint cln tokens to user.
     let mintTx = new Transaction().add(
@@ -176,54 +197,57 @@ describe("tests", async () => {
         walletPubkey,
         tier0.minStakeRequirement.toNumber(),
         CLONE_TOKEN_SCALE
+      ),
+      CloneStaking.createAddStakeInstruction(
+        {
+          user: provider.publicKey!,
+          userAccount: userStakingAddress,
+          cloneStaking: cloneStakingAddress,
+          clnTokenMint: clnTokenMint.publicKey,
+          clnTokenVault: clnTokenVault,
+          userClnTokenAccount: userClnTokenAddress,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        },
+        {
+          amount: tier0.minStakeRequirement,
+        }
       )
     );
 
     await provider.sendAndConfirm(mintTx);
 
-    await cloneStakingProgram.methods
-      .addStake(tier0.minStakeRequirement)
-      .accounts({
-        user: walletPubkey,
-        userAccount: userStakingAddress,
-        cloneStaking: cloneStakingAddress,
-        clnTokenMint: clnTokenMint.publicKey,
-        clnTokenVault: clnTokenVault,
-        userClnTokenAccount: userClnTokenAddress,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .rpc();
-
-    let userStakingAccount = await cloneStakingProgram.account.user.fetch(
+    let userStakingAccount = await CloneStaking.User.fromAccountAddress(
+      provider.connection,
       userStakingAddress
     );
     assert.equal(
-      userStakingAccount.stakedTokens.toNumber(),
+      Number(userStakingAccount.stakedTokens),
       tier0.minStakeRequirement.toNumber()
     );
   });
 
   it("mock jupiter agg initialized + mock usdc initialized + mock asset initialized!", async () => {
-    await jupiterProgram.methods
-      .initialize()
-      .accounts({
-        admin: jupiterProgram.provider.publicKey!,
-        jupiterAccount: jupiterAddress,
-        usdcMint: mockUSDCMint.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .signers([mockUSDCMint])
-      .rpc();
+    await provider.sendAndConfirm(
+      new Transaction().add(
+        createInitializeInstruction({
+          admin: provider.publicKey!,
+          jupiterAccount: jupiterAddress,
+          usdcMint: mockUSDCMint.publicKey,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+      ),
+      [mockUSDCMint]
+    );
   });
 
   it("clone initialized!", async () => {
     await CloneClient.initializeClone(
       provider,
-      cloneProgram.programId,
+      cloneProgramId,
       liquidatorFee,
       liquidatorFee,
       treasuryAddress.publicKey,
@@ -233,7 +257,7 @@ describe("tests", async () => {
       provider.connection,
       cloneAccountAddress
     );
-    cloneClient = new CloneClient(provider, account, cloneProgram.programId);
+    cloneClient = new CloneClient(provider, account, cloneProgramId);
   });
 
   it("user initialized!", async () => {
@@ -249,7 +273,7 @@ describe("tests", async () => {
 
     priceFeed = await createPriceFeed(
       provider,
-      pythProgram.programId,
+      pythProgramId,
       price,
       expo,
       conf
@@ -262,23 +286,29 @@ describe("tests", async () => {
     let updatedPrice = (await getFeedData(provider, priceFeed)).aggregate.price;
     assert.equal(updatedPrice, price, "check updated price");
 
-    await jupiterProgram.methods
-      .createAsset(priceFeed)
-      .accounts({
-        payer: jupiterProgram.provider.publicKey!,
-        assetMint: mockAssetMint.publicKey,
-        jupiterAccount: jupiterAddress,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .signers([mockAssetMint])
-      .rpc();
+    await provider.sendAndConfirm(
+      new Transaction().add(
+        createCreateAssetInstruction(
+          {
+            payer: provider.publicKey!,
+            assetMint: mockAssetMint.publicKey,
+            jupiterAccount: jupiterAddress,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: anchor.web3.SystemProgram.programId,
+          },
+          { pythOracle: priceFeed }
+        )
+      ),
+      [mockAssetMint]
+    );
+
     await cloneClient.addOracleInfo(priceFeed);
   });
 
   it("pool initialized!", async () => {
-    const jupiterData = await jupiterProgram.account.jupiter.fetch(
+    const jupiterData = await Jupiter.fromAccountAddress(
+      provider.connection,
       jupiterAddress
     );
 
@@ -359,15 +389,18 @@ describe("tests", async () => {
       cloneClient.provider,
       mockUSDCMint.publicKey
     );
-    await jupiterProgram.methods
-      .mintUsdc(usdcMintAmount)
-      .accounts({
+    let ix = createMintUsdcInstruction(
+      {
         usdcMint: mockUSDCMint.publicKey,
         usdcTokenAccount: mockUSDCTokenAccountInfo.address,
         jupiterAccount: jupiterAddress,
         tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .rpc();
+      },
+      {
+        amount: usdcMintAmount,
+      }
+    );
+    await provider.sendAndConfirm(new Transaction().add(ix));
 
     mockUSDCTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
@@ -444,15 +477,22 @@ describe("tests", async () => {
         mockAssetMint.publicKey
       );
 
-    await jupiterProgram.methods
-      .mintAsset(0, new BN(assetMintAmount * 100000000))
-      .accounts({
-        assetMint: mockAssetMint.publicKey,
-        assetTokenAccount: mockAssetAssociatedTokenAddress.address,
-        jupiterAccount: jupiterAddress,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .rpc();
+    await provider.sendAndConfirm(
+      new Transaction().add(
+        createMintAssetInstruction(
+          {
+            assetMint: mockAssetMint.publicKey,
+            assetTokenAccount: mockAssetAssociatedTokenAddress.address,
+            jupiterAccount: jupiterAddress,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          },
+          {
+            assetIndex: 0,
+            amount: new BN(assetMintAmount * 100000000),
+          }
+        )
+      )
+    );
 
     mockAssetAssociatedTokenAddress = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
@@ -475,28 +515,33 @@ describe("tests", async () => {
     const currentOnUSD =
       Number(onusdTokenAccountInfo.amount) * CLONE_SCALE_CONVERSION;
 
-    jupiterAccount = await jupiterProgram.account.jupiter.fetch(jupiterAddress);
+    jupiterAccount = await Jupiter.fromAccountAddress(
+      provider.connection,
+      jupiterAddress
+    );
     let usdcMint = jupiterAccount.usdcMint;
 
     usdcAssociatedTokenAddress = await getAssociatedTokenAddress(
       jupiterAccount.usdcMint,
-      cloneProgram.provider.publicKey!,
+      provider.publicKey!,
       false,
       TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
     let onUSDtoMint = 5000000;
-
-    let ixUsdcMint = await jupiterProgram.methods
-      .mintUsdc(toScale(onUSDtoMint, 7))
-      .accounts({
+    let ixUsdcMint = createMintUsdcInstruction(
+      {
         usdcMint: usdcMint,
         usdcTokenAccount: usdcAssociatedTokenAddress,
         jupiterAccount: jupiterAddress,
         tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
+      },
+      {
+        amount: toScale(onUSDtoMint, 7),
+      }
+    );
+
     let wrapIx = cloneClient.mintOnusdInstruction(
       tokenData,
       toCloneScale(onUSDtoMint),
@@ -525,12 +570,15 @@ describe("tests", async () => {
   let usdcAssociatedTokenAddress;
 
   it("mint USDC and swap for some mock asset", async () => {
-    jupiterAccount = await jupiterProgram.account.jupiter.fetch(jupiterAddress);
+    jupiterAccount = await Jupiter.fromAccountAddress(
+      provider.connection,
+      jupiterAddress
+    );
     assetMint = jupiterAccount.assetMints[0];
     let usdcMint = jupiterAccount.usdcMint;
     assetAssociatedTokenAddress = await getAssociatedTokenAddress(
       assetMint,
-      cloneProgram.provider.publicKey!,
+      provider.publicKey!,
       false,
       TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
@@ -538,27 +586,26 @@ describe("tests", async () => {
 
     usdcAssociatedTokenAddress = await getAssociatedTokenAddress(
       jupiterAccount.usdcMint,
-      cloneProgram.provider.publicKey!,
+      provider.publicKey!,
       false,
       TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    await jupiterProgram.methods
-      .mintUsdc(new BN(10000 * 10000000))
-      .accounts({
+    let ixUsdcMint = createMintUsdcInstruction(
+      {
         usdcMint: usdcMint,
         usdcTokenAccount: usdcAssociatedTokenAddress,
         jupiterAccount: jupiterAddress,
         tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .rpc();
-
-    // Swap 10 asset out.
-    await jupiterProgram.methods
-      .swap(0, false, true, toCloneScale(10))
-      .accounts({
-        user: jupiterProgram.provider.publicKey!,
+      },
+      {
+        amount: new BN(10000 * 10000000),
+      }
+    );
+    let ixSwap = createSwapInstruction(
+      {
+        user: provider.publicKey!,
         jupiterAccount: jupiterAddress,
         assetMint: assetMint,
         usdcMint: usdcMint,
@@ -566,8 +613,16 @@ describe("tests", async () => {
         userUsdcTokenAccount: usdcAssociatedTokenAddress,
         pythOracle: jupiterAccount.oracles[0],
         tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .rpc();
+      },
+      {
+        assetIndex: 0,
+        isAmountInput: false,
+        isAmountAsset: true,
+        amount: toCloneScale(10),
+      }
+    );
+
+    await provider.sendAndConfirm(new Transaction().add(ixUsdcMint, ixSwap));
   });
   let mintAmount = 200000;
   let usdctoDeposit = 20000000;
@@ -1167,8 +1222,8 @@ describe("tests", async () => {
       fromCloneScale(pool.onusdIld),
       fromCloneScale(pool.onassetIld),
       fromCloneScale(pool.committedOnusdLiquidity),
-      fromScale(pool.liquidityTradingFee, 4),
-      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(pool.liquidityTradingFeeBps, 4),
+      fromScale(pool.treasuryTradingFeeBps, 4),
       fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
@@ -1230,8 +1285,8 @@ describe("tests", async () => {
       fromCloneScale(pool.onusdIld),
       fromCloneScale(pool.onassetIld),
       fromCloneScale(pool.committedOnusdLiquidity),
-      fromScale(pool.liquidityTradingFee, 4),
-      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(pool.liquidityTradingFeeBps, 4),
+      fromScale(pool.treasuryTradingFeeBps, 4),
       fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
@@ -1321,7 +1376,7 @@ describe("tests", async () => {
       treasuryOnassetTokenAccount.address,
       {
         cloneStaking: cloneStakingAddress,
-        cloneStakingProgram: cloneStakingProgram.programId,
+        cloneStakingProgram: cloneStakingProgramId,
         userStakingAccount: userStakingAddress,
       }
     );
@@ -1369,8 +1424,8 @@ describe("tests", async () => {
       fromCloneScale(pool.onusdIld),
       fromCloneScale(pool.onassetIld),
       fromCloneScale(pool.committedOnusdLiquidity),
-      fromScale(pool.liquidityTradingFee, 4),
-      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(pool.liquidityTradingFeeBps, 4),
+      fromScale(pool.treasuryTradingFeeBps, 4),
       fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
@@ -1519,7 +1574,7 @@ describe("tests", async () => {
 
     let priceFeed2 = await createPriceFeed(
       provider,
-      pythProgram.programId,
+      pythProgramId,
       price,
       expo,
       conf
@@ -1528,20 +1583,25 @@ describe("tests", async () => {
       .price;
     assert.equal(currentPrice, price, "check initial price");
 
-    await jupiterProgram.methods
-      .createAsset(priceFeed2)
-      .accounts({
-        payer: jupiterProgram.provider.publicKey!,
-        assetMint: mockAssetMint2.publicKey,
-        jupiterAccount: jupiterAddress,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .signers([mockAssetMint2])
-      .rpc();
+    await provider.sendAndConfirm(
+      new Transaction().add(
+        createCreateAssetInstruction(
+          {
+            payer: provider.publicKey!,
+            assetMint: mockAssetMint2.publicKey,
+            jupiterAccount: jupiterAddress,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: anchor.web3.SystemProgram.programId,
+          },
+          { pythOracle: priceFeed2 }
+        )
+      ),
+      [mockAssetMint2]
+    );
 
-    const jupiterData = await jupiterProgram.account.jupiter.fetch(
+    const jupiterData = await Jupiter.fromAccountAddress(
+      provider.connection,
       jupiterAddress
     );
 
@@ -1622,8 +1682,8 @@ describe("tests", async () => {
       fromCloneScale(pool.onusdIld),
       fromCloneScale(pool.onassetIld),
       fromCloneScale(pool.committedOnusdLiquidity),
-      fromScale(pool.liquidityTradingFee, 4),
-      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(pool.liquidityTradingFeeBps, 4),
+      fromScale(pool.treasuryTradingFeeBps, 4),
       fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
@@ -1691,18 +1751,13 @@ describe("tests", async () => {
     let oracle = tokenData.oracles[Number(pool.assetInfo.oracleInfoIndex)];
 
     // change status to frozen
-    await cloneProgram.methods
-      .updatePoolParameters(poolIndex, {
-        status: {
-          value: new BN(1),
-        },
-      })
-      .accounts({
-        auth: cloneClient.clone!.admin,
-        clone: cloneClient.cloneAddress,
-        tokenData: cloneClient.clone!.tokenData,
-      })
-      .rpc();
+    await cloneClient.updatePoolParameters({
+      index: poolIndex,
+      params: {
+        __kind: "Status",
+        value: new BN(1),
+      },
+    });
 
     let updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
 
@@ -1757,8 +1812,8 @@ describe("tests", async () => {
       fromCloneScale(pool.onusdIld),
       fromCloneScale(pool.onassetIld),
       fromCloneScale(pool.committedOnusdLiquidity),
-      fromScale(pool.liquidityTradingFee, 4),
-      fromScale(pool.treasuryTradingFee, 4),
+      fromScale(pool.liquidityTradingFeeBps, 4),
+      fromScale(pool.treasuryTradingFeeBps, 4),
       fromScale(oracle.price, oracle.expo)
     );
     // Buy via specified onasset for output
@@ -1791,18 +1846,13 @@ describe("tests", async () => {
     let userAccount = await cloneClient.getUserAccount();
 
     // change status to liquidation
-    await cloneProgram.methods
-      .updatePoolParameters(1, {
-        status: {
-          value: new BN(3),
-        },
-      })
-      .accounts({
-        auth: cloneClient.clone!.admin,
-        clone: cloneClient.cloneAddress,
-        tokenData: cloneClient.clone!.tokenData,
-      })
-      .rpc();
+    await cloneClient.updatePoolParameters({
+      index: 1,
+      params: {
+        __kind: "Status",
+        value: new BN(3),
+      },
+    });
 
     let collateral = tokenData.collaterals[0];
 
@@ -1846,18 +1896,13 @@ describe("tests", async () => {
     assert.closeTo(healthScore.healthScore, 100, 1, "check health score.");
 
     // change status to active
-    await cloneProgram.methods
-      .updatePoolParameters(1, {
-        status: {
-          value: new BN(0),
-        },
-      })
-      .accounts({
-        auth: cloneClient.clone!.admin,
-        clone: cloneClient.cloneAddress,
-        tokenData: cloneClient.clone!.tokenData,
-      })
-      .rpc();
+    await cloneClient.updatePoolParameters({
+      index: 1,
+      params: {
+        __kind: "Status",
+        value: new BN(0),
+      },
+    });
   });
 
   it("borrow position liquidation", async () => {
@@ -1945,38 +1990,28 @@ describe("tests", async () => {
     );
 
     // Reset params
-    await cloneProgram.methods
-      .updatePoolParameters(0, {
-        positionHealthScoreCoefficient: {
-          value: toCloneScale(healthScoreCoefficient),
-        },
-      })
-      .accounts({
-        auth: cloneClient.clone!.admin,
-        clone: cloneClient.cloneAddress,
-        tokenData: cloneClient.clone!.tokenData,
-      })
-      .rpc();
-
-    await cloneProgram.methods
-      .updatePoolParameters(0, {
-        ilHealthScoreCoefficient: {
-          value: toCloneScale(ilHealthScoreCoefficient),
-        },
-      })
-      .accounts({
-        auth: cloneClient.clone!.admin,
-        clone: cloneClient.cloneAddress,
-        tokenData: cloneClient.clone!.tokenData,
-      })
-      .rpc();
+    await cloneClient.updatePoolParameters({
+      index: 0,
+      params: {
+        __kind: "PositionHealthScoreCoefficient",
+        value: toCloneScale(healthScoreCoefficient),
+      },
+    });
+    await cloneClient.updatePoolParameters({
+      index: 0,
+      params: {
+        __kind: "IlHealthScoreCoefficient",
+        value: toCloneScale(ilHealthScoreCoefficient),
+      },
+    });
   });
 
   it("wrap assets and unwrap onassets", async () => {
     const poolIndex = 0;
     const tokenData = await cloneClient.getTokenData();
     const pool = tokenData.pools[poolIndex];
-    const jupiterData = await jupiterProgram.account.jupiter.fetch(
+    const jupiterData = await Jupiter.fromAccountAddress(
+      provider.connection,
       jupiterAddress
     );
 
@@ -1991,15 +2026,22 @@ describe("tests", async () => {
       pool.assetInfo.onassetMint
     );
     // Get asset from jupiter
-    await jupiterProgram.methods
-      .mintAsset(0, new BN(10 * 100000000))
-      .accounts({
-        assetMint: jupiterData.assetMints[0],
-        assetTokenAccount: mockAssetAssociatedTokenAccount.address,
-        jupiterAccount: jupiterAddress,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .rpc();
+    await provider.sendAndConfirm(
+      new Transaction().add(
+        createMintAssetInstruction(
+          {
+            assetMint: jupiterData.assetMints[0],
+            assetTokenAccount: mockAssetAssociatedTokenAccount.address,
+            jupiterAccount: jupiterAddress,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          },
+          {
+            assetIndex: 0,
+            amount: new BN(10 * 100000000),
+          }
+        )
+      )
+    );
 
     mockAssetAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
       cloneClient.provider,
@@ -2076,37 +2118,45 @@ describe("tests", async () => {
   });
 
   it("withdraw all staked CLN", async () => {
-    let userStakingAccount = await cloneStakingProgram.account.user.fetch(
+    let userStakingAccount = await CloneStaking.User.fromAccountAddress(
+      provider.connection,
       userStakingAddress
     );
 
     const getSlot = async () => {
-      return await cloneClient.provider.connection.getSlot("finalized");
+      return await provider.connection.getSlot("finalized");
     };
 
     while (
-      (await getSlot()) < userStakingAccount.minSlotWithdrawal.toNumber()
+      (await getSlot()) < Number(userStakingAccount.minSlotWithdrawal)
     ) {
       sleep(1000);
     }
 
-    await cloneStakingProgram.methods
-      .withdrawStake(userStakingAccount.stakedTokens)
-      .accounts({
-        user: walletPubkey,
-        userAccount: userStakingAddress,
-        cloneStaking: cloneStakingAddress,
-        clnTokenMint: clnTokenMint.publicKey,
-        clnTokenVault: clnTokenVault,
-        userClnTokenAccount: userClnTokenAddress,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .rpc();
+    await provider.sendAndConfirm(
+      new Transaction().add(
+        CloneStaking.createWithdrawStakeInstruction(
+          {
+            user: provider.publicKey!,
+            userAccount: userStakingAddress,
+            cloneStaking: cloneStakingAddress,
+            clnTokenMint: clnTokenMint.publicKey,
+            clnTokenVault: clnTokenVault,
+            userClnTokenAccount: userClnTokenAddress,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: anchor.web3.SystemProgram.programId,
+          },
+          {
+            amount: userStakingAccount.stakedTokens,
+          }
+        )
+      )
+    );
 
-    userStakingAccount = await cloneStakingProgram.account.user.fetch(
+    userStakingAccount = await CloneStaking.User.fromAccountAddress(
+      provider.connection,
       userStakingAddress
     );
-    assert.equal(userStakingAccount.stakedTokens.toNumber(), 0);
+    assert.equal(Number(userStakingAccount.stakedTokens), 0);
   });
 });

@@ -18,7 +18,7 @@ pub struct InitializeClone<'info> {
     #[account(
         init,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
-        space = 8 + 489,
+        space = 8 + 464,
         bump,
         payer = admin
     )]
@@ -37,7 +37,7 @@ pub struct InitializeClone<'info> {
         payer = admin
     )]
     pub onusd_vault: Account<'info, TokenAccount>,
-    /// CHECK:
+    /// CHECK: This is an admin method so this should be correct
     pub usdc_mint: Account<'info, Mint>,
     #[account(
         init,
@@ -53,7 +53,6 @@ pub struct InitializeClone<'info> {
     pub system_program: Program<'info, System>,
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn execute(
     ctx: Context<InitializeClone>,
     comet_liquidator_fee_bps: u16,
@@ -61,11 +60,7 @@ pub fn execute(
     treasury_address: Pubkey,
 ) -> Result<()> {
     return_error_if_false!(
-        comet_liquidator_fee_bps < 10000,
-        CloneError::InvalidValueRange
-    );
-    return_error_if_false!(
-        borrow_liquidator_fee_bps < 10000,
+        comet_liquidator_fee_bps < 10000 && borrow_liquidator_fee_bps < 10000,
         CloneError::InvalidValueRange
     );
     let mut token_data = ctx.accounts.token_data.load_init()?;

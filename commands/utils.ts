@@ -17,6 +17,7 @@ import { Provider, BN } from "@coral-xyz/anchor";
 import { CloneClient, CLONE_TOKEN_SCALE, toCloneScale } from "../sdk/src/clone";
 import { Clone as CloneAccount } from "../sdk/generated/clone";
 import { Jupiter } from "../sdk/generated/jupiter-agg-mock";
+import { CloneStaking } from "../sdk/generated/clone-staking";
 
 const chalk = require("chalk");
 
@@ -99,6 +100,28 @@ export async function getJupiterAccount(
   return await Jupiter.fromAccountAddress(provider.connection, jupiterAddress);
 }
 
+export function getCloneStakingData() {
+  const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
+
+  const cloneStakingProgramId = new PublicKey(config.staking);
+
+  const [cloneStakingAddress, ___] = PublicKey.findProgramAddressSync(
+    [Buffer.from("clone-staking")],
+    cloneStakingProgramId
+  );
+
+  return [cloneStakingProgramId, cloneStakingAddress];
+}
+export async function getCloneStakingAccount(
+  provider: anchor.AnchorProvider,
+  cloneStakingAddress: PublicKey
+) {
+  return await CloneStaking.fromAccountAddress(
+    provider.connection,
+    cloneStakingAddress
+  );
+}
+
 export function getPythData() {
   const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
@@ -112,19 +135,16 @@ export function getPythData() {
   return [pythProgramId, pythAddress];
 }
 
-export async function getUSDC() {
+export function getUSDC() {
   const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
   return new PublicKey(config.usdc);
 }
 
-export async function getAssetPriceFeed(
-  provider: anchor.AnchorProvider,
-  index: number
-) {
-  //not yet implemented
+export function getCLN() {
+  const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
-  return "";
+  return new PublicKey(config.cln);
 }
 
 export const getOrCreateAssociatedTokenAccount = async (

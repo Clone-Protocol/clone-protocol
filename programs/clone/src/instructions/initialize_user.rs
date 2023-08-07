@@ -12,7 +12,7 @@ pub struct InitializeUser<'info> {
     pub payer: Signer<'info>,
     #[account(
         init,
-        space = 8 + 5144,
+        space = 8 + 3096,
         seeds = [USER_SEED.as_ref(), authority.as_ref()],
         bump,
         payer = payer

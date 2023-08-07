@@ -1,3 +1,4 @@
+import fs from "fs";
 import { getFeedData } from "../../sdk/src/oracle";
 import {
   successLog,
@@ -28,6 +29,16 @@ exports.handler = async function () {
       borderColor: "green",
       backgroundColor: "#CCCCCC",
     };
+
+    const config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
+
+    if (config.cln != "") {
+      let underline = new Array("$CLN".length).fill("-").join("");
+      let assetInfo =
+        `$CLN\n` + `${underline}\n` + `Mint: ${chalk.bold(config.cln)}\n`;
+
+      console.log(boxen(assetInfo, assetBoxenOptions));
+    }
 
     let underline = new Array(`USDC`.length).fill("-").join("");
     let assetInfo =

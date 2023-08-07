@@ -77,8 +77,8 @@ exports.handler = async function (yargs: CommandArguments) {
       Number(pool.onusdIld),
       Number(pool.onassetIld),
       Number(pool.committedOnusdLiquidity),
-      Number(pool.liquidityTradingFee),
-      Number(pool.treasuryTradingFee),
+      Number(pool.liquidityTradingFeeBps),
+      Number(pool.treasuryTradingFeeBps),
       Number(oracle.price)
     );
 

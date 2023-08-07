@@ -7,8 +7,8 @@ use anchor_spl::token::*;
 #[instruction(
     min_overcollateral_ratio: u16,
     max_liquidation_overcollateral_ratio: u16,
-    liquidity_trading_fee: u16,
-    treasury_trading_fee: u16,
+    liquidity_trading_fee_bps: u16,
+    treasury_trading_fee_bps: u16,
     il_health_score_coefficient: u64,
     position_health_score_coefficient: u64,
     oracle_info_index: u8,
@@ -85,8 +85,8 @@ pub fn execute(
     ctx: Context<InitializePool>,
     min_overcollateral_ratio: u16,
     max_liquidation_overcollateral_ratio: u16,
-    liquidity_trading_fee: u16,
-    treasury_trading_fee: u16,
+    liquidity_trading_fee_bps: u16,
+    treasury_trading_fee_bps: u16,
     il_health_score_coefficient: u64,
     position_health_score_coefficient: u64,
     oracle_info_index: u8,
@@ -100,8 +100,8 @@ pub fn execute(
             .underlying_asset_token_account
             .to_account_info()
             .key(),
-        treasury_trading_fee: treasury_trading_fee.into(),
-        liquidity_trading_fee: liquidity_trading_fee.into(),
+        treasury_trading_fee_bps: treasury_trading_fee_bps.into(),
+        liquidity_trading_fee_bps: liquidity_trading_fee_bps.into(),
         asset_info: AssetInfo {
             ..Default::default()
         },

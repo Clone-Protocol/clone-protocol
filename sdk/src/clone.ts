@@ -213,8 +213,8 @@ export class CloneClient {
           {
             minOvercollateralRatio,
             maxLiquidationOvercollateralRatio,
-            liquidityTradingFee: liquidityTradingFeeBps,
-            treasuryTradingFee: treasuryTradingFeeBps,
+            liquidityTradingFeeBps,
+            treasuryTradingFeeBps,
             ilHealthScoreCoefficient: toCloneScale(ilHealthScoreCoefficient),
             positionHealthScoreCoefficient: toCloneScale(
               positionHealthScoreCoefficient
@@ -602,7 +602,7 @@ export class CloneClient {
         clone: this.cloneAddress,
         tokenData: this.clone!.tokenData,
         onassetMint: assetInfo.onassetMint,
-        userOnassetTokenAccount: userOnassetTokenAccount,
+        payerOnassetTokenAccount: userOnassetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       { user: this.provider.publicKey!, borrowIndex, amount: onassetAmount }

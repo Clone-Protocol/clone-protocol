@@ -1,9 +1,8 @@
 use crate::error::*;
 use crate::math::*;
-use crate::return_error_if_false;
 use crate::states::*;
 use crate::to_clone_decimal;
-use crate::{CLONE_PROGRAM_SEED, USER_SEED};
+use crate::{return_error_if_false, CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;

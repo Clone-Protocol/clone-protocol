@@ -1,3 +1,4 @@
+import fs from "fs";
 import * as anchor from "@coral-xyz/anchor";
 import { Transaction } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -29,7 +30,14 @@ exports.handler = async function () {
       systemProgram: anchor.web3.SystemProgram.programId,
     });
 
-    await provider.sendAndConfirm(new Transaction().add(ix));
+    await provider.sendAndConfirm(new Transaction().add(ix), [mockUSDCMint]);
+
+    // Update the config file
+    const config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
+
+    config.usdc = mockUSDCMint.publicKey.toString();
+
+    fs.writeFileSync("./config.json", JSON.stringify(config));
 
     successLog("Mock Jupiter Program Initialized!");
   } catch (error: any) {
