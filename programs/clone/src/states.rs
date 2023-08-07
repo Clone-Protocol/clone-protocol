@@ -1,11 +1,8 @@
 use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
-use crate::{to_bps_decimal, to_clone_decimal, to_ratio_decimal};
+use crate::{to_bps_decimal, to_clone_decimal};
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
-
-pub static ONUSD_COLLATERAL_INDEX: usize = 0;
-pub static USDC_COLLATERAL_INDEX: usize = 1;
 
 #[repr(u64)]
 #[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
@@ -18,15 +15,12 @@ pub enum Status {
 }
 
 pub const NUM_POOLS: usize = 64;
-pub const NUM_COLLATERALS: usize = 16;
-pub const NUM_ORACLES: usize = 80;
 pub const NUM_BORROW_POSITIONS: usize = 24;
 pub const NUM_AUTH: usize = 10;
 
 #[account]
 #[derive(Default)]
 pub struct Clone {
-    pub onusd_mint: Pubkey,
     pub admin: Pubkey,
     pub auth: [Pubkey; NUM_AUTH],
     pub bump: u8,
@@ -39,22 +33,20 @@ pub struct Clone {
 #[account(zero_copy)]
 pub struct TokenData {
     pub num_pools: u64,
-    pub num_collaterals: u64,
-    pub num_oracles: u64,
+    pub collateral_mint: Pubkey,
+    pub collateral_vault: Pubkey,
+    pub collateral_oracle_info: OracleInfo,
     pub pools: [Pool; NUM_POOLS],
-    pub collaterals: [Collateral; NUM_COLLATERALS],
-    pub oracles: [OracleInfo; NUM_ORACLES],
 }
 
 impl Default for TokenData {
     fn default() -> Self {
         Self {
             num_pools: 0,
-            num_collaterals: 0,
-            num_oracles: 0,
+            collateral_mint: Pubkey::default(),
+            collateral_vault: Pubkey::default(),
+            collateral_oracle_info: OracleInfo::default(),
             pools: [Pool::default(); NUM_POOLS],
-            collaterals: [Collateral::default(); NUM_COLLATERALS],
-            oracles: [OracleInfo::default(); NUM_ORACLES],
         }
     }
 }
@@ -64,14 +56,6 @@ impl TokenData {
         self.pools[(self.num_pools) as usize] = new_pool;
         self.num_pools += 1;
     }
-    pub fn append_collateral(&mut self, new_collateral: Collateral) {
-        self.collaterals[(self.num_collaterals) as usize] = new_collateral;
-        self.num_collaterals += 1;
-    }
-    pub fn append_oracle_info(&mut self, oracle_info: OracleInfo) {
-        self.oracles[(self.num_oracles) as usize] = oracle_info;
-        self.num_oracles += 1;
-    }
 }
 
 #[zero_copy]
@@ -79,7 +63,7 @@ impl TokenData {
 pub struct AssetInfo {
     // 80
     pub onasset_mint: Pubkey,
-    pub oracle_info_index: u64,
+    pub oracle_info: OracleInfo,
     pub il_health_score_coefficient: u64,
     pub position_health_score_coefficient: u64,
     pub min_overcollateral_ratio: u64,
@@ -106,8 +90,8 @@ impl OracleInfo {
 #[derive(PartialEq, Eq, Default, Debug)]
 pub struct Pool {
     pub underlying_asset_token_account: Pubkey,
-    pub committed_onusd_liquidity: u64,
-    pub onusd_ild: i64,
+    pub committed_collateral_liquidity: u64,
+    pub collateral_ild: i64,
     pub onasset_ild: i64,
     pub treasury_trading_fee_bps: u64,
     pub liquidity_trading_fee_bps: u64,
@@ -123,30 +107,37 @@ pub struct SwapSummary {
 }
 
 impl Pool {
-    pub fn calculate_jit_pool(&self, oracle_price: Decimal) -> (Decimal, Decimal) {
-        let committed_onusd_liquidity = to_clone_decimal!(self.committed_onusd_liquidity);
-        let onusd_ild = to_clone_decimal!(self.onusd_ild);
+    pub fn calculate_jit_pool(
+        &self,
+        onasset_price: Decimal,
+        collateral_price: Decimal,
+    ) -> (Decimal, Decimal) {
+        let committed_collateral_liquidity = to_clone_decimal!(self.committed_collateral_liquidity);
+        let collateral_ild = to_clone_decimal!(self.collateral_ild);
         let onasset_ild = to_clone_decimal!(self.onasset_ild);
-        let pool_onusd =
-            rescale_toward_zero(committed_onusd_liquidity - onusd_ild, CLONE_TOKEN_SCALE);
-        let pool_onasset = rescale_toward_zero(
-            committed_onusd_liquidity / oracle_price - onasset_ild,
+        let pool_collateral = rescale_toward_zero(
+            committed_collateral_liquidity / collateral_price - collateral_ild,
             CLONE_TOKEN_SCALE,
         );
-        (pool_onusd, pool_onasset)
+        let pool_onasset = rescale_toward_zero(
+            committed_collateral_liquidity / onasset_price - onasset_ild,
+            CLONE_TOKEN_SCALE,
+        );
+        (pool_collateral, pool_onasset)
     }
 
     pub fn calculate_swap(
         &self,
-        oracle_price: Decimal,
+        onasset_price: Decimal,
+        collateral_price: Decimal,
         quantity: Decimal,
         quantity_is_input: bool,
-        quantity_is_onusd: bool,
+        quantity_is_collateral: bool,
         override_liquidity_trading_fee: Option<Decimal>,
         override_treasury_trading_fee: Option<Decimal>,
     ) -> SwapSummary {
-        let (pool_onusd, pool_onasset) = self.calculate_jit_pool(oracle_price);
-        let invariant = pool_onasset * pool_onusd;
+        let (pool_collateral, pool_onasset) = self.calculate_jit_pool(onasset_price, collateral_price);
+        let invariant = pool_onasset * pool_collateral;
         let default_liquidity_trading_fee = to_bps_decimal!(self.liquidity_trading_fee_bps);
         let default_treasury_trading_fee = to_bps_decimal!(self.treasury_trading_fee_bps);
         let liquidity_trading_fee =
@@ -155,10 +146,10 @@ impl Pool {
             override_treasury_trading_fee.unwrap_or(default_treasury_trading_fee);
 
         if quantity_is_input {
-            let (i_pool, o_pool) = if quantity_is_onusd {
-                (pool_onusd, pool_onasset)
+            let (i_pool, o_pool) = if quantity_is_collateral {
+                (pool_collateral, pool_onasset)
             } else {
-                (pool_onasset, pool_onusd)
+                (pool_onasset, pool_collateral)
             };
             let output_before_fees =
                 rescale_toward_zero(o_pool - invariant / (i_pool + quantity), CLONE_TOKEN_SCALE);
@@ -178,10 +169,10 @@ impl Pool {
                 treasury_fees_paid,
             }
         } else {
-            let (o_pool, i_pool) = if quantity_is_onusd {
-                (pool_onusd, pool_onasset)
+            let (o_pool, i_pool) = if quantity_is_collateral {
+                (pool_collateral, pool_onasset)
             } else {
-                (pool_onasset, pool_onusd)
+                (pool_onasset, pool_collateral)
             };
             let output_before_fees = rescale_toward_zero(
                 quantity / (Decimal::ONE - liquidity_trading_fee - treasury_trading_fee),
@@ -206,19 +197,8 @@ impl Pool {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.committed_onusd_liquidity == 0 && self.onasset_ild == 0 && self.onusd_ild == 0
+        self.committed_collateral_liquidity == 0 && self.onasset_ild == 0 && self.collateral_ild == 0
     }
-}
-
-#[zero_copy]
-#[derive(PartialEq, Eq, Default, Debug)]
-pub struct Collateral {
-    pub oracle_info_index: u64,
-    pub mint: Pubkey,
-    pub vault: Pubkey,
-    pub collateralization_ratio: u64,
-    pub status: u64,
-    pub scale: u64,
 }
 
 #[account(zero_copy)]
@@ -232,20 +212,18 @@ pub struct User {
 #[zero_copy]
 #[derive(PartialEq, Eq, Debug)]
 pub struct Comet {
-    // 46,976
+    // ??
     pub num_positions: u64,
-    pub num_collaterals: u64,
+    pub collateral_amount: u64,
     pub positions: [CometPosition; NUM_POOLS], // 255 * 120 = 30,600
-    pub collaterals: [CometCollateral; NUM_COLLATERALS], // 255 * 64 = 16,320
 }
 
 impl Default for Comet {
     fn default() -> Self {
         Self {
             num_positions: 0,
-            num_collaterals: 0,
+            collateral_amount: 0,
             positions: [CometPosition::default(); NUM_POOLS],
-            collaterals: [CometCollateral::default(); NUM_COLLATERALS],
         }
     }
 }
@@ -258,52 +236,12 @@ impl Comet {
         };
         self.num_positions -= 1;
     }
-    pub fn remove_collateral(&mut self, index: usize) {
-        self.collaterals[index] = self.collaterals[(self.num_collaterals - 1) as usize];
-        self.collaterals[(self.num_collaterals - 1) as usize] = CometCollateral {
-            ..Default::default()
-        };
-        self.num_collaterals -= 1;
-    }
-    pub fn add_collateral(&mut self, new_collateral: CometCollateral) {
-        self.collaterals[(self.num_collaterals) as usize] = new_collateral;
-        self.num_collaterals += 1;
-    }
     pub fn add_position(&mut self, new_pool: CometPosition) {
         self.positions[(self.num_positions) as usize] = new_pool;
         self.num_positions += 1;
     }
-    pub fn calculate_effective_collateral_value(&self, token_data: &TokenData) -> Decimal {
-        let mut total_value = Decimal::new(0, CLONE_TOKEN_SCALE);
-
-        self.collaterals[0..(self.num_collaterals as usize)]
-            .iter()
-            .enumerate()
-            .for_each(|(_, comet_collateral)| {
-                let collateral_index = comet_collateral.collateral_index as usize;
-                let collateral = token_data.collaterals[collateral_index];
-                let collateral_amount = Decimal::new(
-                    comet_collateral.collateral_amount.try_into().unwrap(),
-                    collateral.scale.try_into().unwrap(),
-                );
-                let collateral_value = if collateral_index == ONUSD_COLLATERAL_INDEX
-                    || collateral_index == USDC_COLLATERAL_INDEX
-                {
-                    collateral_amount
-                } else {
-                    let oracle_price =
-                        token_data.oracles[collateral.oracle_info_index as usize].get_price();
-                    collateral_amount
-                        * oracle_price
-                        * to_ratio_decimal!(collateral.collateralization_ratio)
-                };
-                total_value += collateral_value;
-            });
-        total_value
-    }
-
     pub fn is_empty(&self) -> bool {
-        self.num_positions == 0 && self.num_collaterals == 0
+        self.num_positions == 0 && self.collateral_amount == 0
     }
 }
 
@@ -312,8 +250,8 @@ impl Comet {
 pub struct CometPosition {
     // 120
     pub pool_index: u64,
-    pub committed_onusd_liquidity: u64,
-    pub onusd_ild_rebate: i64,
+    pub committed_collateral_liquidity: u64,
+    pub collateral_ild_rebate: i64,
     pub onasset_ild_rebate: i64,
 }
 
@@ -321,8 +259,8 @@ impl Default for CometPosition {
     fn default() -> Self {
         Self {
             pool_index: u8::MAX.into(),
-            committed_onusd_liquidity: 0,
-            onusd_ild_rebate: 0,
+            committed_collateral_liquidity: 0,
+            collateral_ild_rebate: 0,
             onasset_ild_rebate: 0,
         }
     }
@@ -330,8 +268,8 @@ impl Default for CometPosition {
 
 impl CometPosition {
     pub fn is_empty(&self) -> bool {
-        self.committed_onusd_liquidity == 0
-            && self.onusd_ild_rebate == 0
+        self.committed_collateral_liquidity == 0
+            && self.collateral_ild_rebate == 0
             && self.onasset_ild_rebate == 0
     }
 }
