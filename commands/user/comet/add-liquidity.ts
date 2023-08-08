@@ -1,12 +1,12 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient, toDevnetScale } from "../../../sdk/src/clone";
+import { toCloneScale } from "../../../sdk/src/clone";
 import { BN } from "@coral-xyz/anchor";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneProgram,
-  getOrCreateAssociatedTokenAccount,
+  getCloneData,
+  getCloneClient,
 } from "../../utils";
 import { Argv } from "yargs";
 
@@ -30,21 +30,25 @@ exports.builder = (yargs: CommandArguments) => {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
+    const tokenData = await cloneClient.getTokenData();
 
-    let updatePricesIx = await cloneClient.updatePricesInstruction()
+    let updatePricesIx = cloneClient.updatePricesInstruction(tokenData)
     ;
-    const amount = new BN(`${toDevnetScale(yargs.amount)}`);
+    const amount = new BN(`${toCloneScale(yargs.amount)}`);
 
-    let ix = await cloneClient.addLiquidityToCometInstruction(
+    let ix = cloneClient.addLiquidityToCometInstruction(
         amount,
         yargs.poolIndex
       );
-      await setup.provider.sendAndConfirm(
+      await provider.sendAndConfirm(
         new Transaction().add(updatePricesIx).add(ix)
       );
 

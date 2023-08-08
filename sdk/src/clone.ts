@@ -60,6 +60,8 @@ const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 export const CLONE_TOKEN_SCALE = 8;
 export const MAX_PRICE_SIZE = 128;
+export const ONUSD_COLLATERAL_INDEX = 0;
+export  const USDC_COLLATERAL_INDEX = 1;
 
 export const toScale = (x: number, scale: number): BN => {
   let stringDigits = [];
@@ -433,7 +435,7 @@ export class CloneClient {
     poolIndices?: number[]
   ): TransactionInstruction {
     let arr = [];
-    for (let i = 0; i < tokenData.numOracles.toNumber(); i++) {
+    for (let i = 0; i < Number(tokenData.numOracles); i++) {
       arr.push(i);
     }
     let indices = poolIndices ? poolIndices : arr;
@@ -664,7 +666,7 @@ export class CloneClient {
     borrowIndex: number
   ): TransactionInstruction {
     let assetInfo =
-      tokenData.pools[userAccount.borrows.positions[borrowIndex].poolIndex]
+      tokenData.pools[Number(userAccount.borrows.positions[borrowIndex].poolIndex)]
         .assetInfo;
     const { userPubkey } = this.getUserAddress();
 
@@ -772,7 +774,7 @@ export class CloneClient {
         tokenData: this.tokenDataAddress,
         vault:
           tokenData.collaterals[
-            userAccount.comet.collaterals[cometCollateralIndex].collateralIndex
+            Number(userAccount.comet.collaterals[cometCollateralIndex].collateralIndex)
           ].vault,
         userCollateralTokenAccount: userCollateralTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -838,7 +840,7 @@ export class CloneClient {
         tokenData: this.tokenDataAddress,
         onusdMint: this.clone!.onusdMint,
         onassetMint:
-          tokenData.pools[cometPosition.poolIndex].assetInfo.onassetMint,
+          tokenData.pools[Number(cometPosition.poolIndex)].assetInfo.onassetMint,
         tokenProgram: TOKEN_PROGRAM_ID,
         payerOnassetTokenAccount: payerOnassetTokenAccount,
         payerOnusdTokenAccount: payerOnusdTokenAccount,
@@ -869,8 +871,8 @@ export class CloneClient {
       liquidateeUserAccount.comet.positions[cometPositionIndex];
     const cometCollateral =
       liquidateeUserAccount.comet.collaterals[cometCollateralIndex];
-    const pool = tokenData.pools[cometPosition.poolIndex];
-    const collateral = tokenData.collaterals[cometCollateral.collateralIndex];
+    const pool = tokenData.pools[Number(cometPosition.poolIndex)];
+    const collateral = tokenData.collaterals[Number(cometCollateral.collateralIndex)];
 
     return createLiquidateCometPositionInstruction(
       {
@@ -907,8 +909,8 @@ export class CloneClient {
   ): TransactionInstruction {
     const { userPubkey } = this.getUserAddress(liquidateeAddress);
     const borrowPosition = liquidateeUserAccount.borrows.positions[borrowIndex];
-    const pool = tokenData.pools[borrowPosition.poolIndex];
-    const collateral = tokenData.collaterals[borrowPosition.collateralIndex];
+    const pool = tokenData.pools[Number(borrowPosition.poolIndex)];
+    const collateral = tokenData.collaterals[Number(borrowPosition.collateralIndex)];
 
     return createLiquidateBorrowPositionInstruction(
       {

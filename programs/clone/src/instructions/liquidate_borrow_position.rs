@@ -70,7 +70,8 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
 
     let borrows = &mut ctx.accounts.user_account.load_mut()?.borrows;
     let borrow_position = borrows.positions[borrow_index as usize];
-    let pool = token_data.pools[borrow_position.pool_index as usize];
+    let pool_index = borrow_position.pool_index as usize;
+    let pool = token_data.pools[pool_index];
     let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral_index = borrow_position.collateral_index as usize;
     let collateral = token_data.collaterals[collateral_index];
@@ -193,11 +194,11 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
-        pool_index: borrow_position.pool_index.try_into().unwrap(),
+        pool_index: pool_index.try_into().unwrap(),
         is_liquidation: true,
         collateral_supplied: borrows.positions[borrow_index as usize].collateral_amount,
         collateral_delta: -(collateral_reward.mantissa() as i64),
-        collateral_index: borrow_position.collateral_index.try_into().unwrap(),
+        collateral_index: collateral_index.try_into().unwrap(),
         borrowed_amount: borrows.positions[borrow_index as usize].borrowed_onasset,
         borrowed_delta: -(burn_amount as i64)
     });

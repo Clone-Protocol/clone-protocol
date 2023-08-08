@@ -1,11 +1,14 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient } from "../../../sdk/src/clone";
-import { getMantissa, toNumber } from "../../../sdk/src/decimal";
+import {
+  ONUSD_COLLATERAL_INDEX,
+  USDC_COLLATERAL_INDEX,
+} from "../../../sdk/src/clone";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneProgram,
+  getCloneData,
+  getCloneClient,
 } from "../../utils";
 
 import chalk from "chalk";
@@ -16,43 +19,51 @@ exports.desc = "View your borrow positions";
 exports.builder = {};
 exports.handler = async function () {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
-
-    let ix = await cloneClient.updatePricesInstruction();
-    await setup.provider.sendAndConfirm(new Transaction().add(ix));
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
     const tokenData = await cloneClient.getTokenData();
-    const borrowPositions = await cloneClient.getBorrowPositions();
 
-    for (let i = 0; i < Number(borrowPositions.numPositions); i++) {
-      const borrowPosition = borrowPositions.borrowPositions[i];
+    let ix = cloneClient.updatePricesInstruction(tokenData);
+    await provider.sendAndConfirm(new Transaction().add(ix));
 
-      const pool = tokenData.pools[borrowPosition.poolIndex];
-      const collateral = tokenData.collaterals[borrowPosition.collateralIndex];
+    const user = await cloneClient.getUserAccount();
+    const borrows = user.borrows;
 
-      const stable = Number(collateral.stable);
+    for (let i = 0; i < Number(borrows.numPositions); i++) {
+      const borrowPosition = borrows.positions[i];
+
+      const pool = tokenData.pools[Number(borrowPosition.poolIndex)];
+      const collateralIndex = Number(borrowPosition.collateralIndex);
+      const collateral = tokenData.collaterals[collateralIndex];
+
+      const hasOracle =
+        collateralIndex !== ONUSD_COLLATERAL_INDEX &&
+        collateralIndex !== USDC_COLLATERAL_INDEX;
       let collateralPrice: number;
-      let minimumCollateralRatio: number;
-      if (stable === 0) {
-        const collateralPoolIndex = Number(collateral.poolIndex);
-
-        collateralPrice = getMantissa(
-          tokenData.pools[collateralPoolIndex].assetInfo.price
-        );
-        minimumCollateralRatio = getMantissa(
-          pool.assetInfo.cryptoCollateralRatio
+      if (hasOracle) {
+        collateralPrice = Number(
+          tokenData.oracles[Number(collateral.oracleInfoIndex)].price
         );
       } else {
         collateralPrice = 1;
-        minimumCollateralRatio = getMantissa(
-          pool.assetInfo.stableCollateralRatio
-        );
       }
-      let onAssetPrice = toNumber(pool.assetInfo.price);
+
+      let minOvercollateralRatio = Number(
+        pool.assetInfo.minOvercollateralRatio
+      );
+      let maxLiquidationOvercollateralRatio = Number(
+        pool.assetInfo.maxLiquidationOvercollateralRatio
+      );
+
+      let onAssetPrice = Number(
+        tokenData.oracles[Number(pool.assetInfo.oracleInfoIndex)].price
+      );
 
       const title = `Borrow Position ${i}`;
       const underline = new Array(title.length).fill("-").join("");
@@ -72,26 +83,28 @@ exports.handler = async function () {
         `Collateral Mint: ${chalk.bold(collateral.mint)}\n` +
         `onAsset Mint: ${chalk.bold(pool.assetInfo.onassetMint)}\n` +
         `Collateral Amount: ${chalk.bold(
-          toNumber(borrowPosition.collateralAmount)
+          Number(borrowPosition.collateralAmount)
         )}\n` +
         `Borrowed onAsset Amount: ${chalk.bold(
-          toNumber(borrowPosition.borrowedOnasset)
+          Number(borrowPosition.borrowedOnasset)
         )}\n` +
         `Collateral Oracle Price: $${chalk.bold(collateralPrice)}\n` +
         `onAsset Oracle Price: $${chalk.bold(onAssetPrice)}\n` +
         `Current Collateral Ratio: %${chalk.bold(
-          100 *
-            ((toNumber(borrowPosition.collateralAmount) * collateralPrice) /
-              (toNumber(borrowPosition.borrowedOnasset) * onAssetPrice))
+          (100 * (Number(borrowPosition.collateralAmount) * collateralPrice)) /
+            (Number(borrowPosition.borrowedOnasset) * onAssetPrice)
         )}\n` +
-        `Minimum Collateral Ratio: %${chalk.bold(minimumCollateralRatio)}\n`;
+        `Minimum Overcollateral Ratio: %${chalk.bold(
+          minOvercollateralRatio
+        )}\n` +
+        `Maximum Liquidation Overcollateral Ratio: %${chalk.bold(
+          maxLiquidationOvercollateralRatio
+        )}\n`;
 
       console.log(boxen(assetInfo, assetBoxenOptions));
     }
 
-    successLog(
-      `Viewing ${Number(borrowPositions.numPositions)} Borrow Positions!`
-    );
+    successLog(`Viewing ${Number(borrows.numPositions)} Borrow Positions!`);
   } catch (error: any) {
     errorLog(`Failed to view borrow positions:\n${error.message}`);
   }

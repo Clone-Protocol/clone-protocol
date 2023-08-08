@@ -1,12 +1,12 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient, toDevnetScale, toScale } from "../../../sdk/src/clone";
-import { toDecimal } from "../../../sdk/src/decimal";
+import { toCloneScale, toScale } from "../../../sdk/src/clone";
 import { BN } from "@coral-xyz/anchor";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneProgram,
+  getCloneData,
+  getCloneClient,
   getOrCreateAssociatedTokenAccount,
 } from "../../utils";
 import { Argv } from "yargs";
@@ -42,36 +42,36 @@ exports.builder = (yargs: CommandArguments) => {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
     const tokenData = await cloneClient.getTokenData();
     const pool = tokenData.pools[yargs.poolIndex];
     const collateral = tokenData.collaterals[yargs.collateralIndex];
 
     const onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      setup.provider,
+      provider,
       pool.assetInfo.onassetMint
     );
     const collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      setup.provider,
+      provider,
       collateral.mint
     );
 
-    const borrowAmount = new BN(`${toDevnetScale(yargs.borrowAmount)}`);
+    const borrowAmount = new BN(`${toCloneScale(yargs.borrowAmount)}`);
     const collateralAmount = new BN(
-      `${toScale(
-        yargs.collateralAmount,
-        Number(toDecimal(collateral.vaultMintSupply).scale())
-      )}`
+      `${toScale(yargs.collateralAmount, Number(collateral.scale))}`
     );
 
-    let updatePricesIx = await cloneClient.updatePricesInstruction();
+    let updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
 
-    let ix = await cloneClient.initializeBorrowPositionInstruction(
+    let ix =  cloneClient.initializeBorrowPositionInstruction(
+      tokenData,
       collateralTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       borrowAmount,
@@ -79,7 +79,7 @@ exports.handler = async function (yargs: CommandArguments) {
       yargs.poolIndex,
       yargs.collateralIndex
     );
-    await setup.provider.sendAndConfirm(
+    await provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(ix)
     );
 

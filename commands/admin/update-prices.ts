@@ -1,6 +1,11 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient } from "../../sdk/src/clone";
-import { successLog, errorLog, anchorSetup, getCloneProgram } from "../utils";
+import {
+  successLog,
+  errorLog,
+  anchorSetup,
+  getCloneData,
+  getCloneClient,
+} from "../utils";
 import { Argv } from "yargs";
 
 interface CommandArguments extends Argv {
@@ -19,19 +24,22 @@ exports.builder = {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    let cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
+    const tokenData = await cloneClient.getTokenData();
 
     let ix;
     if (yargs.indices != undefined) {
-      ix = await cloneClient.updatePricesInstruction(yargs.indices);
+      ix = cloneClient.updatePricesInstruction(tokenData, yargs.indices);
     } else {
-      ix = await cloneClient.updatePricesInstruction();
+      ix = cloneClient.updatePricesInstruction(tokenData);
     }
-    await setup.provider.sendAndConfirm(new Transaction().add(ix));
+    await provider.sendAndConfirm(new Transaction().add(ix));
 
     successLog("Prices Updated!");
   } catch (error: any) {

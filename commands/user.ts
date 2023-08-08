@@ -6,6 +6,7 @@ const mintOnUSD = require('./user/mint-onusd');
 const viewCommands = require('./user/view');
 const borrowCommands = require('./user/borrow');
 const cometCommands = require('./user/comet');
+const stakeCommands = require('./user/stake');
 
 module.exports = (yargs: Argv) => {
   yargs
@@ -15,6 +16,7 @@ module.exports = (yargs: Argv) => {
     .command('view <command>', 'commands for viewing data', viewCommands)
     .command('borrow <command>', 'commands for managing borrow positions', borrowCommands)
     .command('comet <command>', 'commands for managing your comet', cometCommands)
+    .command('stake <command>', 'commands for managing $CLN staking', stakeCommands)
     .demandCommand()
     .help();
 }

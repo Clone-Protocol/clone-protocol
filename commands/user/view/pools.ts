@@ -1,12 +1,12 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient } from "../../../sdk/src/clone";
 import { getPoolLiquidity } from "../../../sdk/src/utils";
-import { toNumber } from "../../../sdk/src/decimal";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneProgram,
+  getCloneData,
+  getCloneClient,
+  getStatus,
 } from "../../utils";
 import chalk from "chalk";
 import boxen from "boxen";
@@ -16,20 +16,22 @@ exports.desc = "View all pools on Clone";
 exports.builder = {};
 exports.handler = async function () {
   try {
-    const setup = anchorSetup();
-
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
-
-    let ix = await cloneClient.updatePricesInstruction();
-    await setup.provider.sendAndConfirm(new Transaction().add(ix));
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
     const tokenData = await cloneClient.getTokenData();
 
+    let ix = cloneClient.updatePricesInstruction(tokenData);
+    await provider.sendAndConfirm(new Transaction().add(ix));
+
     for (let i = 0; i < Number(tokenData.numPools); i++) {
       const pool = tokenData.pools[i];
+      const oracle = tokenData.oracles[Number(pool.assetInfo.oracleInfoIndex)];
 
       const title = `onAsset Pool ${i}`;
       const underline = new Array(title.length).fill("-").join("");
@@ -43,7 +45,12 @@ exports.handler = async function () {
         backgroundColor: "#CCCCCC",
       };
 
-      let {poolOnusd, poolOnasset} = getPoolLiquidity(pool);
+      let { poolOnusd, poolOnasset } = getPoolLiquidity(
+        pool,
+        Number(oracle.price)
+      );
+
+      const status = getStatus(Number(pool.status));
 
       const assetInfo =
         `${chalk.bold(title)}\n` +
@@ -52,14 +59,20 @@ exports.handler = async function () {
         //this will change to called quotePrice function on sdk/utils
         `Quote Price: $${chalk.bold(poolOnusd / poolOnasset)}\n` +
         `onUSD Pool Balance: ${chalk.bold(poolOnusd)}\n` +
-        `onAsset ILD: ${chalk.bold(toNumber(pool.onassetIld))}\n` +
-        `onUSD ILD: ${chalk.bold(toNumber(pool.onusdIld))}\n` +
-        `Liquidity Trading Fee: %${chalk.bold(toNumber(pool.liquidityTradingFee))}\n` +
-        `Treasury Trading Fee: %${chalk.bold(toNumber(pool.treasuryTradingFee))}\n` +
-        `Oracle Price: $${chalk.bold(toNumber(pool.assetInfo.price))}\n` +
-        `Pyth Address: ${chalk.bold(pool.assetInfo.pythAddress)}\n` +
-        `Underlying Token Address: ${chalk.bold(pool.assetInfo.onassetMint)}\n` +
-        `Deprecated: ${chalk.bold(pool.deprecated)}\n`;
+        `onAsset ILD: ${chalk.bold(Number(pool.onassetIld))}\n` +
+        `onUSD ILD: ${chalk.bold(Number(pool.onusdIld))}\n` +
+        `Liquidity Trading Fee: %${chalk.bold(
+          Number(pool.liquidityTradingFeeBps)
+        )}\n` +
+        `Treasury Trading Fee: %${chalk.bold(
+          Number(pool.treasuryTradingFeeBps)
+        )}\n` +
+        `Oracle Price: $${chalk.bold(Number(oracle.price))}\n` +
+        `Pyth Address: ${chalk.bold(oracle.pythAddress)}\n` +
+        `Underlying Token Address: ${chalk.bold(
+          pool.assetInfo.onassetMint
+        )}\n` +
+        `Status: ${chalk.bold(status)}\n`;
       console.log(boxen(assetInfo, assetBoxenOptions));
     }
 

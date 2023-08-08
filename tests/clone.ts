@@ -30,6 +30,7 @@ import {
 import { getHealthScore, getILD } from "../sdk/src/healthscore";
 import {
   Clone as CloneAccount,
+  PoolParameters,
 } from "../sdk/generated/clone";
 import {
   Jupiter,
@@ -1112,19 +1113,24 @@ describe("tests", async () => {
 
     assert.closeTo(healthScore.healthScore, 88, 1, "check health score.");
 
+    let params: PoolParameters = {
+      __kind: "PositionHealthScoreCoefficient",
+      value: toCloneScale(healthScoreCoefficient * 2),
+    };
+
     await cloneClient.updatePoolParameters({
       index: 0,
-      params: {
-        __kind: "PositionHealthScoreCoefficient",
-        value: toCloneScale(healthScoreCoefficient * 2),
-      },
+      params: params,
     });
+
+    params = {
+      __kind: "IlHealthScoreCoefficient",
+      value: toCloneScale(ilHealthScoreCoefficient * 2),
+    };
+
     await cloneClient.updatePoolParameters({
       index: 0,
-      params: {
-        __kind: "IlHealthScoreCoefficient",
-        value: toCloneScale(ilHealthScoreCoefficient * 2),
-      },
+      params: params,
     });
 
     userAccount = await cloneClient.getUserAccount();

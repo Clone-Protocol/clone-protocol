@@ -116,17 +116,11 @@ pub fn execute(
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
-        pool_index: borrows.positions[borrow_index as usize]
-            .pool_index
-            .try_into()
-            .unwrap(),
+        pool_index: pool_index.try_into().unwrap(),
         is_liquidation: false,
         collateral_supplied: borrows.positions[borrow_index as usize].collateral_amount,
         collateral_delta: -(amount_to_withdraw as i64),
-        collateral_index: borrows.positions[borrow_index as usize]
-            .collateral_index
-            .try_into()
-            .unwrap(),
+        collateral_index: collateral_index.try_into().unwrap(),
         borrowed_amount: borrows.positions[borrow_index as usize].borrowed_onasset,
         borrowed_delta: 0
     });

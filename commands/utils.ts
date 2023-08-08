@@ -13,15 +13,11 @@ import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import {
-  JupiterAggMock,
-  IDL as mockJupIDL,
-} from "../sdk/src/idl/jupiter_agg_mock";
-import { Clone, IDL as cloneIDL } from "../sdk/src/idl/clone";
-import { Pyth, IDL as pythIDL } from "../sdk/src/idl/pyth";
 import { Provider, BN } from "@coral-xyz/anchor";
-import { Decimal } from "../sdk/src/decimal";
-import { CLONE_TOKEN_SCALE, toDevnetScale } from "../sdk/src/clone";
+import { CloneClient, CLONE_TOKEN_SCALE, toCloneScale } from "../sdk/src/clone";
+import { Clone as CloneAccount } from "../sdk/generated/clone";
+import { Jupiter } from "../sdk/generated/jupiter-agg-mock";
+import { CloneStaking } from "../sdk/generated/clone-staking";
 
 const chalk = require("chalk");
 
@@ -54,77 +50,101 @@ export function anchorSetup() {
 
   anchor.setProvider(provider);
 
-  return { network: network, provider: provider };
+  return provider;
 }
 
-export function getCloneProgram(provider: anchor.AnchorProvider) {
+export function getCloneData() {
   const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
   const cloneProgramId = new PublicKey(config.clone);
 
-  return new Program<Clone>(cloneIDL, cloneProgramId, provider);
+  const [cloneAccountAddress, ___] = PublicKey.findProgramAddressSync(
+    [Buffer.from("clone")],
+    cloneProgramId
+  );
+
+  return [cloneProgramId, cloneAccountAddress];
 }
 
-export function getMockJupiterProgram(provider: anchor.AnchorProvider) {
+export async function getCloneClient(
+  provider: anchor.AnchorProvider,
+  cloneProgramId: PublicKey,
+  cloneAccountAddress: PublicKey
+) {
+  const account = await CloneAccount.fromAccountAddress(
+    provider.connection,
+    cloneAccountAddress
+  );
+  const cloneClient = new CloneClient(provider, account, cloneProgramId);
+
+  return cloneClient;
+}
+
+export function getMockJupiterData() {
   const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
   const mockJupProgramId = new PublicKey(config.jup);
 
-  return new Program<JupiterAggMock>(mockJupIDL, mockJupProgramId, provider);
+  const [jupiterAddress, ___] = PublicKey.findProgramAddressSync(
+    [Buffer.from("jupiter")],
+    mockJupProgramId
+  );
+
+  return [mockJupProgramId, jupiterAddress];
 }
 
-export function getPythProgram(provider: anchor.AnchorProvider) {
+export async function getJupiterAccount(
+  provider: anchor.AnchorProvider,
+  jupiterAddress: PublicKey
+) {
+  return await Jupiter.fromAccountAddress(provider.connection, jupiterAddress);
+}
+
+export function getCloneStakingData() {
   const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
-  const pythProgramId = new PublicKey(config.pyth);
+  const cloneStakingProgramId = new PublicKey(config.staking);
 
-  return new Program<Pyth>(pythIDL, pythProgramId, provider);
+  const [cloneStakingAddress, ___] = PublicKey.findProgramAddressSync(
+    [Buffer.from("clone-staking")],
+    cloneStakingProgramId
+  );
+
+  return [cloneStakingProgramId, cloneStakingAddress];
+}
+export async function getCloneStakingAccount(
+  provider: anchor.AnchorProvider,
+  cloneStakingAddress: PublicKey
+) {
+  return await CloneStaking.fromAccountAddress(
+    provider.connection,
+    cloneStakingAddress
+  );
 }
 
-export async function getUSDC() {
+export function getPythData() {
+  const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
+
+  const pythProgramId = new PublicKey(config.jup);
+
+  const [pythAddress, ___] = PublicKey.findProgramAddressSync(
+    [Buffer.from("pyth")],
+    pythProgramId
+  );
+
+  return [pythProgramId, pythAddress];
+}
+
+export function getUSDC() {
   const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
   return new PublicKey(config.usdc);
 }
 
-export async function getMockAssetMint(
-  provider: anchor.AnchorProvider,
-  index: number
-) {
-  const jupiterProgram = getMockJupiterProgram(provider);
-  let [jupiterAddress, _] = await PublicKey.findProgramAddress(
-    [anchor.utils.bytes.utf8.encode("jupiter")],
-    jupiterProgram.programId
-  );
-  const assetMint = (await jupiterProgram.account.jupiter.fetch(jupiterAddress))
-    .assetMints[index];
+export function getCLN() {
+  const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
-  return assetMint;
-}
-
-export async function getAssetPriceFeed(
-  provider: anchor.AnchorProvider,
-  index: number
-) {
-  //not yet implemented
-
-  return "";
-}
-
-export async function getMockAssetPriceFeed(
-  network: string,
-  provider: anchor.AnchorProvider,
-  index: number
-) {
-  const jupiterProgram = getMockJupiterProgram(provider);
-  let [jupiterAddress, _] = await PublicKey.findProgramAddress(
-    [anchor.utils.bytes.utf8.encode("jupiter")],
-    jupiterProgram.programId
-  );
-  const priceFeed = (await jupiterProgram.account.jupiter.fetch(jupiterAddress))
-    .oracles[index];
-
-  return priceFeed;
+  return new PublicKey(config.cln);
 }
 
 export const getOrCreateAssociatedTokenAccount = async (
@@ -181,15 +201,33 @@ export const getOrCreateAssociatedTokenAccount = async (
   return account;
 };
 
-export const convertToRawDecimal = (num: number) => {
-  let temp = new Decimal(
-    BigInt(toDevnetScale(num).toNumber()),
-    BigInt(CLONE_TOKEN_SCALE)
-  );
-  return temp.toRawDecimal();
+export const getStatus = (num: number) => {
+  let status: string;
+
+  switch (num) {
+    case 0:
+      status = "Active";
+      break;
+    case 1:
+      status = "Frozen";
+      break;
+    case 2:
+      status = "Extraction";
+      break;
+    case 3:
+      status = "Liquidation";
+      break;
+    case 4:
+      status = "Deprecation";
+      break;
+    default:
+      status = "Unknown";
+  }
+
+  return status;
 };
 
-export const fromDevnetScale = (x: number): number => {
+export const fromCloneScale = (x: number): number => {
   const scale = Math.pow(10, CLONE_TOKEN_SCALE);
   return x / scale;
 };

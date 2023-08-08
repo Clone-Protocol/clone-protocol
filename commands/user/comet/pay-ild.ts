@@ -1,11 +1,12 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient, toDevnetScale } from "../../../sdk/src/clone";
+import { toCloneScale } from "../../../sdk/src/clone";
 import { getILD } from "../../../sdk/src/healthscore";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneProgram,
+  getCloneData,
+  getCloneClient,
   getOrCreateAssociatedTokenAccount,
 } from "../../utils";
 import { Argv } from "yargs";
@@ -38,27 +39,31 @@ exports.builder = (yargs: CommandArguments) => {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
     const tokenData = await cloneClient.getTokenData();
-
-    const comet = await cloneClient.getComet();
+    const user = await cloneClient.getUserAccount();
+    const comet = user.comet;
     const pool =
-      tokenData.pools[comet.positions[yargs.cometPositionIndex].poolIndex];
+      tokenData.pools[
+        Number(comet.positions[yargs.cometPositionIndex].poolIndex)
+      ];
 
     let ildInfo = getILD(tokenData, comet)[yargs.cometPositionIndex];
 
     const onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      setup.provider,
+      provider,
       cloneClient.clone!.onusdMint
     );
 
     const onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      setup.provider,
+      provider,
       pool.assetInfo.onassetMint
     );
 
@@ -74,14 +79,16 @@ exports.handler = async function (yargs: CommandArguments) {
       amount = yargs.amount;
     }
 
-    let ix = await cloneClient.payCometILDInstruction(
+    let ix = cloneClient.payCometILDInstruction(
+      tokenData,
+      user,
       yargs.cometPositionIndex,
-      toDevnetScale(amount),
+      toCloneScale(amount),
       yargs.payOnusdDebt,
       onassetTokenAccountInfo.address,
       onusdTokenAccountInfo.address
     );
-    await setup.provider.sendAndConfirm(new Transaction().add(ix));
+    await provider.sendAndConfirm(new Transaction().add(ix));
 
     if (yargs.payOnusdDebt) {
       successLog(`${yargs.amount} onUSD Debt Payed!`);

@@ -1,18 +1,17 @@
-import * as anchor from "@coral-xyz/anchor";
 import { BN } from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import { Transaction } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getMockJupiterProgram,
-  getCloneProgram,
+  getMockJupiterData,
   getUSDC,
   getOrCreateAssociatedTokenAccount,
 } from "../utils";
-import { CloneClient, toScale } from "../../sdk/src/clone";
+import { toScale } from "../../sdk/src/clone";
 import { Argv } from "yargs";
+import { createMintUsdcInstruction } from "../../sdk/generated/jupiter-agg-mock";
 
 interface CommandArguments extends Argv {
   amount: number;
@@ -28,38 +27,28 @@ exports.builder = (yargs: CommandArguments) => {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    if (setup.network != "localnet") {
-      throw Error("Mock instruction must be run on localnet");
-    }
-
-    const jupiterProgram = getMockJupiterProgram(setup.provider);
-    let [jupiterAddress, jupiterNonce] = await PublicKey.findProgramAddress(
-      [anchor.utils.bytes.utf8.encode("jupiter")],
-      jupiterProgram.programId
-    );
-
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
+    const provider = anchorSetup();
+    const [__, jupiterAddress] = getMockJupiterData();
 
     const usdcMint = await getUSDC();
 
-    const usdcMintAmount = new BN(`${toScale(yargs.amount, 7)}`);
+    const amount = new BN(`${toScale(yargs.amount, 7)}`);
     const mockUSDCTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      cloneClient.provider,
+      provider,
       usdcMint
     );
-    await jupiterProgram.methods
-      .mintUsdc(jupiterNonce, usdcMintAmount)
-      .accounts({
+    
+    const ix = createMintUsdcInstruction(
+      {
         usdcMint: usdcMint,
         usdcTokenAccount: mockUSDCTokenAccountInfo.address,
         jupiterAccount: jupiterAddress,
         tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .rpc();
+      },
+      { amount }
+    );
 
+    await provider.sendAndConfirm(new Transaction().add(ix));
     successLog(`${yargs.amount} Mock USDC Minted!`);
   } catch (error: any) {
     errorLog(`Failed to mint mock USDC:\n${error.message}`);

@@ -1,10 +1,10 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient } from "../../../sdk/src/clone";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneProgram,
+  getCloneData,
+  getCloneClient,
   getOrCreateAssociatedTokenAccount,
 } from "../../utils";
 import { Argv } from "yargs";
@@ -23,35 +23,41 @@ exports.builder = (yargs: CommandArguments) => {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
     const tokenData = await cloneClient.getTokenData();
-
-    const comet = await cloneClient.getComet();
+    const user = await cloneClient.getUserAccount();
+    const comet = user.comet;
     const pool =
-      tokenData.pools[comet.positions[yargs.cometPositionIndex].poolIndex];
+      tokenData.pools[
+        Number(comet.positions[yargs.cometPositionIndex].poolIndex)
+      ];
 
     const onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      setup.provider,
+      provider,
       cloneClient.clone!.onusdMint
     );
 
     const onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      setup.provider,
+      provider,
       pool.assetInfo.onassetMint
     );
 
-    let ix = await cloneClient.claimLpRewardsInstruction(
+    let ix = cloneClient.collectLpRewardsInstruction(
+      tokenData,
+      user,
       onusdTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       yargs.cometPositionIndex
     );
 
-    await setup.provider.sendAndConfirm(new Transaction().add(ix));
+    await provider.sendAndConfirm(new Transaction().add(ix));
 
     successLog(`Reward Claimed!`);
   } catch (error: any) {

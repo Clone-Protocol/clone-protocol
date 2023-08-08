@@ -1,12 +1,12 @@
-import { CloneClient } from "../../../sdk/src/clone";
 import { getPoolLiquidity } from "../../../sdk/src/utils";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneProgram,
+  getCloneData,
+  getCloneClient,
   getOrCreateAssociatedTokenAccount,
-  fromDevnetScale,
+  fromCloneScale,
 } from "../../utils";
 import chalk from "chalk";
 import boxen from "boxen";
@@ -16,12 +16,13 @@ exports.desc = "View your wallet balances for all of Clone's assets";
 exports.builder = {};
 exports.handler = async function () {
   try {
-    const setup = anchorSetup();
-
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
     const tokenData = await cloneClient.getTokenData();
 
@@ -40,24 +41,28 @@ exports.handler = async function () {
     let assetInfo = `${chalk.bold(title)}\n` + `${underline}\n`;
 
     let onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      setup.provider,
+      provider,
       cloneClient.clone!.onusdMint
     );
-    const onusdBalance = fromDevnetScale(Number(onusdTokenAccountInfo.amount));
+    const onusdBalance = fromCloneScale(Number(onusdTokenAccountInfo.amount));
     assetInfo += `onUSD Balance: ${onusdBalance}\n\n`;
     let totalBalance = onusdBalance;
 
     for (let i = 0; i < Number(tokenData.numPools); i++) {
       const pool = tokenData.pools[i];
+      const oracle = tokenData.oracles[Number(pool.assetInfo.oracleInfoIndex)];
 
       let onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-        setup.provider,
+        provider,
         pool.assetInfo.onassetMint
       );
 
-      let { poolOnusd, poolOnasset } = getPoolLiquidity(pool);
+      let { poolOnusd, poolOnasset } = getPoolLiquidity(
+        pool,
+        Number(oracle.price)
+      );
       const quotePrice = poolOnusd / poolOnasset;
-      const onassetBalance = fromDevnetScale(
+      const onassetBalance = fromCloneScale(
         Number(onassetTokenAccountInfo.amount)
       );
 

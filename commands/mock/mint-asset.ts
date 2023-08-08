@@ -1,18 +1,17 @@
-import * as anchor from "@coral-xyz/anchor";
 import { BN } from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import { Transaction } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getMockJupiterProgram,
-  getCloneProgram,
+  getMockJupiterData,
   getOrCreateAssociatedTokenAccount,
-  getMockAssetMint,
+  getJupiterAccount,
 } from "../utils";
-import { CloneClient, toDevnetScale } from "../../sdk/src/clone";
+import { toCloneScale } from "../../sdk/src/clone";
 import { Argv } from "yargs";
+import { createMintAssetInstruction } from "../../sdk/generated/jupiter-agg-mock";
 
 interface CommandArguments extends Argv {
   index: number;
@@ -34,35 +33,30 @@ exports.builder = (yargs: CommandArguments) => {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
+    const provider = anchorSetup();
+    const [__, jupiterAddress] = getMockJupiterData();
+    const jupiter = await getJupiterAccount(provider, jupiterAddress);
+    const mockAssetMint = jupiter.assetMints[yargs.index];
 
-    const jupiterProgram = getMockJupiterProgram(setup.provider);
-    let [jupiterAddress, jupiterNonce] = await PublicKey.findProgramAddress(
-      [anchor.utils.bytes.utf8.encode("jupiter")],
-      jupiterProgram.programId
-    );
-
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-
-    const mockAssetMint = await getMockAssetMint(setup.provider, yargs.index);
-
-    const mockAssetMintAmount = new BN(`${toDevnetScale(yargs.amount)}`);
     const mockAssetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      cloneClient.provider,
+      provider,
       mockAssetMint
     );
 
-    await jupiterProgram.methods
-      .mintAsset(jupiterNonce, yargs.index, mockAssetMintAmount)
-      .accounts({
+    const assetIndex = yargs.index;
+    const amount = new BN(`${toCloneScale(yargs.amount)}`);
+
+    const ix = createMintAssetInstruction(
+      {
         assetMint: mockAssetMint,
         assetTokenAccount: mockAssetTokenAccountInfo.address,
         jupiterAccount: jupiterAddress,
         tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .rpc();
+      },
+      { assetIndex, amount }
+    );
+
+    await provider.sendAndConfirm(new Transaction().add(ix));
 
     successLog(`${yargs.amount} Mock Asset ${yargs.index} Minted!`);
   } catch (error: any) {

@@ -59,7 +59,8 @@ export const calculateMantissa = (
 };
 
 export const getPoolLiquidity = (pool: Pool, oraclePrice: number) => {
-  const poolOnusd = Number(pool.committedOnusdLiquidity - pool.onusdIld);
+  const poolOnusd =
+    Number(pool.committedOnusdLiquidity) - Number(pool.onusdIld);
   const poolOnasset =
     Number(pool.committedOnusdLiquidity) / oraclePrice -
     Number(pool.onassetIld);

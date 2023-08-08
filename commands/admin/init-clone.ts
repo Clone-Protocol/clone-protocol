@@ -1,73 +1,88 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Transaction } from "@solana/web3.js";
+import { Transaction, SystemProgram } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
+  MINT_SIZE,
+  getMinimumBalanceForRentExemptMint,
+  createInitializeMintInstruction,
 } from "@solana/spl-token";
-import { CloneClient } from "../../sdk/src/clone";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneProgram,
+  getCloneData,
   getUSDC,
+  getCloneClient,
 } from "../utils";
 import { Argv } from "yargs";
+import { CloneClient, CLONE_TOKEN_SCALE } from "../../sdk/src/clone";
 
 interface CommandArguments extends Argv {
-  ilHealthScoreCutoff: number;
-  ilLiquidationRewardPct: number;
-  maxHealthLiquidation: number;
-  liquidatorFee: number;
+  cometLiquidatorFee: number;
+  borrowLiquidatorFee: number;
 }
 
 exports.command = "init-clone";
 exports.desc = "Initializes the Clone program with optional parameters";
 exports.builder = (yargs: CommandArguments) => {
   return yargs
-    .option("il-health-score-cutoff", {
-      describe: "The impermanent loss health score cutoff",
+    .option("comet-liquidator-fee", {
+      describe: "The fee percentage a liquidator recieves for comet positions",
       type: "number",
-      default: 20,
+      default: 500,
     })
-    .option("il-liquidation-reward-pct", {
-      describe: "The impermanent loss liquidation reward percentage",
-      type: "number",
-      default: 5,
-    })
-    .option("max-health-liquidation", {
-      describe: "The maximum health of a comet after liquidation",
-      type: "number",
-      default: 20,
-    })
-    .option("liquidator-fee", {
-      describe: "The liquidator fee",
+    .option("borrow-liquidator-fee", {
+      describe: "The fee percentage a liquidator recieves for borrow positions",
       type: "number",
       default: 500,
     });
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
-    const usdc = await getUSDC();
-
-    let cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const usdc = getUSDC();
 
     const treasuryAddress = anchor.web3.Keypair.generate();
+    const onusdMint = anchor.web3.Keypair.generate();
 
-    await cloneClient.initializeClone(
-      yargs.ilHealthScoreCutoff,
-      yargs.ilLiquidationRewardPct,
-      yargs.maxHealthLiquidation,
-      yargs.liquidatorFee,
+    let tx = new Transaction().add(
+      // create onusd mint account
+      SystemProgram.createAccount({
+        fromPubkey: provider.publicKey,
+        newAccountPubkey: onusdMint.publicKey,
+        space: MINT_SIZE,
+        lamports: await getMinimumBalanceForRentExemptMint(provider.connection),
+        programId: TOKEN_PROGRAM_ID,
+      }),
+      // init clone mint account
+      createInitializeMintInstruction(
+        onusdMint.publicKey,
+        CLONE_TOKEN_SCALE,
+        cloneAccountAddress,
+        null
+      )
+    );
+    await provider.sendAndConfirm(tx, [onusdMint]);
+
+    await CloneClient.initializeClone(
+      provider,
+      cloneProgramID,
+      yargs.cometLiquidatorFee,
+      yargs.borrowLiquidatorFee,
       treasuryAddress.publicKey,
-      usdc
+      usdc,
+      onusdMint.publicKey
     );
 
-    await cloneClient.loadClone();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
     const treasuryOnusdAssociatedTokenAddress = await getAssociatedTokenAddress(
       cloneClient.clone!.onusdMint,
@@ -77,10 +92,10 @@ exports.handler = async function (yargs: CommandArguments) {
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    await cloneClient.provider.sendAndConfirm!(
+    await provider.sendAndConfirm!(
       new Transaction().add(
-        await createAssociatedTokenAccountInstruction(
-          cloneClient.provider.publicKey!,
+        createAssociatedTokenAccountInstruction(
+          provider.publicKey!,
           treasuryOnusdAssociatedTokenAddress,
           treasuryAddress.publicKey,
           cloneClient.clone!.onusdMint,

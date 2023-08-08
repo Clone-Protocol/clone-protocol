@@ -1,11 +1,12 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient, toDevnetScale } from "../../../sdk/src/clone";
+import { toCloneScale } from "../../../sdk/src/clone";
 import { BN } from "@coral-xyz/anchor";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneProgram,
+  getCloneData,
+  getCloneClient,
   getOrCreateAssociatedTokenAccount,
 } from "../../utils";
 import { Argv } from "yargs";
@@ -30,31 +31,35 @@ exports.builder = (yargs: CommandArguments) => {
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const setup = anchorSetup();
-    const cloneProgram = getCloneProgram(setup.provider);
-
-    const cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
-    await cloneClient.loadClone();
+    const provider = anchorSetup();
+    const [cloneProgramID, cloneAccountAddress] = getCloneData();
+    const cloneClient = await getCloneClient(
+      provider,
+      cloneProgramID,
+      cloneAccountAddress
+    );
 
     const tokenData = await cloneClient.getTokenData();
-    const borrowPosition = (await cloneClient.getBorrowPositions())
-      .borrowPositions[yargs.borrowIndex];
+    const user = await cloneClient.getUserAccount();
+    const borrowPosition = user.borrows.positions[yargs.borrowIndex];
 
-    const pool = tokenData.pools[borrowPosition.poolIndex];
+    const pool = tokenData.pools[Number(borrowPosition.poolIndex)];
 
     const onAssetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
-      setup.provider,
+      provider,
       pool.assetInfo.onassetMint
     );
 
-    const amount = new BN(`${toDevnetScale(yargs.amount)}`);
+    const amount = new BN(`${toCloneScale(yargs.amount)}`);
 
-    let ix = await cloneClient.payBorrowDebtInstruction(
+    let ix = cloneClient.payBorrowDebtInstruction(
+      tokenData,
+      user,
       onAssetTokenAccountInfo.address,
       amount,
-      yargs.borrowIndex,
+      yargs.borrowIndex
     );
-    await setup.provider.sendAndConfirm(new Transaction().add(ix));
+    await provider.sendAndConfirm(new Transaction().add(ix));
 
     successLog(`${yargs.amount} onAsset Debt Payed!`);
   } catch (error: any) {
