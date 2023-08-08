@@ -7,8 +7,8 @@ use std::vec::Vec;
 
 #[derive(Clone, PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize, Default)]
 pub enum Status {
-    #[default]
     Active = 0,
+    #[default]
     Frozen = 1,
     Extraction = 2,
     Liquidation = 3,
@@ -69,7 +69,7 @@ pub struct AssetInfo {
 #[derive(Clone, PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct OracleInfo {
     pub pyth_address: Pubkey,
-    pub price: i16,
+    pub price: i64,
     pub expo: i8,
     pub pyth_status: u8,
     pub status: Status,
@@ -86,8 +86,8 @@ impl OracleInfo {
 pub struct Pool {
     pub underlying_asset_token_account: Pubkey,
     pub committed_collateral_liquidity: u64,
-    pub collateral_ild: i32,
-    pub onasset_ild: i32,
+    pub collateral_ild: i64,
+    pub onasset_ild: i64,
     pub treasury_trading_fee_bps: u16,
     pub liquidity_trading_fee_bps: u16,
     pub asset_info: AssetInfo,
