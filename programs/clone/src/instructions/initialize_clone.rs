@@ -26,9 +26,12 @@ pub struct InitializeClone<'info> {
         mint::decimals = CLONE_TOKEN_SCALE as u8,
         mint::authority = clone,
     )]
-    pub onusd_mint: Account<'info, Mint>,
-    /// CHECK: This is an admin method so this should be correct
-    pub usdc_mint: Account<'info, Mint>,
+    pub collateral_mint: Account<'info, Mint>,
+    #[account(
+        token::mint = collateral_mint,
+        token::authority = clone,
+    )]
+    pub collateral_vault: Account<'info, TokenAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -46,10 +49,11 @@ pub fn execute(
     );
 
     // set manager data
-    ctx.accounts.clone.onusd_mint = *ctx.accounts.onusd_mint.to_account_info().key;
     ctx.accounts.clone.admin = *ctx.accounts.admin.to_account_info().key;
     ctx.accounts.clone.bump = *ctx.bumps.get("clone").unwrap();
     ctx.accounts.clone.treasury_address = treasury_address;
+    ctx.accounts.clone.collateral.vault = *ctx.accounts.collateral_vault.to_account_info().key;
+    ctx.accounts.clone.collateral.mint = *ctx.accounts.collateral_mint.to_account_info().key;
     ctx.accounts.clone.comet_liquidator_fee_bps = comet_liquidator_fee_bps;
     ctx.accounts.clone.borrow_liquidator_fee_bps = borrow_liquidator_fee_bps;
 

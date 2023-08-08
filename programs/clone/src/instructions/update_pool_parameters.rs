@@ -1,17 +1,17 @@
 use crate::{error::CloneError, states::*};
-use crate::{return_error_if_false, CLONE_PROGRAM_SEED, TOKEN_DATA_SEED};
+use crate::{return_error_if_false, CLONE_PROGRAM_SEED, POOLS_SEED};
 use anchor_lang::prelude::*;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Copy, Eq, Debug)]
 pub enum PoolParameters {
-    Status { value: u64 },
-    TreasuryTradingFee { value: u64 },
-    LiquidityTradingFee { value: u64 },
-    OracleInfoIndex { value: u64 },
-    MinOvercollateralRatio { value: u64 },
-    MaxLiquidationOvercollateralRatio { value: u64 },
-    IlHealthScoreCoefficient { value: u64 },
-    PositionHealthScoreCoefficient { value: u64 },
+    Status { value: Status },
+    TreasuryTradingFee { value: u16 },
+    LiquidityTradingFee { value: u16 },
+    OracleInfoIndex { value: u8 },
+    MinOvercollateralRatio { value: u16 },
+    MaxLiquidationOvercollateralRatio { value: u16 },
+    IlHealthScoreCoefficient { value: u16 },
+    PositionHealthScoreCoefficient { value: u16 },
 }
 
 #[derive(Accounts)]
@@ -28,11 +28,11 @@ pub struct UpdatePoolParameters<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        seeds = [TOKEN_DATA_SEED.as_ref()],
+        seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = (index as u64) < token_data.load()?.num_pools @ CloneError::PoolNotFound,
+        constraint = (index as usize) < pools.pools.len() @ CloneError::PoolNotFound,
     )]
-    pub token_data: AccountLoader<'info, TokenData>,
+    pub pools: Box<Account<'info, Pools>>,
 }
 
 pub fn execute(
@@ -40,17 +40,15 @@ pub fn execute(
     index: u8,
     params: PoolParameters,
 ) -> Result<()> {
-    let token_data = &mut ctx.accounts.token_data.load_mut()?;
+    let auth_key = *ctx.accounts.auth.key;
+    let clone_admin = ctx.accounts.clone.admin;
+    let clone_auth = ctx.accounts.clone.auth.clone();
 
-    let pool = &mut token_data.pools[index as usize];
+    let pools = &mut ctx.accounts.pools;
+    let pool = &mut pools.pools[index as usize];
 
-    let is_admin = *ctx.accounts.auth.key == ctx.accounts.clone.admin;
-    let is_auth = ctx
-        .accounts
-        .clone
-        .auth
-        .iter()
-        .any(|auth| *auth == *ctx.accounts.auth.key);
+    let is_admin = auth_key == clone_admin;
+    let is_auth = clone_auth.iter().any(|auth| *auth == auth_key);
 
     // Always allow admin, auth only if Status is updated to Frozen
     return_error_if_false!(
@@ -58,7 +56,7 @@ pub fn execute(
             true
         } else if is_auth {
             if let PoolParameters::Status { value } = params {
-                value == (Status::Frozen as u64)
+                value == Status::Frozen
             } else {
                 false
             }

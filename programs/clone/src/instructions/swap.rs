@@ -4,7 +4,9 @@ use crate::events::*;
 use crate::math::*;
 use crate::states::*;
 use crate::to_bps_decimal;
-use crate::{return_error_if_false, to_clone_decimal, CLONE_PROGRAM_SEED, TOKEN_DATA_SEED};
+use crate::{
+    return_error_if_false, to_clone_decimal, CLONE_PROGRAM_SEED, ORACLES_SEED, POOLS_SEED,
+};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use clone_staking::{
@@ -20,7 +22,7 @@ use std::convert::TryInto;
     pool_index: u8,
     quantity: u64,
     quantity_is_input: bool,
-    quantity_is_onusd: bool,
+    quantity_is_collateral: bool,
     result_threshold: u64
 )]
 pub struct Swap<'info> {
@@ -33,18 +35,24 @@ pub struct Swap<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        seeds = [TOKEN_DATA_SEED.as_ref()],
+        seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = (pool_index as u64) < token_data.load()?.num_pools @ CloneError::InvalidInputPositionIndex,
-        constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction,
+        constraint = (pool_index as usize) < pools.pools.len() @ CloneError::InvalidInputPositionIndex,
+        constraint = pools.pools[pool_index as usize].status == Status::Active @ CloneError::StatusPreventsAction,
     )]
-    pub token_data: AccountLoader<'info, TokenData>,
+    pub pools: Box<Account<'info, Pools>>,
     #[account(
         mut,
-        associated_token::mint = onusd_mint,
+        seeds = [ORACLES_SEED.as_ref()],
+        bump,
+    )]
+    pub oracles: Box<Account<'info, Oracles>>,
+    #[account(
+        mut,
+        associated_token::mint = collateral_mint,
         associated_token::authority = user
     )]
-    pub user_onusd_token_account: Box<Account<'info, TokenAccount>>,
+    pub user_collateral_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::mint = onasset_mint,
@@ -53,14 +61,14 @@ pub struct Swap<'info> {
     pub user_onasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[pool_index as usize].asset_info.onasset_mint,
+        address = pools.pools[pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = clone.onusd_mint
+        address = clone.collateral.mint
     )]
-    pub onusd_mint: Box<Account<'info, Mint>>,
+    pub collateral_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
         associated_token::mint = onasset_mint,
@@ -69,10 +77,10 @@ pub struct Swap<'info> {
     pub treasury_onasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        associated_token::mint = onusd_mint,
+        associated_token::mint = collateral_mint,
         associated_token::authority = clone.treasury_address
     )]
-    pub treasury_onusd_token_account: Box<Account<'info, TokenAccount>>,
+    pub treasury_collateral_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
     #[account(
         seeds = [CLONE_STAKING_SEED.as_ref()],
@@ -94,16 +102,19 @@ pub fn execute(
     pool_index: u8,
     quantity: u64,
     quantity_is_input: bool,
-    quantity_is_onusd: bool,
+    quantity_is_collateral: bool,
     result_threshold: u64,
 ) -> Result<()> {
     let seeds = &[&[
         CLONE_PROGRAM_SEED.as_ref(),
         bytemuck::bytes_of(&ctx.accounts.clone.bump),
     ][..]];
-    let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let pool = token_data.pools[pool_index as usize];
-    let oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
+    let collateral = &ctx.accounts.clone.collateral;
+    let pools = &mut ctx.accounts.pools;
+    let oracles = &ctx.accounts.oracles;
+    let pool = &pools.pools[pool_index as usize];
+    let pool_oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
+    let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
 
     let mut override_liquidity_trading_fee = None;
     let mut override_treasury_trading_fee = None;
@@ -122,17 +133,21 @@ pub fn execute(
         }
     }
 
-    check_feed_update(oracle, Clock::get()?.slot)?;
+    check_feed_update(&pool_oracle, Clock::get()?.slot)?;
+    check_feed_update(&collateral_oracle, Clock::get()?.slot)?;
 
-    return_error_if_false!(pool.committed_onusd_liquidity > 0, CloneError::PoolEmpty);
+    return_error_if_false!(
+        pool.committed_collateral_liquidity > 0,
+        CloneError::PoolEmpty
+    );
 
     let user_specified_quantity = to_clone_decimal!(quantity);
-    let oracle_price = oracle.get_price();
     let swap_summary = pool.calculate_swap(
-        oracle_price,
+        pool_oracle.get_price(),
+        collateral_oracle.get_price(),
         user_specified_quantity,
         quantity_is_input,
-        quantity_is_onusd,
+        quantity_is_collateral,
         override_liquidity_trading_fee,
         override_treasury_trading_fee,
     );
@@ -148,7 +163,7 @@ pub fn execute(
     let threshold = to_clone_decimal!(result_threshold);
 
     let (
-        input_is_onusd,
+        input_is_collateral,
         user_input_account,
         input_mint,
         burn_amount,
@@ -157,7 +172,7 @@ pub fn execute(
         output_amount,
         treasury_output_account,
         onasset_ild_delta,
-        onusd_ild_delta,
+        collateral_ild_delta,
     ) = if quantity_is_input {
         return_error_if_false!(
             swap_summary.result >= threshold,
@@ -168,15 +183,15 @@ pub fn execute(
             swap_summary.result + swap_summary.treasury_fees_paid,
             CLONE_TOKEN_SCALE,
         );
-        if quantity_is_onusd {
-            // User specifies input, input (onusd), output (onasset)
+        if quantity_is_collateral {
+            // User specifies input, input (collateral), output (onasset)
             (
                 true,
                 ctx.accounts
-                    .user_onusd_token_account
+                    .user_collateral_token_account
                     .to_account_info()
                     .clone(),
-                ctx.accounts.onusd_mint.to_account_info().clone(),
+                ctx.accounts.collateral_mint.to_account_info().clone(),
                 user_specified_quantity,
                 ctx.accounts
                     .user_onasset_token_account
@@ -192,7 +207,7 @@ pub fn execute(
                 ild_delta_input,
             )
         } else {
-            // User specifies input, input (onasset), output (onusd)
+            // User specifies input, input (onasset), output (collateral)
             (
                 false,
                 ctx.accounts
@@ -202,13 +217,13 @@ pub fn execute(
                 ctx.accounts.onasset_mint.to_account_info().clone(),
                 user_specified_quantity,
                 ctx.accounts
-                    .user_onusd_token_account
+                    .user_collateral_token_account
                     .to_account_info()
                     .clone(),
-                ctx.accounts.onusd_mint.to_account_info().clone(),
+                ctx.accounts.collateral_mint.to_account_info().clone(),
                 swap_summary.result,
                 ctx.accounts
-                    .treasury_onusd_token_account
+                    .treasury_collateral_token_account
                     .to_account_info()
                     .clone(),
                 ild_delta_input,
@@ -225,8 +240,8 @@ pub fn execute(
             user_specified_quantity + swap_summary.treasury_fees_paid,
             CLONE_TOKEN_SCALE,
         );
-        if quantity_is_onusd {
-            // User specifies output, input (onasset), output (onusd)
+        if quantity_is_collateral {
+            // User specifies output, input (onasset), output (collateral)
             (
                 false,
                 ctx.accounts
@@ -236,27 +251,27 @@ pub fn execute(
                 ctx.accounts.onasset_mint.to_account_info().clone(),
                 swap_summary.result,
                 ctx.accounts
-                    .user_onusd_token_account
+                    .user_collateral_token_account
                     .to_account_info()
                     .clone(),
-                ctx.accounts.onusd_mint.to_account_info().clone(),
+                ctx.accounts.collateral_mint.to_account_info().clone(),
                 user_specified_quantity,
                 ctx.accounts
-                    .treasury_onusd_token_account
+                    .treasury_collateral_token_account
                     .to_account_info()
                     .clone(),
                 ild_delta_input,
                 ild_delta_output,
             )
         } else {
-            // User specifies output, input (onusd), output (onasset)
+            // User specifies output, input (collateral), output (onasset)
             (
                 true,
                 ctx.accounts
-                    .user_onusd_token_account
+                    .user_collateral_token_account
                     .to_account_info()
                     .clone(),
-                ctx.accounts.onusd_mint.to_account_info().clone(),
+                ctx.accounts.collateral_mint.to_account_info().clone(),
                 swap_summary.result,
                 ctx.accounts
                     .user_onasset_token_account
@@ -319,14 +334,14 @@ pub fn execute(
             .unwrap(),
     )?;
 
-    token_data.pools[pool_index as usize].onasset_ild += onasset_ild_delta.mantissa() as i64;
-    token_data.pools[pool_index as usize].onusd_ild += onusd_ild_delta.mantissa() as i64;
+    pools.pools[pool_index as usize].onasset_ild += onasset_ild_delta.mantissa() as i64;
+    pools.pools[pool_index as usize].collateral_ild += collateral_ild_delta.mantissa() as i64;
 
     emit!(SwapEvent {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
         pool_index,
-        input_is_onusd,
+        input_is_collateral,
         input: burn_amount.mantissa().try_into().unwrap(),
         output: output_amount.mantissa().try_into().unwrap(),
         trading_fee: swap_summary
@@ -341,16 +356,15 @@ pub fn execute(
             .unwrap()
     });
 
-    let pool = token_data.pools[pool_index as usize];
-    let oracle_price = rescale_toward_zero(oracle_price, CLONE_TOKEN_SCALE);
+    let pool = &pools.pools[pool_index as usize];
 
     emit!(PoolState {
         event_id: ctx.accounts.clone.event_counter,
         pool_index,
         onasset_ild: pool.onasset_ild,
-        onusd_ild: pool.onusd_ild,
-        committed_onusd_liquidity: pool.committed_onusd_liquidity,
-        oracle_price: oracle_price.mantissa().try_into().unwrap()
+        collateral_ild: pool.collateral_ild,
+        committed_collateral_liquidity: pool.committed_collateral_liquidity,
+        oracle_price: pool_oracle.price.try_into().unwrap()
     });
     ctx.accounts.clone.event_counter += 1;
 

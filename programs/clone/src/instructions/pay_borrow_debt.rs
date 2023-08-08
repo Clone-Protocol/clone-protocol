@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::events::*;
 use crate::states::*;
-use crate::{return_error_if_false, CLONE_PROGRAM_SEED, TOKEN_DATA_SEED, USER_SEED};
+use crate::{return_error_if_false, CLONE_PROGRAM_SEED, POOLS_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use std::convert::TryInto;
@@ -24,11 +24,11 @@ pub struct PayBorrowDebt<'info> {
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
-        seeds = [TOKEN_DATA_SEED.as_ref()],
+        seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = token_data.load()?.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
+        constraint = pools.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].status != Status::Frozen @ CloneError::StatusPreventsAction
     )]
-    pub token_data: AccountLoader<'info, TokenData>,
+    pub pools: Box<Account<'info, Pools>>,
     #[account(
         mut,
         constraint = payer_onasset_token_account.amount >= amount @ CloneError::InvalidTokenAccountBalance,
@@ -38,7 +38,7 @@ pub struct PayBorrowDebt<'info> {
     pub payer_onasset_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
-        address = token_data.load()?.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].asset_info.onasset_mint,
+        address = pools.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     pub token_program: Program<'info, Token>,
@@ -81,10 +81,6 @@ pub fn execute(
         is_liquidation: false,
         collateral_supplied: borrows.positions[borrow_index as usize].collateral_amount,
         collateral_delta: 0,
-        collateral_index: borrows.positions[borrow_index as usize]
-            .collateral_index
-            .try_into()
-            .unwrap(),
         borrowed_amount: borrows.positions[borrow_index as usize].borrowed_onasset,
         borrowed_delta: -(amount_value as i64)
     });

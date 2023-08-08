@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::events::*;
 use crate::states::*;
-use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED, USER_SEED};
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use std::convert::TryInto;
@@ -24,14 +24,7 @@ pub struct AddCollateralToBorrow<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        seeds = [TOKEN_DATA_SEED.as_ref()],
-        bump,
-        constraint = token_data.load()?.collaterals[user_account.load()?.borrows.positions[borrow_index as usize].collateral_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
-    )]
-    pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        mut,
-        address = token_data.load()?.collaterals[user_account.load()?.borrows.positions[borrow_index as usize].collateral_index as usize].vault
+        address = clone.collateral.vault
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -74,10 +67,6 @@ pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u6
         is_liquidation: false,
         collateral_supplied: borrows.positions[borrow_index as usize].collateral_amount,
         collateral_delta: amount.try_into().unwrap(),
-        collateral_index: borrows.positions[borrow_index as usize]
-            .collateral_index
-            .try_into()
-            .unwrap(),
         borrowed_amount: borrows.positions[borrow_index as usize].borrowed_onasset,
         borrowed_delta: 0
     });

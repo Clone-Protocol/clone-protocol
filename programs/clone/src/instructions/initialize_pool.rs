@@ -1,6 +1,6 @@
 use crate::decimal::CLONE_TOKEN_SCALE;
 use crate::states::*;
-use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED};
+use crate::{CLONE_PROGRAM_SEED, POOLS_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 
@@ -25,14 +25,14 @@ pub struct InitializePool<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        seeds = [TOKEN_DATA_SEED.as_ref()],
+        seeds = [POOLS_SEED.as_ref()],
         bump,
     )]
-    pub token_data: AccountLoader<'info, TokenData>,
+    pub pools: Box<Account<'info, Pools>>,
     #[account(
-        address = clone.onusd_mint
+        address = clone.collateral.mint
     )]
-    pub onusd_mint: Box<Account<'info, Mint>>,
+    pub collateral_mint: Box<Account<'info, Mint>>,
     #[account(
         mint::decimals = CLONE_TOKEN_SCALE as u8,
         mint::authority = clone,
@@ -59,14 +59,14 @@ pub fn execute(
     max_liquidation_overcollateral_ratio: u16,
     liquidity_trading_fee_bps: u16,
     treasury_trading_fee_bps: u16,
-    il_health_score_coefficient: u64,
-    position_health_score_coefficient: u64,
+    il_health_score_coefficient: u16,
+    position_health_score_coefficient: u16,
     oracle_info_index: u8,
 ) -> Result<()> {
-    let token_data = &mut ctx.accounts.token_data.load_mut()?;
+    let pools = &mut ctx.accounts.pools;
 
     // append pool to list
-    token_data.append_pool(Pool {
+    pools.pools.push(Pool {
         underlying_asset_token_account: ctx
             .accounts
             .underlying_asset_token_account
@@ -77,13 +77,13 @@ pub fn execute(
         asset_info: AssetInfo {
             ..Default::default()
         },
-        status: 0,
-        committed_onusd_liquidity: 0,
-        onusd_ild: 0,
+        status: Status::Frozen,
+        committed_collateral_liquidity: 0,
+        collateral_ild: 0,
         onasset_ild: 0,
     });
-    let index = token_data.num_pools - 1;
-    let asset_info = &mut token_data.pools[index as usize].asset_info;
+    let index = pools.pools.len() - 1;
+    let asset_info = &mut pools.pools[index as usize].asset_info;
     asset_info.onasset_mint = ctx.accounts.onasset_mint.to_account_info().key();
     asset_info.oracle_info_index = oracle_info_index.into();
     asset_info.il_health_score_coefficient = il_health_score_coefficient;

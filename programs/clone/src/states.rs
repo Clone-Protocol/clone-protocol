@@ -5,7 +5,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 use std::vec::Vec;
 
-#[derive(Clone, PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize, Default)]
+#[derive(Clone, PartialEq, Copy, Eq, Debug, AnchorDeserialize, AnchorSerialize, Default)]
 pub enum Status {
     Active = 0,
     #[default]
@@ -245,6 +245,9 @@ impl Comet {
         self.positions[(self.num_positions) as usize] = new_pool;
         self.num_positions += 1;
     }
+    pub fn calculate_effective_collateral_value(&self, collateral: &Collateral) -> Decimal {
+        to_clone_decimal!(self.collateral_amount * (collateral.collateralization_ratio as u64))
+    }
     pub fn is_empty(&self) -> bool {
         self.num_positions == 0 && self.collateral_amount == 0
     }
@@ -276,21 +279,6 @@ impl CometPosition {
         self.committed_collateral_liquidity == 0
             && self.collateral_ild_rebate == 0
             && self.onasset_ild_rebate == 0
-    }
-}
-
-#[zero_copy]
-#[derive(PartialEq, Eq, Debug)]
-pub struct CometCollateral {
-    pub collateral_amount: u64,
-    pub collateral_index: u64,
-}
-impl Default for CometCollateral {
-    fn default() -> Self {
-        Self {
-            collateral_amount: 0,
-            collateral_index: u8::MAX.into(),
-        }
     }
 }
 
@@ -330,7 +318,6 @@ pub struct BorrowPosition {
     pub pool_index: u64,
     pub borrowed_onasset: u64,
     pub collateral_amount: u64,
-    pub collateral_index: u64,
 }
 
 impl BorrowPosition {
@@ -345,7 +332,6 @@ impl Default for BorrowPosition {
             pool_index: u64::MAX,
             borrowed_onasset: 0,
             collateral_amount: 0,
-            collateral_index: u64::MAX,
         }
     }
 }

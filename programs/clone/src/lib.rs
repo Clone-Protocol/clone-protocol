@@ -31,12 +31,12 @@ pub mod clone {
         )
     }
 
-    pub fn initialize_token_data(ctx: Context<InitializeTokenData>) -> Result<()> {
-        instructions::initialize_token_data::execute(ctx)
+    pub fn initialize_pools(ctx: Context<InitializePools>) -> Result<()> {
+        instructions::initialize_pools::execute(ctx)
     }
 
-    pub fn reallocate_token_data(ctx: Context<ReallocateTokenData>, len: u16) -> Result<()> {
-        instructions::reallocate_token_data::execute(ctx, len)
+    pub fn initialize_oracles(ctx: Context<InitializeOracles>) -> Result<()> {
+        instructions::initialize_oracles::execute(ctx)
     }
 
     pub fn update_clone_parameters(
@@ -54,24 +54,8 @@ pub mod clone {
         instructions::update_pool_parameters::execute(ctx, index, params)
     }
 
-    pub fn update_collateral_parameters(
-        ctx: Context<UpdateCollateralParameters>,
-        index: u8,
-        params: CollateralParameters,
-    ) -> Result<()> {
-        instructions::update_collateral_parameters::execute(ctx, index, params)
-    }
-
     pub fn initialize_user(ctx: Context<InitializeUser>, authority: Pubkey) -> Result<()> {
         instructions::initialize_user::execute(ctx, authority)
-    }
-
-    pub fn add_collateral(
-        ctx: Context<AddCollateral>,
-        collateralization_ratio: u8,
-        oracle_info_index: u8,
-    ) -> Result<()> {
-        instructions::add_collateral::execute(ctx, collateralization_ratio, oracle_info_index)
     }
 
     pub fn initialize_pool(
@@ -80,8 +64,8 @@ pub mod clone {
         max_liquidation_overcollateral_ratio: u16,
         liquidity_trading_fee_bps: u16,
         treasury_trading_fee_bps: u16,
-        il_health_score_coefficient: u64,
-        position_health_score_coefficient: u64,
+        il_health_score_coefficient: u16,
+        position_health_score_coefficient: u16,
         oracle_info_index: u8,
     ) -> Result<()> {
         instructions::initialize_pool::execute(
@@ -96,32 +80,22 @@ pub mod clone {
         )
     }
 
-    pub fn update_prices<'info>(
-        ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
-        indices: OracleIndices,
-    ) -> Result<()> {
-        instructions::update_prices::execute(ctx, indices)
-    }
-
-    pub fn mint_onusd(ctx: Context<MintONUSD>, amount: u64) -> Result<()> {
-        instructions::mint_onusd::execute(ctx, amount)
-    }
-
-    pub fn burn_onusd(ctx: Context<BurnONUSD>, amount: u64) -> Result<()> {
-        instructions::burn_onusd::execute(ctx, amount)
-    }
+    // pub fn update_prices<'info>(
+    //     ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
+    //     indices: OracleIndices,
+    // ) -> Result<()> {
+    //     instructions::update_prices::execute(ctx, indices)
+    // }
 
     pub fn initialize_borrow_position(
         ctx: Context<InitializeBorrowPosition>,
         pool_index: u8,
-        collateral_index: u8,
         onasset_amount: u64,
         collateral_amount: u64,
     ) -> Result<()> {
         instructions::initialize_borrow_position::execute(
             ctx,
             pool_index,
-            collateral_index,
             onasset_amount,
             collateral_amount,
         )
@@ -158,22 +132,16 @@ pub mod clone {
 
     pub fn add_collateral_to_comet(
         ctx: Context<AddCollateralToComet>,
-        collateral_index: u8,
         collateral_amount: u64,
     ) -> Result<()> {
-        instructions::add_collateral_to_comet::execute(ctx, collateral_index, collateral_amount)
+        instructions::add_collateral_to_comet::execute(ctx, collateral_amount)
     }
 
     pub fn withdraw_collateral_from_comet(
         ctx: Context<WithdrawCollateralFromComet>,
-        comet_collateral_index: u8,
         collateral_amount: u64,
     ) -> Result<()> {
-        instructions::withdraw_collateral_from_comet::execute(
-            ctx,
-            comet_collateral_index,
-            collateral_amount,
-        )
+        instructions::withdraw_collateral_from_comet::execute(ctx, collateral_amount)
     }
 
     pub fn add_liquidity_to_comet(
@@ -199,14 +167,12 @@ pub mod clone {
     pub fn liquidate_comet_position(
         ctx: Context<LiquidateCometPosition>,
         comet_position_index: u8,
-        comet_collateral_index: u8,
         amount: u64,
         pay_onusd_debt: bool,
     ) -> Result<()> {
         instructions::liquidate_comet_position::execute(
             ctx,
             comet_position_index,
-            comet_collateral_index,
             amount,
             pay_onusd_debt,
         )
@@ -278,13 +244,5 @@ pub mod clone {
             quantity_is_onusd,
             result_threshold,
         )
-    }
-
-    pub fn add_oracle_feed(ctx: Context<AddOracleFeed>, pyth_address: Pubkey) -> Result<()> {
-        instructions::add_oracle_feed::execute(ctx, pyth_address)
-    }
-
-    pub fn remove_oracle_feed(ctx: Context<RemoveOracleFeed>, index: u8) -> Result<()> {
-        instructions::remove_oracle_feed::execute(ctx, index)
     }
 }

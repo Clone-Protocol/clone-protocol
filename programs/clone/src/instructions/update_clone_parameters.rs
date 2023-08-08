@@ -11,6 +11,7 @@ pub enum CloneParameters {
     CometLiquidationFee { value: u16 },
     BorrowLiquidationFee { value: u16 },
     TreasuryAddress { address: Pubkey },
+    CollateralizationRatio { value: u8 },
 }
 
 #[derive(Accounts)]
@@ -59,6 +60,9 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
         }
         CloneParameters::TreasuryAddress { address } => {
             clone.treasury_address = address;
+        }
+        CloneParameters::CollateralizationRatio { value } => {
+            clone.collateral.collateralization_ratio = value;
         }
     }
 
