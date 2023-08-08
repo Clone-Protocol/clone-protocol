@@ -3,10 +3,11 @@ use crate::{to_bps_decimal, to_clone_decimal};
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
+use std::vec::Vec;
 
-#[repr(u64)]
-#[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
+#[derive(Clone, PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize, Default)]
 pub enum Status {
+    #[default]
     Active = 0,
     Frozen = 1,
     Extraction = 2,
@@ -24,79 +25,73 @@ pub struct Clone {
     pub admin: Pubkey,
     pub auth: [Pubkey; NUM_AUTH],
     pub bump: u8,
+    pub collateral: Collateral,
     pub comet_liquidator_fee_bps: u16,
     pub borrow_liquidator_fee_bps: u16,
     pub treasury_address: Pubkey,
     pub event_counter: u64,
 }
 
-#[account(zero_copy)]
-pub struct TokenData {
-    pub num_pools: u64,
-    pub collateral_mint: Pubkey,
-    pub collateral_vault: Pubkey,
-    pub collateral_oracle_info: OracleInfo,
-    pub pools: [Pool; NUM_POOLS],
+#[account]
+pub struct Pools {
+    pub pools: Vec<Pool>,
 }
 
-impl Default for TokenData {
+impl Default for Pools {
+    fn default() -> Self {
+        Self { pools: Vec::new() }
+    }
+}
+
+#[account]
+pub struct Oracles {
+    pub oracles: Vec<OracleInfo>,
+}
+
+impl Default for Oracles {
     fn default() -> Self {
         Self {
-            num_pools: 0,
-            collateral_mint: Pubkey::default(),
-            collateral_vault: Pubkey::default(),
-            collateral_oracle_info: OracleInfo::default(),
-            pools: [Pool::default(); NUM_POOLS],
+            oracles: Vec::new(),
         }
     }
 }
 
-impl TokenData {
-    pub fn append_pool(&mut self, new_pool: Pool) {
-        self.pools[(self.num_pools) as usize] = new_pool;
-        self.num_pools += 1;
-    }
-}
-
-#[zero_copy]
-#[derive(PartialEq, Eq, Default, Debug)]
+#[derive(Clone, PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct AssetInfo {
-    // 80
     pub onasset_mint: Pubkey,
-    pub oracle_info: OracleInfo,
-    pub il_health_score_coefficient: u64,
-    pub position_health_score_coefficient: u64,
-    pub min_overcollateral_ratio: u64,
-    pub max_liquidation_overcollateral_ratio: u64,
+    pub oracle_info_index: u8,
+    pub il_health_score_coefficient: u16,
+    pub position_health_score_coefficient: u16,
+    pub min_overcollateral_ratio: u16,
+    pub max_liquidation_overcollateral_ratio: u16,
 }
 
-#[zero_copy]
-#[derive(PartialEq, Eq, Default, Debug)]
+#[derive(Clone, PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct OracleInfo {
     pub pyth_address: Pubkey,
-    pub price: i64,
-    pub expo: i64,
-    pub status: u64,
+    pub price: i16,
+    pub expo: i8,
+    pub pyth_status: u8,
+    pub status: Status,
     pub last_update_slot: u64,
 }
 
 impl OracleInfo {
     pub fn get_price(&self) -> Decimal {
-        Decimal::new(self.price, self.expo.try_into().unwrap())
+        Decimal::new(self.price as i64, self.expo.try_into().unwrap())
     }
 }
 
-#[zero_copy]
-#[derive(PartialEq, Eq, Default, Debug)]
+#[derive(Clone, PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct Pool {
     pub underlying_asset_token_account: Pubkey,
     pub committed_collateral_liquidity: u64,
-    pub collateral_ild: i64,
-    pub onasset_ild: i64,
-    pub treasury_trading_fee_bps: u64,
-    pub liquidity_trading_fee_bps: u64,
+    pub collateral_ild: i32,
+    pub onasset_ild: i32,
+    pub treasury_trading_fee_bps: u16,
+    pub liquidity_trading_fee_bps: u16,
     pub asset_info: AssetInfo,
-    pub status: u64,
+    pub status: Status,
 }
 
 #[derive(Default, Debug)]
@@ -136,7 +131,8 @@ impl Pool {
         override_liquidity_trading_fee: Option<Decimal>,
         override_treasury_trading_fee: Option<Decimal>,
     ) -> SwapSummary {
-        let (pool_collateral, pool_onasset) = self.calculate_jit_pool(onasset_price, collateral_price);
+        let (pool_collateral, pool_onasset) =
+            self.calculate_jit_pool(onasset_price, collateral_price);
         let invariant = pool_onasset * pool_collateral;
         let default_liquidity_trading_fee = to_bps_decimal!(self.liquidity_trading_fee_bps);
         let default_treasury_trading_fee = to_bps_decimal!(self.treasury_trading_fee_bps);
@@ -197,14 +193,24 @@ impl Pool {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.committed_collateral_liquidity == 0 && self.onasset_ild == 0 && self.collateral_ild == 0
+        self.committed_collateral_liquidity == 0
+            && self.onasset_ild == 0
+            && self.collateral_ild == 0
     }
+}
+
+#[derive(Clone, PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
+pub struct Collateral {
+    pub oracle_info_index: u8,
+    pub mint: Pubkey,
+    pub vault: Pubkey,
+    pub collateralization_ratio: u8,
+    pub scale: u8,
 }
 
 #[account(zero_copy)]
 #[derive(Default)]
 pub struct User {
-    // 97
     pub borrows: BorrowPositions,
     pub comet: Comet,
 }
@@ -212,10 +218,9 @@ pub struct User {
 #[zero_copy]
 #[derive(PartialEq, Eq, Debug)]
 pub struct Comet {
-    // ??
     pub num_positions: u64,
     pub collateral_amount: u64,
-    pub positions: [CometPosition; NUM_POOLS], // 255 * 120 = 30,600
+    pub positions: [CometPosition; NUM_POOLS],
 }
 
 impl Default for Comet {
