@@ -7,7 +7,8 @@ pub const CLONE_PROGRAM_SEED: &str = "clone";
 
 #[derive(Accounts)]
 #[instruction(
-    comet_liquidator_fee_bps: u16,
+    comet_collateral_ild_liquidator_amount: u16,
+    comet_onasset_ild_liquidator_fee_bps: u16,
     borrow_liquidator_fee_bps: u16,
     treasury_address: Pubkey,
 )]
@@ -39,12 +40,13 @@ pub struct InitializeClone<'info> {
 
 pub fn execute(
     ctx: Context<InitializeClone>,
-    comet_liquidator_fee_bps: u16,
+    comet_collateral_ild_liquidator_fee_bps: u16,
+    comet_onasset_ild_liquidator_fee_bps: u16,
     borrow_liquidator_fee_bps: u16,
     treasury_address: Pubkey,
 ) -> Result<()> {
     return_error_if_false!(
-        comet_liquidator_fee_bps < 10000 && borrow_liquidator_fee_bps < 10000,
+        comet_onasset_ild_liquidator_fee_bps < 10000 && borrow_liquidator_fee_bps < 10000,
         CloneError::InvalidValueRange
     );
 
@@ -54,7 +56,10 @@ pub fn execute(
     ctx.accounts.clone.treasury_address = treasury_address;
     ctx.accounts.clone.collateral.vault = *ctx.accounts.collateral_vault.to_account_info().key;
     ctx.accounts.clone.collateral.mint = *ctx.accounts.collateral_mint.to_account_info().key;
-    ctx.accounts.clone.comet_liquidator_fee_bps = comet_liquidator_fee_bps;
+    ctx.accounts
+        .clone
+        .comet_collateral_ild_liquidator_fee_bps = comet_collateral_ild_liquidator_fee_bps;
+    ctx.accounts.clone.comet_onasset_ild_liquidator_fee_bps = comet_onasset_ild_liquidator_fee_bps;
     ctx.accounts.clone.borrow_liquidator_fee_bps = borrow_liquidator_fee_bps;
 
     Ok(())

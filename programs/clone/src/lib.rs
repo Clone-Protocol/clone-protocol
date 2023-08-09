@@ -19,13 +19,15 @@ pub mod clone {
     #[allow(clippy::too_many_arguments)]
     pub fn initialize_clone(
         ctx: Context<InitializeClone>,
-        comet_liquidator_fee_bps: u16,
+        comet_collateral_ild_liquidator_fee_bps: u16,
+        comet_onasset_ild_liquidator_fee_bps: u16,
         borrow_liquidator_fee_bps: u16,
         treasury_address: Pubkey,
     ) -> Result<()> {
         instructions::initialize_clone::execute(
             ctx,
-            comet_liquidator_fee_bps,
+            comet_collateral_ild_liquidator_fee_bps,
+            comet_onasset_ild_liquidator_fee_bps,
             borrow_liquidator_fee_bps,
             treasury_address,
         )
@@ -164,18 +166,19 @@ pub mod clone {
         )
     }
 
+    pub fn liquidate_comet_collateral_ild(
+        ctx: Context<LiquidateCometCollateralIld>,
+        comet_position_index: u8,
+    ) -> Result<()> {
+        instructions::liquidate_comet_collateral_ild::execute(ctx, comet_position_index)
+    }
+
     pub fn liquidate_comet_position(
-        ctx: Context<LiquidateCometPosition>,
+        ctx: Context<LiquidateCometOnassetIld>,
         comet_position_index: u8,
         amount: u64,
-        pay_onusd_debt: bool,
     ) -> Result<()> {
-        instructions::liquidate_comet_position::execute(
-            ctx,
-            comet_position_index,
-            amount,
-            pay_onusd_debt,
-        )
+        instructions::liquidate_comet_onasset_ild::execute(ctx, comet_position_index, amount)
     }
 
     pub fn liquidate_borrow_position(
@@ -198,14 +201,14 @@ pub mod clone {
         user: Pubkey,
         comet_position_index: u8,
         amount: u64,
-        pay_onusd_debt: bool,
+        payment_type: PaymentType,
     ) -> Result<()> {
         instructions::pay_impermanent_loss_debt::execute(
             ctx,
             user,
             comet_position_index,
             amount,
-            pay_onusd_debt,
+            payment_type,
         )
     }
 
