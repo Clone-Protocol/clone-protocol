@@ -1,25 +1,28 @@
-////use crate::instructions::InitializeUser;
 use crate::states::*;
+use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
-use anchor_spl::token::Token;
 
 pub const USER_SEED: &str = "user";
 
 #[derive(Accounts)]
 #[instruction(authority: Pubkey)]
 pub struct InitializeUser<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
+    #[account(mut, address = clone.admin)]
+    pub admin: Signer<'info>,
+    #[account(
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
+        bump,
+        has_one = admin,
+    )]
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         init,
-        space = 8 + 3096,
+        space = 10240,
         seeds = [USER_SEED.as_ref(), authority.as_ref()],
         bump,
-        payer = payer
+        payer = admin,
     )]
-    pub user_account: AccountLoader<'info, User>,
-    pub rent: Sysvar<'info, Rent>,
-    pub token_program: Program<'info, Token>,
+    pub user_account: Account<'info, User>,
     pub system_program: Program<'info, System>,
 }
 

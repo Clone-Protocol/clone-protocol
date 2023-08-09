@@ -22,9 +22,9 @@ pub struct LiquidateCometPosition<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
-        constraint = user_account.load()?.comet.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex,
+        constraint = user_account.comet.positions.len() > comet_position_index.into() @ CloneError::InvalidInputPositionIndex,
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
@@ -34,8 +34,8 @@ pub struct LiquidateCometPosition<'info> {
     #[account(
         seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = pools.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].status == Status::Active ||
-        pools.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].status == Status::Liquidation @ CloneError::StatusPreventsAction
+        constraint = pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status == Status::Active ||
+        pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status == Status::Liquidation @ CloneError::StatusPreventsAction
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
@@ -50,7 +50,7 @@ pub struct LiquidateCometPosition<'info> {
     pub collateral_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = pools.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
+        address = pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -84,7 +84,7 @@ pub fn execute(
     let collateral = &ctx.accounts.clone.collateral;
     let pools = &mut ctx.accounts.pools;
     let oracles = &ctx.accounts.oracles;
-    let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
+    let comet = &mut ctx.accounts.user_account.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
     let authorized_amount = to_clone_decimal!(amount);
@@ -205,7 +205,7 @@ pub fn execute(
     ctx.accounts.clone.event_counter += 1;
 
     if comet.positions[comet_position_index as usize].is_empty() {
-        comet.remove_position(comet_position_index as usize);
+        comet.positions.remove(comet_position_index as usize);
     }
 
     Ok(())

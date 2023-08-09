@@ -19,9 +19,9 @@ pub struct WithdrawCollateralFromBorrow<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
-        constraint = (borrow_index as u64) < user_account.load()?.borrows.num_positions @ CloneError::InvalidInputPositionIndex
+        constraint = (borrow_index as usize) < user_account.borrows.len() @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
@@ -31,7 +31,7 @@ pub struct WithdrawCollateralFromBorrow<'info> {
         mut,
         seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = pools.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].status != Status::Frozen @ CloneError::StatusPreventsAction
+        constraint = pools.pools[user_account.borrows[borrow_index as usize].pool_index as usize].status != Status::Frozen @ CloneError::StatusPreventsAction
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
@@ -68,21 +68,21 @@ pub fn execute(
     let collateral = &ctx.accounts.clone.collateral;
     let pools = &mut ctx.accounts.pools;
     let oracles = &ctx.accounts.oracles;
-    let borrows = &mut ctx.accounts.user_account.load_mut()?.borrows;
+    let borrows = &mut ctx.accounts.user_account.borrows;
 
-    let pool_index = borrows.positions[borrow_index as usize].pool_index;
+    let pool_index = borrows[borrow_index as usize].pool_index;
     let pool = &pools.pools[pool_index as usize];
     let pool_oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
 
     let min_overcollateral_ratio = to_ratio_decimal!(pool.asset_info.min_overcollateral_ratio);
     let collateralization_ratio = to_ratio_decimal!(collateral.collateralization_ratio);
-    let borrow_position: BorrowPosition = borrows.positions[borrow_index as usize];
+    let borrow_position = borrows[borrow_index as usize];
     let asset_amount_borrowed = to_clone_decimal!(borrow_position.borrowed_onasset);
-    let amount_to_withdraw = amount.min(borrows.positions[borrow_index as usize].collateral_amount);
+    let amount_to_withdraw = amount.min(borrows[borrow_index as usize].collateral_amount);
 
     // subtract collateral amount from mint data
-    borrows.positions[borrow_index as usize].collateral_amount -= amount_to_withdraw;
+    borrows[borrow_index as usize].collateral_amount -= amount_to_withdraw;
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
@@ -92,7 +92,7 @@ pub fn execute(
         min_overcollateral_ratio,
         collateralization_ratio,
         Decimal::new(
-            borrows.positions[borrow_index as usize]
+            borrows[borrow_index as usize]
                 .collateral_amount
                 .try_into()
                 .unwrap(),
@@ -121,15 +121,15 @@ pub fn execute(
         user_address: ctx.accounts.user.key(),
         pool_index: pool_index.try_into().unwrap(),
         is_liquidation: false,
-        collateral_supplied: borrows.positions[borrow_index as usize].collateral_amount,
+        collateral_supplied: borrows[borrow_index as usize].collateral_amount,
         collateral_delta: -(amount_to_withdraw as i64),
-        borrowed_amount: borrows.positions[borrow_index as usize].borrowed_onasset,
+        borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
         borrowed_delta: 0
     });
     ctx.accounts.clone.event_counter += 1;
 
     // check to see if mint is empty, if so remove
-    if borrows.positions[borrow_index as usize].is_empty() {
+    if borrows[borrow_index as usize].is_empty() {
         borrows.remove(borrow_index as usize);
     }
 

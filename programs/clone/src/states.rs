@@ -208,62 +208,36 @@ pub struct Collateral {
     pub scale: u8,
 }
 
-#[account(zero_copy)]
-#[derive(Default)]
+#[account]
 pub struct User {
-    pub borrows: BorrowPositions,
+    pub borrows: Vec<Borrow>,
     pub comet: Comet,
 }
 
-#[zero_copy]
-#[derive(PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct Comet {
-    pub num_positions: u64,
     pub collateral_amount: u64,
-    pub positions: [CometPosition; NUM_POOLS],
-}
-
-impl Default for Comet {
-    fn default() -> Self {
-        Self {
-            num_positions: 0,
-            collateral_amount: 0,
-            positions: [CometPosition::default(); NUM_POOLS],
-        }
-    }
+    pub positions: Vec<LiquidityPosition>,
 }
 
 impl Comet {
-    pub fn remove_position(&mut self, index: usize) {
-        self.positions[index] = self.positions[(self.num_positions - 1) as usize];
-        self.positions[(self.num_positions - 1) as usize] = CometPosition {
-            ..Default::default()
-        };
-        self.num_positions -= 1;
-    }
-    pub fn add_position(&mut self, new_pool: CometPosition) {
-        self.positions[(self.num_positions) as usize] = new_pool;
-        self.num_positions += 1;
-    }
     pub fn calculate_effective_collateral_value(&self, collateral: &Collateral) -> Decimal {
         to_clone_decimal!(self.collateral_amount * (collateral.collateralization_ratio as u64))
     }
     pub fn is_empty(&self) -> bool {
-        self.num_positions == 0 && self.collateral_amount == 0
+        self.positions.len() == 0 && self.collateral_amount == 0
     }
 }
 
-#[zero_copy]
-#[derive(PartialEq, Eq, Debug)]
-pub struct CometPosition {
-    // 120
+#[derive(Clone, PartialEq, Eq, Copy, Debug, AnchorDeserialize, AnchorSerialize)]
+pub struct LiquidityPosition {
     pub pool_index: u64,
     pub committed_collateral_liquidity: u64,
     pub collateral_ild_rebate: i64,
     pub onasset_ild_rebate: i64,
 }
 
-impl Default for CometPosition {
+impl Default for LiquidityPosition {
     fn default() -> Self {
         Self {
             pool_index: u8::MAX.into(),
@@ -274,7 +248,7 @@ impl Default for CometPosition {
     }
 }
 
-impl CometPosition {
+impl LiquidityPosition {
     pub fn is_empty(&self) -> bool {
         self.committed_collateral_liquidity == 0
             && self.collateral_ild_rebate == 0
@@ -283,50 +257,20 @@ impl CometPosition {
 }
 
 #[zero_copy]
-#[derive(PartialEq, Eq, Debug)]
-pub struct BorrowPositions {
-    pub num_positions: u64,
-    pub positions: [BorrowPosition; NUM_BORROW_POSITIONS], // 255 * 80 = 20,400
-}
-
-impl Default for BorrowPositions {
-    fn default() -> Self {
-        Self {
-            num_positions: 0,
-            positions: [BorrowPosition::default(); NUM_BORROW_POSITIONS],
-        }
-    }
-}
-
-impl BorrowPositions {
-    pub fn remove(&mut self, index: usize) {
-        self.positions[index] = self.positions[(self.num_positions - 1) as usize];
-        self.positions[(self.num_positions - 1) as usize] = BorrowPosition {
-            ..Default::default()
-        };
-        self.num_positions -= 1;
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.num_positions == 0
-    }
-}
-
-#[zero_copy]
-#[derive(PartialEq, Eq, Debug)]
-pub struct BorrowPosition {
+#[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
+pub struct Borrow {
     pub pool_index: u64,
     pub borrowed_onasset: u64,
     pub collateral_amount: u64,
 }
 
-impl BorrowPosition {
+impl Borrow {
     pub fn is_empty(&self) -> bool {
         self.borrowed_onasset == 0 && self.collateral_amount == 0
     }
 }
 
-impl Default for BorrowPosition {
+impl Default for Borrow {
     fn default() -> Self {
         Self {
             pool_index: u64::MAX,

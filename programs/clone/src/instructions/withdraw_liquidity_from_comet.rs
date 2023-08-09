@@ -15,9 +15,9 @@ pub struct WithdrawLiquidityFromComet<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
-        constraint = (comet_position_index as u64) < user_account.load()?.comet.num_positions @ CloneError::InvalidInputPositionIndex
+        constraint = (comet_position_index as usize) < user_account.comet.positions.len() @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
@@ -28,7 +28,7 @@ pub struct WithdrawLiquidityFromComet<'info> {
         mut,
         seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = pools.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen @ CloneError::StatusPreventsAction
+        constraint = pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen @ CloneError::StatusPreventsAction
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
@@ -121,7 +121,7 @@ pub fn execute(
 ) -> Result<()> {
     let pools = &mut ctx.accounts.pools;
     let oracles = &ctx.accounts.oracles;
-    let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
+    let comet = &mut ctx.accounts.user_account.comet;
     withdraw_liquidity(
         pools,
         oracles,
