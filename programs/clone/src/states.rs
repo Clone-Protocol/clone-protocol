@@ -66,12 +66,19 @@ pub struct AssetInfo {
     pub max_liquidation_overcollateral_ratio: u16,
 }
 
+#[derive(Clone, PartialEq, Default, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
+pub enum OracleSource {
+    #[default]
+    PYTH,
+    SWITCHBOARD,
+}
+
 #[derive(Clone, PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct OracleInfo {
-    pub pyth_address: Pubkey,
+    pub source: OracleSource,
+    pub address: Pubkey,
     pub price: i64,
     pub expo: i8,
-    pub pyth_status: u8,
     pub status: Status,
     pub last_update_slot: u64,
 }

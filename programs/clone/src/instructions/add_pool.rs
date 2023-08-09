@@ -14,7 +14,7 @@ use anchor_spl::token::*;
     position_health_score_coefficient: u64,
     oracle_info_index: u8,
 )]
-pub struct InitializePool<'info> {
+pub struct AddPool<'info> {
     #[account(mut, address = clone.admin)]
     pub admin: Signer<'info>,
     #[account(
@@ -54,7 +54,7 @@ pub struct InitializePool<'info> {
 }
 
 pub fn execute(
-    ctx: Context<InitializePool>,
+    ctx: Context<AddPool>,
     min_overcollateral_ratio: u16,
     max_liquidation_overcollateral_ratio: u16,
     liquidity_trading_fee_bps: u16,

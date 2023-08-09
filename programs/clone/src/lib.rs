@@ -54,12 +54,19 @@ pub mod clone {
         instructions::update_pool_parameters::execute(ctx, index, params)
     }
 
+    pub fn update_oracles(
+        ctx: Context<UpdateOracles>,
+        params: UpdateOracleParameters
+    ) -> Result<()> {
+        instructions::update_oracles::execute(ctx, params)
+    }
+
     pub fn initialize_user(ctx: Context<InitializeUser>, authority: Pubkey) -> Result<()> {
         instructions::initialize_user::execute(ctx, authority)
     }
 
-    pub fn initialize_pool(
-        ctx: Context<InitializePool>,
+    pub fn add_pool(
+        ctx: Context<AddPool>,
         min_overcollateral_ratio: u16,
         max_liquidation_overcollateral_ratio: u16,
         liquidity_trading_fee_bps: u16,
@@ -68,7 +75,7 @@ pub mod clone {
         position_health_score_coefficient: u16,
         oracle_info_index: u8,
     ) -> Result<()> {
-        instructions::initialize_pool::execute(
+        instructions::add_pool::execute(
             ctx,
             min_overcollateral_ratio,
             max_liquidation_overcollateral_ratio,
@@ -80,12 +87,12 @@ pub mod clone {
         )
     }
 
-    // pub fn update_prices<'info>(
-    //     ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
-    //     indices: OracleIndices,
-    // ) -> Result<()> {
-    //     instructions::update_prices::execute(ctx, indices)
-    // }
+    pub fn update_prices<'info>(
+        ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
+        indices: OracleIndices,
+    ) -> Result<()> {
+        instructions::update_prices::execute(ctx, indices)
+    }
 
     pub fn initialize_borrow_position(
         ctx: Context<InitializeBorrowPosition>,

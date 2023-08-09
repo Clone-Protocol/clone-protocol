@@ -116,6 +116,8 @@ pub fn calculate_health_score(
     collateral: &Collateral,
 ) -> Result<HealthScore> {
     let slot = Clock::get().expect("Failed to get slot.").slot;
+    let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
+    check_feed_update(collateral_oracle, slot)?;
 
     let mut total_il_term = Decimal::zero();
     let mut total_position_term = Decimal::zero();
@@ -134,11 +136,12 @@ pub fn calculate_health_score(
     }
 
     let effective_collateral = comet.calculate_effective_collateral_value(&collateral);
+    let collateral_price = collateral_oracle.get_price();
 
     let score = if total_il_term.is_zero() && total_position_term.is_zero() {
         Decimal::new(100, 0)
     } else {
-        Decimal::new(100, 0) - (total_il_term + total_position_term) / effective_collateral
+        Decimal::new(100, 0) - (total_il_term + total_position_term) / (effective_collateral * collateral_price)
     };
 
     Ok(HealthScore {
