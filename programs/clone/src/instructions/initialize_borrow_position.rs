@@ -19,7 +19,7 @@ pub struct InitializeBorrowPosition<'info> {
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
@@ -137,16 +137,13 @@ pub fn execute(
     )?;
 
     // set mint position data
-    let user_account = &mut ctx.accounts.user_account.load_mut()?;
-    let num_positions = user_account.borrows.num_positions;
-    user_account.borrows.positions[num_positions as usize] = BorrowPosition {
+    let user_account = &mut ctx.accounts.user_account;
+    let num_positions = user_account.borrows.len();
+    user_account.borrows[num_positions as usize] = Borrow {
         collateral_amount,
         pool_index: pool_index.try_into().unwrap(),
         borrowed_onasset: onasset_amount,
     };
-
-    // increment number of mint positions
-    user_account.borrows.num_positions += 1;
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,

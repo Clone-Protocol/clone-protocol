@@ -16,9 +16,9 @@ pub struct PayImpermanentLossDebt<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.as_ref()],
         bump,
-        constraint = user_account.load()?.comet.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
+        constraint = user_account.comet.positions.len() > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
@@ -28,7 +28,7 @@ pub struct PayImpermanentLossDebt<'info> {
     #[account(
         seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = pools.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen @ CloneError::StatusPreventsAction
+        constraint = pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen @ CloneError::StatusPreventsAction
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
@@ -38,7 +38,7 @@ pub struct PayImpermanentLossDebt<'info> {
     pub collateral_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
-        address = pools.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
+        address = pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -66,7 +66,7 @@ pub fn execute(
     return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
     let authorized_amount = to_clone_decimal!(amount);
     let pools = &ctx.accounts.pools;
-    let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
+    let comet = &mut ctx.accounts.user_account.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
     let ild_share = calculate_ild_share(&comet_position, &pools);
