@@ -18,7 +18,7 @@ pub struct AddLiquidityToComet<'info> {
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
@@ -49,7 +49,7 @@ pub fn execute(
     let collateral = &ctx.accounts.clone.collateral;
     let pools = &mut ctx.accounts.pools;
     let oracles = &ctx.accounts.oracles;
-    let comet: &mut Comet = &mut ctx.accounts.user_account.load_mut()?.comet;
+    let comet = &mut ctx.accounts.user_account.comet;
     let pool = &pools.pools[pool_index as usize];
     let committed_collateral_value = to_clone_decimal!(pool.committed_collateral_liquidity);
     let collateral_liquidity_value = to_clone_decimal!(collateral_amount);
@@ -70,25 +70,25 @@ pub fn execute(
     );
 
     // find the index of the position within the comet position
-    let mut comet_position_index: Option<usize> = None;
-    for (i, pos) in comet.positions[..comet.num_positions as usize]
+    let mut liquidity_position_index: Option<usize> = None;
+    for (i, pos) in comet.positions[..comet.positions.len() as usize]
         .iter()
         .enumerate()
     {
         if pos.pool_index == (pool_index as u64) {
-            comet_position_index = Some(i);
+            liquidity_position_index = Some(i);
             break;
         }
     }
 
     // check to see if a new position must be added to the position
-    if let Some(position_index) = comet_position_index {
+    if let Some(position_index) = liquidity_position_index {
         // update comet position data
         comet.positions[position_index].committed_collateral_liquidity += collateral_amount;
         comet.positions[position_index].collateral_ild_rebate += collateral_ild.mantissa() as i64;
         comet.positions[position_index].onasset_ild_rebate += onasset_ild.mantissa() as i64;
     } else {
-        comet.add_position(CometPosition {
+        comet.positions.push(LiquidityPosition {
             pool_index: pool_index as u64,
             committed_collateral_liquidity: collateral_liquidity_value
                 .mantissa()

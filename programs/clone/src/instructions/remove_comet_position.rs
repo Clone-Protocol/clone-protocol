@@ -12,9 +12,9 @@ pub struct RemoveCometPosition<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
-        constraint = user_account.load()?.comet.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
+        constraint = user_account.comet.positions.len() > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
         seeds = [POOLS_SEED.as_ref()],
@@ -24,7 +24,7 @@ pub struct RemoveCometPosition<'info> {
 }
 
 pub fn execute(ctx: Context<RemoveCometPosition>, comet_position_index: u8) -> Result<()> {
-    let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
+    let comet = &mut ctx.accounts.user_account.comet;
     let comet_position = comet.positions[comet_position_index as usize];
 
     return_error_if_false!(
@@ -34,7 +34,7 @@ pub fn execute(ctx: Context<RemoveCometPosition>, comet_position_index: u8) -> R
         CloneError::CometNotEmpty
     );
 
-    comet.remove_position(comet_position_index.into());
+    comet.positions.remove(comet_position_index.into());
 
     Ok(())
 }

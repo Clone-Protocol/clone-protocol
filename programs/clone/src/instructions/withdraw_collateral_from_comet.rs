@@ -15,7 +15,7 @@ pub struct WithdrawCollateralFromComet<'info> {
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
@@ -58,7 +58,7 @@ pub fn execute(ctx: Context<WithdrawCollateralFromComet>, collateral_amount: u64
     let pools = &mut ctx.accounts.pools;
     let oracles = &ctx.accounts.oracles;
 
-    let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
+    let comet = &mut ctx.accounts.user_account.comet;
     let collateral_to_withdraw = collateral_amount.min(comet.collateral_amount);
 
     // update the collateral amount

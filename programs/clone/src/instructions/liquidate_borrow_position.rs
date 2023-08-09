@@ -27,7 +27,7 @@ pub struct LiquidateBorrowPosition<'info> {
         mut,
         seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = pools.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].status != Status::Frozen @ CloneError::StatusPreventsAction
+        constraint = pools.pools[user_account.borrows[borrow_index as usize].pool_index as usize].status != Status::Frozen @ CloneError::StatusPreventsAction
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
@@ -42,12 +42,12 @@ pub struct LiquidateBorrowPosition<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
-        constraint = (borrow_index as u64) < user_account.load()?.borrows.num_positions @ CloneError::InvalidInputPositionIndex
+        constraint = (borrow_index as usize) < user_account.borrows.len() @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
-        address = pools.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].asset_info.onasset_mint,
+        address = pools.pools[user_account.borrows[borrow_index as usize].pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -78,8 +78,8 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
     let pools = &mut ctx.accounts.pools;
     let oracles = &ctx.accounts.oracles;
 
-    let borrows = &mut ctx.accounts.user_account.load_mut()?.borrows;
-    let borrow_position = borrows.positions[borrow_index as usize];
+    let borrows = &mut ctx.accounts.user_account.borrows;
+    let borrow_position = borrows[borrow_index as usize];
     let pool_index = borrow_position.pool_index as usize;
     let pool = &pools.pools[pool_index];
     let pool_oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
@@ -161,18 +161,18 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
     )?;
 
     // Update data
-    borrows.positions[borrow_index as usize].borrowed_onasset -= burn_amount;
-    borrows.positions[borrow_index as usize].collateral_amount -=
+    borrows[borrow_index as usize].borrowed_onasset -= burn_amount;
+    borrows[borrow_index as usize].collateral_amount -=
         collateral_reward.mantissa() as u64;
 
     // Remove position if empty
-    if borrows.positions[borrow_index as usize].is_empty() {
+    if borrows[borrow_index as usize].is_empty() {
         borrows.remove(borrow_index as usize);
     } else {
         let borrowed_onasset =
-            to_clone_decimal!(borrows.positions[borrow_index as usize].borrowed_onasset);
+            to_clone_decimal!(borrows[borrow_index as usize].borrowed_onasset);
         let collateral_amount = Decimal::new(
-            borrows.positions[borrow_index as usize]
+            borrows[borrow_index as usize]
                 .collateral_amount
                 .try_into()
                 .unwrap(),
@@ -193,9 +193,9 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
         user_address: ctx.accounts.user.key(),
         pool_index: pool_index.try_into().unwrap(),
         is_liquidation: true,
-        collateral_supplied: borrows.positions[borrow_index as usize].collateral_amount,
+        collateral_supplied: borrows[borrow_index as usize].collateral_amount,
         collateral_delta: -(collateral_reward.mantissa() as i64),
-        borrowed_amount: borrows.positions[borrow_index as usize].borrowed_onasset,
+        borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
         borrowed_delta: -(burn_amount as i64)
     });
     ctx.accounts.clone.event_counter += 1;

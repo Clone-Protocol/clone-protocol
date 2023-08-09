@@ -69,15 +69,15 @@ impl HealthScore {
     }
 }
 
-pub fn calculate_comet_position_loss(
+pub fn calculate_liquidity_position_loss(
     pools: &Pools,
     oracles: &Oracles,
-    comet_position: &CometPosition,
+    liquidity_position: &LiquidityPosition,
 ) -> Result<(Decimal, Decimal)> {
-    let pool = &&pools.pools[comet_position.pool_index as usize];
+    let pool = &&pools.pools[liquidity_position.pool_index as usize];
     let oracle = &&oracles.oracles[pool.asset_info.oracle_info_index as usize];
     let position_committed_collateral_liquidity =
-        to_clone_decimal!(comet_position.committed_collateral_liquidity);
+        to_clone_decimal!(liquidity_position.committed_collateral_liquidity);
     let total_committed_collateral_liquidity =
         to_clone_decimal!(pool.committed_collateral_liquidity);
 
@@ -89,12 +89,12 @@ pub fn calculate_comet_position_loss(
 
     let collateral_ild_share = rescale_toward_zero(
         to_clone_decimal!(pool.collateral_ild) * proportional_value
-            - to_clone_decimal!(comet_position.collateral_ild_rebate),
+            - to_clone_decimal!(liquidity_position.collateral_ild_rebate),
         CLONE_TOKEN_SCALE,
     );
     let onasset_ild_share = rescale_toward_zero(
         to_clone_decimal!(pool.onasset_ild) * proportional_value
-            - to_clone_decimal!(comet_position.onasset_ild_rebate),
+            - to_clone_decimal!(liquidity_position.onasset_ild_rebate),
         CLONE_TOKEN_SCALE,
     );
 
@@ -103,7 +103,7 @@ pub fn calculate_comet_position_loss(
 
     let impermanent_loss_term =
         impermanent_loss * to_clone_decimal!(pool.asset_info.il_health_score_coefficient);
-    let position_term = to_clone_decimal!(comet_position.committed_collateral_liquidity)
+    let position_term = to_clone_decimal!(liquidity_position.committed_collateral_liquidity)
         * to_clone_decimal!(pool.asset_info.position_health_score_coefficient);
 
     Ok((impermanent_loss_term, position_term))
@@ -122,14 +122,14 @@ pub fn calculate_health_score(
     let mut total_il_term = Decimal::zero();
     let mut total_position_term = Decimal::zero();
 
-    for index in 0..(comet.num_positions as usize) {
-        let comet_position = comet.positions[index];
-        let pool = &&pools.pools[comet_position.pool_index as usize];
+    for index in 0..(comet.positions.len() as usize) {
+        let liquidity_position = comet.positions[index];
+        let pool = &&pools.pools[liquidity_position.pool_index as usize];
         let oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
 
         check_feed_update(oracle, slot)?;
         let (impermanent_loss_term, position_term) =
-            calculate_comet_position_loss(pools, oracles, &comet_position)?;
+            calculate_liquidity_position_loss(pools, oracles, &liquidity_position)?;
 
         total_il_term += impermanent_loss_term;
         total_position_term += position_term;
@@ -159,11 +159,11 @@ pub struct ILDShare {
     pub onasset_ild_share: Decimal,
 }
 
-pub fn calculate_ild_share(comet_position: &CometPosition, pools: &Pools) -> ILDShare {
-    let pool_index = comet_position.pool_index as usize;
+pub fn calculate_ild_share(liquidity_position: &LiquidityPosition, pools: &Pools) -> ILDShare {
+    let pool_index = liquidity_position.pool_index as usize;
     let pool = &pools.pools[pool_index];
     let position_committed_collateral_liquidity =
-        to_clone_decimal!(comet_position.committed_collateral_liquidity);
+        to_clone_decimal!(liquidity_position.committed_collateral_liquidity);
     let total_committed_collateral_liquidity =
         to_clone_decimal!(pool.committed_collateral_liquidity);
 
@@ -183,11 +183,11 @@ pub fn calculate_ild_share(comet_position: &CometPosition, pools: &Pools) -> ILD
     );
 
     let collateral_ild_share = rescale_toward_zero(
-        collateral_ild_claim - to_clone_decimal!(comet_position.collateral_ild_rebate),
+        collateral_ild_claim - to_clone_decimal!(liquidity_position.collateral_ild_rebate),
         CLONE_TOKEN_SCALE,
     );
     let onasset_ild_share = rescale_toward_zero(
-        onasset_ild_claim - to_clone_decimal!(comet_position.onasset_ild_rebate),
+        onasset_ild_claim - to_clone_decimal!(liquidity_position.onasset_ild_rebate),
         CLONE_TOKEN_SCALE,
     );
 

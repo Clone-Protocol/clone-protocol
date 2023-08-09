@@ -13,7 +13,7 @@ pub struct AddCollateralToComet<'info> {
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
@@ -35,7 +35,7 @@ pub struct AddCollateralToComet<'info> {
 }
 
 pub fn execute(ctx: Context<AddCollateralToComet>, amount: u64) -> Result<()> {
-    let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
+    let comet = &mut ctx.accounts.user_account.comet;
 
     // send collateral from user to vault
     let cpi_accounts = Transfer {
