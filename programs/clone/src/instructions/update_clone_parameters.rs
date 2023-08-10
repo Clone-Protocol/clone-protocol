@@ -8,7 +8,8 @@ use anchor_lang::prelude::*;
 pub enum CloneParameters {
     AddAuth { address: Pubkey },
     RemoveAuth { address: Pubkey },
-    CometLiquidationFee { value: u16 },
+    CometCollateralLiquidationFee { value: u16 },
+    CometOnassetLiquidationFee { value: u16 },
     BorrowLiquidationFee { value: u16 },
     TreasuryAddress { address: Pubkey },
     CollateralizationRatio { value: u8 },
@@ -42,8 +43,11 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
             return_error_if_false!(empty_slot.is_some(), CloneError::AuthArrayFull);
             clone.auth[empty_slot.unwrap().0] = address;
         }
-        CloneParameters::CometLiquidationFee { value } => {
-            ctx.accounts.clone.comet_liquidator_fee_bps = value;
+        CloneParameters::CometCollateralLiquidationFee { value } => {
+            ctx.accounts.clone.comet_collateral_ild_liquidator_fee_bps = value;
+        }
+        CloneParameters::CometOnassetLiquidationFee { value } => {
+            ctx.accounts.clone.comet_onasset_ild_liquidator_fee_bps = value;
         }
         CloneParameters::BorrowLiquidationFee { value } => {
             ctx.accounts.clone.borrow_liquidator_fee_bps = value;

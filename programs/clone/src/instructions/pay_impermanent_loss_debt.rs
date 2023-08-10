@@ -8,8 +8,23 @@ use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
+#[derive(Clone, Debug, PartialEq, AnchorSerialize, AnchorDeserialize)]
+pub enum PaymentType {
+    Onasset,
+    Collateral,
+    CollateralFromWallet,
+}
+impl PaymentType {
+    fn is_valid(&self) -> bool {
+        matches!(
+            self,
+            PaymentType::Collateral | PaymentType::CollateralFromWallet
+        )
+    }
+}
+
 #[derive(Accounts)]
-#[instruction(user: Pubkey, comet_position_index: u8, amount: u64, pay_collateral_debt: bool)]
+#[instruction(user: Pubkey, comet_position_index: u8, amount: u64, payment_type: PaymentType)]
 pub struct PayImpermanentLossDebt<'info> {
     pub payer: Signer<'info>,
     #[account(
@@ -61,7 +76,7 @@ pub fn execute(
     _user: Pubkey,
     comet_position_index: u8,
     amount: u64,
-    pay_collateral_debt: bool,
+    payment_type: PaymentType,
 ) -> Result<()> {
     return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
     let authorized_amount = to_clone_decimal!(amount);
@@ -71,50 +86,57 @@ pub fn execute(
     let comet_position = comet.positions[comet_position_index as usize];
     let ild_share = calculate_ild_share(&comet_position, &pools);
 
-    if (pay_collateral_debt && ild_share.collateral_ild_share <= Decimal::ZERO)
-        || (!pay_collateral_debt && ild_share.onasset_ild_share <= Decimal::ZERO)
-    {
+    if ild_share.collateral_ild_share <= Decimal::ZERO {
         return Ok(());
     }
 
-    let (cpi_accounts, burn_amount) = if pay_collateral_debt {
-        let burn_amount = ild_share.collateral_ild_share.min(authorized_amount);
-        comet.positions[comet_position_index as usize].collateral_ild_rebate +=
-            burn_amount.mantissa() as i64;
-        (
-            Burn {
-                mint: ctx.accounts.collateral_mint.to_account_info().clone(),
-                from: ctx
-                    .accounts
-                    .payer_collateral_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.payer.to_account_info().clone(),
-            },
-            burn_amount,
-        )
-    } else {
+    return_error_if_false!(!payment_type.is_valid(), CloneError::InvalidPaymentType);
+
+    if payment_type == PaymentType::Onasset {
         let burn_amount = ild_share.onasset_ild_share.min(authorized_amount);
         comet.positions[comet_position_index as usize].onasset_ild_rebate +=
             burn_amount.mantissa() as i64;
-        (
-            Burn {
-                mint: ctx.accounts.onasset_mint.to_account_info().clone(),
-                from: ctx
-                    .accounts
-                    .payer_onasset_token_account
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.payer.to_account_info().clone(),
-            },
-            burn_amount,
-        )
-    };
 
-    token::burn(
-        CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts),
-        burn_amount.mantissa().try_into().unwrap(),
-    )?;
+        let cpi_accounts = Burn {
+            mint: ctx.accounts.onasset_mint.to_account_info().clone(),
+            from: ctx
+                .accounts
+                .payer_onasset_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.payer.to_account_info().clone(),
+        };
+
+        token::burn(
+            CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts),
+            burn_amount.mantissa().try_into().unwrap(),
+        )?;
+    } else if payment_type == PaymentType::Collateral {
+        let burn_amount = ild_share.collateral_ild_share.min(authorized_amount);
+        comet.positions[comet_position_index as usize].collateral_ild_rebate +=
+            burn_amount.mantissa() as i64;
+
+        let cpi_accounts = Burn {
+            mint: ctx.accounts.collateral_mint.to_account_info().clone(),
+            from: ctx
+                .accounts
+                .payer_collateral_token_account
+                .to_account_info()
+                .clone(),
+            authority: ctx.accounts.payer.to_account_info().clone(),
+        };
+
+        token::burn(
+            CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts),
+            burn_amount.mantissa().try_into().unwrap(),
+        )?;
+    } else {
+        let burn_amount = ild_share.collateral_ild_share.min(authorized_amount);
+        comet.positions[comet_position_index as usize].collateral_ild_rebate +=
+            burn_amount.mantissa() as i64;
+
+        comet.collateral_amount -= burn_amount.mantissa() as u64;
+    }
 
     Ok(())
 }

@@ -141,6 +141,10 @@ pub enum CloneError {
     /// 34. Invalid oracle index
     #[msg("Invalid oracle index")]
     InvalidOracleIndex,
+
+    /// 34. Invalid Payment Type
+    #[msg("Invalid Payment Type")]
+    InvalidPaymentType,
 }
 
 impl From<CloneError> for ProgramError {
