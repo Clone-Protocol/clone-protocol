@@ -8,7 +8,6 @@ use crate::{
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
-use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
@@ -77,12 +76,12 @@ pub fn execute(
 
     let min_overcollateral_ratio = to_ratio_decimal!(pool.asset_info.min_overcollateral_ratio);
     let collateralization_ratio = to_ratio_decimal!(collateral.collateralization_ratio);
-    let borrow_position = borrows[borrow_index as usize];
+    let borrow_position = &mut borrows[borrow_index as usize];
     let asset_amount_borrowed = to_clone_decimal!(borrow_position.borrowed_onasset);
-    let amount_to_withdraw = amount.min(borrows[borrow_index as usize].collateral_amount);
+    let amount_to_withdraw = amount.min(borrow_position.collateral_amount);
 
     // subtract collateral amount from mint data
-    borrows[borrow_index as usize].collateral_amount -= amount_to_withdraw;
+    borrow_position.collateral_amount -= amount_to_withdraw;
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
@@ -91,13 +90,7 @@ pub fn execute(
         asset_amount_borrowed,
         min_overcollateral_ratio,
         collateralization_ratio,
-        Decimal::new(
-            borrows[borrow_index as usize]
-                .collateral_amount
-                .try_into()
-                .unwrap(),
-            collateral.scale.try_into().unwrap(),
-        ),
+        collateral.to_collateral_decimal(borrow_position.collateral_amount)?,
     )?;
 
     // send collateral back to user
@@ -121,15 +114,15 @@ pub fn execute(
         user_address: ctx.accounts.user.key(),
         pool_index: pool_index.try_into().unwrap(),
         is_liquidation: false,
-        collateral_supplied: borrows[borrow_index as usize].collateral_amount,
+        collateral_supplied: borrow_position.collateral_amount,
         collateral_delta: -(amount_to_withdraw as i64),
-        borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
+        borrowed_amount: borrow_position.borrowed_onasset,
         borrowed_delta: 0
     });
     ctx.accounts.clone.event_counter += 1;
 
     // check to see if mint is empty, if so remove
-    if borrows[borrow_index as usize].is_empty() {
+    if borrow_position.is_empty() {
         borrows.remove(borrow_index as usize);
     }
 

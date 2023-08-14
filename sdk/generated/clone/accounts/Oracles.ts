@@ -8,51 +8,49 @@
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
-import { Borrow, borrowBeet } from '../types/Borrow'
-import { Comet, cometBeet } from '../types/Comet'
+import { OracleInfo, oracleInfoBeet } from '../types/OracleInfo'
 
 /**
- * Arguments used to create {@link User}
+ * Arguments used to create {@link Oracles}
  * @category Accounts
  * @category generated
  */
-export type UserArgs = {
-  borrows: Borrow[]
-  comet: Comet
+export type OraclesArgs = {
+  oracles: OracleInfo[]
 }
 
-export const userDiscriminator = [159, 117, 95, 227, 239, 151, 58, 236]
+export const oraclesDiscriminator = [118, 5, 196, 234, 105, 220, 8, 8]
 /**
- * Holds the data for the {@link User} Account and provides de/serialization
+ * Holds the data for the {@link Oracles} Account and provides de/serialization
  * functionality for that data
  *
  * @category Accounts
  * @category generated
  */
-export class User implements UserArgs {
-  private constructor(readonly borrows: Borrow[], readonly comet: Comet) {}
+export class Oracles implements OraclesArgs {
+  private constructor(readonly oracles: OracleInfo[]) {}
 
   /**
-   * Creates a {@link User} instance from the provided args.
+   * Creates a {@link Oracles} instance from the provided args.
    */
-  static fromArgs(args: UserArgs) {
-    return new User(args.borrows, args.comet)
+  static fromArgs(args: OraclesArgs) {
+    return new Oracles(args.oracles)
   }
 
   /**
-   * Deserializes the {@link User} from the data of the provided {@link web3.AccountInfo}.
+   * Deserializes the {@link Oracles} from the data of the provided {@link web3.AccountInfo}.
    * @returns a tuple of the account data and the offset up to which the buffer was read to obtain it.
    */
   static fromAccountInfo(
     accountInfo: web3.AccountInfo<Buffer>,
     offset = 0
-  ): [User, number] {
-    return User.deserialize(accountInfo.data, offset)
+  ): [Oracles, number] {
+    return Oracles.deserialize(accountInfo.data, offset)
   }
 
   /**
    * Retrieves the account info from the provided address and deserializes
-   * the {@link User} from its data.
+   * the {@link Oracles} from its data.
    *
    * @throws Error if no account info is found at the address or if deserialization fails
    */
@@ -60,15 +58,15 @@ export class User implements UserArgs {
     connection: web3.Connection,
     address: web3.PublicKey,
     commitmentOrConfig?: web3.Commitment | web3.GetAccountInfoConfig
-  ): Promise<User> {
+  ): Promise<Oracles> {
     const accountInfo = await connection.getAccountInfo(
       address,
       commitmentOrConfig
     )
     if (accountInfo == null) {
-      throw new Error(`Unable to find User account at ${address}`)
+      throw new Error(`Unable to find Oracles account at ${address}`)
     }
-    return User.fromAccountInfo(accountInfo, 0)[0]
+    return Oracles.fromAccountInfo(accountInfo, 0)[0]
   }
 
   /**
@@ -82,70 +80,69 @@ export class User implements UserArgs {
       'F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v'
     )
   ) {
-    return beetSolana.GpaBuilder.fromStruct(programId, userBeet)
+    return beetSolana.GpaBuilder.fromStruct(programId, oraclesBeet)
   }
 
   /**
-   * Deserializes the {@link User} from the provided data Buffer.
+   * Deserializes the {@link Oracles} from the provided data Buffer.
    * @returns a tuple of the account data and the offset up to which the buffer was read to obtain it.
    */
-  static deserialize(buf: Buffer, offset = 0): [User, number] {
-    return userBeet.deserialize(buf, offset)
+  static deserialize(buf: Buffer, offset = 0): [Oracles, number] {
+    return oraclesBeet.deserialize(buf, offset)
   }
 
   /**
-   * Serializes the {@link User} into a Buffer.
+   * Serializes the {@link Oracles} into a Buffer.
    * @returns a tuple of the created Buffer and the offset up to which the buffer was written to store it.
    */
   serialize(): [Buffer, number] {
-    return userBeet.serialize({
-      accountDiscriminator: userDiscriminator,
+    return oraclesBeet.serialize({
+      accountDiscriminator: oraclesDiscriminator,
       ...this,
     })
   }
 
   /**
    * Returns the byteSize of a {@link Buffer} holding the serialized data of
-   * {@link User} for the provided args.
+   * {@link Oracles} for the provided args.
    *
    * @param args need to be provided since the byte size for this account
    * depends on them
    */
-  static byteSize(args: UserArgs) {
-    const instance = User.fromArgs(args)
-    return userBeet.toFixedFromValue({
-      accountDiscriminator: userDiscriminator,
+  static byteSize(args: OraclesArgs) {
+    const instance = Oracles.fromArgs(args)
+    return oraclesBeet.toFixedFromValue({
+      accountDiscriminator: oraclesDiscriminator,
       ...instance,
     }).byteSize
   }
 
   /**
    * Fetches the minimum balance needed to exempt an account holding
-   * {@link User} data from rent
+   * {@link Oracles} data from rent
    *
    * @param args need to be provided since the byte size for this account
    * depends on them
    * @param connection used to retrieve the rent exemption information
    */
   static async getMinimumBalanceForRentExemption(
-    args: UserArgs,
+    args: OraclesArgs,
     connection: web3.Connection,
     commitment?: web3.Commitment
   ): Promise<number> {
     return connection.getMinimumBalanceForRentExemption(
-      User.byteSize(args),
+      Oracles.byteSize(args),
       commitment
     )
   }
 
   /**
-   * Returns a readable version of {@link User} properties
+   * Returns a readable version of {@link Oracles} properties
    * and can be used to convert to JSON and/or logging
    */
   pretty() {
     return {
-      borrows: this.borrows,
-      comet: this.comet,
+      oracles: this.oracles,
     }
   }
 }
@@ -154,17 +151,16 @@ export class User implements UserArgs {
  * @category Accounts
  * @category generated
  */
-export const userBeet = new beet.FixableBeetStruct<
-  User,
-  UserArgs & {
+export const oraclesBeet = new beet.FixableBeetStruct<
+  Oracles,
+  OraclesArgs & {
     accountDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['accountDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['borrows', beet.array(borrowBeet)],
-    ['comet', cometBeet],
+    ['oracles', beet.array(oracleInfoBeet)],
   ],
-  User.fromArgs,
-  'User'
+  Oracles.fromArgs,
+  'Oracles'
 )

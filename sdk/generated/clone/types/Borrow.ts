@@ -6,19 +6,21 @@
  */
 
 import * as beet from '@metaplex-foundation/beet'
-export type CometCollateral = {
+export type Borrow = {
+  poolIndex: number
+  borrowedOnasset: beet.bignum
   collateralAmount: beet.bignum
-  collateralIndex: beet.bignum
 }
 
 /**
  * @category userTypes
  * @category generated
  */
-export const cometCollateralBeet = new beet.BeetArgsStruct<CometCollateral>(
+export const borrowBeet = new beet.BeetArgsStruct<Borrow>(
   [
+    ['poolIndex', beet.u8],
+    ['borrowedOnasset', beet.u64],
     ['collateralAmount', beet.u64],
-    ['collateralIndex', beet.u64],
   ],
-  'CometCollateral'
+  'Borrow'
 )

@@ -6,87 +6,91 @@
  */
 
 import * as splToken from '@solana/spl-token'
-import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
+import * as beetSolana from '@metaplex-foundation/beet-solana'
+import * as beet from '@metaplex-foundation/beet'
 
 /**
  * @category Instructions
- * @category BorrowMore
+ * @category LiquidateCometCollateralIld
  * @category generated
  */
-export type BorrowMoreInstructionArgs = {
-  borrowIndex: number
-  amount: beet.bignum
+export type LiquidateCometCollateralIldInstructionArgs = {
+  user: web3.PublicKey
+  cometPositionIndex: number
 }
 /**
  * @category Instructions
- * @category BorrowMore
+ * @category LiquidateCometCollateralIld
  * @category generated
  */
-export const borrowMoreStruct = new beet.BeetArgsStruct<
-  BorrowMoreInstructionArgs & {
+export const liquidateCometCollateralIldStruct = new beet.BeetArgsStruct<
+  LiquidateCometCollateralIldInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['borrowIndex', beet.u8],
-    ['amount', beet.u64],
+    ['user', beetSolana.publicKey],
+    ['cometPositionIndex', beet.u8],
   ],
-  'BorrowMoreInstructionArgs'
+  'LiquidateCometCollateralIldInstructionArgs'
 )
 /**
- * Accounts required by the _borrowMore_ instruction
+ * Accounts required by the _liquidateCometCollateralIld_ instruction
  *
- * @property [**signer**] user
+ * @property [**signer**] liquidator
  * @property [_writable_] userAccount
  * @property [_writable_] clone
  * @property [] pools
  * @property [] oracles
- * @property [_writable_] userOnassetTokenAccount
- * @property [_writable_] onassetMint
+ * @property [_writable_] collateralMint
+ * @property [_writable_] liquidatorCollateralTokenAccount
+ * @property [_writable_] vault
  * @category Instructions
- * @category BorrowMore
+ * @category LiquidateCometCollateralIld
  * @category generated
  */
-export type BorrowMoreInstructionAccounts = {
-  user: web3.PublicKey
+export type LiquidateCometCollateralIldInstructionAccounts = {
+  liquidator: web3.PublicKey
   userAccount: web3.PublicKey
   clone: web3.PublicKey
   pools: web3.PublicKey
   oracles: web3.PublicKey
-  userOnassetTokenAccount: web3.PublicKey
-  onassetMint: web3.PublicKey
+  collateralMint: web3.PublicKey
+  liquidatorCollateralTokenAccount: web3.PublicKey
+  vault: web3.PublicKey
   tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const borrowMoreInstructionDiscriminator = [
-  99, 191, 157, 15, 122, 190, 25, 86,
+export const liquidateCometCollateralIldInstructionDiscriminator = [
+  173, 42, 162, 112, 216, 18, 147, 150,
 ]
 
 /**
- * Creates a _BorrowMore_ instruction.
+ * Creates a _LiquidateCometCollateralIld_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category BorrowMore
+ * @category LiquidateCometCollateralIld
  * @category generated
  */
-export function createBorrowMoreInstruction(
-  accounts: BorrowMoreInstructionAccounts,
-  args: BorrowMoreInstructionArgs,
+export function createLiquidateCometCollateralIldInstruction(
+  accounts: LiquidateCometCollateralIldInstructionAccounts,
+  args: LiquidateCometCollateralIldInstructionArgs,
   programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
-  const [data] = borrowMoreStruct.serialize({
-    instructionDiscriminator: borrowMoreInstructionDiscriminator,
+  const [data] = liquidateCometCollateralIldStruct.serialize({
+    instructionDiscriminator:
+      liquidateCometCollateralIldInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.user,
+      pubkey: accounts.liquidator,
       isWritable: false,
       isSigner: true,
     },
@@ -111,12 +115,17 @@ export function createBorrowMoreInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.userOnassetTokenAccount,
+      pubkey: accounts.collateralMint,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.onassetMint,
+      pubkey: accounts.liquidatorCollateralTokenAccount,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.vault,
       isWritable: true,
       isSigner: false,
     },

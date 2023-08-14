@@ -1,7 +1,6 @@
 use crate::error::*;
 use crate::math::*;
 use crate::states::*;
-use crate::to_clone_decimal;
 use crate::{return_error_if_false, CLONE_PROGRAM_SEED, POOLS_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
@@ -13,14 +12,6 @@ pub enum PaymentType {
     Onasset,
     Collateral,
     CollateralFromWallet,
-}
-impl PaymentType {
-    fn is_valid(&self) -> bool {
-        matches!(
-            self,
-            PaymentType::Collateral | PaymentType::CollateralFromWallet
-        )
-    }
 }
 
 #[derive(Accounts)]
@@ -47,10 +38,14 @@ pub struct PayImpermanentLossDebt<'info> {
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
-        mut,
         address = clone.collateral.mint
     )]
     pub collateral_mint: Box<Account<'info, Mint>>,
+    #[account(
+        mut,
+        address = clone.collateral.vault,
+    )]
+    pub collateral_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         address = pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
@@ -73,69 +68,91 @@ pub struct PayImpermanentLossDebt<'info> {
 
 pub fn execute(
     ctx: Context<PayImpermanentLossDebt>,
-    _user: Pubkey,
+    user: Pubkey,
     comet_position_index: u8,
     amount: u64,
     payment_type: PaymentType,
 ) -> Result<()> {
     return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
-    let authorized_amount = to_clone_decimal!(amount);
     let pools = &ctx.accounts.pools;
     let comet = &mut ctx.accounts.user_account.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
-    let ild_share = calculate_ild_share(&comet_position, &pools);
+    let ild_share = calculate_ild_share(&comet_position, &pools, &ctx.accounts.clone.collateral);
 
-    if ild_share.collateral_ild_share <= Decimal::ZERO {
-        return Ok(());
-    }
+    match payment_type {
+        PaymentType::Onasset => {
+            return_error_if_false!(
+                ild_share.onasset_ild_share > Decimal::ZERO,
+                CloneError::InvalidPaymentType
+            );
 
-    return_error_if_false!(!payment_type.is_valid(), CloneError::InvalidPaymentType);
+            let ild_share: u64 = ild_share.onasset_ild_share.mantissa().try_into().unwrap();
+            let burn_amount = ild_share.min(amount);
 
-    if payment_type == PaymentType::Onasset {
-        let burn_amount = ild_share.onasset_ild_share.min(authorized_amount);
-        comet.positions[comet_position_index as usize].onasset_ild_rebate +=
-            burn_amount.mantissa() as i64;
+            comet.positions[comet_position_index as usize].onasset_ild_rebate += burn_amount as i64;
 
-        let cpi_accounts = Burn {
-            mint: ctx.accounts.onasset_mint.to_account_info().clone(),
-            from: ctx
-                .accounts
-                .payer_onasset_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.payer.to_account_info().clone(),
-        };
+            let cpi_accounts = Burn {
+                mint: ctx.accounts.onasset_mint.to_account_info().clone(),
+                from: ctx
+                    .accounts
+                    .payer_onasset_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.payer.to_account_info().clone(),
+            };
 
-        token::burn(
-            CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts),
-            burn_amount.mantissa().try_into().unwrap(),
-        )?;
-    } else if payment_type == PaymentType::Collateral {
-        let burn_amount = ild_share.collateral_ild_share.min(authorized_amount);
-        comet.positions[comet_position_index as usize].collateral_ild_rebate +=
-            burn_amount.mantissa() as i64;
+            token::burn(
+                CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts),
+                burn_amount,
+            )?;
+        }
+        PaymentType::Collateral => {
+            return_error_if_false!(
+                ild_share.collateral_ild_share > Decimal::ZERO,
+                CloneError::InvalidPaymentType
+            );
+            let ild_share: u64 = ild_share
+                .collateral_ild_share
+                .mantissa()
+                .try_into()
+                .unwrap();
+            let transfer_amount = ild_share.min(amount);
+            comet.positions[comet_position_index as usize].collateral_ild_rebate +=
+                transfer_amount as i64;
 
-        let cpi_accounts = Burn {
-            mint: ctx.accounts.collateral_mint.to_account_info().clone(),
-            from: ctx
-                .accounts
-                .payer_collateral_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.payer.to_account_info().clone(),
-        };
+            let cpi_accounts = Transfer {
+                to: ctx.accounts.collateral_vault.to_account_info().clone(),
+                from: ctx
+                    .accounts
+                    .payer_collateral_token_account
+                    .to_account_info()
+                    .clone(),
+                authority: ctx.accounts.payer.to_account_info().clone(),
+            };
 
-        token::burn(
-            CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts),
-            burn_amount.mantissa().try_into().unwrap(),
-        )?;
-    } else {
-        let burn_amount = ild_share.collateral_ild_share.min(authorized_amount);
-        comet.positions[comet_position_index as usize].collateral_ild_rebate +=
-            burn_amount.mantissa() as i64;
+            token::transfer(
+                CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts),
+                transfer_amount,
+            )?;
+        }
+        PaymentType::CollateralFromWallet => {
+            return_error_if_false!(
+                ild_share.collateral_ild_share > Decimal::ZERO,
+                CloneError::InvalidPaymentType
+            );
+            return_error_if_false!(ctx.accounts.payer.key().eq(&user), CloneError::Unauthorized);
+            let ild_share: u64 = ild_share
+                .collateral_ild_share
+                .mantissa()
+                .try_into()
+                .unwrap();
+            let from_wallet_amount = ild_share.min(amount).min(comet.collateral_amount);
+            comet.positions[comet_position_index as usize].collateral_ild_rebate +=
+                from_wallet_amount as i64;
 
-        comet.collateral_amount -= burn_amount.mantissa() as u64;
+            comet.collateral_amount -= from_wallet_amount;
+        }
     }
 
     Ok(())

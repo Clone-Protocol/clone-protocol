@@ -6,8 +6,9 @@
  */
 
 import * as splToken from '@solana/spl-token'
-import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
+import * as beet from '@metaplex-foundation/beet'
+import * as beetSolana from '@metaplex-foundation/beet-solana'
 
 /**
  * @category Instructions
@@ -15,6 +16,7 @@ import * as web3 from '@solana/web3.js'
  * @category generated
  */
 export type LiquidateBorrowPositionInstructionArgs = {
+  user: web3.PublicKey
   borrowIndex: number
   amount: beet.bignum
 }
@@ -30,6 +32,7 @@ export const liquidateBorrowPositionStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
+    ['user', beetSolana.publicKey],
     ['borrowIndex', beet.u8],
     ['amount', beet.u64],
   ],
@@ -40,8 +43,8 @@ export const liquidateBorrowPositionStruct = new beet.BeetArgsStruct<
  *
  * @property [**signer**] liquidator
  * @property [_writable_] clone
- * @property [_writable_] tokenData
- * @property [] user
+ * @property [_writable_] pools
+ * @property [_writable_] oracles
  * @property [_writable_] userAccount
  * @property [_writable_] onassetMint
  * @property [_writable_] vault
@@ -54,8 +57,8 @@ export const liquidateBorrowPositionStruct = new beet.BeetArgsStruct<
 export type LiquidateBorrowPositionInstructionAccounts = {
   liquidator: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
-  user: web3.PublicKey
+  pools: web3.PublicKey
+  oracles: web3.PublicKey
   userAccount: web3.PublicKey
   onassetMint: web3.PublicKey
   vault: web3.PublicKey
@@ -100,13 +103,13 @@ export function createLiquidateBorrowPositionInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.pools,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.user,
-      isWritable: false,
+      pubkey: accounts.oracles,
+      isWritable: true,
       isSigner: false,
     },
     {

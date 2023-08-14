@@ -5,7 +5,6 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
 import * as web3 from '@solana/web3.js'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
 import * as beet from '@metaplex-foundation/beet'
@@ -46,8 +45,6 @@ export const initializeUserStruct = new beet.BeetArgsStruct<
 export type InitializeUserInstructionAccounts = {
   payer: web3.PublicKey
   userAccount: web3.PublicKey
-  rent?: web3.PublicKey
-  tokenProgram?: web3.PublicKey
   systemProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
@@ -84,16 +81,6 @@ export function createInitializeUserInstruction(
     {
       pubkey: accounts.userAccount,
       isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.rent ?? web3.SYSVAR_RENT_PUBKEY,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
-      isWritable: false,
       isSigner: false,
     },
     {

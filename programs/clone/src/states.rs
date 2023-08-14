@@ -1,4 +1,5 @@
 use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
+use crate::error::CloneError;
 use crate::{to_bps_decimal, to_clone_decimal};
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
@@ -32,7 +33,6 @@ pub struct Clone {
     pub treasury_address: Pubkey,
     pub event_counter: u64,
 }
-
 #[account]
 pub struct Pools {
     pub pools: Vec<Pool>,
@@ -79,14 +79,14 @@ pub struct OracleInfo {
     pub source: OracleSource,
     pub address: Pubkey,
     pub price: i64,
-    pub expo: i8,
+    pub expo: u8,
     pub status: Status,
     pub last_update_slot: u64,
 }
 
 impl OracleInfo {
     pub fn get_price(&self) -> Decimal {
-        Decimal::new(self.price as i64, self.expo.try_into().unwrap())
+        Decimal::new(self.price as i64, self.expo.into())
     }
 }
 
@@ -114,21 +114,26 @@ impl Pool {
         &self,
         onasset_price: Decimal,
         collateral_price: Decimal,
+        collateral: &Collateral,
     ) -> (Decimal, Decimal) {
-        let committed_collateral_liquidity = to_clone_decimal!(self.committed_collateral_liquidity);
-        let collateral_ild = to_clone_decimal!(self.collateral_ild);
+        let committed_collateral_liquidity = collateral
+            .to_collateral_decimal(self.committed_collateral_liquidity)
+            .unwrap();
         let onasset_ild = to_clone_decimal!(self.onasset_ild);
-        let pool_collateral = rescale_toward_zero(
-            committed_collateral_liquidity / collateral_price - collateral_ild,
-            CLONE_TOKEN_SCALE,
-        );
+        let center_price = onasset_price / collateral_price;
+        let pool_collateral = collateral
+            .to_collateral_decimal(self.committed_collateral_liquidity - self.collateral_ild as u64)
+            .unwrap();
         let pool_onasset = rescale_toward_zero(
-            committed_collateral_liquidity / onasset_price - onasset_ild,
+            committed_collateral_liquidity / center_price - onasset_ild,
             CLONE_TOKEN_SCALE,
         );
         (pool_collateral, pool_onasset)
     }
 
+    // This function calculate either the resultant amount received or
+    // required as input into the pool depending on the `quantity` specifications.
+    // Fees are calculated as well and are always of the output type of the swap.
     pub fn calculate_swap(
         &self,
         onasset_price: Decimal,
@@ -136,11 +141,12 @@ impl Pool {
         quantity: Decimal,
         quantity_is_input: bool,
         quantity_is_collateral: bool,
+        collateral: &Collateral,
         override_liquidity_trading_fee: Option<Decimal>,
         override_treasury_trading_fee: Option<Decimal>,
     ) -> SwapSummary {
         let (pool_collateral, pool_onasset) =
-            self.calculate_jit_pool(onasset_price, collateral_price);
+            self.calculate_jit_pool(onasset_price, collateral_price, collateral);
         let invariant = pool_onasset * pool_collateral;
         let default_liquidity_trading_fee = to_bps_decimal!(self.liquidity_trading_fee_bps);
         let default_treasury_trading_fee = to_bps_decimal!(self.treasury_trading_fee_bps);
@@ -148,24 +154,21 @@ impl Pool {
             override_liquidity_trading_fee.unwrap_or(default_liquidity_trading_fee);
         let treasury_trading_fee =
             override_treasury_trading_fee.unwrap_or(default_treasury_trading_fee);
-
         if quantity_is_input {
-            let (i_pool, o_pool) = if quantity_is_collateral {
-                (pool_collateral, pool_onasset)
+            let (i_pool, o_pool, o_scale) = if quantity_is_collateral {
+                (pool_collateral, pool_onasset, CLONE_TOKEN_SCALE)
             } else {
-                (pool_onasset, pool_collateral)
+                (pool_onasset, pool_collateral, collateral.scale.into())
             };
             let output_before_fees =
-                rescale_toward_zero(o_pool - invariant / (i_pool + quantity), CLONE_TOKEN_SCALE);
-            let liquidity_fees_paid = rescale_toward_zero(
-                output_before_fees * liquidity_trading_fee,
-                CLONE_TOKEN_SCALE,
-            );
+                rescale_toward_zero(o_pool - invariant / (i_pool + quantity), o_scale);
+            let liquidity_fees_paid =
+                rescale_toward_zero(output_before_fees * liquidity_trading_fee, o_scale);
             let treasury_fees_paid =
-                rescale_toward_zero(output_before_fees * treasury_trading_fee, CLONE_TOKEN_SCALE);
+                rescale_toward_zero(output_before_fees * treasury_trading_fee, o_scale);
             let result = rescale_toward_zero(
                 output_before_fees - liquidity_fees_paid - treasury_fees_paid,
-                CLONE_TOKEN_SCALE,
+                o_scale,
             );
             SwapSummary {
                 result,
@@ -173,25 +176,31 @@ impl Pool {
                 treasury_fees_paid,
             }
         } else {
-            let (o_pool, i_pool) = if quantity_is_collateral {
-                (pool_collateral, pool_onasset)
+            let (o_pool, i_pool, i_scale, o_scale) = if quantity_is_collateral {
+                (
+                    pool_collateral,
+                    pool_onasset,
+                    CLONE_TOKEN_SCALE,
+                    collateral.scale.into(),
+                )
             } else {
-                (pool_onasset, pool_collateral)
+                (
+                    pool_onasset,
+                    pool_collateral,
+                    collateral.scale.into(),
+                    CLONE_TOKEN_SCALE,
+                )
             };
             let output_before_fees = rescale_toward_zero(
                 quantity / (Decimal::ONE - liquidity_trading_fee - treasury_trading_fee),
-                CLONE_TOKEN_SCALE,
+                o_scale,
             );
-            let result = rescale_toward_zero(
-                invariant / (o_pool - output_before_fees) - i_pool,
-                CLONE_TOKEN_SCALE,
-            );
-            let liquidity_fees_paid = rescale_toward_zero(
-                output_before_fees * liquidity_trading_fee,
-                CLONE_TOKEN_SCALE,
-            );
+            let result =
+                rescale_toward_zero(invariant / (o_pool - output_before_fees) - i_pool, i_scale);
+            let liquidity_fees_paid =
+                rescale_toward_zero(output_before_fees * liquidity_trading_fee, o_scale);
             let treasury_fees_paid =
-                rescale_toward_zero(output_before_fees * treasury_trading_fee, CLONE_TOKEN_SCALE);
+                rescale_toward_zero(output_before_fees * treasury_trading_fee, o_scale);
             SwapSummary {
                 result,
                 liquidity_fees_paid,
@@ -214,6 +223,16 @@ pub struct Collateral {
     pub vault: Pubkey,
     pub collateralization_ratio: u8,
     pub scale: u8,
+}
+
+impl Collateral {
+    pub fn to_collateral_decimal<T: TryInto<i64>>(&self, value: T) -> Result<Decimal> {
+        if let Ok(num) = TryInto::<i64>::try_into(value) {
+            Ok(Decimal::new(num, self.scale.try_into().unwrap()))
+        } else {
+            Err(error!(CloneError::InvalidConversion))
+        }
+    }
 }
 
 #[account]
@@ -239,7 +258,7 @@ impl Comet {
 
 #[derive(Clone, PartialEq, Eq, Copy, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct LiquidityPosition {
-    pub pool_index: u64,
+    pub pool_index: u8,
     pub committed_collateral_liquidity: u64,
     pub collateral_ild_rebate: i64,
     pub onasset_ild_rebate: i64,
@@ -267,7 +286,7 @@ impl LiquidityPosition {
 #[zero_copy]
 #[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct Borrow {
-    pub pool_index: u64,
+    pub pool_index: u8,
     pub borrowed_onasset: u64,
     pub collateral_amount: u64,
 }
@@ -281,7 +300,7 @@ impl Borrow {
 impl Default for Borrow {
     fn default() -> Self {
         Self {
-            pool_index: u64::MAX,
+            pool_index: u8::MAX,
             borrowed_onasset: 0,
             collateral_amount: 0,
         }

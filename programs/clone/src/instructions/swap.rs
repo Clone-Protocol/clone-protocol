@@ -1,4 +1,3 @@
-use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
@@ -71,6 +70,11 @@ pub struct Swap<'info> {
     pub collateral_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
+        address = clone.collateral.vault
+    )]
+    pub collateral_vault: Box<Account<'info, TokenAccount>>,
+    #[account(
+        mut,
         associated_token::mint = onasset_mint,
         associated_token::authority = clone.treasury_address
     )]
@@ -140,14 +144,19 @@ pub fn execute(
         pool.committed_collateral_liquidity > 0,
         CloneError::PoolEmpty
     );
+    let user_specified_quantity = if quantity_is_collateral {
+        collateral.to_collateral_decimal(quantity)?
+    } else {
+        to_clone_decimal!(quantity)
+    };
 
-    let user_specified_quantity = to_clone_decimal!(quantity);
     let swap_summary = pool.calculate_swap(
         pool_oracle.get_price(),
         collateral_oracle.get_price(),
         user_specified_quantity,
         quantity_is_input,
         quantity_is_collateral,
+        collateral,
         override_liquidity_trading_fee,
         override_treasury_trading_fee,
     );
@@ -160,203 +169,170 @@ pub fn execute(
         CloneError::InvalidTokenAmount
     );
 
-    let threshold = to_clone_decimal!(result_threshold);
+    let treasury_fees: u64 = swap_summary
+        .treasury_fees_paid
+        .mantissa()
+        .try_into()
+        .unwrap();
+    let result_amount: u64 = swap_summary.result.mantissa().try_into().unwrap();
+    let mut input_is_collateral = false;
 
-    let (
-        input_is_collateral,
-        user_input_account,
-        input_mint,
-        burn_amount,
-        user_output_account,
-        output_mint,
-        output_amount,
-        treasury_output_account,
-        onasset_ild_delta,
-        collateral_ild_delta,
-    ) = if quantity_is_input {
-        return_error_if_false!(
-            swap_summary.result >= threshold,
-            CloneError::SlippageToleranceExceeded
-        );
-        let ild_delta_input = -user_specified_quantity;
-        let ild_delta_output = rescale_toward_zero(
-            swap_summary.result + swap_summary.treasury_fees_paid,
-            CLONE_TOKEN_SCALE,
-        );
-        if quantity_is_collateral {
-            // User specifies input, input (collateral), output (onasset)
-            (
-                true,
-                ctx.accounts
-                    .user_collateral_token_account
-                    .to_account_info()
-                    .clone(),
-                ctx.accounts.collateral_mint.to_account_info().clone(),
-                user_specified_quantity,
-                ctx.accounts
-                    .user_onasset_token_account
-                    .to_account_info()
-                    .clone(),
-                ctx.accounts.onasset_mint.to_account_info().clone(),
-                swap_summary.result,
-                ctx.accounts
-                    .treasury_onasset_token_account
-                    .to_account_info()
-                    .clone(),
-                ild_delta_output,
-                ild_delta_input,
-            )
+    let (onasset_ild_delta, collateral_ild_delta) = if (quantity_is_input && quantity_is_collateral)
+        || (!quantity_is_input && !quantity_is_collateral)
+    {
+        input_is_collateral = true;
+        // User transfers collateral to vault, mint onasset to user, mint onasset as fees
+        let (transfer_amount, mint_amount) = if quantity_is_input {
+            (quantity, result_amount)
         } else {
-            // User specifies input, input (onasset), output (collateral)
-            (
-                false,
-                ctx.accounts
-                    .user_onasset_token_account
-                    .to_account_info()
-                    .clone(),
-                ctx.accounts.onasset_mint.to_account_info().clone(),
-                user_specified_quantity,
-                ctx.accounts
-                    .user_collateral_token_account
-                    .to_account_info()
-                    .clone(),
-                ctx.accounts.collateral_mint.to_account_info().clone(),
-                swap_summary.result,
-                ctx.accounts
-                    .treasury_collateral_token_account
-                    .to_account_info()
-                    .clone(),
-                ild_delta_input,
-                ild_delta_output,
-            )
-        }
+            (result_amount, quantity)
+        };
+        token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info().clone(),
+                Transfer {
+                    from: ctx
+                        .accounts
+                        .user_collateral_token_account
+                        .to_account_info()
+                        .clone(),
+                    to: ctx.accounts.collateral_vault.to_account_info().clone(),
+                    authority: ctx.accounts.user.to_account_info().clone(),
+                },
+            ),
+            transfer_amount,
+        )?;
+        token::mint_to(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                MintTo {
+                    mint: ctx.accounts.onasset_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .user_onasset_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.clone.to_account_info().clone(),
+                },
+                seeds,
+            ),
+            mint_amount,
+        )?;
+        token::mint_to(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                MintTo {
+                    mint: ctx.accounts.onasset_mint.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .treasury_onasset_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.clone.to_account_info().clone(),
+                },
+                seeds,
+            ),
+            treasury_fees,
+        )?;
+
+        (
+            (mint_amount + treasury_fees).try_into().unwrap(),
+            -(TryInto::<i64>::try_into(transfer_amount).unwrap()),
+        )
     } else {
-        return_error_if_false!(
-            swap_summary.result <= threshold,
-            CloneError::SlippageToleranceExceeded
-        );
-        let ild_delta_input = -swap_summary.result;
-        let ild_delta_output = rescale_toward_zero(
-            user_specified_quantity + swap_summary.treasury_fees_paid,
-            CLONE_TOKEN_SCALE,
-        );
-        if quantity_is_collateral {
-            // User specifies output, input (onasset), output (collateral)
-            (
-                false,
-                ctx.accounts
-                    .user_onasset_token_account
-                    .to_account_info()
-                    .clone(),
-                ctx.accounts.onasset_mint.to_account_info().clone(),
-                swap_summary.result,
-                ctx.accounts
-                    .user_collateral_token_account
-                    .to_account_info()
-                    .clone(),
-                ctx.accounts.collateral_mint.to_account_info().clone(),
-                user_specified_quantity,
-                ctx.accounts
-                    .treasury_collateral_token_account
-                    .to_account_info()
-                    .clone(),
-                ild_delta_input,
-                ild_delta_output,
-            )
+        // User burns onasset, transfer collateral from vault to user, transfer collateral as fees.
+        let (burn_amount, transfer_amount) = if quantity_is_input {
+            (quantity, result_amount)
         } else {
-            // User specifies output, input (collateral), output (onasset)
-            (
-                true,
-                ctx.accounts
-                    .user_collateral_token_account
-                    .to_account_info()
-                    .clone(),
-                ctx.accounts.collateral_mint.to_account_info().clone(),
-                swap_summary.result,
-                ctx.accounts
-                    .user_onasset_token_account
-                    .to_account_info()
-                    .clone(),
-                ctx.accounts.onasset_mint.to_account_info().clone(),
-                user_specified_quantity,
-                ctx.accounts
-                    .treasury_onasset_token_account
-                    .to_account_info()
-                    .clone(),
-                ild_delta_output,
-                ild_delta_input,
-            )
-        }
+            (result_amount, quantity)
+        };
+        token::burn(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info().clone(),
+                Burn {
+                    mint: ctx.accounts.onasset_mint.to_account_info().clone(),
+                    from: ctx
+                        .accounts
+                        .user_onasset_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.user.to_account_info().clone(),
+                },
+            ),
+            burn_amount,
+        )?;
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                Transfer {
+                    from: ctx.accounts.collateral_vault.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .user_collateral_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.clone.to_account_info().clone(),
+                },
+                seeds,
+            ),
+            transfer_amount,
+        )?;
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                Transfer {
+                    from: ctx.accounts.collateral_vault.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .treasury_collateral_token_account
+                        .to_account_info()
+                        .clone(),
+                    authority: ctx.accounts.clone.to_account_info().clone(),
+                },
+                seeds,
+            ),
+            treasury_fees,
+        )?;
+        (
+            -(TryInto::<i64>::try_into(burn_amount).unwrap()),
+            (transfer_amount + treasury_fees).try_into().unwrap(),
+        )
     };
 
-    // burn from user
-    token::burn(
-        CpiContext::new(
-            ctx.accounts.token_program.to_account_info().clone(),
-            Burn {
-                mint: input_mint,
-                from: user_input_account,
-                authority: ctx.accounts.user.to_account_info().clone(),
-            },
-        ),
-        burn_amount.mantissa().try_into().unwrap(),
-    )?;
+    pools.pools[pool_index as usize].onasset_ild += onasset_ild_delta;
+    pools.pools[pool_index as usize].collateral_ild += collateral_ild_delta;
 
-    // mint to user
-    token::mint_to(
-        CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            MintTo {
-                to: user_output_account,
-                mint: output_mint.clone(),
-                authority: ctx.accounts.clone.to_account_info().clone(),
-            },
-            seeds,
-        ),
-        output_amount.mantissa().try_into().unwrap(),
-    )?;
-
-    // Mint treasury fee to treasury token account
-    token::mint_to(
-        CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            MintTo {
-                mint: output_mint,
-                to: treasury_output_account,
-                authority: ctx.accounts.clone.to_account_info().clone(),
-            },
-            seeds,
-        ),
-        swap_summary
-            .treasury_fees_paid
-            .mantissa()
-            .try_into()
-            .unwrap(),
-    )?;
-
-    pools.pools[pool_index as usize].onasset_ild += onasset_ild_delta.mantissa() as i64;
-    pools.pools[pool_index as usize].collateral_ild += collateral_ild_delta.mantissa() as i64;
+    let (input, output) = if quantity_is_input {
+        return_error_if_false!(
+            result_amount >= result_threshold,
+            CloneError::SlippageToleranceExceeded
+        );
+        (quantity, result_amount)
+    } else {
+        return_error_if_false!(
+            result_amount <= result_threshold,
+            CloneError::SlippageToleranceExceeded
+        );
+        (result_amount, quantity)
+    };
 
     emit!(SwapEvent {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
         pool_index,
         input_is_collateral,
-        input: burn_amount.mantissa().try_into().unwrap(),
-        output: output_amount.mantissa().try_into().unwrap(),
+        input,
+        output,
         trading_fee: swap_summary
             .liquidity_fees_paid
             .mantissa()
             .try_into()
             .unwrap(),
-        treasury_fee: swap_summary
-            .treasury_fees_paid
-            .mantissa()
-            .try_into()
-            .unwrap()
+        treasury_fee: treasury_fees
     });
 
     let pool = &pools.pools[pool_index as usize];
+    let pool_price = pool_oracle.get_price() / collateral_oracle.get_price();
 
     emit!(PoolState {
         event_id: ctx.accounts.clone.event_counter,
@@ -364,7 +340,8 @@ pub fn execute(
         onasset_ild: pool.onasset_ild,
         collateral_ild: pool.collateral_ild,
         committed_collateral_liquidity: pool.committed_collateral_liquidity,
-        oracle_price: pool_oracle.price.try_into().unwrap()
+        pool_price: pool_price.mantissa().try_into().unwrap(),
+        pool_scale: pool_price.scale()
     });
     ctx.accounts.clone.event_counter += 1;
 

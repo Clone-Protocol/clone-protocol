@@ -6,10 +6,10 @@
  */
 
 import * as beet from '@metaplex-foundation/beet'
-export type CometPosition = {
-  poolIndex: beet.bignum
-  committedOnusdLiquidity: beet.bignum
-  onusdIldRebate: beet.bignum
+export type LiquidityPosition = {
+  poolIndex: number
+  committedCollateralLiquidity: beet.bignum
+  collateralIldRebate: beet.bignum
   onassetIldRebate: beet.bignum
 }
 
@@ -17,12 +17,12 @@ export type CometPosition = {
  * @category userTypes
  * @category generated
  */
-export const cometPositionBeet = new beet.BeetArgsStruct<CometPosition>(
+export const liquidityPositionBeet = new beet.BeetArgsStruct<LiquidityPosition>(
   [
-    ['poolIndex', beet.u64],
-    ['committedOnusdLiquidity', beet.u64],
-    ['onusdIldRebate', beet.i64],
+    ['poolIndex', beet.u8],
+    ['committedCollateralLiquidity', beet.u64],
+    ['collateralIldRebate', beet.i64],
     ['onassetIldRebate', beet.i64],
   ],
-  'CometPosition'
+  'LiquidityPosition'
 )

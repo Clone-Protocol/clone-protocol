@@ -32,7 +32,8 @@ pub struct PoolState {
     pub onasset_ild: i64,
     pub collateral_ild: i64,
     pub committed_collateral_liquidity: u64,
-    pub oracle_price: u64,
+    pub pool_price: u64,
+    pub pool_scale: u32,
 }
 
 // BORROW UPDATE

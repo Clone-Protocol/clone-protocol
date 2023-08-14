@@ -34,15 +34,8 @@ fn load_price_from_pyth(pyth_oracle: &AccountInfo) -> Result<Price> {
         Err(error!(CloneError::FailedToLoadPyth))
     }
 }
-
-#[zero_copy]
-#[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
-pub struct OracleIndices {
-    pub indices: [u8; MAX_SIZE],
-}
-
 #[derive(Accounts)]
-#[instruction(oracle_indices: OracleIndices)]
+#[instruction(oracle_indices: Vec<u8>)]
 pub struct UpdatePrices<'info> {
     #[account(
         mut,
@@ -54,17 +47,14 @@ pub struct UpdatePrices<'info> {
 
 pub fn execute<'info>(
     ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
-    oracle_indices: OracleIndices,
+    oracle_indices: Vec<u8>,
 ) -> Result<()> {
     let oracles = &mut ctx.accounts.oracles.oracles;
-    let n_accounts = ctx.remaining_accounts.iter().len();
-    return_error_if_false!(n_accounts > 0, CloneError::NoRemainingAccountsSupplied);
 
     // generate data from pyth oracle
-    for i in 0..n_accounts {
-        let oracle_index = oracle_indices.indices[i] as usize;
-        return_error_if_false!(oracle_index < oracles.len(), CloneError::InvalidOracleIndex);
-        let supplied_oracle_address = &ctx.remaining_accounts[i];
+    for (account_index, oracle_index) in oracle_indices.iter().enumerate() {
+        let supplied_oracle_address = &ctx.remaining_accounts[account_index];
+        let oracle_index = *oracle_index as usize;
         let oracle: &mut OracleInfo = &mut oracles[oracle_index];
 
         return_error_if_false!(
@@ -75,7 +65,11 @@ pub fn execute<'info>(
         let (price, expo) = match oracle.source {
             OracleSource::PYTH => {
                 let info = load_price_from_pyth(supplied_oracle_address)?;
-                (info.price, (-info.expo).try_into().unwrap())
+                if info.expo <= 0 {
+                    (info.price, (-info.expo).try_into().unwrap())
+                } else {
+                    (info.price * 10_i64.pow(info.expo.try_into().unwrap()), 0)
+                }
             }
             OracleSource::SWITCHBOARD => {
                 let raw = supplied_oracle_address.try_borrow_data()?;

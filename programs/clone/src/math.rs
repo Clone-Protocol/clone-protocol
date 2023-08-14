@@ -1,7 +1,9 @@
+use std::convert::TryInto;
+
 use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
-use crate::error::*;
-use crate::states::*;
+use crate::{error::*, to_ratio_decimal};
 use crate::{return_error_if_false, to_clone_decimal};
+use crate::{states::*, to_pct_decimal};
 use anchor_lang::prelude::*;
 use rust_decimal::prelude::*;
 
@@ -42,12 +44,11 @@ pub fn check_mint_collateral_sufficient(
     let slot = Clock::get().expect("Failed to get slot.").slot;
     check_feed_update(pool_oracle, slot)?;
     check_feed_update(collateral_oracle, slot)?;
-    let collateral_price = collateral_oracle.get_price();
+    let pool_price = pool_oracle.get_price() / collateral_oracle.get_price();
 
     return_error_if_false!(
         (asset_amount_borrowed == Decimal::ZERO)
-            || (collateral_price * collateral_amount * collateralization_ratio)
-                / (pool_oracle.get_price() * asset_amount_borrowed)
+            || (collateral_amount * collateralization_ratio) / (pool_price * asset_amount_borrowed)
                 >= min_overcollateral_ratio,
         CloneError::InvalidMintCollateralRatio
     );
@@ -73,13 +74,16 @@ pub fn calculate_liquidity_position_loss(
     pools: &Pools,
     oracles: &Oracles,
     liquidity_position: &LiquidityPosition,
+    collateral: &Collateral,
 ) -> Result<(Decimal, Decimal)> {
     let pool = &&pools.pools[liquidity_position.pool_index as usize];
     let oracle = &&oracles.oracles[pool.asset_info.oracle_info_index as usize];
+    let collateral_oracle = &&oracles.oracles[collateral.oracle_info_index as usize];
+
     let position_committed_collateral_liquidity =
-        to_clone_decimal!(liquidity_position.committed_collateral_liquidity);
+        collateral.to_collateral_decimal(liquidity_position.committed_collateral_liquidity)?;
     let total_committed_collateral_liquidity =
-        to_clone_decimal!(pool.committed_collateral_liquidity);
+        collateral.to_collateral_decimal(pool.committed_collateral_liquidity)?;
 
     let proportional_value = if total_committed_collateral_liquidity > Decimal::ZERO {
         position_committed_collateral_liquidity / total_committed_collateral_liquidity
@@ -88,9 +92,9 @@ pub fn calculate_liquidity_position_loss(
     };
 
     let collateral_ild_share = rescale_toward_zero(
-        to_clone_decimal!(pool.collateral_ild) * proportional_value
-            - to_clone_decimal!(liquidity_position.collateral_ild_rebate),
-        CLONE_TOKEN_SCALE,
+        collateral.to_collateral_decimal(pool.collateral_ild)? * proportional_value
+            - collateral.to_collateral_decimal(liquidity_position.collateral_ild_rebate)?,
+        collateral.scale.try_into().unwrap(),
     );
     let onasset_ild_share = rescale_toward_zero(
         to_clone_decimal!(pool.onasset_ild) * proportional_value
@@ -98,13 +102,16 @@ pub fn calculate_liquidity_position_loss(
         CLONE_TOKEN_SCALE,
     );
 
-    let impermanent_loss = collateral_ild_share.max(Decimal::ZERO)
-        + oracle.get_price() * onasset_ild_share.max(Decimal::ZERO);
+    let pool_price = oracle.get_price() / collateral_oracle.get_price();
+
+    let impermanent_loss =
+        collateral_ild_share.max(Decimal::ZERO) + pool_price * onasset_ild_share.max(Decimal::ZERO);
 
     let impermanent_loss_term =
-        impermanent_loss * to_clone_decimal!(pool.asset_info.il_health_score_coefficient);
-    let position_term = to_clone_decimal!(liquidity_position.committed_collateral_liquidity)
-        * to_clone_decimal!(pool.asset_info.position_health_score_coefficient);
+        impermanent_loss * to_pct_decimal!(pool.asset_info.il_health_score_coefficient);
+    let position_term = collateral
+        .to_collateral_decimal(liquidity_position.committed_collateral_liquidity)?
+        * to_pct_decimal!(pool.asset_info.position_health_score_coefficient);
 
     Ok((impermanent_loss_term, position_term))
 }
@@ -129,19 +136,19 @@ pub fn calculate_health_score(
 
         check_feed_update(oracle, slot)?;
         let (impermanent_loss_term, position_term) =
-            calculate_liquidity_position_loss(pools, oracles, &liquidity_position)?;
+            calculate_liquidity_position_loss(pools, oracles, &liquidity_position, collateral)?;
 
         total_il_term += impermanent_loss_term;
         total_position_term += position_term;
     }
 
-    let effective_collateral = comet.calculate_effective_collateral_value(&collateral);
-    let collateral_price = collateral_oracle.get_price();
+    let effective_collateral = collateral.to_collateral_decimal(comet.collateral_amount)?
+        * to_ratio_decimal!(collateral.collateralization_ratio);
 
     let score = if total_il_term.is_zero() && total_position_term.is_zero() {
         Decimal::new(100, 0)
     } else {
-        Decimal::new(100, 0) - (total_il_term + total_position_term) / (effective_collateral * collateral_price)
+        Decimal::new(100, 0) - (total_il_term + total_position_term) / effective_collateral
     };
 
     Ok(HealthScore {
@@ -159,13 +166,19 @@ pub struct ILDShare {
     pub onasset_ild_share: Decimal,
 }
 
-pub fn calculate_ild_share(liquidity_position: &LiquidityPosition, pools: &Pools) -> ILDShare {
+pub fn calculate_ild_share(
+    liquidity_position: &LiquidityPosition,
+    pools: &Pools,
+    collateral: &Collateral,
+) -> ILDShare {
     let pool_index = liquidity_position.pool_index as usize;
     let pool = &pools.pools[pool_index];
-    let position_committed_collateral_liquidity =
-        to_clone_decimal!(liquidity_position.committed_collateral_liquidity);
-    let total_committed_collateral_liquidity =
-        to_clone_decimal!(pool.committed_collateral_liquidity);
+    let position_committed_collateral_liquidity = collateral
+        .to_collateral_decimal(liquidity_position.committed_collateral_liquidity)
+        .unwrap();
+    let total_committed_collateral_liquidity = collateral
+        .to_collateral_decimal(pool.committed_collateral_liquidity)
+        .unwrap();
 
     let claimable_ratio = if total_committed_collateral_liquidity > Decimal::ZERO {
         position_committed_collateral_liquidity / total_committed_collateral_liquidity
@@ -174,8 +187,11 @@ pub fn calculate_ild_share(liquidity_position: &LiquidityPosition, pools: &Pools
     };
 
     let collateral_ild_claim = rescale_toward_zero(
-        to_clone_decimal!(pool.collateral_ild) * claimable_ratio,
-        CLONE_TOKEN_SCALE,
+        collateral
+            .to_collateral_decimal(pool.collateral_ild)
+            .unwrap()
+            * claimable_ratio,
+        collateral.scale.try_into().unwrap(),
     );
     let onasset_ild_claim = rescale_toward_zero(
         to_clone_decimal!(pool.onasset_ild) * claimable_ratio,
@@ -183,8 +199,11 @@ pub fn calculate_ild_share(liquidity_position: &LiquidityPosition, pools: &Pools
     );
 
     let collateral_ild_share = rescale_toward_zero(
-        collateral_ild_claim - to_clone_decimal!(liquidity_position.collateral_ild_rebate),
-        CLONE_TOKEN_SCALE,
+        collateral_ild_claim
+            - collateral
+                .to_collateral_decimal(liquidity_position.collateral_ild_rebate)
+                .unwrap(),
+        collateral.scale.try_into().unwrap(),
     );
     let onasset_ild_share = rescale_toward_zero(
         onasset_ild_claim - to_clone_decimal!(liquidity_position.onasset_ild_rebate),

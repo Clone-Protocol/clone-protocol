@@ -29,8 +29,6 @@ pub struct AddLiquidityToComet<'info> {
         mut,
         seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = (pool_index as usize) < pools.pools.len() @ CloneError::InvalidInputPositionIndex,
-        constraint = pools.pools[pool_index as usize].status == Status::Active @ CloneError::StatusPreventsAction
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
@@ -48,11 +46,16 @@ pub fn execute(
 ) -> Result<()> {
     let collateral = &ctx.accounts.clone.collateral;
     let pools = &mut ctx.accounts.pools;
+    return_error_if_false!(
+        pools.pools[pool_index as usize].status == Status::Active,
+        CloneError::StatusPreventsAction
+    );
     let oracles = &ctx.accounts.oracles;
     let comet = &mut ctx.accounts.user_account.comet;
     let pool = &pools.pools[pool_index as usize];
-    let committed_collateral_value = to_clone_decimal!(pool.committed_collateral_liquidity);
-    let collateral_liquidity_value = to_clone_decimal!(collateral_amount);
+    let committed_collateral_value =
+        collateral.to_collateral_decimal(pool.committed_collateral_liquidity)?;
+    let collateral_liquidity_value = collateral.to_collateral_decimal(collateral_amount)?;
 
     let proportion_value = if committed_collateral_value > Decimal::ZERO {
         collateral_liquidity_value / committed_collateral_value
@@ -61,48 +64,39 @@ pub fn execute(
     };
 
     let collateral_ild = rescale_toward_zero(
-        to_clone_decimal!(pool.collateral_ild) * proportion_value,
-        CLONE_TOKEN_SCALE,
+        collateral.to_collateral_decimal(pool.collateral_ild)? * proportion_value,
+        collateral.scale.try_into().unwrap(),
     );
+    let collateral_ild_delta: i64 = collateral_ild.mantissa().try_into().unwrap();
     let onasset_ild = rescale_toward_zero(
         to_clone_decimal!(pool.onasset_ild) * proportion_value,
         CLONE_TOKEN_SCALE,
     );
+    let onasset_ild_delta: i64 = onasset_ild.mantissa().try_into().unwrap();
 
     // find the index of the position within the comet position
-    let mut liquidity_position_index: Option<usize> = None;
-    for (i, pos) in comet.positions[..comet.positions.len() as usize]
+    if let Some((position_index, _)) = comet
+        .positions
         .iter()
         .enumerate()
+        .find(|(_, position)| position.pool_index == pool_index)
     {
-        if pos.pool_index == (pool_index as u64) {
-            liquidity_position_index = Some(i);
-            break;
-        }
-    }
-
-    // check to see if a new position must be added to the position
-    if let Some(position_index) = liquidity_position_index {
-        // update comet position data
         comet.positions[position_index].committed_collateral_liquidity += collateral_amount;
-        comet.positions[position_index].collateral_ild_rebate += collateral_ild.mantissa() as i64;
-        comet.positions[position_index].onasset_ild_rebate += onasset_ild.mantissa() as i64;
+        comet.positions[position_index].collateral_ild_rebate += collateral_ild_delta;
+        comet.positions[position_index].onasset_ild_rebate += onasset_ild_delta;
     } else {
         comet.positions.push(LiquidityPosition {
-            pool_index: pool_index as u64,
-            committed_collateral_liquidity: collateral_liquidity_value
-                .mantissa()
-                .try_into()
-                .unwrap(),
-            collateral_ild_rebate: collateral_ild.mantissa().try_into().unwrap(),
-            onasset_ild_rebate: onasset_ild.mantissa().try_into().unwrap(),
+            pool_index,
+            committed_collateral_liquidity: collateral_amount,
+            collateral_ild_rebate: collateral_ild_delta,
+            onasset_ild_rebate: onasset_ild_delta,
         });
     }
 
     // Update pool
     pools.pools[pool_index as usize].committed_collateral_liquidity += collateral_amount;
-    pools.pools[pool_index as usize].onasset_ild += onasset_ild.mantissa() as i64;
-    pools.pools[pool_index as usize].collateral_ild += collateral_ild.mantissa() as i64;
+    pools.pools[pool_index as usize].onasset_ild += onasset_ild_delta;
+    pools.pools[pool_index as usize].collateral_ild += collateral_ild_delta;
 
     let health_score = calculate_health_score(comet, pools, oracles, collateral)?;
 
@@ -113,13 +107,14 @@ pub fn execute(
         user_address: ctx.accounts.user.key(),
         pool_index,
         committed_collateral_delta: collateral_amount.try_into().unwrap(),
-        collateral_ild_delta: collateral_ild.mantissa().try_into().unwrap(),
-        onasset_ild_delta: onasset_ild.mantissa().try_into().unwrap(),
+        collateral_ild_delta,
+        onasset_ild_delta,
     });
 
     let pool = &pools.pools[pool_index as usize];
     let oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
-    let oracle_price = rescale_toward_zero(oracle.get_price(), CLONE_TOKEN_SCALE);
+    let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
+    let pool_price = oracle.get_price() / collateral_oracle.get_price();
 
     emit!(PoolState {
         event_id: ctx.accounts.clone.event_counter,
@@ -127,7 +122,8 @@ pub fn execute(
         onasset_ild: pool.onasset_ild,
         collateral_ild: pool.collateral_ild,
         committed_collateral_liquidity: pool.committed_collateral_liquidity,
-        oracle_price: oracle_price.mantissa().try_into().unwrap()
+        pool_price: pool_price.mantissa().try_into().unwrap(),
+        pool_scale: pool_price.scale()
     });
 
     ctx.accounts.clone.event_counter += 1;

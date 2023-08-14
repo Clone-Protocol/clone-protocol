@@ -15,7 +15,6 @@ import * as web3 from '@solana/web3.js'
  * @category generated
  */
 export type AddCollateralToCometInstructionArgs = {
-  collateralIndex: number
   collateralAmount: beet.bignum
 }
 /**
@@ -30,7 +29,6 @@ export const addCollateralToCometStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['collateralIndex', beet.u8],
     ['collateralAmount', beet.u64],
   ],
   'AddCollateralToCometInstructionArgs'
@@ -40,7 +38,7 @@ export const addCollateralToCometStruct = new beet.BeetArgsStruct<
  *
  * @property [**signer**] user
  * @property [_writable_] userAccount
- * @property [_writable_] tokenData
+ * @property [] clone
  * @property [_writable_] vault
  * @property [_writable_] userCollateralTokenAccount
  * @category Instructions
@@ -50,7 +48,7 @@ export const addCollateralToCometStruct = new beet.BeetArgsStruct<
 export type AddCollateralToCometInstructionAccounts = {
   user: web3.PublicKey
   userAccount: web3.PublicKey
-  tokenData: web3.PublicKey
+  clone: web3.PublicKey
   vault: web3.PublicKey
   userCollateralTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
@@ -92,8 +90,8 @@ export function createAddCollateralToCometInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
-      isWritable: true,
+      pubkey: accounts.clone,
+      isWritable: false,
       isSigner: false,
     },
     {

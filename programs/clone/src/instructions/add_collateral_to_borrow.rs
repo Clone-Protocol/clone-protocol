@@ -1,4 +1,3 @@
-use crate::error::*;
 use crate::events::*;
 use crate::states::*;
 use crate::{CLONE_PROGRAM_SEED, USER_SEED};
@@ -14,7 +13,6 @@ pub struct AddCollateralToBorrow<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
-        constraint = (borrow_index as usize) < user_account.borrows.len() @ CloneError::InvalidInputPositionIndex
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
@@ -29,7 +27,6 @@ pub struct AddCollateralToBorrow<'info> {
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = user_collateral_token_account.amount >= amount @ CloneError::InvalidTokenAccountBalance,
         associated_token::mint = vault.mint,
         associated_token::authority = user
     )]

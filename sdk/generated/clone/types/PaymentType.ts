@@ -6,15 +6,20 @@
  */
 
 import * as beet from '@metaplex-foundation/beet'
-export type OracleIndices = {
-  indices: number[] /* size: 128 */
+/**
+ * @category enums
+ * @category generated
+ */
+export enum PaymentType {
+  Onasset,
+  Collateral,
+  CollateralFromWallet,
 }
 
 /**
  * @category userTypes
  * @category generated
  */
-export const oracleIndicesBeet = new beet.BeetArgsStruct<OracleIndices>(
-  [['indices', beet.uniformFixedSizeArray(beet.u8, 128)]],
-  'OracleIndices'
-)
+export const paymentTypeBeet = beet.fixedScalarEnum(
+  PaymentType
+) as beet.FixedSizeBeet<PaymentType, PaymentType>

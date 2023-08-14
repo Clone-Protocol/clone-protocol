@@ -44,7 +44,7 @@ export const payBorrowDebtStruct = new beet.BeetArgsStruct<
  * @property [**signer**] payer
  * @property [_writable_] userAccount
  * @property [_writable_] clone
- * @property [] tokenData
+ * @property [] pools
  * @property [_writable_] payerOnassetTokenAccount
  * @property [_writable_] onassetMint
  * @category Instructions
@@ -55,7 +55,7 @@ export type PayBorrowDebtInstructionAccounts = {
   payer: web3.PublicKey
   userAccount: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
+  pools: web3.PublicKey
   payerOnassetTokenAccount: web3.PublicKey
   onassetMint: web3.PublicKey
   tokenProgram?: web3.PublicKey
@@ -102,7 +102,7 @@ export function createPayBorrowDebtInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.pools,
       isWritable: false,
       isSigner: false,
     },

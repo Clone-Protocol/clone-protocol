@@ -40,7 +40,7 @@ export const wrapAssetStruct = new beet.BeetArgsStruct<
  *
  * @property [**signer**] user
  * @property [] clone
- * @property [] tokenData
+ * @property [] pools
  * @property [_writable_] underlyingAssetTokenAccount
  * @property [] assetMint
  * @property [_writable_] userAssetTokenAccount
@@ -53,7 +53,7 @@ export const wrapAssetStruct = new beet.BeetArgsStruct<
 export type WrapAssetInstructionAccounts = {
   user: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
+  pools: web3.PublicKey
   underlyingAssetTokenAccount: web3.PublicKey
   assetMint: web3.PublicKey
   userAssetTokenAccount: web3.PublicKey
@@ -98,7 +98,7 @@ export function createWrapAssetInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.pools,
       isWritable: false,
       isSigner: false,
     },
