@@ -1,7 +1,6 @@
 [programs.localnet]
 clone = "F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v"
 pyth = "9inbbNkKUi2VwaSH7QiXcHteeHZiXWoTkgYSdX6RmtmW"
-jupiter_agg_mock = "CS52uHyHj6yod3TCQsrhPS8SqqnvoEHNjtTLoUio5kWB"
 clone_staking = "6yb6cqAvngy2do4qAFmM24Jda2FfyXcPuQxu4P3Va2F4"
 
 [registry]
