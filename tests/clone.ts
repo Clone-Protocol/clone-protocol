@@ -38,7 +38,6 @@ import {
 } from "../sdk/generated/clone";
 import * as CloneStaking from "../sdk/generated/clone-staking";
 
-const CLONE_SCALE_CONVERSION = Math.pow(10, -CLONE_TOKEN_SCALE);
 const COLLATERAL_SCALE = 7;
 
 const createTokenMint = async (
@@ -274,6 +273,37 @@ describe("tests", async () => {
     );
     cloneClient = new CloneClient(provider, account, cloneProgramId);
   });
+
+  it("add auth test", async () => {
+    const address = anchor.web3.Keypair.generate().publicKey
+    await cloneClient.updateCloneParameters({ params :{
+        __kind: "AddAuth",
+        address
+    }})
+
+    let clone = await CloneAccount.fromAccountAddress(provider.connection, cloneAccountAddress)
+    let foundAddress = clone.auth.find((v) => {
+      return v.equals(address)
+    })
+    assert(
+      foundAddress !== undefined,
+      "Auth not added"
+    )
+
+    await cloneClient.updateCloneParameters({ params :{
+      __kind: "RemoveAuth",
+      address
+    }})
+
+    clone = await CloneAccount.fromAccountAddress(provider.connection, cloneAccountAddress)
+    foundAddress = clone.auth.find((v) => {
+      return v.equals(address)
+    })
+    assert(
+      foundAddress === undefined,
+      "Auth not removed"
+    )
+  })
 
   it("initialize feeds + create mock assets + add oracles", async () => {
     const usdcPriceFeed = await createPriceFeed(
@@ -1876,4 +1906,5 @@ describe("tests", async () => {
       },
     });
   });
+
 });

@@ -25,7 +25,7 @@ pub struct UpdateCloneParameters<'info> {
     #[account(
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
-        bump = clone.bump,
+        bump,
     )]
     pub clone: Box<Account<'info, Clone>>,
 }
@@ -38,8 +38,7 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
             let empty_slot = auth_array
                 .iter()
                 .enumerate()
-                .find(|(_, slot)| **slot != Pubkey::default());
-
+                .find(|(_, slot)| (**slot).eq(&Pubkey::default()));
             return_error_if_false!(empty_slot.is_some(), CloneError::AuthArrayFull);
             clone.auth[empty_slot.unwrap().0] = address;
         }
@@ -50,14 +49,14 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
             ctx.accounts.clone.comet_onasset_ild_liquidator_fee_bps = value;
         }
         CloneParameters::BorrowLiquidationFee { value } => {
-            ctx.accounts.clone.borrow_liquidator_fee_bps = value;
+            clone.borrow_liquidator_fee_bps = value;
         }
         CloneParameters::RemoveAuth { address } => {
             let auth_array = clone.auth;
             let auth_slot = auth_array
                 .iter()
                 .enumerate()
-                .find(|(_, slot)| **slot == address);
+                .find(|(_, slot)| (**slot).eq(&address));
 
             return_error_if_false!(auth_slot.is_some(), CloneError::AuthNotFound);
             clone.auth[auth_slot.unwrap().0] = Pubkey::default();
