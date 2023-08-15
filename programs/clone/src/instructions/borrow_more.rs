@@ -1,13 +1,13 @@
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use crate::{
     to_clone_decimal, to_ratio_decimal, CLONE_PROGRAM_SEED, ORACLES_SEED, POOLS_SEED, USER_SEED,
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
-use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
@@ -18,7 +18,6 @@ pub struct BorrowMore<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
-        constraint = (borrow_index as usize) < user_account.borrows.len() @ CloneError::InvalidInputPositionIndex,
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
@@ -29,8 +28,7 @@ pub struct BorrowMore<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         seeds = [POOLS_SEED.as_ref()],
-        bump,
-        constraint = pools.pools[user_account.borrows[borrow_index as usize].pool_index as usize].status == Status::Active @ CloneError::StatusPreventsAction,
+        bump
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
@@ -65,6 +63,11 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
 
     let pool_index = borrows[borrow_index as usize].pool_index;
     let pool = &pools.pools[pool_index as usize];
+    return_error_if_false!(
+        pool.status == Status::Active,
+        CloneError::StatusPreventsAction
+    );
+
     let pool_oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
     let borrow_position = borrows[borrow_index as usize];
@@ -80,10 +83,7 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
         to_clone_decimal!(borrows[borrow_index as usize].borrowed_onasset),
         min_overcollateral_ratio,
         collateralization_ratio,
-        Decimal::new(
-            borrow_position.collateral_amount.try_into().unwrap(),
-            collateral.scale.try_into().unwrap(),
-        ),
+        collateral.to_collateral_decimal(borrow_position.collateral_amount)?,
     )?;
 
     // mint onasset to the user

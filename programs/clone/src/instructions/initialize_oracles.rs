@@ -2,7 +2,7 @@ use crate::states::*;
 use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 
-pub const ORACLES_SEED: &str = "pools";
+pub const ORACLES_SEED: &str = "oracles";
 
 #[derive(Accounts)]
 pub struct InitializeOracles<'info> {

@@ -7,76 +7,79 @@
 
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
+import {
+  UpdateOracleParameters,
+  updateOracleParametersBeet,
+} from '../types/UpdateOracleParameters'
 
 /**
  * @category Instructions
- * @category ReallocateTokenData
+ * @category UpdateOracles
  * @category generated
  */
-export type ReallocateTokenDataInstructionArgs = {
-  len: number
+export type UpdateOraclesInstructionArgs = {
+  params: UpdateOracleParameters
 }
 /**
  * @category Instructions
- * @category ReallocateTokenData
+ * @category UpdateOracles
  * @category generated
  */
-export const reallocateTokenDataStruct = new beet.BeetArgsStruct<
-  ReallocateTokenDataInstructionArgs & {
+export const updateOraclesStruct = new beet.FixableBeetArgsStruct<
+  UpdateOraclesInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['len', beet.u16],
+    ['params', updateOracleParametersBeet],
   ],
-  'ReallocateTokenDataInstructionArgs'
+  'UpdateOraclesInstructionArgs'
 )
 /**
- * Accounts required by the _reallocateTokenData_ instruction
+ * Accounts required by the _updateOracles_ instruction
  *
- * @property [_writable_, **signer**] admin
+ * @property [**signer**] auth
  * @property [] clone
- * @property [_writable_] tokenData
+ * @property [_writable_] oracles
  * @category Instructions
- * @category ReallocateTokenData
+ * @category UpdateOracles
  * @category generated
  */
-export type ReallocateTokenDataInstructionAccounts = {
-  admin: web3.PublicKey
+export type UpdateOraclesInstructionAccounts = {
+  auth: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
-  systemProgram?: web3.PublicKey
+  oracles: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const reallocateTokenDataInstructionDiscriminator = [
-  87, 235, 125, 144, 229, 65, 67, 170,
+export const updateOraclesInstructionDiscriminator = [
+  209, 115, 103, 72, 108, 69, 218, 189,
 ]
 
 /**
- * Creates a _ReallocateTokenData_ instruction.
+ * Creates a _UpdateOracles_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category ReallocateTokenData
+ * @category UpdateOracles
  * @category generated
  */
-export function createReallocateTokenDataInstruction(
-  accounts: ReallocateTokenDataInstructionAccounts,
-  args: ReallocateTokenDataInstructionArgs,
+export function createUpdateOraclesInstruction(
+  accounts: UpdateOraclesInstructionAccounts,
+  args: UpdateOraclesInstructionArgs,
   programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
-  const [data] = reallocateTokenDataStruct.serialize({
-    instructionDiscriminator: reallocateTokenDataInstructionDiscriminator,
+  const [data] = updateOraclesStruct.serialize({
+    instructionDiscriminator: updateOraclesInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.admin,
-      isWritable: true,
+      pubkey: accounts.auth,
+      isWritable: false,
       isSigner: true,
     },
     {
@@ -85,13 +88,8 @@ export function createReallocateTokenDataInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.oracles,
       isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.systemProgram ?? web3.SystemProgram.programId,
-      isWritable: false,
       isSigner: false,
     },
   ]

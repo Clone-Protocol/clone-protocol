@@ -3,7 +3,6 @@ import * as beet from "@metaplex-foundation/beet";
 import { BN, Provider } from "@coral-xyz/anchor";
 import {
   PublicKey,
-  Connection,
   ConfirmOptions,
   TransactionInstruction,
   Transaction,
@@ -16,15 +15,12 @@ import {
   getAssociatedTokenAddress,
   createInitializeMintInstruction,
   getMinimumBalanceForRentExemptMint,
-  getAccount,
 } from "@solana/spl-token";
 import {
   Clone,
   User,
-  TokenData,
   createInitializeUserInstruction,
   createUpdatePricesInstruction,
-  createMintOnusdInstruction,
   createAddCollateralToBorrowInstruction,
   createWithdrawCollateralFromBorrowInstruction,
   createPayBorrowDebtInstruction,
@@ -35,33 +31,34 @@ import {
   createAddLiquidityToCometInstruction,
   createWithdrawLiquidityFromCometInstruction,
   createPayImpermanentLossDebtInstruction,
-  createLiquidateCometPositionInstruction,
   createLiquidateBorrowPositionInstruction,
   createCollectLpRewardsInstruction,
   createInitializeBorrowPositionInstruction,
-  createInitializePoolInstruction,
-  createAddCollateralInstruction,
   createInitializeCloneInstruction,
   UpdatePoolParametersInstructionArgs,
   createUpdatePoolParametersInstruction,
-  UpdateCollateralParametersInstructionArgs,
-  createUpdateCollateralParametersInstruction,
   UpdateCloneParametersInstructionArgs,
   createUpdateCloneParametersInstruction,
-  createAddOracleFeedInstruction,
   createWrapAssetInstruction,
   createUnwrapOnassetInstruction,
-  createInitializeTokenDataInstruction,
-  createReallocateTokenDataInstruction,
+  createInitializePoolsInstruction,
+  createInitializeOraclesInstruction,
+  createUpdateOraclesInstruction,
+  createAddPoolInstruction,
+  UpdateOraclesInstructionArgs,
+  Pools,
+  Oracles,
+  PaymentType,
+  createLiquidateCometCollateralIldInstruction,
+  createLiquidateCometOnassetIldInstruction,
 } from "../generated/clone";
-import { getOrCreateAssociatedTokenAccount } from "./utils";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
 export const CLONE_TOKEN_SCALE = 8;
 export const MAX_PRICE_SIZE = 128;
 export const ONUSD_COLLATERAL_INDEX = 0;
-export  const USDC_COLLATERAL_INDEX = 1;
+export const USDC_COLLATERAL_INDEX = 1;
 
 export const toScale = (x: number, scale: number): BN => {
   let stringDigits = [];
@@ -101,7 +98,8 @@ export const fromCloneScale = (x: number | beet.bignum | BN | bigint) => {
 export class CloneClient {
   clone: Clone;
   cloneAddress: PublicKey;
-  tokenDataAddress: PublicKey;
+  poolsAddress: PublicKey;
+  oraclesAddress: PublicKey;
   programId: PublicKey;
   provider: Provider;
   opts?: ConfirmOptions;
@@ -117,7 +115,8 @@ export class CloneClient {
     this.clone = clone;
     this.opts = opts;
     this.cloneAddress = this.getCloneAddress();
-    this.tokenDataAddress = this.getTokenDataAddress();
+    this.poolsAddress = this.getPoolsAddress();
+    this.oraclesAddress = this.getOraclesAddress();
   }
 
   /// Admin RPC methods ///
@@ -125,61 +124,84 @@ export class CloneClient {
   public static async initializeClone(
     provider: anchor.AnchorProvider,
     programId: PublicKey,
-    cometLiquidatorFeeBps: number,
+    cometCollateralIldLiquidatorFeeBps: number,
+    cometOnassetIldLiquidatorFeeBps: number,
     borrowLiquidatorFeeBps: number,
     treasuryAddress: PublicKey,
-    usdcMint: PublicKey,
-    onusdMint: PublicKey
+    collateralMint: PublicKey,
+    collateralOracleIndex: number,
+    collateralizationRatio: number
   ) {
     const [cloneAddress, _] = PublicKey.findProgramAddressSync(
       [Buffer.from("clone")],
       programId
     );
-    const [tokenDataAddress, __] = PublicKey.findProgramAddressSync(
-      [Buffer.from("token-data")],
+    const [poolsAddress, ___] = PublicKey.findProgramAddressSync(
+      [Buffer.from("pools")],
       programId
+    );
+    const [oraclesAddress, ____] = PublicKey.findProgramAddressSync(
+      [Buffer.from("oracles")],
+      programId
+    );
+
+    const collateralVault = await getAssociatedTokenAddress(
+      collateralMint,
+      cloneAddress,
+      true
     );
 
     // Use SystemProgram to create TokenData account.
     let tx = new Transaction().add(
+      createAssociatedTokenAccountInstruction(
+        provider.publicKey!,
+        collateralVault,
+        cloneAddress,
+        collateralMint
+      ),
       createInitializeCloneInstruction(
         {
           admin: provider.publicKey!,
           clone: cloneAddress,
-          onusdMint,
-          usdcMint,
+          collateralMint,
+          collateralVault,
           rent: RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
         },
         {
-          cometLiquidatorFeeBps,
+          cometCollateralIldLiquidatorFeeBps,
+          cometOnassetIldLiquidatorFeeBps,
           borrowLiquidatorFeeBps,
           treasuryAddress,
-        }
+          collateralOracleIndex,
+          collateralizationRatio,
+        },
+        programId
       ),
-      createInitializeTokenDataInstruction({
-        admin: provider.publicKey!,
-        clone: cloneAddress,
-        tokenData: tokenDataAddress,
-        systemProgram: SYSTEM_PROGRAM_ID,
-      }),
-      createReallocateTokenDataInstruction(
+      createInitializePoolsInstruction(
         {
           admin: provider.publicKey!,
           clone: cloneAddress,
-          tokenData: tokenDataAddress,
+          pools: poolsAddress,
           systemProgram: SYSTEM_PROGRAM_ID,
         },
+        programId
+      ),
+      createInitializeOraclesInstruction(
         {
-          len: 16408 + 8,
-        }
+          admin: provider.publicKey!,
+          clone: cloneAddress,
+          oracles: oraclesAddress,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        },
+        programId
       )
     );
     await provider.sendAndConfirm!(tx);
   }
 
-  public async initializePool(
+  public async addPool(
     minOvercollateralRatio: number,
     maxLiquidationOvercollateralRatio: number,
     liquidityTradingFeeBps: number,
@@ -203,7 +225,7 @@ export class CloneClient {
 
     await this.provider.sendAndConfirm!(
       new Transaction().add(
-        // create onusd mint account
+        // create onasset mint account
         SystemProgram.createAccount({
           fromPubkey: this.provider.publicKey!,
           newAccountPubkey: onassetMint.publicKey,
@@ -239,12 +261,11 @@ export class CloneClient {
 
     await this.provider.sendAndConfirm!(
       new Transaction().add(
-        createInitializePoolInstruction(
+        createAddPoolInstruction(
           {
             admin: this.provider.publicKey!,
             clone: this.cloneAddress,
-            tokenData: this.tokenDataAddress,
-            onusdMint: this.clone!.onusdMint,
+            pools: this.poolsAddress,
             onassetMint: onassetMint.publicKey,
             onassetTokenAccount,
             underlyingAssetMint,
@@ -256,12 +277,11 @@ export class CloneClient {
             maxLiquidationOvercollateralRatio,
             liquidityTradingFeeBps,
             treasuryTradingFeeBps,
-            ilHealthScoreCoefficient: toCloneScale(ilHealthScoreCoefficient),
-            positionHealthScoreCoefficient: toCloneScale(
-              positionHealthScoreCoefficient
-            ),
+            ilHealthScoreCoefficient,
+            positionHealthScoreCoefficient,
             oracleInfoIndex: oracleIndex,
-          }
+          },
+          this.programId
         )
       ),
       [],
@@ -269,52 +289,16 @@ export class CloneClient {
     );
   }
 
-  public async addCollateral(
-    collateralMint: PublicKey,
-    collateralizationRatio: number = 0,
-    oracleInfoIndex: number = 255
-  ) {
-    const vaultAccount = await getOrCreateAssociatedTokenAccount(
-      this.provider,
-      collateralMint,
-      this.cloneAddress,
-      true
-    );
-    let tx = new Transaction();
-
-    tx.add(
-      createAddCollateralInstruction(
-        {
-          admin: this.provider.publicKey!,
-          clone: this.cloneAddress,
-          tokenData: this.tokenDataAddress,
-          collateralMint,
-          vault: vaultAccount.address,
-          rent: RENT_PUBKEY,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SYSTEM_PROGRAM_ID,
-        },
-        {
-          collateralizationRatio,
-          oracleInfoIndex,
-        }
-      )
-    );
-
-    await this.provider.sendAndConfirm!(tx, [], this.opts);
-  }
-
-  public async addOracleInfo(pythFeedAddress: PublicKey) {
+  public async updateOracles(params: UpdateOraclesInstructionArgs) {
     let tx = new Transaction().add(
-      createAddOracleFeedInstruction(
+      createUpdateOraclesInstruction(
         {
-          admin: this.provider.publicKey!,
+          auth: this.provider.publicKey!,
           clone: this.cloneAddress,
-          tokenData: this.tokenDataAddress,
+          oracles: this.oraclesAddress,
         },
-        {
-          pythAddress: pythFeedAddress,
-        }
+        params,
+        this.programId
       )
     );
     await this.provider.sendAndConfirm!(tx);
@@ -328,7 +312,8 @@ export class CloneClient {
         admin: this.provider.publicKey!,
         clone: this.cloneAddress,
       },
-      params
+      params,
+      this.programId
     );
     await this.provider.sendAndConfirm!(new Transaction().add(ix));
   }
@@ -340,23 +325,10 @@ export class CloneClient {
       {
         auth: this.provider.publicKey!,
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
+        pools: this.poolsAddress,
       },
-      params
-    );
-    await this.provider.sendAndConfirm!(new Transaction().add(ix));
-  }
-
-  public async updateCollateralParameters(
-    params: UpdateCollateralParametersInstructionArgs
-  ) {
-    let ix = createUpdateCollateralParametersInstruction(
-      {
-        admin: this.provider.publicKey!,
-        clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
-      },
-      params
+      params,
+      this.programId
     );
     await this.provider.sendAndConfirm!(new Transaction().add(ix));
   }
@@ -371,20 +343,28 @@ export class CloneClient {
     return address;
   }
 
-  public getTokenDataAddress(): PublicKey {
+  public getPoolsAddress(): PublicKey {
     const [address, _] = PublicKey.findProgramAddressSync(
-      [Buffer.from("token-data")],
+      [Buffer.from("pools")],
       this.programId
     );
     return address;
   }
 
-  public getUserAddress(address?: PublicKey) {
-    const [userPubkey, bump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("user"), (address ?? this.provider.publicKey!).toBuffer()],
+  public getOraclesAddress(): PublicKey {
+    const [address, _] = PublicKey.findProgramAddressSync(
+      [Buffer.from("oracles")],
       this.programId
     );
-    return { userPubkey, bump };
+    return address;
+  }
+
+  public getUserAccountAddress(authority?: PublicKey) {
+    const [userPubkey, _] = PublicKey.findProgramAddressSync(
+      [Buffer.from("user"), (authority ?? this.provider.publicKey!).toBuffer()],
+      this.programId
+    );
+    return userPubkey;
   }
 
   public async getCloneAccount(): Promise<Clone> {
@@ -394,19 +374,25 @@ export class CloneClient {
     );
   }
 
-  public async getTokenData(): Promise<TokenData> {
-    return await TokenData.fromAccountAddress(
+  public async getPools(): Promise<Pools> {
+    return await Pools.fromAccountAddress(
       this.provider.connection,
-      this.tokenDataAddress
+      this.poolsAddress
     );
   }
 
-  public async getUserAccount(address?: PublicKey): Promise<User> {
-    if (!address) {
-      const { userPubkey } = this.getUserAddress();
-      address = userPubkey;
-    }
-    return await User.fromAccountAddress(this.provider.connection, address);
+  public async getOracles(): Promise<Oracles> {
+    return await Oracles.fromAccountAddress(
+      this.provider.connection,
+      this.oraclesAddress
+    );
+  }
+
+  public async getUserAccount(authority?: PublicKey): Promise<User> {
+    return await User.fromAccountAddress(
+      this.provider.connection,
+      this.getUserAccountAddress(authority)
+    );
   }
 
   /// Instruction creation methods ///
@@ -414,90 +400,74 @@ export class CloneClient {
   public initializeUserInstruction(
     authority?: PublicKey
   ): TransactionInstruction {
-    const { userPubkey } = this.getUserAddress(authority);
+    const userAccountAddress = this.getUserAccountAddress(authority);
 
     return createInitializeUserInstruction(
       {
         payer: this.provider.publicKey!,
-        userAccount: userPubkey,
-        rent: RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        userAccount: userAccountAddress,
         systemProgram: SYSTEM_PROGRAM_ID,
       },
       {
         authority: authority ?? this.provider.publicKey!,
-      }
+      },
+      this.programId
     );
   }
 
   public updatePricesInstruction(
-    tokenData: TokenData,
-    poolIndices?: number[]
+    oracles: Oracles,
+    indices?: number[]
   ): TransactionInstruction {
-    let arr = [];
-    for (let i = 0; i < Number(tokenData.numOracles); i++) {
-      arr.push(i);
-    }
-    let indices = poolIndices ? poolIndices : arr;
-
     let anchorRemainingAccounts: anchor.web3.AccountMeta[] = [];
 
-    indices.forEach((index) => {
-      anchorRemainingAccounts.push({
-        pubkey: tokenData.oracles[index].pythAddress,
-        isWritable: false,
-        isSigner: false,
-      });
-    });
+    let oracleIndices: Uint8Array;
 
-    let zero_padding = MAX_PRICE_SIZE - indices.length;
-    for (let i = 0; i < zero_padding; i++) {
-      indices.push(0);
+    if (indices && indices.length > 0) {
+      indices.forEach((index) => {
+        anchorRemainingAccounts.push({
+          pubkey: oracles.oracles[index].address,
+          isWritable: false,
+          isSigner: false,
+        });
+      });
+      oracleIndices = new Uint8Array(indices);
+    } else {
+      let temp: number[] = [];
+      for (const [index, oracle] of oracles.oracles.entries()) {
+        temp.push(index);
+        anchorRemainingAccounts.push({
+          pubkey: oracle.address,
+          isWritable: false,
+          isSigner: false,
+        });
+      }
+      oracleIndices = new Uint8Array(temp);
     }
 
     return createUpdatePricesInstruction(
       {
-        tokenData: this.tokenDataAddress,
+        oracles: this.oraclesAddress,
         anchorRemainingAccounts,
       },
-      { indices: { indices: indices } }
-    );
-  }
-
-  public mintOnusdInstruction(
-    tokenData: TokenData,
-    amount: BN,
-    userOnusdTokenAccount: PublicKey,
-    userCollateralTokenAccount: PublicKey
-  ): TransactionInstruction {
-    return createMintOnusdInstruction(
-      {
-        user: this.provider.publicKey!,
-        clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
-        usdcVault: tokenData.collaterals[1].vault,
-        onusdMint: this.clone!.onusdMint,
-        userOnusdTokenAccount: userOnusdTokenAccount,
-        userCollateralTokenAccount: userCollateralTokenAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      },
-      { amount }
+      { oracleIndices },
+      this.programId
     );
   }
 
   public wrapAssetInstruction(
-    tokenData: TokenData,
+    pools: Pools,
     amount: BN,
     poolIndex: number,
     assetMint: PublicKey,
     userAssetTokenAccount: PublicKey,
     userOnassetTokenAccount: PublicKey
   ): TransactionInstruction {
-    const pool = tokenData.pools[poolIndex];
+    const pool = pools.pools[poolIndex];
     return createWrapAssetInstruction(
       {
         user: this.provider.publicKey!,
-        tokenData: this.tokenDataAddress,
+        pools: this.poolsAddress,
         underlyingAssetTokenAccount: pool.underlyingAssetTokenAccount!,
         assetMint,
         userAssetTokenAccount,
@@ -509,178 +479,164 @@ export class CloneClient {
       {
         amount,
         poolIndex,
-      }
+      },
+      this.programId
     );
   }
 
   public unwrapOnassetInstruction(
-    tokenData: TokenData,
+    pools: Pools,
     amount: BN,
     poolIndex: number,
     assetMint: PublicKey,
     userAssetTokenAccount: PublicKey,
     userOnassetTokenAccount: PublicKey
   ): TransactionInstruction {
-    const pool = tokenData.pools[poolIndex];
+    let pool = pools.pools[poolIndex];
     return createUnwrapOnassetInstruction(
       {
         user: this.provider.publicKey!,
-        tokenData: this.tokenDataAddress,
+        clone: this.cloneAddress,
+        pools: this.poolsAddress,
         underlyingAssetTokenAccount: pool.underlyingAssetTokenAccount!,
         assetMint,
         userAssetTokenAccount,
         onassetMint: pool.assetInfo.onassetMint,
         userOnassetTokenAccount,
-        clone: this.cloneAddress,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       {
         amount,
         poolIndex,
-      }
+      },
+      this.programId
     );
   }
 
   public initializeBorrowPositionInstruction(
-    tokenData: TokenData,
+    pools: Pools,
     userCollateralTokenAccount: PublicKey,
     userOnassetTokenAccount: PublicKey,
     onassetAmount: BN,
     collateralAmount: BN,
-    poolIndex: number,
-    collateralIndex: number
+    poolIndex: number
   ): TransactionInstruction {
-    const { userPubkey } = this.getUserAddress();
-
     return createInitializeBorrowPositionInstruction(
       {
         user: this.provider.publicKey!,
-        userAccount: userPubkey,
+        userAccount: this.getUserAccountAddress(),
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
-        vault: tokenData.collaterals[collateralIndex].vault,
+        pools: this.poolsAddress,
+        oracles: this.oraclesAddress,
+        vault: this.clone.collateral.vault,
         userCollateralTokenAccount: userCollateralTokenAccount,
-        onassetMint: tokenData.pools[poolIndex].assetInfo.onassetMint,
+        onassetMint: pools.pools[poolIndex].assetInfo.onassetMint,
         userOnassetTokenAccount: userOnassetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       {
         poolIndex,
-        collateralIndex,
         onassetAmount,
         collateralAmount,
-      }
+      },
+      this.programId
     );
   }
 
   public addCollateralToBorrowInstruction(
-    tokenData: TokenData,
-    userAccount: User,
     borrowIndex: number,
     userCollateralTokenAccount: PublicKey,
     collateralAmount: BN
   ): TransactionInstruction {
-    const { userPubkey } = this.getUserAddress();
-
     return createAddCollateralToBorrowInstruction(
       {
         user: this.provider.publicKey!,
-        userAccount: userPubkey,
+        userAccount: this.getUserAccountAddress(),
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
-        vault:
-          tokenData.collaterals[
-            Number(userAccount.borrows.positions[borrowIndex].collateralIndex)
-          ].vault,
+        vault: this.clone.collateral.vault,
         userCollateralTokenAccount: userCollateralTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       {
         borrowIndex,
         amount: collateralAmount,
-      }
+      },
+      this.programId
     );
   }
 
   public withdrawCollateralFromBorrowInstruction(
-    tokenData: TokenData,
-    userAccount: User,
     borrowIndex: number,
     userCollateralTokenAccount: PublicKey,
     collateralAmount: BN
   ): TransactionInstruction {
-    const { userPubkey } = this.getUserAddress();
-
     return createWithdrawCollateralFromBorrowInstruction(
       {
         user: this.provider.publicKey!,
-        userAccount: userPubkey,
+        userAccount: this.getUserAccountAddress(),
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
-        vault:
-          tokenData.collaterals[
-            Number(userAccount.borrows.positions[borrowIndex].collateralIndex)
-          ].vault,
+        pools: this.poolsAddress,
+        oracles: this.oraclesAddress,
+        vault: this.clone.collateral.vault,
         userCollateralTokenAccount: userCollateralTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       {
         borrowIndex,
         amount: collateralAmount,
-      }
+      },
+      this.programId
     );
   }
 
   public payBorrowDebtInstruction(
-    tokenData: TokenData,
+    pools: Pools,
     userAccount: User,
     userOnassetTokenAccount: PublicKey,
     onassetAmount: BN,
     borrowIndex: number
   ): TransactionInstruction {
     let assetInfo =
-      tokenData.pools[
-        Number(userAccount.borrows.positions[borrowIndex].poolIndex)
-      ].assetInfo;
-    const { userPubkey } = this.getUserAddress();
+      pools.pools[Number(userAccount.borrows[borrowIndex].poolIndex)].assetInfo;
 
     return createPayBorrowDebtInstruction(
       {
         payer: this.provider.publicKey!,
-        userAccount: userPubkey,
+        userAccount: this.getUserAccountAddress(),
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
+        pools: this.poolsAddress,
         onassetMint: assetInfo.onassetMint,
         payerOnassetTokenAccount: userOnassetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
-      { user: this.provider.publicKey!, borrowIndex, amount: onassetAmount }
+      { user: this.provider.publicKey!, borrowIndex, amount: onassetAmount },
+      this.programId
     );
   }
 
   public borrowMoreInstruction(
-    tokenData: TokenData,
+    pools: Pools,
     userAccount: User,
     userOnassetTokenAccount: PublicKey,
     onassetAmount: BN,
     borrowIndex: number
   ): TransactionInstruction {
     let assetInfo =
-      tokenData.pools[Number(userAccount.borrows.positions[borrowIndex].poolIndex)]
-        .assetInfo;
-    const { userPubkey } = this.getUserAddress();
+      pools.pools[Number(userAccount.borrows[borrowIndex].poolIndex)].assetInfo;
 
     return createBorrowMoreInstruction(
       {
         user: this.provider.publicKey!,
-        userAccount: userPubkey,
+        userAccount: this.getUserAccountAddress(),
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
+        pools: this.poolsAddress,
+        oracles: this.oraclesAddress,
         onassetMint: assetInfo.onassetMint,
         userOnassetTokenAccount: userOnassetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
-      { borrowIndex, amount: onassetAmount }
+      { borrowIndex, amount: onassetAmount },
+      this.programId
     );
   }
 
@@ -688,12 +644,12 @@ export class CloneClient {
     poolIndex: number,
     quantity: BN,
     quantityIsInput: boolean,
-    quantityIsOnusd: boolean,
+    quantityIsCollateral: boolean,
     threshold: BN,
     onassetMint: PublicKey,
-    userOnusdTokenAddress: PublicKey,
+    userCollateralTokenAddress: PublicKey,
     userOnassetTokenAddress: PublicKey,
-    treasuryOnusdTokenAddress: PublicKey,
+    treasuryCollateralTokenAddress: PublicKey,
     treasuryOnassetTokenAddress: PublicKey,
     cloneStakingConfig?: {
       cloneStakingProgram: PublicKey;
@@ -711,13 +667,15 @@ export class CloneClient {
       {
         user: this.provider.publicKey!,
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
+        pools: this.poolsAddress,
+        oracles: this.oraclesAddress,
         userOnassetTokenAccount: userOnassetTokenAddress,
-        userOnusdTokenAccount: userOnusdTokenAddress,
-        treasuryOnusdTokenAccount: treasuryOnusdTokenAddress,
+        userCollateralTokenAccount: userCollateralTokenAddress,
+        treasuryCollateralTokenAccount: treasuryCollateralTokenAddress,
         treasuryOnassetTokenAccount: treasuryOnassetTokenAddress,
-        onusdMint: this.clone!.onusdMint,
-        onassetMint: onassetMint,
+        collateralMint: this.clone.collateral.mint,
+        onassetMint,
+        collateralVault: this.clone.collateral.vault,
         tokenProgram: TOKEN_PROGRAM_ID,
         cloneStaking: cloneStaking,
         cloneStakingProgram: cloneStakingProgram,
@@ -727,179 +685,187 @@ export class CloneClient {
         poolIndex,
         quantity,
         quantityIsInput,
-        quantityIsOnusd,
+        quantityIsCollateral,
         resultThreshold: threshold,
-      }
+      },
+      this.programId
     );
   }
 
   public addCollateralToCometInstruction(
-    tokenData: TokenData,
     userCollateralTokenAccount: PublicKey,
-    collateralAmount: BN,
-    collateralIndex: number
+    collateralAmount: BN
   ): TransactionInstruction {
-    const { userPubkey } = this.getUserAddress();
-
     return createAddCollateralToCometInstruction(
       {
         user: this.provider.publicKey!,
-        userAccount: userPubkey,
-        tokenData: this.tokenDataAddress,
-        vault: tokenData.collaterals[collateralIndex].vault,
+        userAccount: this.getUserAccountAddress(),
+        clone: this.cloneAddress,
+        vault: this.clone.collateral.vault,
         userCollateralTokenAccount: userCollateralTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       {
-        collateralIndex,
         collateralAmount,
-      }
+      },
+      this.programId
     );
   }
 
   public withdrawCollateralFromCometInstruction(
-    tokenData: TokenData,
-    userAccount: User,
     userCollateralTokenAccount: PublicKey,
-    collateralAmount: BN,
-    cometCollateralIndex: number
+    collateralAmount: BN
   ): TransactionInstruction {
-    const { userPubkey } = this.getUserAddress();
-
     return createWithdrawCollateralFromCometInstruction(
       {
         user: this.provider.publicKey!,
-        userAccount: userPubkey,
+        userAccount: this.getUserAccountAddress(),
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
-        vault:
-          tokenData.collaterals[
-            Number(userAccount.comet.collaterals[cometCollateralIndex].collateralIndex)
-          ].vault,
+        pools: this.poolsAddress,
+        oracles: this.oraclesAddress,
+        vault: this.clone.collateral.vault,
         userCollateralTokenAccount: userCollateralTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       {
-        cometCollateralIndex,
         collateralAmount,
-      }
+      },
+      this.programId
     );
   }
 
   public addLiquidityToCometInstruction(
-    onusdAmount: BN,
+    collateralAmount: BN,
     poolIndex: number
   ): TransactionInstruction {
-    let { userPubkey } = this.getUserAddress();
-
     return createAddLiquidityToCometInstruction(
       {
         user: this.provider.publicKey!,
-        userAccount: userPubkey,
+        userAccount: this.getUserAccountAddress(),
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
+        pools: this.poolsAddress,
+        oracles: this.oraclesAddress,
       },
-      { poolIndex, onusdAmount }
+      { poolIndex, collateralAmount },
+      this.programId
     );
   }
 
   public withdrawLiquidityFromCometInstruction(
-    onusdWithdrawal: BN,
+    amount: BN,
     cometPositionIndex: number
   ): TransactionInstruction {
-    const { userPubkey } = this.getUserAddress();
-
     return createWithdrawLiquidityFromCometInstruction(
       {
         user: this.provider.publicKey!,
-        userAccount: userPubkey,
+        userAccount: this.getUserAccountAddress(),
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
+        pools: this.poolsAddress,
+        oracles: this.oraclesAddress,
       },
-      { cometPositionIndex, onusdAmount: onusdWithdrawal }
+      { cometPositionIndex, amount },
+      this.programId
     );
   }
 
   public payCometILDInstruction(
-    tokenData: TokenData,
+    pools: Pools,
     userAccount: User,
     cometPositionIndex: number,
     authorizedAmount: BN,
-    payOnusdDebt: boolean,
+    paymentType: PaymentType,
     payerOnassetTokenAccount: PublicKey,
-    payerOnusdTokenAccount: PublicKey
+    payerCollateralTokenAccount: PublicKey
   ): TransactionInstruction {
-    const cometPosition = userAccount.comet.positions[cometPositionIndex];
-    const { userPubkey } = this.getUserAddress();
+    const onassetMint =
+      pools.pools[userAccount.comet.positions[cometPositionIndex].poolIndex]
+        .assetInfo.onassetMint;
 
     return createPayImpermanentLossDebtInstruction(
       {
         payer: this.provider.publicKey!,
-        userAccount: userPubkey,
+        userAccount: this.getUserAccountAddress(),
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
-        onusdMint: this.clone!.onusdMint,
-        onassetMint:
-          tokenData.pools[Number(cometPosition.poolIndex)].assetInfo.onassetMint,
+        pools: this.poolsAddress,
+        collateralMint: this.clone.collateral.mint,
+        collateralVault: this.clone.collateral.vault,
+        onassetMint,
         tokenProgram: TOKEN_PROGRAM_ID,
-        payerOnassetTokenAccount: payerOnassetTokenAccount,
-        payerOnusdTokenAccount: payerOnusdTokenAccount,
+        payerOnassetTokenAccount,
+        payerCollateralTokenAccount,
       },
       {
         user: this.provider.publicKey!,
         cometPositionIndex,
         amount: authorizedAmount,
-        payOnusdDebt,
-      }
+        paymentType,
+      },
+      this.programId
     );
   }
 
-  public liquidateCometPositionInstruction(
-    tokenData: TokenData,
-    liquidateeUserAccount: User,
+  public liquidateCometCollateralILDInstruction(
     liquidateeAddress: PublicKey,
     cometPositionIndex: number,
-    cometCollateralIndex: number,
-    amount: BN,
-    payOnusdDebt: boolean,
-    liquidatorOnusdTokenAccount: PublicKey,
-    liquidatorOnassetTokenAccount: PublicKey,
     liquidatorCollateralTokenAccount: PublicKey
   ): TransactionInstruction {
-    const { userPubkey } = this.getUserAddress(liquidateeAddress);
-    const cometPosition =
-      liquidateeUserAccount.comet.positions[cometPositionIndex];
-    const cometCollateral =
-      liquidateeUserAccount.comet.collaterals[cometCollateralIndex];
-    const pool = tokenData.pools[Number(cometPosition.poolIndex)];
-    const collateral = tokenData.collaterals[Number(cometCollateral.collateralIndex)];
-
-    return createLiquidateCometPositionInstruction(
+    return createLiquidateCometCollateralIldInstruction(
       {
         liquidator: this.provider.publicKey!,
-        user: liquidateeAddress,
-        userAccount: userPubkey,
+        userAccount: this.getUserAccountAddress(liquidateeAddress),
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
-        onusdMint: this.clone!.onusdMint,
-        onassetMint: pool.assetInfo.onassetMint,
-        liquidatorOnusdTokenAccount: liquidatorOnusdTokenAccount,
-        liquidatorOnassetTokenAccount: liquidatorOnassetTokenAccount,
-        liquidatorCollateralTokenAccount: liquidatorCollateralTokenAccount,
-        vault: collateral.vault,
+        pools: this.poolsAddress,
+        oracles: this.oraclesAddress,
+        collateralMint: this.clone.collateral.mint,
+        liquidatorCollateralTokenAccount,
+        vault: this.clone.collateral.vault,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       {
+        user: liquidateeAddress,
         cometPositionIndex,
-        cometCollateralIndex,
+      },
+      this.programId
+    );
+  }
+
+  public liquidateCometOnassetILDInstruction(
+    pools: Pools,
+    liquidateeUserAccount: User,
+    liquidateeAddress: PublicKey,
+    cometPositionIndex: number,
+    liquidatorCollateralTokenAccount: PublicKey,
+    liquidatorOnassetTokenAccount: PublicKey,
+    amount: BN
+  ): TransactionInstruction {
+    const cometPosition =
+      liquidateeUserAccount.comet.positions[cometPositionIndex];
+    const pool = pools.pools[Number(cometPosition.poolIndex)];
+
+    return createLiquidateCometOnassetIldInstruction(
+      {
+        liquidator: this.provider.publicKey!,
+        userAccount: this.getUserAccountAddress(liquidateeAddress),
+        clone: this.cloneAddress,
+        pools: this.poolsAddress,
+        oracles: this.oraclesAddress,
+        onassetMint: pool.assetInfo.onassetMint,
+        liquidatorOnassetTokenAccount,
+        liquidatorCollateralTokenAccount,
+        vault: this.clone.collateral.vault,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      },
+      {
+        user: liquidateeAddress,
+        cometPositionIndex,
         amount,
-        payOnusdDebt,
-      }
+      },
+      this.programId
     );
   }
 
   public liquidateBorrowPositionInstruction(
-    tokenData: TokenData,
+    pools: Pools,
     liquidateeUserAccount: User,
     liquidateeAddress: PublicKey,
     borrowIndex: number,
@@ -907,57 +873,56 @@ export class CloneClient {
     liquidatorCollateralTokenAccount: PublicKey,
     liquidatorOnassetTokenAccount: PublicKey
   ): TransactionInstruction {
-    const { userPubkey } = this.getUserAddress(liquidateeAddress);
-    const borrowPosition = liquidateeUserAccount.borrows.positions[borrowIndex];
-    const pool = tokenData.pools[Number(borrowPosition.poolIndex)];
-    const collateral = tokenData.collaterals[Number(borrowPosition.collateralIndex)];
+    const borrowPosition = liquidateeUserAccount.borrows[borrowIndex];
+    const pool = pools.pools[Number(borrowPosition.poolIndex)];
 
     return createLiquidateBorrowPositionInstruction(
       {
         liquidator: this.provider.publicKey!,
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
-        userAccount: userPubkey,
-        user: liquidateeAddress,
+        userAccount: this.getUserAccountAddress(liquidateeAddress),
+        pools: this.poolsAddress,
+        oracles: this.oraclesAddress,
         onassetMint: pool.assetInfo.onassetMint,
-        vault: collateral.vault,
+        vault: this.clone.collateral.vault,
         liquidatorCollateralTokenAccount: liquidatorCollateralTokenAccount,
         liquidatorOnassetTokenAccount: liquidatorOnassetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       {
+        user: liquidateeAddress,
         borrowIndex,
         amount,
-      }
+      },
+      this.programId
     );
   }
 
   public collectLpRewardsInstruction(
-    tokenData: TokenData,
+    pools: Pools,
     userAccount: User,
-    userOnusdTokenAccount: PublicKey,
-    onassetTokenAccountInfo: PublicKey,
+    userCollateralTokenAccount: PublicKey,
+    userOnassetTokenAccount: PublicKey,
     cometPositionIndex: number
   ): TransactionInstruction {
-    const { userPubkey } = this.getUserAddress();
     const poolIndex = Number(
       userAccount.comet.positions[cometPositionIndex].poolIndex
     );
-    const pool = tokenData.pools[poolIndex];
 
     return createCollectLpRewardsInstruction(
       {
         user: this.provider.publicKey!,
-        userAccount: userPubkey,
+        userAccount: this.getUserAccountAddress(),
         clone: this.cloneAddress,
-        tokenData: this.tokenDataAddress,
-        onusdMint: this.clone!.onusdMint,
-        onassetMint: pool.assetInfo.onassetMint,
-        userOnusdTokenAccount: userOnusdTokenAccount,
-        userOnassetTokenAccount: onassetTokenAccountInfo,
+        pools: this.poolsAddress,
+        collateralVault: this.clone.collateral.vault,
+        onassetMint: pools.pools[poolIndex].assetInfo.onassetMint,
+        userCollateralTokenAccount,
+        userOnassetTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
-      { cometPositionIndex }
+      { cometPositionIndex },
+      this.programId
     );
   }
 }

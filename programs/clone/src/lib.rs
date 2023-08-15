@@ -23,6 +23,8 @@ pub mod clone {
         comet_onasset_ild_liquidator_fee_bps: u16,
         borrow_liquidator_fee_bps: u16,
         treasury_address: Pubkey,
+        collateral_oracle_index: u8,
+        collateralization_ratio: u8,
     ) -> Result<()> {
         instructions::initialize_clone::execute(
             ctx,
@@ -30,6 +32,8 @@ pub mod clone {
             comet_onasset_ild_liquidator_fee_bps,
             borrow_liquidator_fee_bps,
             treasury_address,
+            collateral_oracle_index,
+            collateralization_ratio,
         )
     }
 
@@ -56,12 +60,19 @@ pub mod clone {
         instructions::update_pool_parameters::execute(ctx, index, params)
     }
 
+    pub fn update_oracles(
+        ctx: Context<UpdateOracles>,
+        params: UpdateOracleParameters,
+    ) -> Result<()> {
+        instructions::update_oracles::execute(ctx, params)
+    }
+
     pub fn initialize_user(ctx: Context<InitializeUser>, authority: Pubkey) -> Result<()> {
         instructions::initialize_user::execute(ctx, authority)
     }
 
-    pub fn initialize_pool(
-        ctx: Context<InitializePool>,
+    pub fn add_pool(
+        ctx: Context<AddPool>,
         min_overcollateral_ratio: u16,
         max_liquidation_overcollateral_ratio: u16,
         liquidity_trading_fee_bps: u16,
@@ -70,7 +81,7 @@ pub mod clone {
         position_health_score_coefficient: u16,
         oracle_info_index: u8,
     ) -> Result<()> {
-        instructions::initialize_pool::execute(
+        instructions::add_pool::execute(
             ctx,
             min_overcollateral_ratio,
             max_liquidation_overcollateral_ratio,
@@ -82,12 +93,12 @@ pub mod clone {
         )
     }
 
-    // pub fn update_prices<'info>(
-    //     ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
-    //     indices: OracleIndices,
-    // ) -> Result<()> {
-    //     instructions::update_prices::execute(ctx, indices)
-    // }
+    pub fn update_prices<'info>(
+        ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
+        oracle_indices: Vec<u8>,
+    ) -> Result<()> {
+        instructions::update_prices::execute(ctx, oracle_indices)
+    }
 
     pub fn initialize_borrow_position(
         ctx: Context<InitializeBorrowPosition>,
@@ -149,44 +160,43 @@ pub mod clone {
     pub fn add_liquidity_to_comet(
         ctx: Context<AddLiquidityToComet>,
         pool_index: u8,
-        onusd_amount: u64,
+        collateral_amount: u64,
     ) -> Result<()> {
-        instructions::add_liquidity_to_comet::execute(ctx, pool_index, onusd_amount)
+        instructions::add_liquidity_to_comet::execute(ctx, pool_index, collateral_amount)
     }
 
     pub fn withdraw_liquidity_from_comet(
         ctx: Context<WithdrawLiquidityFromComet>,
         comet_position_index: u8,
-        onusd_amount: u64,
+        amount: u64,
     ) -> Result<()> {
-        instructions::withdraw_liquidity_from_comet::execute(
-            ctx,
-            comet_position_index,
-            onusd_amount,
-        )
+        instructions::withdraw_liquidity_from_comet::execute(ctx, comet_position_index, amount)
     }
 
     pub fn liquidate_comet_collateral_ild(
         ctx: Context<LiquidateCometCollateralIld>,
+        user: Pubkey,
         comet_position_index: u8,
     ) -> Result<()> {
-        instructions::liquidate_comet_collateral_ild::execute(ctx, comet_position_index)
+        instructions::liquidate_comet_collateral_ild::execute(ctx, user, comet_position_index)
     }
 
-    pub fn liquidate_comet_position(
+    pub fn liquidate_comet_onasset_ild(
         ctx: Context<LiquidateCometOnassetIld>,
+        user: Pubkey,
         comet_position_index: u8,
         amount: u64,
     ) -> Result<()> {
-        instructions::liquidate_comet_onasset_ild::execute(ctx, comet_position_index, amount)
+        instructions::liquidate_comet_onasset_ild::execute(ctx, user, comet_position_index, amount)
     }
 
     pub fn liquidate_borrow_position(
         ctx: Context<LiquidateBorrowPosition>,
+        user: Pubkey,
         borrow_index: u8,
         amount: u64,
     ) -> Result<()> {
-        instructions::liquidate_borrow_position::execute(ctx, borrow_index, amount)
+        instructions::liquidate_borrow_position::execute(ctx, user, borrow_index, amount)
     }
 
     pub fn collect_lp_rewards(
@@ -236,7 +246,7 @@ pub mod clone {
         pool_index: u8,
         quantity: u64,
         quantity_is_input: bool,
-        quantity_is_onusd: bool,
+        quantity_is_collateral: bool,
         result_threshold: u64,
     ) -> Result<()> {
         instructions::swap::execute(
@@ -244,7 +254,7 @@ pub mod clone {
             pool_index,
             quantity,
             quantity_is_input,
-            quantity_is_onusd,
+            quantity_is_collateral,
             result_threshold,
         )
     }

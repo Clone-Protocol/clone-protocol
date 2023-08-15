@@ -28,3 +28,4 @@ clone-staking = { path = "../clone-staking", version = "0.1.0", features = ["cpi
 rust_decimal = "1.25.0"
 rust_decimal_macros = "1.25.0"
 pyth-sdk-solana = "0.7.0"
+switchboard-solana = "0.1.0"

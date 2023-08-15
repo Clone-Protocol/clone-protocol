@@ -18,7 +18,7 @@ export type SwapInstructionArgs = {
   poolIndex: number
   quantity: beet.bignum
   quantityIsInput: boolean
-  quantityIsOnusd: boolean
+  quantityIsCollateral: boolean
   resultThreshold: beet.bignum
 }
 /**
@@ -36,7 +36,7 @@ export const swapStruct = new beet.BeetArgsStruct<
     ['poolIndex', beet.u8],
     ['quantity', beet.u64],
     ['quantityIsInput', beet.bool],
-    ['quantityIsOnusd', beet.bool],
+    ['quantityIsCollateral', beet.bool],
     ['resultThreshold', beet.u64],
   ],
   'SwapInstructionArgs'
@@ -46,13 +46,15 @@ export const swapStruct = new beet.BeetArgsStruct<
  *
  * @property [**signer**] user
  * @property [_writable_] clone
- * @property [_writable_] tokenData
- * @property [_writable_] userOnusdTokenAccount
+ * @property [_writable_] pools
+ * @property [_writable_] oracles
+ * @property [_writable_] userCollateralTokenAccount
  * @property [_writable_] userOnassetTokenAccount
  * @property [_writable_] onassetMint
- * @property [_writable_] onusdMint
+ * @property [_writable_] collateralMint
+ * @property [_writable_] collateralVault
  * @property [_writable_] treasuryOnassetTokenAccount
- * @property [_writable_] treasuryOnusdTokenAccount
+ * @property [_writable_] treasuryCollateralTokenAccount
  * @property [] cloneStaking (optional)
  * @property [] userStakingAccount (optional)
  * @property [] cloneStakingProgram (optional)
@@ -63,13 +65,15 @@ export const swapStruct = new beet.BeetArgsStruct<
 export type SwapInstructionAccounts = {
   user: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
-  userOnusdTokenAccount: web3.PublicKey
+  pools: web3.PublicKey
+  oracles: web3.PublicKey
+  userCollateralTokenAccount: web3.PublicKey
   userOnassetTokenAccount: web3.PublicKey
   onassetMint: web3.PublicKey
-  onusdMint: web3.PublicKey
+  collateralMint: web3.PublicKey
+  collateralVault: web3.PublicKey
   treasuryOnassetTokenAccount: web3.PublicKey
-  treasuryOnusdTokenAccount: web3.PublicKey
+  treasuryCollateralTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
   cloneStaking?: web3.PublicKey
   userStakingAccount?: web3.PublicKey
@@ -117,12 +121,17 @@ export function createSwapInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.pools,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.userOnusdTokenAccount,
+      pubkey: accounts.oracles,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.userCollateralTokenAccount,
       isWritable: true,
       isSigner: false,
     },
@@ -137,7 +146,12 @@ export function createSwapInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.onusdMint,
+      pubkey: accounts.collateralMint,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.collateralVault,
       isWritable: true,
       isSigner: false,
     },
@@ -147,7 +161,7 @@ export function createSwapInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.treasuryOnusdTokenAccount,
+      pubkey: accounts.treasuryCollateralTokenAccount,
       isWritable: true,
       isSigner: false,
     },

@@ -1,5 +1,6 @@
 use crate::decimal::rescale_toward_zero;
 use crate::error::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use crate::to_clone_decimal;
 use crate::{CLONE_PROGRAM_SEED, POOLS_SEED};
@@ -18,9 +19,6 @@ pub struct UnwrapOnAsset<'info> {
     #[account(
         seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = (pool_index as usize) < pools.pools.len() @ CloneError::PoolNotFound,
-        constraint = pools.pools[pool_index as usize].status == Status::Active ||
-        pools.pools[pool_index as usize].status == Status::Deprecation @ CloneError::StatusPreventsAction,
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
@@ -52,7 +50,13 @@ pub struct UnwrapOnAsset<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(ctx: Context<UnwrapOnAsset>, amount: u64, _pool_index: u8) -> Result<()> {
+pub fn execute(ctx: Context<UnwrapOnAsset>, amount: u64, pool_index: u8) -> Result<()> {
+    let pool = &ctx.accounts.pools.pools[pool_index as usize];
+    return_error_if_false!(
+        pool.status == Status::Active || pool.status == Status::Deprecation,
+        CloneError::StatusPreventsAction
+    );
+
     let underlying_mint_scale = ctx.accounts.asset_mint.decimals as u32;
     let unwrapped_amount =
         rescale_toward_zero(to_clone_decimal!(amount), underlying_mint_scale).mantissa() as u64;

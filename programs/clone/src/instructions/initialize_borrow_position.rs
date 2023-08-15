@@ -1,13 +1,13 @@
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
 use crate::{
     to_clone_decimal, to_ratio_decimal, CLONE_PROGRAM_SEED, ORACLES_SEED, POOLS_SEED, USER_SEED,
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
-use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
@@ -30,8 +30,6 @@ pub struct InitializeBorrowPosition<'info> {
         mut,
         seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = (pool_index as usize) < pools.pools.len() @ CloneError::InvalidInputPositionIndex,
-        constraint = pools.pools[pool_index as usize].status == Status::Active @ CloneError::StatusPreventsAction
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
@@ -47,7 +45,6 @@ pub struct InitializeBorrowPosition<'info> {
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = user_collateral_token_account.amount >= collateral_amount @ CloneError::InvalidTokenAccountBalance,
         associated_token::mint = vault.mint,
         associated_token::authority = user
     )]
@@ -81,18 +78,18 @@ pub fn execute(
     let oracles = &ctx.accounts.oracles;
 
     let pool = &pools.pools[pool_index as usize];
+    return_error_if_false!(
+        pool.status == Status::Active,
+        CloneError::StatusPreventsAction
+    );
+
     let pool_oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
-    let collateral_oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
-    let collateral_scale = collateral.scale;
+    let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
     let min_overcollateral_ratio = to_ratio_decimal!(pool.asset_info.min_overcollateral_ratio);
     let collateralization_ratio = to_ratio_decimal!(collateral.collateralization_ratio);
 
-    let collateral_amount_value = Decimal::new(
-        collateral_amount.try_into().unwrap(),
-        collateral_scale.try_into().unwrap(),
-    );
+    let collateral_amount_value = collateral.to_collateral_decimal(collateral_amount)?;
     let onasset_amount_value = to_clone_decimal!(onasset_amount);
-
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
         pool_oracle,
@@ -138,12 +135,11 @@ pub fn execute(
 
     // set mint position data
     let user_account = &mut ctx.accounts.user_account;
-    let num_positions = user_account.borrows.len();
-    user_account.borrows[num_positions as usize] = Borrow {
+    user_account.borrows.push(Borrow {
         collateral_amount,
         pool_index: pool_index.try_into().unwrap(),
         borrowed_onasset: onasset_amount,
-    };
+    });
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,

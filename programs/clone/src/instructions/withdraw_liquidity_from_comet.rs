@@ -8,7 +8,7 @@ use anchor_lang::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(comet_position_index: u8, collateral_amount: u64)]
+#[instruction(comet_position_index: u8, amount: u64)]
 pub struct WithdrawLiquidityFromComet<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -43,6 +43,7 @@ pub fn withdraw_liquidity(
     pools: &mut Pools,
     oracles: &Oracles,
     comet: &mut Comet,
+    collateral: &Collateral,
     comet_position_index: u8,
     collateral_amount: u64,
     user: Pubkey,
@@ -66,11 +67,11 @@ pub fn withdraw_liquidity(
         collateral_amount.min(comet_position.committed_collateral_liquidity);
 
     let proportional_value = to_clone_decimal!(collateral_value_to_withdraw)
-        / to_clone_decimal!(pool.committed_collateral_liquidity);
+        / collateral.to_collateral_decimal(pool.committed_collateral_liquidity)?;
 
     let collateral_ild_claim = rescale_toward_zero(
-        to_clone_decimal!(pool.collateral_ild) * proportional_value,
-        CLONE_TOKEN_SCALE,
+        collateral.to_collateral_decimal(pool.collateral_ild)? * proportional_value,
+        collateral.scale.try_into().unwrap(),
     );
     let onasset_ild_claim = rescale_toward_zero(
         to_clone_decimal!(pool.onasset_ild) * proportional_value,
@@ -100,7 +101,8 @@ pub fn withdraw_liquidity(
 
     let pool = &pools.pools[pool_index as usize];
     let oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
-    let oracle_price = rescale_toward_zero(oracle.get_price(), CLONE_TOKEN_SCALE);
+    let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
+    let pool_price = oracle.get_price() / collateral_oracle.get_price();
 
     emit!(PoolState {
         event_id: event_counter,
@@ -108,7 +110,8 @@ pub fn withdraw_liquidity(
         onasset_ild: pool.onasset_ild,
         collateral_ild: pool.collateral_ild,
         committed_collateral_liquidity: pool.committed_collateral_liquidity,
-        oracle_price: oracle_price.mantissa().try_into().unwrap()
+        pool_price: pool_price.mantissa().try_into().unwrap(),
+        pool_scale: pool_price.scale()
     });
 
     Ok(())
@@ -117,8 +120,9 @@ pub fn withdraw_liquidity(
 pub fn execute(
     ctx: Context<WithdrawLiquidityFromComet>,
     comet_position_index: u8,
-    collateral_amount: u64,
+    amount: u64,
 ) -> Result<()> {
+    let collateral = &ctx.accounts.clone.collateral;
     let pools = &mut ctx.accounts.pools;
     let oracles = &ctx.accounts.oracles;
     let comet = &mut ctx.accounts.user_account.comet;
@@ -126,8 +130,9 @@ pub fn execute(
         pools,
         oracles,
         comet,
+        collateral,
         comet_position_index,
-        collateral_amount,
+        amount,
         ctx.accounts.user.key(),
         ctx.accounts.clone.event_counter,
     )?;

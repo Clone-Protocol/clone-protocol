@@ -41,7 +41,6 @@ export const addCollateralToBorrowStruct = new beet.BeetArgsStruct<
  * @property [**signer**] user
  * @property [_writable_] userAccount
  * @property [] clone
- * @property [_writable_] tokenData
  * @property [_writable_] vault
  * @property [_writable_] userCollateralTokenAccount
  * @category Instructions
@@ -52,7 +51,6 @@ export type AddCollateralToBorrowInstructionAccounts = {
   user: web3.PublicKey
   userAccount: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
   vault: web3.PublicKey
   userCollateralTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
@@ -96,11 +94,6 @@ export function createAddCollateralToBorrowInstruction(
     {
       pubkey: accounts.clone,
       isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.tokenData,
-      isWritable: true,
       isSigner: false,
     },
     {

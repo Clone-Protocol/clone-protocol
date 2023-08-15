@@ -14,7 +14,7 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(borrow_index: u8, amount: u64)]
+#[instruction(user: Pubkey, borrow_index: u8, amount: u64)]
 pub struct LiquidateBorrowPosition<'info> {
     pub liquidator: Signer<'info>,
     #[account(
@@ -27,7 +27,6 @@ pub struct LiquidateBorrowPosition<'info> {
         mut,
         seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = pools.pools[user_account.borrows[borrow_index as usize].pool_index as usize].status != Status::Frozen @ CloneError::StatusPreventsAction
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
@@ -36,13 +35,10 @@ pub struct LiquidateBorrowPosition<'info> {
         bump,
     )]
     pub oracles: Box<Account<'info, Oracles>>,
-    /// CHECK: Only used for address validation.
-    pub user: AccountInfo<'info>,
     #[account(
         mut,
-        seeds = [USER_SEED.as_ref(), user.key.as_ref()],
+        seeds = [USER_SEED.as_ref(), user.as_ref()],
         bump,
-        constraint = (borrow_index as usize) < user_account.borrows.len() @ CloneError::InvalidInputPositionIndex
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
@@ -70,9 +66,17 @@ pub struct LiquidateBorrowPosition<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: u64) -> Result<()> {
+pub fn execute(
+    ctx: Context<LiquidateBorrowPosition>,
+    user: Pubkey,
+    borrow_index: u8,
+    amount: u64,
+) -> Result<()> {
     return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
-    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[
+        CLONE_PROGRAM_SEED.as_ref(),
+        bytemuck::bytes_of(&ctx.accounts.clone.bump),
+    ][..]];
 
     let collateral = &ctx.accounts.clone.collateral;
     let pools = &mut ctx.accounts.pools;
@@ -82,6 +86,11 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
     let borrow_position = borrows[borrow_index as usize];
     let pool_index = borrow_position.pool_index as usize;
     let pool = &pools.pools[pool_index];
+    return_error_if_false!(
+        pool.status != Status::Frozen,
+        CloneError::StatusPreventsAction
+    );
+
     let pool_oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
 
@@ -89,10 +98,8 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
     let collateralization_ratio = to_ratio_decimal!(collateral.collateralization_ratio);
 
     let burn_amount = amount.min(borrow_position.borrowed_onasset);
-    let collateral_position_amount = Decimal::new(
-        borrow_position.collateral_amount.try_into().unwrap(),
-        collateral.scale.try_into().unwrap(),
-    );
+    let collateral_position_amount =
+        collateral.to_collateral_decimal(borrow_position.collateral_amount)?;
 
     // This call checks that the oracles are updated
     let is_undercollateralized = check_mint_collateral_sufficient(
@@ -112,13 +119,12 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
     );
 
     let borrow_liquidation_fee_rate = to_bps_decimal!(ctx.accounts.clone.borrow_liquidator_fee_bps);
-    let collateral_price = collateral_oracle.get_price();
+    let pool_price = pool_oracle.get_price() / collateral_oracle.get_price();
 
     let collateral_reward = rescale_toward_zero(
         (Decimal::one() + borrow_liquidation_fee_rate)
             * to_clone_decimal!(burn_amount)
-            * pool_oracle.get_price()
-            / collateral_price,
+            * pool_price,
         collateral.scale.try_into().unwrap(),
     )
     .min(collateral_position_amount);
@@ -162,15 +168,13 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
 
     // Update data
     borrows[borrow_index as usize].borrowed_onasset -= burn_amount;
-    borrows[borrow_index as usize].collateral_amount -=
-        collateral_reward.mantissa() as u64;
+    borrows[borrow_index as usize].collateral_amount -= collateral_reward.mantissa() as u64;
 
     // Remove position if empty
     if borrows[borrow_index as usize].is_empty() {
         borrows.remove(borrow_index as usize);
     } else {
-        let borrowed_onasset =
-            to_clone_decimal!(borrows[borrow_index as usize].borrowed_onasset);
+        let borrowed_onasset = to_clone_decimal!(borrows[borrow_index as usize].borrowed_onasset);
         let collateral_amount = Decimal::new(
             borrows[borrow_index as usize]
                 .collateral_amount
@@ -180,17 +184,16 @@ pub fn execute(ctx: Context<LiquidateBorrowPosition>, borrow_index: u8, amount: 
         );
         let max_liquidation_overcollateral_ratio =
             to_ratio_decimal!(pool.asset_info.max_liquidation_overcollateral_ratio);
+        let c_ratio = collateral_amount * collateralization_ratio / (pool_price * borrowed_onasset);
         return_error_if_false!(
-            collateral_amount * collateral_price * collateralization_ratio
-                / (pool_oracle.get_price() * borrowed_onasset)
-                <= max_liquidation_overcollateral_ratio,
+            c_ratio <= max_liquidation_overcollateral_ratio,
             CloneError::InvalidMintCollateralRatio
         );
     }
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
-        user_address: ctx.accounts.user.key(),
+        user_address: user,
         pool_index: pool_index.try_into().unwrap(),
         is_liquidation: true,
         collateral_supplied: borrows[borrow_index as usize].collateral_amount,

@@ -13,16 +13,13 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(comet_position_index: u8, amount: u64)]
+#[instruction(user: Pubkey, comet_position_index: u8, amount: u64)]
 pub struct LiquidateCometOnassetIld<'info> {
     pub liquidator: Signer<'info>,
-    /// CHECK: Only used for address validation.
-    pub user: AccountInfo<'info>,
     #[account(
         mut,
-        seeds = [USER_SEED.as_ref(), user.key.as_ref()],
+        seeds = [USER_SEED.as_ref(), user.as_ref()],
         bump,
-        constraint = user_account.comet.positions.len() > comet_position_index.into() @ CloneError::InvalidInputPositionIndex,
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
@@ -34,8 +31,6 @@ pub struct LiquidateCometOnassetIld<'info> {
     #[account(
         seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status == Status::Active ||
-        pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status == Status::Liquidation @ CloneError::StatusPreventsAction
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
@@ -70,26 +65,36 @@ pub struct LiquidateCometOnassetIld<'info> {
 
 pub fn execute(
     ctx: Context<LiquidateCometOnassetIld>,
+    user: Pubkey,
     comet_position_index: u8,
     amount: u64,
 ) -> Result<()> {
     return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
-    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+    let seeds = &[&[
+        CLONE_PROGRAM_SEED.as_ref(),
+        bytemuck::bytes_of(&ctx.accounts.clone.bump),
+    ][..]];
     let collateral = &ctx.accounts.clone.collateral;
     let pools = &mut ctx.accounts.pools;
     let oracles = &ctx.accounts.oracles;
     let comet = &mut ctx.accounts.user_account.comet;
-
     let comet_position = comet.positions[comet_position_index as usize];
     let authorized_amount = to_clone_decimal!(amount);
-    let ild_share = calculate_ild_share(&comet_position, pools);
+    let ild_share = calculate_ild_share(&comet_position, pools, collateral);
     let pool_index = comet_position.pool_index as usize;
     let pool = &pools.pools[pool_index];
+
+    return_error_if_false!(
+        pool.status == Status::Active || pool.status == Status::Liquidation,
+        CloneError::StatusPreventsAction
+    );
+
     let pool_oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
     let onasset_price = pool_oracle.get_price();
     let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
     let collateral_price = collateral_oracle.get_price();
     let collateral_scale = collateral.scale as u32;
+    let pool_price = onasset_price / collateral_price;
 
     let is_in_liquidation_mode = pool.status == Status::Liquidation;
     let starting_health_score = calculate_health_score(comet, pools, oracles, collateral)?;
@@ -105,7 +110,7 @@ pub fn execute(
 
     // calculate reward for liquidator
     let collateral_reward = rescale_toward_zero(
-        (Decimal::one() + liquidator_fee) * onasset_price * burn_amount / collateral_price,
+        (Decimal::one() + liquidator_fee) * pool_price * burn_amount,
         collateral_scale,
     );
 
@@ -119,7 +124,7 @@ pub fn execute(
                 .liquidator_onasset_token_account
                 .to_account_info()
                 .clone(),
-            authority: ctx.accounts.user.to_account_info().clone(),
+            authority: ctx.accounts.liquidator.to_account_info().clone(),
         };
 
         token::burn(
@@ -153,9 +158,10 @@ pub fn execute(
             pools,
             oracles,
             comet,
+            collateral,
             comet_position_index,
             comet_position.committed_collateral_liquidity,
-            ctx.accounts.user.key(),
+            user,
             ctx.accounts.clone.event_counter,
         )?;
     };

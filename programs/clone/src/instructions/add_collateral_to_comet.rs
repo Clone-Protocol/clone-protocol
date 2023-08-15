@@ -1,4 +1,3 @@
-use crate::error::CloneError;
 use crate::states::*;
 use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
@@ -26,8 +25,7 @@ pub struct AddCollateralToComet<'info> {
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = user_collateral_token_account.amount >= amount @ CloneError::InvalidTokenAccountBalance,
-        associated_token::mint = vault.mint,
+        associated_token::mint = clone.collateral.mint,
         associated_token::authority = user
     )]
     pub user_collateral_token_account: Account<'info, TokenAccount>,

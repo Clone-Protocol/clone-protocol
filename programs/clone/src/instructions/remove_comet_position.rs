@@ -12,7 +12,6 @@ pub struct RemoveCometPosition<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
-        constraint = user_account.comet.positions.len() > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(

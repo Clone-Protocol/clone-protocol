@@ -31,10 +31,9 @@ pub struct CollectLpRewards<'info> {
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
-        mut,
-        address = clone.collateral.mint
+        address = clone.collateral.vault
     )]
-    pub collateral_mint: Box<Account<'info, Mint>>,
+    pub collateral_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         address = pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
@@ -43,7 +42,7 @@ pub struct CollectLpRewards<'info> {
     #[account(
         mut,
         associated_token::authority = user,
-        associated_token::mint = collateral_mint,
+        associated_token::mint = clone.collateral.mint,
     )]
     pub user_collateral_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -65,18 +64,17 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
 
     let comet_position = comet.positions[comet_position_index as usize];
 
-    let ild_share = calculate_ild_share(&comet_position, pools);
+    let ild_share = calculate_ild_share(&comet_position, pools, &ctx.accounts.clone.collateral);
 
     if ild_share.collateral_ild_share < Decimal::ZERO {
-        let collateral_reward = ild_share.collateral_ild_share.abs();
+        let collateral_reward = ild_share.collateral_ild_share.abs().mantissa() as i64;
 
         // Update rebate amount such that the ild_share is now zero.
-        comet.positions[comet_position_index as usize].collateral_ild_rebate -=
-            collateral_reward.mantissa() as i64;
+        comet.positions[comet_position_index as usize].collateral_ild_rebate -= collateral_reward;
 
         // Mint reward amount to user
-        let cpi_accounts = MintTo {
-            mint: ctx.accounts.collateral_mint.to_account_info().clone(),
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.collateral_vault.to_account_info().clone(),
             to: ctx
                 .accounts
                 .user_collateral_token_account
@@ -84,22 +82,21 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
                 .clone(),
             authority: ctx.accounts.clone.to_account_info().clone(),
         };
-        token::mint_to(
+        token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
                 cpi_accounts,
                 seeds,
             ),
-            collateral_reward.mantissa().try_into().unwrap(),
+            collateral_reward.try_into().unwrap(),
         )?;
     }
 
     if ild_share.onasset_ild_share < Decimal::ZERO {
-        let onasset_reward = ild_share.onasset_ild_share.abs();
+        let onasset_reward = ild_share.onasset_ild_share.abs().mantissa() as i64;
 
         // Update rebate amount such that the ild_share is now zero.
-        comet.positions[comet_position_index as usize].onasset_ild_rebate -=
-            onasset_reward.mantissa() as i64;
+        comet.positions[comet_position_index as usize].onasset_ild_rebate -= onasset_reward;
 
         // Mint reward amount to user
         let cpi_accounts = MintTo {
@@ -117,7 +114,7 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
                 cpi_accounts,
                 seeds,
             ),
-            onasset_reward.mantissa().try_into().unwrap(),
+            onasset_reward.try_into().unwrap(),
         )?;
     }
 

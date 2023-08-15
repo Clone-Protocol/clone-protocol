@@ -12,16 +12,13 @@ use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(comet_position_index: u8)]
+#[instruction(user: Pubkey, comet_position_index: u8)]
 pub struct LiquidateCometCollateralIld<'info> {
     pub liquidator: Signer<'info>,
-    /// CHECK: Only used for address validation.
-    pub user: AccountInfo<'info>,
     #[account(
         mut,
-        seeds = [USER_SEED.as_ref(), user.key.as_ref()],
+        seeds = [USER_SEED.as_ref(), user.as_ref()],
         bump,
-        constraint = user_account.comet.positions.len() > comet_position_index.into() @ CloneError::InvalidInputPositionIndex,
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
@@ -33,8 +30,6 @@ pub struct LiquidateCometCollateralIld<'info> {
     #[account(
         seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status == Status::Active ||
-        pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status == Status::Liquidation @ CloneError::StatusPreventsAction
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
@@ -61,17 +56,28 @@ pub struct LiquidateCometCollateralIld<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(ctx: Context<LiquidateCometCollateralIld>, comet_position_index: u8) -> Result<()> {
-    let seeds = &[&[b"clone", bytemuck::bytes_of(&ctx.accounts.clone.bump)][..]];
+pub fn execute(
+    ctx: Context<LiquidateCometCollateralIld>,
+    user: Pubkey,
+    comet_position_index: u8,
+) -> Result<()> {
+    let seeds = &[&[
+        CLONE_PROGRAM_SEED.as_ref(),
+        bytemuck::bytes_of(&ctx.accounts.clone.bump),
+    ][..]];
     let collateral = &ctx.accounts.clone.collateral;
     let pools = &mut ctx.accounts.pools;
     let oracles = &ctx.accounts.oracles;
     let comet = &mut ctx.accounts.user_account.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
-    let ild_share = calculate_ild_share(&comet_position, pools);
+    let ild_share = calculate_ild_share(&comet_position, pools, collateral);
     let pool_index = comet_position.pool_index as usize;
     let pool = &pools.pools[pool_index];
+    return_error_if_false!(
+        pool.status == Status::Active || pool.status == Status::Liquidation,
+        CloneError::StatusPreventsAction
+    );
     let collateral_scale = collateral.scale as u32;
 
     let is_in_liquidation_mode = pool.status == Status::Liquidation;
@@ -82,17 +88,29 @@ pub fn execute(ctx: Context<LiquidateCometCollateralIld>, comet_position_index: 
         CloneError::NotSubjectToLiquidation
     );
 
-    let liquidator_fee =
-        to_bps_decimal!(ctx.accounts.clone.comet_collateral_ild_liquidator_fee_bps);
-
-    // calculate reward for liquidator
-    let collateral_reward = rescale_toward_zero(
-        (Decimal::one() + liquidator_fee) * ild_share.collateral_ild_share,
-        collateral_scale,
-    );
-
     if ild_share.collateral_ild_share > Decimal::ZERO {
-        comet.positions[comet_position_index as usize].collateral_ild_rebate = 0;
+        // calculate reward for liquidator
+        let liquidator_fee =
+            to_bps_decimal!(ctx.accounts.clone.comet_collateral_ild_liquidator_fee_bps);
+        let collateral_reward: u64 = rescale_toward_zero(
+            liquidator_fee * ild_share.collateral_ild_share,
+            collateral_scale,
+        )
+        .try_into()
+        .unwrap();
+        // Remove equivalent reward from user's collateral
+        let ild_share: u64 = ild_share
+            .collateral_ild_share
+            .mantissa()
+            .try_into()
+            .unwrap();
+        let collateral_reduction: u64 = collateral_reward + ild_share;
+        return_error_if_false!(
+            collateral_reduction <= comet.collateral_amount,
+            CloneError::InvalidTokenAmount
+        );
+        comet.collateral_amount -= collateral_reduction;
+        comet.positions[comet_position_index as usize].collateral_ild_rebate += ild_share as i64;
 
         // Transfer collateral to liquidator
         let cpi_accounts = Transfer {
@@ -107,11 +125,8 @@ pub fn execute(ctx: Context<LiquidateCometCollateralIld>, comet_position_index: 
         let cpi_program = ctx.accounts.token_program.to_account_info();
         token::transfer(
             CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
-            collateral_reward.mantissa().try_into().unwrap(),
+            collateral_reward,
         )?;
-
-        // Remove equivalent reward from user's collateral
-        comet.collateral_amount -= collateral_reward.mantissa() as u64;
     }
 
     // Withdraw liquidity position
@@ -120,9 +135,10 @@ pub fn execute(ctx: Context<LiquidateCometCollateralIld>, comet_position_index: 
             pools,
             oracles,
             comet,
+            collateral,
             comet_position_index,
             comet_position.committed_collateral_liquidity,
-            ctx.accounts.user.key(),
+            user,
             ctx.accounts.clone.event_counter,
         )?;
     };

@@ -39,10 +39,10 @@ export const collectLpRewardsStruct = new beet.BeetArgsStruct<
  * @property [**signer**] user
  * @property [_writable_] userAccount
  * @property [_writable_] clone
- * @property [] tokenData
- * @property [_writable_] onusdMint
+ * @property [] pools
+ * @property [] collateralVault
  * @property [_writable_] onassetMint
- * @property [_writable_] userOnusdTokenAccount
+ * @property [_writable_] userCollateralTokenAccount
  * @property [_writable_] userOnassetTokenAccount
  * @category Instructions
  * @category CollectLpRewards
@@ -52,10 +52,10 @@ export type CollectLpRewardsInstructionAccounts = {
   user: web3.PublicKey
   userAccount: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
-  onusdMint: web3.PublicKey
+  pools: web3.PublicKey
+  collateralVault: web3.PublicKey
   onassetMint: web3.PublicKey
-  userOnusdTokenAccount: web3.PublicKey
+  userCollateralTokenAccount: web3.PublicKey
   userOnassetTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
@@ -101,13 +101,13 @@ export function createCollectLpRewardsInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.pools,
       isWritable: false,
       isSigner: false,
     },
     {
-      pubkey: accounts.onusdMint,
-      isWritable: true,
+      pubkey: accounts.collateralVault,
+      isWritable: false,
       isSigner: false,
     },
     {
@@ -116,7 +116,7 @@ export function createCollectLpRewardsInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.userOnusdTokenAccount,
+      pubkey: accounts.userCollateralTokenAccount,
       isWritable: true,
       isSigner: false,
     },

@@ -1,70 +1,52 @@
-import {
-  TokenData,
-  Comet,
-} from "../generated/clone";
+import { Pools, Comet, Collateral, Oracles } from "../generated/clone";
 import { fromCloneScale, fromScale } from "./clone";
 
-export const getEffectiveUSDCollateralValue = (
-  tokenData: TokenData,
-  comet: Comet
+export const getEffectiveCollateralValue = (
+  comet: Comet,
+  collateral: Collateral
 ) => {
-  // Iterate through collaterals.
-  let effectiveUSDCollateral = 0;
-
-  comet.collaterals
-    .slice(0, Number(comet.numCollaterals))
-    .forEach((cometCollateral) => {
-      let collateralIndex = Number(cometCollateral.collateralIndex)
-      const collateral =
-        tokenData.collaterals[collateralIndex];
-      const collateralAmount = fromScale(cometCollateral.collateralAmount, collateral.scale);
-      
-      if (collateralIndex === 0 || collateralIndex === 1) {
-        effectiveUSDCollateral += collateralAmount
-      } else {
-        const oracle = tokenData.oracles[Number(collateral.oracleInfoIndex)];
-        const oraclePrice = fromScale(oracle.price, oracle.expo);
-        effectiveUSDCollateral +=
-          (oraclePrice * collateralAmount) /
-          fromScale(collateral.collateralizationRatio, 2);
-      }
-    });
-
-  return effectiveUSDCollateral;
+  return (
+    fromScale(comet.collateralAmount, collateral.scale) *
+    fromScale(collateral.collateralizationRatio, 2)
+  );
 };
 
 export const getHealthScore = (
-  tokenData: TokenData,
+  oracles: Oracles,
+  pools: Pools,
   comet: Comet,
+  collateral: Collateral,
   oraclePrices?: number[]
 ): {
   healthScore: number;
   ildHealthImpact: number;
 } => {
-  const totalCollateralAmount = getEffectiveUSDCollateralValue(
-    tokenData,
-    comet
-  );
-  const positionILD = getILD(tokenData, comet, oraclePrices);
+  const totalCollateralValue = getEffectiveCollateralValue(comet, collateral);
+  const positionILD = getILD(collateral, pools, oracles, comet, oraclePrices);
   let totalIldHealthImpact = 0;
 
   const loss =
     comet.positions
-      .slice(0, Number(comet.numPositions))
       .map((position, index) => {
-        const positionCommitted = fromCloneScale(position.committedOnusdLiquidity);
-        const { onAssetILD, onusdILD, poolIndex, oraclePrice } =
+        const positionCommitted = fromScale(
+          position.committedCollateralLiquidity,
+          collateral.scale
+        );
+        const { onAssetILD, collateralILD, poolIndex, oraclePrice } =
           positionILD[index];
-        const pool = tokenData.pools[poolIndex];
+        const pool = pools.pools[poolIndex];
 
-        let ilHealthScoreCoefficient = fromCloneScale(
-          pool.assetInfo.ilHealthScoreCoefficient
+        let ilHealthScoreCoefficient = fromScale(
+          pool.assetInfo.ilHealthScoreCoefficient,
+          2
         );
-        let poolHealthScoreCoefficient = fromCloneScale(
-          pool.assetInfo.positionHealthScoreCoefficient
+        let poolHealthScoreCoefficient = fromScale(
+          pool.assetInfo.positionHealthScoreCoefficient,
+          2
         );
 
-        let ild = Math.max(onusdILD, 0) + Math.max(onAssetILD * oraclePrice, 0);
+        let ild =
+          Math.max(collateralILD, 0) + Math.max(onAssetILD * oraclePrice, 0);
         let ilHealthImpact = ild * ilHealthScoreCoefficient;
         let positionHealthImpact =
           poolHealthScoreCoefficient * positionCommitted;
@@ -73,50 +55,72 @@ export const getHealthScore = (
 
         return positionHealthImpact + ilHealthImpact;
       })
-      .reduce((partialSum, a) => partialSum + a, 0) / totalCollateralAmount;
+      .reduce((partialSum, a) => partialSum + a, 0) / totalCollateralValue;
 
   return {
     healthScore: 100 - loss,
-    ildHealthImpact: totalIldHealthImpact / totalCollateralAmount,
+    ildHealthImpact: totalIldHealthImpact / totalCollateralValue,
   };
 };
 
 export const getILD = (
-  tokenData: TokenData,
+  collateral: Collateral,
+  pools: Pools,
+  oracles: Oracles,
   comet: Comet,
   oraclePrices?: number[]
 ): {
   onAssetILD: number;
-  onusdILD: number;
+  collateralILD: number;
   poolIndex: number;
   oraclePrice: number;
 }[] => {
   let results: {
     onAssetILD: number;
-    onusdILD: number;
+    collateralILD: number;
     poolIndex: number;
     oraclePrice: number;
   }[] = [];
 
-  comet.positions.slice(0, Number(comet.numPositions)).forEach((position) => {
-    const pool = tokenData.pools[Number(position.poolIndex)];
-    const poolCommittedOnusd = fromCloneScale(pool.committedOnusdLiquidity);
-    const oracle = tokenData.oracles[Number(pool.assetInfo.oracleInfoIndex)];
+  comet.positions.forEach((position) => {
+    const pool = pools.pools[Number(position.poolIndex)];
+    const poolCommittedOnusd = fromScale(
+      pool.committedCollateralLiquidity,
+      collateral.scale
+    );
+
+    const oraclePrice = (() => {
+      const assetOracleIndex = Number(pool.assetInfo.oracleInfoIndex);
+      const collateralOracleIndex = Number(collateral.oracleInfoIndex);
+      if (oraclePrices) {
+        return (
+          oraclePrices[assetOracleIndex] / oraclePrices[collateralOracleIndex]
+        );
+      } else {
+        const assetOracle = oracles.oracles[assetOracleIndex];
+        const collateralOracle = oracles.oracles[collateralOracleIndex];
+        return (
+          fromScale(assetOracle.price, assetOracle.expo) /
+          fromScale(collateralOracle.price, collateralOracle.expo)
+        );
+      }
+    })();
 
     const L =
       poolCommittedOnusd > 0
-        ? fromCloneScale(position.committedOnusdLiquidity) / poolCommittedOnusd
+        ? fromScale(position.committedCollateralLiquidity, collateral.scale) /
+          poolCommittedOnusd
         : 0;
-    const onusdILD =
-      L * fromCloneScale(pool.onusdIld) - fromCloneScale(position.onusdIldRebate);
+    const collateralILD =
+      L * fromScale(pool.collateralIld, collateral.scale) -
+      fromScale(position.collateralIldRebate, collateral.scale);
     const onAssetILD =
-      L * fromCloneScale(pool.onassetIld) - fromCloneScale(position.onassetIldRebate);
+      L * fromCloneScale(pool.onassetIld) -
+      fromCloneScale(position.onassetIldRebate);
     results.push({
       onAssetILD,
-      onusdILD,
-      oraclePrice: oraclePrices
-        ? oraclePrices[Number(pool.assetInfo.oracleInfoIndex)]
-        : fromScale(oracle.price, oracle.expo),
+      collateralILD,
+      oraclePrice,
       poolIndex: Number(position.poolIndex),
     });
   });

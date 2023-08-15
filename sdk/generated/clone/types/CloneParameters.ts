@@ -20,9 +20,11 @@ import * as beet from '@metaplex-foundation/beet'
 export type CloneParametersRecord = {
   AddAuth: { address: web3.PublicKey }
   RemoveAuth: { address: web3.PublicKey }
-  CometLiquidationFee: { value: number }
+  CometCollateralLiquidationFee: { value: number }
+  CometOnassetLiquidationFee: { value: number }
   BorrowLiquidationFee: { value: number }
   TreasuryAddress: { address: web3.PublicKey }
+  CollateralizationRatio: { value: number }
 }
 
 /**
@@ -44,10 +46,14 @@ export const isCloneParametersAddAuth = (
 export const isCloneParametersRemoveAuth = (
   x: CloneParameters
 ): x is CloneParameters & { __kind: 'RemoveAuth' } => x.__kind === 'RemoveAuth'
-export const isCloneParametersCometLiquidationFee = (
+export const isCloneParametersCometCollateralLiquidationFee = (
   x: CloneParameters
-): x is CloneParameters & { __kind: 'CometLiquidationFee' } =>
-  x.__kind === 'CometLiquidationFee'
+): x is CloneParameters & { __kind: 'CometCollateralLiquidationFee' } =>
+  x.__kind === 'CometCollateralLiquidationFee'
+export const isCloneParametersCometOnassetLiquidationFee = (
+  x: CloneParameters
+): x is CloneParameters & { __kind: 'CometOnassetLiquidationFee' } =>
+  x.__kind === 'CometOnassetLiquidationFee'
 export const isCloneParametersBorrowLiquidationFee = (
   x: CloneParameters
 ): x is CloneParameters & { __kind: 'BorrowLiquidationFee' } =>
@@ -56,6 +62,10 @@ export const isCloneParametersTreasuryAddress = (
   x: CloneParameters
 ): x is CloneParameters & { __kind: 'TreasuryAddress' } =>
   x.__kind === 'TreasuryAddress'
+export const isCloneParametersCollateralizationRatio = (
+  x: CloneParameters
+): x is CloneParameters & { __kind: 'CollateralizationRatio' } =>
+  x.__kind === 'CollateralizationRatio'
 
 /**
  * @category userTypes
@@ -79,10 +89,22 @@ export const cloneParametersBeet = beet.dataEnum<CloneParametersRecord>([
   ],
 
   [
-    'CometLiquidationFee',
-    new beet.BeetArgsStruct<CloneParametersRecord['CometLiquidationFee']>(
+    'CometCollateralLiquidationFee',
+    new beet.BeetArgsStruct<
+      CloneParametersRecord['CometCollateralLiquidationFee']
+    >(
       [['value', beet.u16]],
-      'CloneParametersRecord["CometLiquidationFee"]'
+      'CloneParametersRecord["CometCollateralLiquidationFee"]'
+    ),
+  ],
+
+  [
+    'CometOnassetLiquidationFee',
+    new beet.BeetArgsStruct<
+      CloneParametersRecord['CometOnassetLiquidationFee']
+    >(
+      [['value', beet.u16]],
+      'CloneParametersRecord["CometOnassetLiquidationFee"]'
     ),
   ],
 
@@ -99,6 +121,14 @@ export const cloneParametersBeet = beet.dataEnum<CloneParametersRecord>([
     new beet.BeetArgsStruct<CloneParametersRecord['TreasuryAddress']>(
       [['address', beetSolana.publicKey]],
       'CloneParametersRecord["TreasuryAddress"]'
+    ),
+  ],
+
+  [
+    'CollateralizationRatio',
+    new beet.BeetArgsStruct<CloneParametersRecord['CollateralizationRatio']>(
+      [['value', beet.u8]],
+      'CloneParametersRecord["CollateralizationRatio"]'
     ),
   ],
 ]) as beet.FixableBeet<CloneParameters, CloneParameters>
