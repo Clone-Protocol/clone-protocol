@@ -74,7 +74,6 @@ describe("tests", async () => {
 
   let cloneProgramId = anchor.workspace.Clone.programId;
   let pythProgramId = anchor.workspace.Pyth.programId;
-  let jupiterProgramId = anchor.workspace.JupiterAggMock.programId;
   let cloneStakingProgramId = anchor.workspace.CloneStaking.programId;
 
   const mockUSDCMint = anchor.web3.Keypair.generate();
@@ -103,10 +102,6 @@ describe("tests", async () => {
   const [cloneAccountAddress, ___] = PublicKey.findProgramAddressSync(
     [Buffer.from("clone")],
     cloneProgramId
-  );
-  let [jupiterAddress, _jupiterNonce] = PublicKey.findProgramAddressSync(
-    [Buffer.from("jupiter")],
-    jupiterProgramId
   );
 
   const [cloneStakingAddress, _] = PublicKey.findProgramAddressSync(
@@ -312,6 +307,31 @@ describe("tests", async () => {
 
     let oracles = await cloneClient.getOracles();
     assert.equal(oracles.oracles.length, 2);
+  });
+
+  it("add and check switchboard oracle", async () => {
+    let switchboardFeedAddress = new PublicKey(
+      "GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR"
+    );
+    await cloneClient.updateOracles({
+      params: {
+        __kind: "Add",
+        source: OracleSource.SWITCHBOARD,
+        address: switchboardFeedAddress,
+      },
+    });
+    let oracles = await cloneClient.getOracles();
+    assert.equal(oracles.oracles.length, 3);
+    // Update prices
+    await provider.sendAndConfirm(
+      new Transaction().add(cloneClient.updatePricesInstruction(oracles))
+    );
+    oracles = await cloneClient.getOracles();
+
+    let switchboardOracle = oracles.oracles[2];
+    let price = fromScale(switchboardOracle.price, switchboardOracle.expo);
+
+    assert.isTrue(price !== 0, "switchboard price is not updated");
   });
 
   it("pools initialized!", async () => {
