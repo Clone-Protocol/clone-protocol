@@ -6,66 +6,61 @@
  */
 
 import * as splToken from '@solana/spl-token'
-import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
+import * as beet from '@metaplex-foundation/beet'
+import * as beetSolana from '@metaplex-foundation/beet-solana'
 
 /**
  * @category Instructions
- * @category LiquidateCometPosition
+ * @category LiquidateCometOnassetIld
  * @category generated
  */
-export type LiquidateCometPositionInstructionArgs = {
+export type LiquidateCometOnassetIldInstructionArgs = {
+  user: web3.PublicKey
   cometPositionIndex: number
-  cometCollateralIndex: number
   amount: beet.bignum
-  payOnusdDebt: boolean
 }
 /**
  * @category Instructions
- * @category LiquidateCometPosition
+ * @category LiquidateCometOnassetIld
  * @category generated
  */
-export const liquidateCometPositionStruct = new beet.BeetArgsStruct<
-  LiquidateCometPositionInstructionArgs & {
+export const liquidateCometOnassetIldStruct = new beet.BeetArgsStruct<
+  LiquidateCometOnassetIldInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
+    ['user', beetSolana.publicKey],
     ['cometPositionIndex', beet.u8],
-    ['cometCollateralIndex', beet.u8],
     ['amount', beet.u64],
-    ['payOnusdDebt', beet.bool],
   ],
-  'LiquidateCometPositionInstructionArgs'
+  'LiquidateCometOnassetIldInstructionArgs'
 )
 /**
- * Accounts required by the _liquidateCometPosition_ instruction
+ * Accounts required by the _liquidateCometOnassetIld_ instruction
  *
  * @property [**signer**] liquidator
- * @property [] user
  * @property [_writable_] userAccount
  * @property [_writable_] clone
- * @property [] tokenData
- * @property [_writable_] onusdMint
+ * @property [] pools
+ * @property [] oracles
  * @property [_writable_] onassetMint
- * @property [_writable_] liquidatorOnusdTokenAccount
  * @property [_writable_] liquidatorOnassetTokenAccount
  * @property [_writable_] liquidatorCollateralTokenAccount
  * @property [_writable_] vault
  * @category Instructions
- * @category LiquidateCometPosition
+ * @category LiquidateCometOnassetIld
  * @category generated
  */
-export type LiquidateCometPositionInstructionAccounts = {
+export type LiquidateCometOnassetIldInstructionAccounts = {
   liquidator: web3.PublicKey
-  user: web3.PublicKey
   userAccount: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
-  onusdMint: web3.PublicKey
+  pools: web3.PublicKey
+  oracles: web3.PublicKey
   onassetMint: web3.PublicKey
-  liquidatorOnusdTokenAccount: web3.PublicKey
   liquidatorOnassetTokenAccount: web3.PublicKey
   liquidatorCollateralTokenAccount: web3.PublicKey
   vault: web3.PublicKey
@@ -73,27 +68,27 @@ export type LiquidateCometPositionInstructionAccounts = {
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const liquidateCometPositionInstructionDiscriminator = [
-  15, 195, 173, 61, 94, 219, 143, 205,
+export const liquidateCometOnassetIldInstructionDiscriminator = [
+  203, 186, 24, 213, 251, 103, 57, 65,
 ]
 
 /**
- * Creates a _LiquidateCometPosition_ instruction.
+ * Creates a _LiquidateCometOnassetIld_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category LiquidateCometPosition
+ * @category LiquidateCometOnassetIld
  * @category generated
  */
-export function createLiquidateCometPositionInstruction(
-  accounts: LiquidateCometPositionInstructionAccounts,
-  args: LiquidateCometPositionInstructionArgs,
+export function createLiquidateCometOnassetIldInstruction(
+  accounts: LiquidateCometOnassetIldInstructionAccounts,
+  args: LiquidateCometOnassetIldInstructionArgs,
   programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
-  const [data] = liquidateCometPositionStruct.serialize({
-    instructionDiscriminator: liquidateCometPositionInstructionDiscriminator,
+  const [data] = liquidateCometOnassetIldStruct.serialize({
+    instructionDiscriminator: liquidateCometOnassetIldInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
@@ -101,11 +96,6 @@ export function createLiquidateCometPositionInstruction(
       pubkey: accounts.liquidator,
       isWritable: false,
       isSigner: true,
-    },
-    {
-      pubkey: accounts.user,
-      isWritable: false,
-      isSigner: false,
     },
     {
       pubkey: accounts.userAccount,
@@ -118,22 +108,17 @@ export function createLiquidateCometPositionInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.pools,
       isWritable: false,
       isSigner: false,
     },
     {
-      pubkey: accounts.onusdMint,
-      isWritable: true,
+      pubkey: accounts.oracles,
+      isWritable: false,
       isSigner: false,
     },
     {
       pubkey: accounts.onassetMint,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.liquidatorOnusdTokenAccount,
       isWritable: true,
       isSigner: false,
     },

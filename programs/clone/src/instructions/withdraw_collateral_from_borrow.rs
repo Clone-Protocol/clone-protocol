@@ -3,10 +3,11 @@ use crate::events::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
-use crate::{to_clone_decimal, to_ratio_decimal, CLONE_PROGRAM_SEED, TOKEN_DATA_SEED, USER_SEED};
+use crate::{
+    to_clone_decimal, to_ratio_decimal, CLONE_PROGRAM_SEED, ORACLES_SEED, POOLS_SEED, USER_SEED,
+};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
-use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
@@ -17,9 +18,9 @@ pub struct WithdrawCollateralFromBorrow<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
-        constraint = (borrow_index as u64) < user_account.load()?.borrows.num_positions @ CloneError::InvalidInputPositionIndex
+        constraint = (borrow_index as usize) < user_account.borrows.len() @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
@@ -27,20 +28,26 @@ pub struct WithdrawCollateralFromBorrow<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        seeds = [TOKEN_DATA_SEED.as_ref()],
+        seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = token_data.load()?.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
+        constraint = pools.pools[user_account.borrows[borrow_index as usize].pool_index as usize].status != Status::Frozen @ CloneError::StatusPreventsAction
     )]
-    pub token_data: AccountLoader<'info, TokenData>,
+    pub pools: Box<Account<'info, Pools>>,
     #[account(
         mut,
-        address = token_data.load()?.collaterals[user_account.load()?.borrows.positions[borrow_index as usize].collateral_index as usize].vault @ CloneError::InvalidInputCollateralAccount,
+        seeds = [ORACLES_SEED.as_ref()],
+        bump,
+    )]
+    pub oracles: Box<Account<'info, Oracles>>,
+    #[account(
+        mut,
+        address = clone.collateral.vault,
         constraint = vault.amount >= amount @ CloneError::InvalidTokenAccountBalance
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        associated_token::mint = vault.mint,
+        associated_token::mint = clone.collateral.mint,
         associated_token::authority = user
     )]
     pub user_collateral_token_account: Account<'info, TokenAccount>,
@@ -57,29 +64,24 @@ pub fn execute(
         CLONE_PROGRAM_SEED.as_ref(),
         bytemuck::bytes_of(&ctx.accounts.clone.bump),
     ][..]];
-    let token_data = &mut ctx.accounts.token_data.load_mut()?;
-    let borrows = &mut ctx.accounts.user_account.load_mut()?.borrows;
+    let collateral = &ctx.accounts.clone.collateral;
+    let pools = &mut ctx.accounts.pools;
+    let oracles = &ctx.accounts.oracles;
+    let borrows = &mut ctx.accounts.user_account.borrows;
 
-    let pool_index = borrows.positions[borrow_index as usize].pool_index;
-    let pool = token_data.pools[pool_index as usize];
-    let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
-    let collateral_index = borrows.positions[borrow_index as usize].collateral_index as usize;
-    let collateral = token_data.collaterals[collateral_index];
-    let collateral_oracle = if collateral_index == ONUSD_COLLATERAL_INDEX
-        || collateral_index == USDC_COLLATERAL_INDEX
-    {
-        None
-    } else {
-        Some(token_data.oracles[collateral.oracle_info_index as usize])
-    };
+    let pool_index = borrows[borrow_index as usize].pool_index;
+    let pool = &pools.pools[pool_index as usize];
+    let pool_oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
+    let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
+
     let min_overcollateral_ratio = to_ratio_decimal!(pool.asset_info.min_overcollateral_ratio);
     let collateralization_ratio = to_ratio_decimal!(collateral.collateralization_ratio);
-    let borrow_position: BorrowPosition = borrows.positions[borrow_index as usize];
+    let borrow_position = &mut borrows[borrow_index as usize];
     let asset_amount_borrowed = to_clone_decimal!(borrow_position.borrowed_onasset);
-    let amount_to_withdraw = amount.min(borrows.positions[borrow_index as usize].collateral_amount);
+    let amount_to_withdraw = amount.min(borrow_position.collateral_amount);
 
     // subtract collateral amount from mint data
-    borrows.positions[borrow_index as usize].collateral_amount -= amount_to_withdraw;
+    borrow_position.collateral_amount -= amount_to_withdraw;
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
@@ -88,13 +90,7 @@ pub fn execute(
         asset_amount_borrowed,
         min_overcollateral_ratio,
         collateralization_ratio,
-        Decimal::new(
-            borrows.positions[borrow_index as usize]
-                .collateral_amount
-                .try_into()
-                .unwrap(),
-            collateral.scale.try_into().unwrap(),
-        ),
+        collateral.to_collateral_decimal(borrow_position.collateral_amount)?,
     )?;
 
     // send collateral back to user
@@ -118,16 +114,15 @@ pub fn execute(
         user_address: ctx.accounts.user.key(),
         pool_index: pool_index.try_into().unwrap(),
         is_liquidation: false,
-        collateral_supplied: borrows.positions[borrow_index as usize].collateral_amount,
+        collateral_supplied: borrow_position.collateral_amount,
         collateral_delta: -(amount_to_withdraw as i64),
-        collateral_index: collateral_index.try_into().unwrap(),
-        borrowed_amount: borrows.positions[borrow_index as usize].borrowed_onasset,
+        borrowed_amount: borrow_position.borrowed_onasset,
         borrowed_delta: 0
     });
     ctx.accounts.clone.event_counter += 1;
 
     // check to see if mint is empty, if so remove
-    if borrows.positions[borrow_index as usize].is_empty() {
+    if borrow_position.is_empty() {
         borrows.remove(borrow_index as usize);
     }
 

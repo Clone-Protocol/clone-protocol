@@ -1,15 +1,17 @@
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
+use crate::return_error_if_false;
 use crate::states::*;
-use crate::{to_clone_decimal, to_ratio_decimal, CLONE_PROGRAM_SEED, TOKEN_DATA_SEED, USER_SEED};
+use crate::{
+    to_clone_decimal, to_ratio_decimal, CLONE_PROGRAM_SEED, ORACLES_SEED, POOLS_SEED, USER_SEED,
+};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
-use rust_decimal::prelude::*;
 use std::convert::TryInto;
 
 #[derive(Accounts)]
-#[instruction(pool_index: u8, collateral_index: u8, onasset_amount: u64, collateral_amount: u64)]
+#[instruction(pool_index: u8, onasset_amount: u64, collateral_amount: u64)]
 pub struct InitializeBorrowPosition<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -17,7 +19,7 @@ pub struct InitializeBorrowPosition<'info> {
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
@@ -26,26 +28,30 @@ pub struct InitializeBorrowPosition<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        seeds = [TOKEN_DATA_SEED.as_ref()],
+        seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
     )]
-    pub token_data: AccountLoader<'info, TokenData>,
+    pub pools: Box<Account<'info, Pools>>,
     #[account(
         mut,
-        address = token_data.load()?.collaterals[collateral_index as usize].vault
+        seeds = [ORACLES_SEED.as_ref()],
+        bump,
+    )]
+    pub oracles: Box<Account<'info, Oracles>>,
+    #[account(
+        mut,
+        address = clone.collateral.vault
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = user_collateral_token_account.amount >= collateral_amount @ CloneError::InvalidTokenAccountBalance,
         associated_token::mint = vault.mint,
         associated_token::authority = user
     )]
     pub user_collateral_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[pool_index as usize].asset_info.onasset_mint,
+        address = pools.pools[pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -60,7 +66,6 @@ pub struct InitializeBorrowPosition<'info> {
 pub fn execute(
     ctx: Context<InitializeBorrowPosition>,
     pool_index: u8,
-    collateral_index: u8,
     onasset_amount: u64,
     collateral_amount: u64,
 ) -> Result<()> {
@@ -68,29 +73,23 @@ pub fn execute(
         CLONE_PROGRAM_SEED.as_ref(),
         bytemuck::bytes_of(&ctx.accounts.clone.bump),
     ][..]];
-    let token_data = &mut ctx.accounts.token_data.load_mut()?;
+    let collateral = &ctx.accounts.clone.collateral;
+    let pools = &mut ctx.accounts.pools;
+    let oracles = &ctx.accounts.oracles;
 
-    let pool = token_data.pools[pool_index as usize];
-    let pool_oracle = token_data.oracles[pool.asset_info.oracle_info_index as usize];
-    let collateral_index = collateral_index as usize;
-    let collateral = token_data.collaterals[collateral_index];
-    let collateral_scale = collateral.scale;
+    let pool = &pools.pools[pool_index as usize];
+    return_error_if_false!(
+        pool.status == Status::Active,
+        CloneError::StatusPreventsAction
+    );
+
+    let pool_oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
+    let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
     let min_overcollateral_ratio = to_ratio_decimal!(pool.asset_info.min_overcollateral_ratio);
     let collateralization_ratio = to_ratio_decimal!(collateral.collateralization_ratio);
-    let collateral_oracle = if collateral_index == ONUSD_COLLATERAL_INDEX
-        || collateral_index == USDC_COLLATERAL_INDEX
-    {
-        None
-    } else {
-        Some(token_data.oracles[collateral.oracle_info_index as usize])
-    };
 
-    let collateral_amount_value = Decimal::new(
-        collateral_amount.try_into().unwrap(),
-        collateral_scale.try_into().unwrap(),
-    );
+    let collateral_amount_value = collateral.to_collateral_decimal(collateral_amount)?;
     let onasset_amount_value = to_clone_decimal!(onasset_amount);
-
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
         pool_oracle,
@@ -135,17 +134,12 @@ pub fn execute(
     )?;
 
     // set mint position data
-    let user_account = &mut ctx.accounts.user_account.load_mut()?;
-    let num_positions = user_account.borrows.num_positions;
-    user_account.borrows.positions[num_positions as usize] = BorrowPosition {
+    let user_account = &mut ctx.accounts.user_account;
+    user_account.borrows.push(Borrow {
         collateral_amount,
-        collateral_index: collateral_index.try_into().unwrap(),
         pool_index: pool_index.try_into().unwrap(),
         borrowed_onasset: onasset_amount,
-    };
-
-    // increment number of mint positions
-    user_account.borrows.num_positions += 1;
+    });
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
@@ -154,7 +148,6 @@ pub fn execute(
         is_liquidation: false,
         collateral_supplied: collateral_amount,
         collateral_delta: collateral_amount.try_into().unwrap(),
-        collateral_index: collateral_index.try_into().unwrap(),
         borrowed_amount: onasset_amount,
         borrowed_delta: onasset_amount.try_into().unwrap()
     });

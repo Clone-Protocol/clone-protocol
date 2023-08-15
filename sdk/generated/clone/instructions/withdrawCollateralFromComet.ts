@@ -15,7 +15,6 @@ import * as web3 from '@solana/web3.js'
  * @category generated
  */
 export type WithdrawCollateralFromCometInstructionArgs = {
-  cometCollateralIndex: number
   collateralAmount: beet.bignum
 }
 /**
@@ -30,7 +29,6 @@ export const withdrawCollateralFromCometStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['cometCollateralIndex', beet.u8],
     ['collateralAmount', beet.u64],
   ],
   'WithdrawCollateralFromCometInstructionArgs'
@@ -41,7 +39,8 @@ export const withdrawCollateralFromCometStruct = new beet.BeetArgsStruct<
  * @property [**signer**] user
  * @property [_writable_] userAccount
  * @property [] clone
- * @property [_writable_] tokenData
+ * @property [_writable_] pools
+ * @property [_writable_] oracles
  * @property [_writable_] vault
  * @property [_writable_] userCollateralTokenAccount
  * @category Instructions
@@ -52,7 +51,8 @@ export type WithdrawCollateralFromCometInstructionAccounts = {
   user: web3.PublicKey
   userAccount: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
+  pools: web3.PublicKey
+  oracles: web3.PublicKey
   vault: web3.PublicKey
   userCollateralTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
@@ -100,7 +100,12 @@ export function createWithdrawCollateralFromCometInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.pools,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.oracles,
       isWritable: true,
       isSigner: false,
     },

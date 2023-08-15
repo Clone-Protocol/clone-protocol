@@ -5,81 +5,92 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
- * @category AddCollateral
+ * @category AddPool
  * @category generated
  */
-export type AddCollateralInstructionArgs = {
-  collateralizationRatio: number
+export type AddPoolInstructionArgs = {
+  minOvercollateralRatio: number
+  maxLiquidationOvercollateralRatio: number
+  liquidityTradingFeeBps: number
+  treasuryTradingFeeBps: number
+  ilHealthScoreCoefficient: number
+  positionHealthScoreCoefficient: number
   oracleInfoIndex: number
 }
 /**
  * @category Instructions
- * @category AddCollateral
+ * @category AddPool
  * @category generated
  */
-export const addCollateralStruct = new beet.BeetArgsStruct<
-  AddCollateralInstructionArgs & {
+export const addPoolStruct = new beet.BeetArgsStruct<
+  AddPoolInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['collateralizationRatio', beet.u8],
+    ['minOvercollateralRatio', beet.u16],
+    ['maxLiquidationOvercollateralRatio', beet.u16],
+    ['liquidityTradingFeeBps', beet.u16],
+    ['treasuryTradingFeeBps', beet.u16],
+    ['ilHealthScoreCoefficient', beet.u16],
+    ['positionHealthScoreCoefficient', beet.u16],
     ['oracleInfoIndex', beet.u8],
   ],
-  'AddCollateralInstructionArgs'
+  'AddPoolInstructionArgs'
 )
 /**
- * Accounts required by the _addCollateral_ instruction
+ * Accounts required by the _addPool_ instruction
  *
  * @property [_writable_, **signer**] admin
  * @property [] clone
- * @property [_writable_] tokenData
- * @property [] collateralMint
- * @property [] vault
+ * @property [_writable_] pools
+ * @property [] onassetMint
+ * @property [] onassetTokenAccount
+ * @property [] underlyingAssetMint
+ * @property [] underlyingAssetTokenAccount
  * @category Instructions
- * @category AddCollateral
+ * @category AddPool
  * @category generated
  */
-export type AddCollateralInstructionAccounts = {
+export type AddPoolInstructionAccounts = {
   admin: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
-  collateralMint: web3.PublicKey
-  vault: web3.PublicKey
-  rent?: web3.PublicKey
-  tokenProgram?: web3.PublicKey
+  pools: web3.PublicKey
+  onassetMint: web3.PublicKey
+  onassetTokenAccount: web3.PublicKey
+  underlyingAssetMint: web3.PublicKey
+  underlyingAssetTokenAccount: web3.PublicKey
   systemProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const addCollateralInstructionDiscriminator = [
-  127, 82, 121, 42, 161, 176, 249, 206,
+export const addPoolInstructionDiscriminator = [
+  115, 230, 212, 211, 175, 49, 39, 169,
 ]
 
 /**
- * Creates a _AddCollateral_ instruction.
+ * Creates a _AddPool_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category AddCollateral
+ * @category AddPool
  * @category generated
  */
-export function createAddCollateralInstruction(
-  accounts: AddCollateralInstructionAccounts,
-  args: AddCollateralInstructionArgs,
+export function createAddPoolInstruction(
+  accounts: AddPoolInstructionAccounts,
+  args: AddPoolInstructionArgs,
   programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
-  const [data] = addCollateralStruct.serialize({
-    instructionDiscriminator: addCollateralInstructionDiscriminator,
+  const [data] = addPoolStruct.serialize({
+    instructionDiscriminator: addPoolInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
@@ -94,27 +105,27 @@ export function createAddCollateralInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.pools,
       isWritable: true,
       isSigner: false,
     },
     {
-      pubkey: accounts.collateralMint,
+      pubkey: accounts.onassetMint,
       isWritable: false,
       isSigner: false,
     },
     {
-      pubkey: accounts.vault,
+      pubkey: accounts.onassetTokenAccount,
       isWritable: false,
       isSigner: false,
     },
     {
-      pubkey: accounts.rent ?? web3.SYSVAR_RENT_PUBKEY,
+      pubkey: accounts.underlyingAssetMint,
       isWritable: false,
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
+      pubkey: accounts.underlyingAssetTokenAccount,
       isWritable: false,
       isSigner: false,
     },

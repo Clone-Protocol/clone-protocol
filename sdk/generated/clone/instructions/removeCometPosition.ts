@@ -37,7 +37,7 @@ export const removeCometPositionStruct = new beet.BeetArgsStruct<
  *
  * @property [**signer**] user
  * @property [_writable_] userAccount
- * @property [_writable_] tokenData
+ * @property [_writable_] pools
  * @category Instructions
  * @category RemoveCometPosition
  * @category generated
@@ -45,7 +45,7 @@ export const removeCometPositionStruct = new beet.BeetArgsStruct<
 export type RemoveCometPositionInstructionAccounts = {
   user: web3.PublicKey
   userAccount: web3.PublicKey
-  tokenData: web3.PublicKey
+  pools: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
@@ -84,7 +84,7 @@ export function createRemoveCometPositionInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.pools,
       isWritable: true,
       isSigner: false,
     },

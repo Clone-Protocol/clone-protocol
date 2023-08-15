@@ -15,7 +15,7 @@ import * as web3 from '@solana/web3.js'
  */
 export type AddLiquidityToCometInstructionArgs = {
   poolIndex: number
-  onusdAmount: beet.bignum
+  collateralAmount: beet.bignum
 }
 /**
  * @category Instructions
@@ -30,7 +30,7 @@ export const addLiquidityToCometStruct = new beet.BeetArgsStruct<
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['poolIndex', beet.u8],
-    ['onusdAmount', beet.u64],
+    ['collateralAmount', beet.u64],
   ],
   'AddLiquidityToCometInstructionArgs'
 )
@@ -40,7 +40,8 @@ export const addLiquidityToCometStruct = new beet.BeetArgsStruct<
  * @property [**signer**] user
  * @property [_writable_] userAccount
  * @property [_writable_] clone
- * @property [_writable_] tokenData
+ * @property [_writable_] pools
+ * @property [_writable_] oracles
  * @category Instructions
  * @category AddLiquidityToComet
  * @category generated
@@ -49,7 +50,8 @@ export type AddLiquidityToCometInstructionAccounts = {
   user: web3.PublicKey
   userAccount: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
+  pools: web3.PublicKey
+  oracles: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
@@ -93,7 +95,12 @@ export function createAddLiquidityToCometInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.pools,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.oracles,
       isWritable: true,
       isSigner: false,
     },

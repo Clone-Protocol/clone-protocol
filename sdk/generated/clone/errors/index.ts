@@ -829,6 +829,52 @@ createErrorFromNameLookup.set(
 )
 
 /**
+ * InvalidPaymentType: 'Invalid Payment Type'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class InvalidPaymentTypeError extends Error {
+  readonly code: number = 0x1793
+  readonly name: string = 'InvalidPaymentType'
+  constructor() {
+    super('Invalid Payment Type')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, InvalidPaymentTypeError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x1793, () => new InvalidPaymentTypeError())
+createErrorFromNameLookup.set(
+  'InvalidPaymentType',
+  () => new InvalidPaymentTypeError()
+)
+
+/**
+ * InvalidConversion: 'Invalid Conversion'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class InvalidConversionError extends Error {
+  readonly code: number = 0x1794
+  readonly name: string = 'InvalidConversion'
+  constructor() {
+    super('Invalid Conversion')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, InvalidConversionError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x1794, () => new InvalidConversionError())
+createErrorFromNameLookup.set(
+  'InvalidConversion',
+  () => new InvalidConversionError()
+)
+
+/**
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
  * @category generated

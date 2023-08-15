@@ -141,23 +141,20 @@ pub enum CloneError {
     /// 34. Invalid oracle index
     #[msg("Invalid oracle index")]
     InvalidOracleIndex,
+
+    /// 35. Invalid Payment Type
+    #[msg("Invalid Payment Type")]
+    InvalidPaymentType,
+
+    /// 36. Invalid Conversion
+    #[msg("Invalid Conversion")]
+    InvalidConversion,
 }
 
 impl From<CloneError> for ProgramError {
     fn from(e: CloneError) -> Self {
         ProgramError::Custom(e as u32)
     }
-}
-
-#[macro_export]
-macro_rules! math_error {
-    () => {{
-        || {
-            let error_code = CloneError::MathError;
-            msg!("Error {} thrown at {}:{}", error_code, file!(), line!());
-            error_code
-        }
-    }};
 }
 
 #[macro_export]

@@ -1,11 +1,10 @@
-use crate::error::CloneError;
 use crate::states::*;
-use crate::{TOKEN_DATA_SEED, USER_SEED};
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 
 #[derive(Accounts)]
-#[instruction(collateral_index: u8, collateral_amount: u64)]
+#[instruction(amount: u64)]
 pub struct AddCollateralToComet<'info> {
     pub user: Signer<'info>,
     #[account(
@@ -13,52 +12,28 @@ pub struct AddCollateralToComet<'info> {
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
-        mut,
-        seeds = [TOKEN_DATA_SEED.as_ref()],
-        bump,
-        constraint = (collateral_index as u64) < token_data.load()?.num_collaterals @ CloneError::InvalidInputPositionIndex,
-        constraint = token_data.load()?.collaterals[collateral_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
+        seeds = [CLONE_PROGRAM_SEED.as_ref()],
+        bump = clone.bump,
     )]
-    pub token_data: AccountLoader<'info, TokenData>,
+    pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        address = token_data.load()?.collaterals[collateral_index as usize].vault,
+        address = clone.collateral.vault,
    )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = user_collateral_token_account.amount >= collateral_amount @ CloneError::InvalidTokenAccountBalance,
-        associated_token::mint = vault.mint,
+        associated_token::mint = clone.collateral.mint,
         associated_token::authority = user
     )]
     pub user_collateral_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(
-    ctx: Context<AddCollateralToComet>,
-    collateral_index: u8,
-    collateral_amount: u64,
-) -> Result<()> {
-    let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
-
-    // find the comet collateral index
-    let comet_collateral_info = comet.collaterals[..comet.num_collaterals as usize]
-        .iter()
-        .enumerate()
-        .find(|(_, comet_collateral)| comet_collateral.collateral_index == collateral_index as u64);
-
-    // check to see if a new collateral must be added to the position
-    if let Some((index, _)) = comet_collateral_info {
-        comet.collaterals[index].collateral_amount += collateral_amount;
-    } else {
-        comet.add_collateral(CometCollateral {
-            collateral_amount,
-            collateral_index: collateral_index.into(),
-        });
-    }
+pub fn execute(ctx: Context<AddCollateralToComet>, amount: u64) -> Result<()> {
+    let comet = &mut ctx.accounts.user_account.comet;
 
     // send collateral from user to vault
     let cpi_accounts = Transfer {
@@ -71,10 +46,9 @@ pub fn execute(
         authority: ctx.accounts.user.to_account_info().clone(),
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
-    token::transfer(
-        CpiContext::new(cpi_program, cpi_accounts),
-        collateral_amount,
-    )?;
+    token::transfer(CpiContext::new(cpi_program, cpi_accounts), amount)?;
+
+    comet.collateral_amount += amount;
 
     Ok(())
 }

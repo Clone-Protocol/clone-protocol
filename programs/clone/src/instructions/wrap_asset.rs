@@ -1,8 +1,7 @@
 use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
 use crate::error::*;
-use crate::return_error_if_false;
 use crate::states::*;
-use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED};
+use crate::{CLONE_PROGRAM_SEED, POOLS_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 use rust_decimal::prelude::*;
@@ -18,15 +17,16 @@ pub struct WrapAsset<'info> {
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
-        seeds = [TOKEN_DATA_SEED.as_ref()],
+        seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = token_data.load()?.pools[pool_index as usize].status != Status::Frozen as u64 &&
-        token_data.load()?.pools[pool_index as usize].status != Status::Deprecation as u64 @ CloneError::StatusPreventsAction,
+        constraint = (pool_index as usize) < pools.pools.len(),
+        constraint = pools.pools[pool_index as usize].status != Status::Frozen &&
+        pools.pools[pool_index as usize].status != Status::Deprecation @ CloneError::StatusPreventsAction,
     )]
-    pub token_data: AccountLoader<'info, TokenData>,
+    pub pools: Box<Account<'info, Pools>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[pool_index as usize].underlying_asset_token_account,
+        address = pools.pools[pool_index as usize].underlying_asset_token_account,
     )]
     pub underlying_asset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -41,7 +41,7 @@ pub struct WrapAsset<'info> {
     pub user_asset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[pool_index as usize].asset_info.onasset_mint,
+        address = pools.pools[pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -53,12 +53,7 @@ pub struct WrapAsset<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn execute(ctx: Context<WrapAsset>, amount: u64, pool_index: u8) -> Result<()> {
-    let token_data = ctx.accounts.token_data.load()?;
-    return_error_if_false!(
-        (pool_index as u64) < token_data.num_pools,
-        CloneError::PoolNotFound
-    );
+pub fn execute(ctx: Context<WrapAsset>, amount: u64, _pool_index: u8) -> Result<()> {
     let underlying_mint_scale = ctx.accounts.asset_mint.decimals as u32;
     let onasset_amount = rescale_toward_zero(
         Decimal::new(amount.try_into().unwrap(), underlying_mint_scale),

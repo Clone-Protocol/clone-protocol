@@ -6,15 +6,19 @@
  */
 
 import * as beet from '@metaplex-foundation/beet'
-export type RawDecimal = {
-  data: number[] /* size: 16 */
+/**
+ * @category enums
+ * @category generated
+ */
+export enum OracleSource {
+  PYTH,
+  SWITCHBOARD,
 }
 
 /**
  * @category userTypes
  * @category generated
  */
-export const rawDecimalBeet = new beet.BeetArgsStruct<RawDecimal>(
-  [['data', beet.uniformFixedSizeArray(beet.u8, 16)]],
-  'RawDecimal'
-)
+export const oracleSourceBeet = beet.fixedScalarEnum(
+  OracleSource
+) as beet.FixedSizeBeet<OracleSource, OracleSource>

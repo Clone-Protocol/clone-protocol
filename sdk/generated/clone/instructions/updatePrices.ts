@@ -7,7 +7,6 @@
 
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
-import { OracleIndices, oracleIndicesBeet } from '../types/OracleIndices'
 
 /**
  * @category Instructions
@@ -15,34 +14,34 @@ import { OracleIndices, oracleIndicesBeet } from '../types/OracleIndices'
  * @category generated
  */
 export type UpdatePricesInstructionArgs = {
-  indices: OracleIndices
+  oracleIndices: Uint8Array
 }
 /**
  * @category Instructions
  * @category UpdatePrices
  * @category generated
  */
-export const updatePricesStruct = new beet.BeetArgsStruct<
+export const updatePricesStruct = new beet.FixableBeetArgsStruct<
   UpdatePricesInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['indices', oracleIndicesBeet],
+    ['oracleIndices', beet.bytes],
   ],
   'UpdatePricesInstructionArgs'
 )
 /**
  * Accounts required by the _updatePrices_ instruction
  *
- * @property [_writable_] tokenData
+ * @property [_writable_] oracles
  * @category Instructions
  * @category UpdatePrices
  * @category generated
  */
 export type UpdatePricesInstructionAccounts = {
-  tokenData: web3.PublicKey
+  oracles: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
@@ -71,7 +70,7 @@ export function createUpdatePricesInstruction(
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.oracles,
       isWritable: true,
       isSigner: false,
     },

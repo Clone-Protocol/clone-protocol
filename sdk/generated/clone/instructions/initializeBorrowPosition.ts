@@ -16,7 +16,6 @@ import * as web3 from '@solana/web3.js'
  */
 export type InitializeBorrowPositionInstructionArgs = {
   poolIndex: number
-  collateralIndex: number
   onassetAmount: beet.bignum
   collateralAmount: beet.bignum
 }
@@ -33,7 +32,6 @@ export const initializeBorrowPositionStruct = new beet.BeetArgsStruct<
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['poolIndex', beet.u8],
-    ['collateralIndex', beet.u8],
     ['onassetAmount', beet.u64],
     ['collateralAmount', beet.u64],
   ],
@@ -45,7 +43,8 @@ export const initializeBorrowPositionStruct = new beet.BeetArgsStruct<
  * @property [**signer**] user
  * @property [_writable_] userAccount
  * @property [_writable_] clone
- * @property [_writable_] tokenData
+ * @property [_writable_] pools
+ * @property [_writable_] oracles
  * @property [_writable_] vault
  * @property [_writable_] userCollateralTokenAccount
  * @property [_writable_] onassetMint
@@ -58,7 +57,8 @@ export type InitializeBorrowPositionInstructionAccounts = {
   user: web3.PublicKey
   userAccount: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
+  pools: web3.PublicKey
+  oracles: web3.PublicKey
   vault: web3.PublicKey
   userCollateralTokenAccount: web3.PublicKey
   onassetMint: web3.PublicKey
@@ -107,7 +107,12 @@ export function createInitializeBorrowPositionInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.pools,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.oracles,
       isWritable: true,
       isSigner: false,
     },

@@ -8,51 +8,49 @@
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
-import { Borrow, borrowBeet } from '../types/Borrow'
-import { Comet, cometBeet } from '../types/Comet'
+import { Pool, poolBeet } from '../types/Pool'
 
 /**
- * Arguments used to create {@link User}
+ * Arguments used to create {@link Pools}
  * @category Accounts
  * @category generated
  */
-export type UserArgs = {
-  borrows: Borrow[]
-  comet: Comet
+export type PoolsArgs = {
+  pools: Pool[]
 }
 
-export const userDiscriminator = [159, 117, 95, 227, 239, 151, 58, 236]
+export const poolsDiscriminator = [107, 216, 188, 161, 30, 47, 151, 9]
 /**
- * Holds the data for the {@link User} Account and provides de/serialization
+ * Holds the data for the {@link Pools} Account and provides de/serialization
  * functionality for that data
  *
  * @category Accounts
  * @category generated
  */
-export class User implements UserArgs {
-  private constructor(readonly borrows: Borrow[], readonly comet: Comet) {}
+export class Pools implements PoolsArgs {
+  private constructor(readonly pools: Pool[]) {}
 
   /**
-   * Creates a {@link User} instance from the provided args.
+   * Creates a {@link Pools} instance from the provided args.
    */
-  static fromArgs(args: UserArgs) {
-    return new User(args.borrows, args.comet)
+  static fromArgs(args: PoolsArgs) {
+    return new Pools(args.pools)
   }
 
   /**
-   * Deserializes the {@link User} from the data of the provided {@link web3.AccountInfo}.
+   * Deserializes the {@link Pools} from the data of the provided {@link web3.AccountInfo}.
    * @returns a tuple of the account data and the offset up to which the buffer was read to obtain it.
    */
   static fromAccountInfo(
     accountInfo: web3.AccountInfo<Buffer>,
     offset = 0
-  ): [User, number] {
-    return User.deserialize(accountInfo.data, offset)
+  ): [Pools, number] {
+    return Pools.deserialize(accountInfo.data, offset)
   }
 
   /**
    * Retrieves the account info from the provided address and deserializes
-   * the {@link User} from its data.
+   * the {@link Pools} from its data.
    *
    * @throws Error if no account info is found at the address or if deserialization fails
    */
@@ -60,15 +58,15 @@ export class User implements UserArgs {
     connection: web3.Connection,
     address: web3.PublicKey,
     commitmentOrConfig?: web3.Commitment | web3.GetAccountInfoConfig
-  ): Promise<User> {
+  ): Promise<Pools> {
     const accountInfo = await connection.getAccountInfo(
       address,
       commitmentOrConfig
     )
     if (accountInfo == null) {
-      throw new Error(`Unable to find User account at ${address}`)
+      throw new Error(`Unable to find Pools account at ${address}`)
     }
-    return User.fromAccountInfo(accountInfo, 0)[0]
+    return Pools.fromAccountInfo(accountInfo, 0)[0]
   }
 
   /**
@@ -82,70 +80,69 @@ export class User implements UserArgs {
       'F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v'
     )
   ) {
-    return beetSolana.GpaBuilder.fromStruct(programId, userBeet)
+    return beetSolana.GpaBuilder.fromStruct(programId, poolsBeet)
   }
 
   /**
-   * Deserializes the {@link User} from the provided data Buffer.
+   * Deserializes the {@link Pools} from the provided data Buffer.
    * @returns a tuple of the account data and the offset up to which the buffer was read to obtain it.
    */
-  static deserialize(buf: Buffer, offset = 0): [User, number] {
-    return userBeet.deserialize(buf, offset)
+  static deserialize(buf: Buffer, offset = 0): [Pools, number] {
+    return poolsBeet.deserialize(buf, offset)
   }
 
   /**
-   * Serializes the {@link User} into a Buffer.
+   * Serializes the {@link Pools} into a Buffer.
    * @returns a tuple of the created Buffer and the offset up to which the buffer was written to store it.
    */
   serialize(): [Buffer, number] {
-    return userBeet.serialize({
-      accountDiscriminator: userDiscriminator,
+    return poolsBeet.serialize({
+      accountDiscriminator: poolsDiscriminator,
       ...this,
     })
   }
 
   /**
    * Returns the byteSize of a {@link Buffer} holding the serialized data of
-   * {@link User} for the provided args.
+   * {@link Pools} for the provided args.
    *
    * @param args need to be provided since the byte size for this account
    * depends on them
    */
-  static byteSize(args: UserArgs) {
-    const instance = User.fromArgs(args)
-    return userBeet.toFixedFromValue({
-      accountDiscriminator: userDiscriminator,
+  static byteSize(args: PoolsArgs) {
+    const instance = Pools.fromArgs(args)
+    return poolsBeet.toFixedFromValue({
+      accountDiscriminator: poolsDiscriminator,
       ...instance,
     }).byteSize
   }
 
   /**
    * Fetches the minimum balance needed to exempt an account holding
-   * {@link User} data from rent
+   * {@link Pools} data from rent
    *
    * @param args need to be provided since the byte size for this account
    * depends on them
    * @param connection used to retrieve the rent exemption information
    */
   static async getMinimumBalanceForRentExemption(
-    args: UserArgs,
+    args: PoolsArgs,
     connection: web3.Connection,
     commitment?: web3.Commitment
   ): Promise<number> {
     return connection.getMinimumBalanceForRentExemption(
-      User.byteSize(args),
+      Pools.byteSize(args),
       commitment
     )
   }
 
   /**
-   * Returns a readable version of {@link User} properties
+   * Returns a readable version of {@link Pools} properties
    * and can be used to convert to JSON and/or logging
    */
   pretty() {
     return {
-      borrows: this.borrows,
-      comet: this.comet,
+      pools: this.pools,
     }
   }
 }
@@ -154,17 +151,16 @@ export class User implements UserArgs {
  * @category Accounts
  * @category generated
  */
-export const userBeet = new beet.FixableBeetStruct<
-  User,
-  UserArgs & {
+export const poolsBeet = new beet.FixableBeetStruct<
+  Pools,
+  PoolsArgs & {
     accountDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['accountDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['borrows', beet.array(borrowBeet)],
-    ['comet', cometBeet],
+    ['pools', beet.array(poolBeet)],
   ],
-  User.fromArgs,
-  'User'
+  Pools.fromArgs,
+  'Pools'
 )

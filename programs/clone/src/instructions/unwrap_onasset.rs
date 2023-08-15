@@ -3,7 +3,7 @@ use crate::error::*;
 use crate::return_error_if_false;
 use crate::states::*;
 use crate::to_clone_decimal;
-use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED};
+use crate::{CLONE_PROGRAM_SEED, POOLS_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
 
@@ -17,15 +17,13 @@ pub struct UnwrapOnAsset<'info> {
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
-        seeds = [TOKEN_DATA_SEED.as_ref()],
+        seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = token_data.load()?.pools[pool_index as usize].status == Status::Active as u64 ||
-        token_data.load()?.pools[pool_index as usize].status == Status::Deprecation as u64 @ CloneError::StatusPreventsAction,
     )]
-    pub token_data: AccountLoader<'info, TokenData>,
+    pub pools: Box<Account<'info, Pools>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[pool_index as usize].underlying_asset_token_account,
+        address = pools.pools[pool_index as usize].underlying_asset_token_account,
     )]
     pub underlying_asset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -40,7 +38,7 @@ pub struct UnwrapOnAsset<'info> {
     pub user_asset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = token_data.load()?.pools[pool_index as usize].asset_info.onasset_mint,
+        address = pools.pools[pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
@@ -53,10 +51,10 @@ pub struct UnwrapOnAsset<'info> {
 }
 
 pub fn execute(ctx: Context<UnwrapOnAsset>, amount: u64, pool_index: u8) -> Result<()> {
-    let token_data = ctx.accounts.token_data.load()?;
+    let pool = &ctx.accounts.pools.pools[pool_index as usize];
     return_error_if_false!(
-        (pool_index as u64) < token_data.num_pools,
-        CloneError::PoolNotFound
+        pool.status == Status::Active || pool.status == Status::Deprecation,
+        CloneError::StatusPreventsAction
     );
 
     let underlying_mint_scale = ctx.accounts.asset_mint.decimals as u32;

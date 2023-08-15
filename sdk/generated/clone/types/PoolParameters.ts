@@ -6,6 +6,7 @@
  */
 
 import * as beet from '@metaplex-foundation/beet'
+import { Status, statusBeet } from './Status'
 /**
  * This type is used to derive the {@link PoolParameters} type as well as the de/serializer.
  * However don't refer to it in your code but use the {@link PoolParameters} type instead.
@@ -16,14 +17,14 @@ import * as beet from '@metaplex-foundation/beet'
  * @private
  */
 export type PoolParametersRecord = {
-  Status: { value: beet.bignum }
-  TreasuryTradingFee: { value: beet.bignum }
-  LiquidityTradingFee: { value: beet.bignum }
-  OracleInfoIndex: { value: beet.bignum }
-  MinOvercollateralRatio: { value: beet.bignum }
-  MaxLiquidationOvercollateralRatio: { value: beet.bignum }
-  IlHealthScoreCoefficient: { value: beet.bignum }
-  PositionHealthScoreCoefficient: { value: beet.bignum }
+  Status: { value: Status }
+  TreasuryTradingFee: { value: number }
+  LiquidityTradingFee: { value: number }
+  OracleInfoIndex: { value: number }
+  MinOvercollateralRatio: { value: number }
+  MaxLiquidationOvercollateralRatio: { value: number }
+  IlHealthScoreCoefficient: { value: number }
+  PositionHealthScoreCoefficient: { value: number }
 }
 
 /**
@@ -79,7 +80,7 @@ export const poolParametersBeet = beet.dataEnum<PoolParametersRecord>([
   [
     'Status',
     new beet.BeetArgsStruct<PoolParametersRecord['Status']>(
-      [['value', beet.u64]],
+      [['value', statusBeet]],
       'PoolParametersRecord["Status"]'
     ),
   ],
@@ -87,7 +88,7 @@ export const poolParametersBeet = beet.dataEnum<PoolParametersRecord>([
   [
     'TreasuryTradingFee',
     new beet.BeetArgsStruct<PoolParametersRecord['TreasuryTradingFee']>(
-      [['value', beet.u64]],
+      [['value', beet.u16]],
       'PoolParametersRecord["TreasuryTradingFee"]'
     ),
   ],
@@ -95,7 +96,7 @@ export const poolParametersBeet = beet.dataEnum<PoolParametersRecord>([
   [
     'LiquidityTradingFee',
     new beet.BeetArgsStruct<PoolParametersRecord['LiquidityTradingFee']>(
-      [['value', beet.u64]],
+      [['value', beet.u16]],
       'PoolParametersRecord["LiquidityTradingFee"]'
     ),
   ],
@@ -103,7 +104,7 @@ export const poolParametersBeet = beet.dataEnum<PoolParametersRecord>([
   [
     'OracleInfoIndex',
     new beet.BeetArgsStruct<PoolParametersRecord['OracleInfoIndex']>(
-      [['value', beet.u64]],
+      [['value', beet.u8]],
       'PoolParametersRecord["OracleInfoIndex"]'
     ),
   ],
@@ -111,7 +112,7 @@ export const poolParametersBeet = beet.dataEnum<PoolParametersRecord>([
   [
     'MinOvercollateralRatio',
     new beet.BeetArgsStruct<PoolParametersRecord['MinOvercollateralRatio']>(
-      [['value', beet.u64]],
+      [['value', beet.u16]],
       'PoolParametersRecord["MinOvercollateralRatio"]'
     ),
   ],
@@ -121,7 +122,7 @@ export const poolParametersBeet = beet.dataEnum<PoolParametersRecord>([
     new beet.BeetArgsStruct<
       PoolParametersRecord['MaxLiquidationOvercollateralRatio']
     >(
-      [['value', beet.u64]],
+      [['value', beet.u16]],
       'PoolParametersRecord["MaxLiquidationOvercollateralRatio"]'
     ),
   ],
@@ -129,7 +130,7 @@ export const poolParametersBeet = beet.dataEnum<PoolParametersRecord>([
   [
     'IlHealthScoreCoefficient',
     new beet.BeetArgsStruct<PoolParametersRecord['IlHealthScoreCoefficient']>(
-      [['value', beet.u64]],
+      [['value', beet.u16]],
       'PoolParametersRecord["IlHealthScoreCoefficient"]'
     ),
   ],
@@ -139,7 +140,7 @@ export const poolParametersBeet = beet.dataEnum<PoolParametersRecord>([
     new beet.BeetArgsStruct<
       PoolParametersRecord['PositionHealthScoreCoefficient']
     >(
-      [['value', beet.u64]],
+      [['value', beet.u16]],
       'PoolParametersRecord["PositionHealthScoreCoefficient"]'
     ),
   ],

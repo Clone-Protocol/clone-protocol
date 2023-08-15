@@ -5,59 +5,56 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
- * @category Initialize
+ * @category InitializeOracles
  * @category generated
  */
-export const initializeStruct = new beet.BeetArgsStruct<{
+export const initializeOraclesStruct = new beet.BeetArgsStruct<{
   instructionDiscriminator: number[] /* size: 8 */
 }>(
   [['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)]],
-  'InitializeInstructionArgs'
+  'InitializeOraclesInstructionArgs'
 )
 /**
- * Accounts required by the _initialize_ instruction
+ * Accounts required by the _initializeOracles_ instruction
  *
  * @property [_writable_, **signer**] admin
- * @property [_writable_] jupiterAccount
- * @property [_writable_, **signer**] usdcMint
+ * @property [] clone
+ * @property [_writable_] oracles
  * @category Instructions
- * @category Initialize
+ * @category InitializeOracles
  * @category generated
  */
-export type InitializeInstructionAccounts = {
+export type InitializeOraclesInstructionAccounts = {
   admin: web3.PublicKey
-  jupiterAccount: web3.PublicKey
-  usdcMint: web3.PublicKey
-  rent?: web3.PublicKey
-  tokenProgram?: web3.PublicKey
+  clone: web3.PublicKey
+  oracles: web3.PublicKey
   systemProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const initializeInstructionDiscriminator = [
-  175, 175, 109, 31, 13, 152, 155, 237,
+export const initializeOraclesInstructionDiscriminator = [
+  187, 13, 76, 77, 183, 146, 201, 56,
 ]
 
 /**
- * Creates a _Initialize_ instruction.
+ * Creates a _InitializeOracles_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @category Instructions
- * @category Initialize
+ * @category InitializeOracles
  * @category generated
  */
-export function createInitializeInstruction(
-  accounts: InitializeInstructionAccounts,
-  programId = new web3.PublicKey('CS52uHyHj6yod3TCQsrhPS8SqqnvoEHNjtTLoUio5kWB')
+export function createInitializeOraclesInstruction(
+  accounts: InitializeOraclesInstructionAccounts,
+  programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
-  const [data] = initializeStruct.serialize({
-    instructionDiscriminator: initializeInstructionDiscriminator,
+  const [data] = initializeOraclesStruct.serialize({
+    instructionDiscriminator: initializeOraclesInstructionDiscriminator,
   })
   const keys: web3.AccountMeta[] = [
     {
@@ -66,23 +63,13 @@ export function createInitializeInstruction(
       isSigner: true,
     },
     {
-      pubkey: accounts.jupiterAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.usdcMint,
-      isWritable: true,
-      isSigner: true,
-    },
-    {
-      pubkey: accounts.rent ?? web3.SYSVAR_RENT_PUBKEY,
+      pubkey: accounts.clone,
       isWritable: false,
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
-      isWritable: false,
+      pubkey: accounts.oracles,
+      isWritable: true,
       isSigner: false,
     },
     {

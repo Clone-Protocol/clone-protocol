@@ -1,7 +1,6 @@
-use crate::error::*;
 use crate::events::*;
 use crate::states::*;
-use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED, USER_SEED};
+use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use std::convert::TryInto;
@@ -14,9 +13,8 @@ pub struct AddCollateralToBorrow<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
-        constraint = (borrow_index as u64) < user_account.load()?.borrows.num_positions @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
@@ -24,19 +22,11 @@ pub struct AddCollateralToBorrow<'info> {
     pub clone: Box<Account<'info, Clone>>,
     #[account(
         mut,
-        seeds = [TOKEN_DATA_SEED.as_ref()],
-        bump,
-        constraint = token_data.load()?.collaterals[user_account.load()?.borrows.positions[borrow_index as usize].collateral_index as usize].status == Status::Active as u64 @ CloneError::StatusPreventsAction
-    )]
-    pub token_data: AccountLoader<'info, TokenData>,
-    #[account(
-        mut,
-        address = token_data.load()?.collaterals[user_account.load()?.borrows.positions[borrow_index as usize].collateral_index as usize].vault
+        address = clone.collateral.vault
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        constraint = user_collateral_token_account.amount >= amount @ CloneError::InvalidTokenAccountBalance,
         associated_token::mint = vault.mint,
         associated_token::authority = user
     )]
@@ -45,10 +35,10 @@ pub struct AddCollateralToBorrow<'info> {
 }
 
 pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u64) -> Result<()> {
-    let borrows = &mut ctx.accounts.user_account.load_mut()?.borrows;
+    let borrows = &mut ctx.accounts.user_account.borrows;
 
     // add collateral amount to mint data
-    borrows.positions[borrow_index as usize].collateral_amount += amount;
+    borrows[borrow_index as usize].collateral_amount += amount;
 
     // send collateral to vault
     let cpi_accounts = Transfer {
@@ -67,18 +57,14 @@ pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u6
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
-        pool_index: borrows.positions[borrow_index as usize]
+        pool_index: borrows[borrow_index as usize]
             .pool_index
             .try_into()
             .unwrap(),
         is_liquidation: false,
-        collateral_supplied: borrows.positions[borrow_index as usize].collateral_amount,
+        collateral_supplied: borrows[borrow_index as usize].collateral_amount,
         collateral_delta: amount.try_into().unwrap(),
-        collateral_index: borrows.positions[borrow_index as usize]
-            .collateral_index
-            .try_into()
-            .unwrap(),
-        borrowed_amount: borrows.positions[borrow_index as usize].borrowed_onasset,
+        borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
         borrowed_delta: 0
     });
     ctx.accounts.clone.event_counter += 1;

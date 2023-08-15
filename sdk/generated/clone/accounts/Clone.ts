@@ -8,6 +8,7 @@
 import * as web3 from '@solana/web3.js'
 import * as beet from '@metaplex-foundation/beet'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
+import { Collateral, collateralBeet } from '../types/Collateral'
 
 /**
  * Arguments used to create {@link Clone}
@@ -15,11 +16,12 @@ import * as beetSolana from '@metaplex-foundation/beet-solana'
  * @category generated
  */
 export type CloneArgs = {
-  onusdMint: web3.PublicKey
   admin: web3.PublicKey
   auth: web3.PublicKey[] /* size: 10 */
   bump: number
-  cometLiquidatorFeeBps: number
+  collateral: Collateral
+  cometCollateralIldLiquidatorFeeBps: number
+  cometOnassetIldLiquidatorFeeBps: number
   borrowLiquidatorFeeBps: number
   treasuryAddress: web3.PublicKey
   eventCounter: beet.bignum
@@ -35,11 +37,12 @@ export const cloneDiscriminator = [20, 243, 87, 121, 2, 202, 130, 130]
  */
 export class Clone implements CloneArgs {
   private constructor(
-    readonly onusdMint: web3.PublicKey,
     readonly admin: web3.PublicKey,
     readonly auth: web3.PublicKey[] /* size: 10 */,
     readonly bump: number,
-    readonly cometLiquidatorFeeBps: number,
+    readonly collateral: Collateral,
+    readonly cometCollateralIldLiquidatorFeeBps: number,
+    readonly cometOnassetIldLiquidatorFeeBps: number,
     readonly borrowLiquidatorFeeBps: number,
     readonly treasuryAddress: web3.PublicKey,
     readonly eventCounter: beet.bignum
@@ -50,11 +53,12 @@ export class Clone implements CloneArgs {
    */
   static fromArgs(args: CloneArgs) {
     return new Clone(
-      args.onusdMint,
       args.admin,
       args.auth,
       args.bump,
-      args.cometLiquidatorFeeBps,
+      args.collateral,
+      args.cometCollateralIldLiquidatorFeeBps,
+      args.cometOnassetIldLiquidatorFeeBps,
       args.borrowLiquidatorFeeBps,
       args.treasuryAddress,
       args.eventCounter
@@ -164,11 +168,13 @@ export class Clone implements CloneArgs {
    */
   pretty() {
     return {
-      onusdMint: this.onusdMint.toBase58(),
       admin: this.admin.toBase58(),
       auth: this.auth,
       bump: this.bump,
-      cometLiquidatorFeeBps: this.cometLiquidatorFeeBps,
+      collateral: this.collateral,
+      cometCollateralIldLiquidatorFeeBps:
+        this.cometCollateralIldLiquidatorFeeBps,
+      cometOnassetIldLiquidatorFeeBps: this.cometOnassetIldLiquidatorFeeBps,
       borrowLiquidatorFeeBps: this.borrowLiquidatorFeeBps,
       treasuryAddress: this.treasuryAddress.toBase58(),
       eventCounter: (() => {
@@ -198,11 +204,12 @@ export const cloneBeet = new beet.BeetStruct<
 >(
   [
     ['accountDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['onusdMint', beetSolana.publicKey],
     ['admin', beetSolana.publicKey],
     ['auth', beet.uniformFixedSizeArray(beetSolana.publicKey, 10)],
     ['bump', beet.u8],
-    ['cometLiquidatorFeeBps', beet.u16],
+    ['collateral', collateralBeet],
+    ['cometCollateralIldLiquidatorFeeBps', beet.u16],
+    ['cometOnassetIldLiquidatorFeeBps', beet.u16],
     ['borrowLiquidatorFeeBps', beet.u16],
     ['treasuryAddress', beetSolana.publicKey],
     ['eventCounter', beet.u64],

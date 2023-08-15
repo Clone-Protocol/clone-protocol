@@ -5,16 +5,15 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
+import * as beet from '@metaplex-foundation/beet'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
 export type Collateral = {
-  oracleInfoIndex: beet.bignum
+  oracleInfoIndex: number
   mint: web3.PublicKey
   vault: web3.PublicKey
-  collateralizationRatio: beet.bignum
-  status: beet.bignum
-  scale: beet.bignum
+  collateralizationRatio: number
+  scale: number
 }
 
 /**
@@ -23,12 +22,11 @@ export type Collateral = {
  */
 export const collateralBeet = new beet.BeetArgsStruct<Collateral>(
   [
-    ['oracleInfoIndex', beet.u64],
+    ['oracleInfoIndex', beet.u8],
     ['mint', beetSolana.publicKey],
     ['vault', beetSolana.publicKey],
-    ['collateralizationRatio', beet.u64],
-    ['status', beet.u64],
-    ['scale', beet.u64],
+    ['collateralizationRatio', beet.u8],
+    ['scale', beet.u8],
   ],
   'Collateral'
 )

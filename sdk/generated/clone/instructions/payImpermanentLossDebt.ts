@@ -9,6 +9,7 @@ import * as splToken from '@solana/spl-token'
 import * as web3 from '@solana/web3.js'
 import * as beet from '@metaplex-foundation/beet'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
+import { PaymentType, paymentTypeBeet } from '../types/PaymentType'
 
 /**
  * @category Instructions
@@ -19,7 +20,7 @@ export type PayImpermanentLossDebtInstructionArgs = {
   user: web3.PublicKey
   cometPositionIndex: number
   amount: beet.bignum
-  payOnusdDebt: boolean
+  paymentType: PaymentType
 }
 /**
  * @category Instructions
@@ -36,7 +37,7 @@ export const payImpermanentLossDebtStruct = new beet.BeetArgsStruct<
     ['user', beetSolana.publicKey],
     ['cometPositionIndex', beet.u8],
     ['amount', beet.u64],
-    ['payOnusdDebt', beet.bool],
+    ['paymentType', paymentTypeBeet],
   ],
   'PayImpermanentLossDebtInstructionArgs'
 )
@@ -46,10 +47,11 @@ export const payImpermanentLossDebtStruct = new beet.BeetArgsStruct<
  * @property [**signer**] payer
  * @property [_writable_] userAccount
  * @property [_writable_] clone
- * @property [] tokenData
- * @property [_writable_] onusdMint
+ * @property [] pools
+ * @property [] collateralMint
+ * @property [_writable_] collateralVault
  * @property [_writable_] onassetMint
- * @property [_writable_] payerOnusdTokenAccount
+ * @property [_writable_] payerCollateralTokenAccount
  * @property [_writable_] payerOnassetTokenAccount
  * @category Instructions
  * @category PayImpermanentLossDebt
@@ -59,10 +61,11 @@ export type PayImpermanentLossDebtInstructionAccounts = {
   payer: web3.PublicKey
   userAccount: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
-  onusdMint: web3.PublicKey
+  pools: web3.PublicKey
+  collateralMint: web3.PublicKey
+  collateralVault: web3.PublicKey
   onassetMint: web3.PublicKey
-  payerOnusdTokenAccount: web3.PublicKey
+  payerCollateralTokenAccount: web3.PublicKey
   payerOnassetTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
@@ -108,12 +111,17 @@ export function createPayImpermanentLossDebtInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.pools,
       isWritable: false,
       isSigner: false,
     },
     {
-      pubkey: accounts.onusdMint,
+      pubkey: accounts.collateralMint,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.collateralVault,
       isWritable: true,
       isSigner: false,
     },
@@ -123,7 +131,7 @@ export function createPayImpermanentLossDebtInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.payerOnusdTokenAccount,
+      pubkey: accounts.payerCollateralTokenAccount,
       isWritable: true,
       isSigner: false,
     },

@@ -10,51 +10,51 @@ import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
- * @category InitializeTokenData
+ * @category InitializePools
  * @category generated
  */
-export const initializeTokenDataStruct = new beet.BeetArgsStruct<{
+export const initializePoolsStruct = new beet.BeetArgsStruct<{
   instructionDiscriminator: number[] /* size: 8 */
 }>(
   [['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)]],
-  'InitializeTokenDataInstructionArgs'
+  'InitializePoolsInstructionArgs'
 )
 /**
- * Accounts required by the _initializeTokenData_ instruction
+ * Accounts required by the _initializePools_ instruction
  *
  * @property [_writable_, **signer**] admin
  * @property [] clone
- * @property [_writable_] tokenData
+ * @property [_writable_] pools
  * @category Instructions
- * @category InitializeTokenData
+ * @category InitializePools
  * @category generated
  */
-export type InitializeTokenDataInstructionAccounts = {
+export type InitializePoolsInstructionAccounts = {
   admin: web3.PublicKey
   clone: web3.PublicKey
-  tokenData: web3.PublicKey
+  pools: web3.PublicKey
   systemProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const initializeTokenDataInstructionDiscriminator = [
-  72, 104, 255, 15, 146, 31, 188, 177,
+export const initializePoolsInstructionDiscriminator = [
+  48, 75, 127, 251, 17, 111, 153, 216,
 ]
 
 /**
- * Creates a _InitializeTokenData_ instruction.
+ * Creates a _InitializePools_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @category Instructions
- * @category InitializeTokenData
+ * @category InitializePools
  * @category generated
  */
-export function createInitializeTokenDataInstruction(
-  accounts: InitializeTokenDataInstructionAccounts,
+export function createInitializePoolsInstruction(
+  accounts: InitializePoolsInstructionAccounts,
   programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
 ) {
-  const [data] = initializeTokenDataStruct.serialize({
-    instructionDiscriminator: initializeTokenDataInstructionDiscriminator,
+  const [data] = initializePoolsStruct.serialize({
+    instructionDiscriminator: initializePoolsInstructionDiscriminator,
   })
   const keys: web3.AccountMeta[] = [
     {
@@ -68,7 +68,7 @@ export function createInitializeTokenDataInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.tokenData,
+      pubkey: accounts.pools,
       isWritable: true,
       isSigner: false,
     },

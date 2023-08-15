@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::math::*;
 use crate::states::*;
-use crate::{CLONE_PROGRAM_SEED, TOKEN_DATA_SEED, USER_SEED};
+use crate::{CLONE_PROGRAM_SEED, POOLS_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use rust_decimal::prelude::*;
@@ -15,9 +15,9 @@ pub struct CollectLpRewards<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
         bump,
-        constraint = user_account.load()?.comet.num_positions > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
+        constraint = user_account.comet.positions.len() > comet_position_index.into() @ CloneError::InvalidInputPositionIndex
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
@@ -25,27 +25,26 @@ pub struct CollectLpRewards<'info> {
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
-        seeds = [TOKEN_DATA_SEED.as_ref()],
+        seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = token_data.load()?.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
+        constraint = pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].status != Status::Frozen @ CloneError::StatusPreventsAction
     )]
-    pub token_data: AccountLoader<'info, TokenData>,
+    pub pools: Box<Account<'info, Pools>>,
+    #[account(
+        address = clone.collateral.vault
+    )]
+    pub collateral_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        address = clone.onusd_mint
-    )]
-    pub onusd_mint: Box<Account<'info, Mint>>,
-    #[account(
-        mut,
-        address = token_data.load()?.pools[user_account.load()?.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
+        address = pools.pools[user_account.comet.positions[comet_position_index as usize].pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
         associated_token::authority = user,
-        associated_token::mint = onusd_mint,
+        associated_token::mint = clone.collateral.mint,
     )]
-    pub user_onusd_token_account: Box<Account<'info, TokenAccount>>,
+    pub user_collateral_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::authority = user,
@@ -60,46 +59,44 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
         CLONE_PROGRAM_SEED.as_ref(),
         bytemuck::bytes_of(&ctx.accounts.clone.bump),
     ][..]];
-    let token_data = ctx.accounts.token_data.load()?;
-    let comet = &mut ctx.accounts.user_account.load_mut()?.comet;
+    let pools = &ctx.accounts.pools;
+    let comet = &mut ctx.accounts.user_account.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
 
-    let ild_share = calculate_ild_share(&comet_position, &token_data);
+    let ild_share = calculate_ild_share(&comet_position, pools, &ctx.accounts.clone.collateral);
 
-    if ild_share.onusd_ild_share < Decimal::ZERO {
-        let onusd_reward = ild_share.onusd_ild_share.abs();
+    if ild_share.collateral_ild_share < Decimal::ZERO {
+        let collateral_reward = ild_share.collateral_ild_share.abs().mantissa() as i64;
 
         // Update rebate amount such that the ild_share is now zero.
-        comet.positions[comet_position_index as usize].onusd_ild_rebate -=
-            onusd_reward.mantissa() as i64;
+        comet.positions[comet_position_index as usize].collateral_ild_rebate -= collateral_reward;
 
         // Mint reward amount to user
-        let cpi_accounts = MintTo {
-            mint: ctx.accounts.onusd_mint.to_account_info().clone(),
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.collateral_vault.to_account_info().clone(),
             to: ctx
                 .accounts
-                .user_onusd_token_account
+                .user_collateral_token_account
                 .to_account_info()
                 .clone(),
             authority: ctx.accounts.clone.to_account_info().clone(),
         };
-        token::mint_to(
+        token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
                 cpi_accounts,
                 seeds,
             ),
-            onusd_reward.mantissa().try_into().unwrap(),
+            collateral_reward.try_into().unwrap(),
         )?;
     }
 
     if ild_share.onasset_ild_share < Decimal::ZERO {
-        let onasset_reward = ild_share.onasset_ild_share.abs();
+        let onasset_reward = ild_share.onasset_ild_share.abs().mantissa() as i64;
 
         // Update rebate amount such that the ild_share is now zero.
-        comet.positions[comet_position_index as usize].onasset_ild_rebate -=
-            onasset_reward.mantissa() as i64;
+        comet.positions[comet_position_index as usize].onasset_ild_rebate -= onasset_reward;
 
         // Mint reward amount to user
         let cpi_accounts = MintTo {
@@ -117,7 +114,7 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
                 cpi_accounts,
                 seeds,
             ),
-            onasset_reward.mantissa().try_into().unwrap(),
+            onasset_reward.try_into().unwrap(),
         )?;
     }
 

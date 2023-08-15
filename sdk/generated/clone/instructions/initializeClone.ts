@@ -16,9 +16,12 @@ import * as beetSolana from '@metaplex-foundation/beet-solana'
  * @category generated
  */
 export type InitializeCloneInstructionArgs = {
-  cometLiquidatorFeeBps: number
+  cometCollateralIldLiquidatorFeeBps: number
+  cometOnassetIldLiquidatorFeeBps: number
   borrowLiquidatorFeeBps: number
   treasuryAddress: web3.PublicKey
+  collateralOracleIndex: number
+  collateralizationRatio: number
 }
 /**
  * @category Instructions
@@ -32,9 +35,12 @@ export const initializeCloneStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['cometLiquidatorFeeBps', beet.u16],
+    ['cometCollateralIldLiquidatorFeeBps', beet.u16],
+    ['cometOnassetIldLiquidatorFeeBps', beet.u16],
     ['borrowLiquidatorFeeBps', beet.u16],
     ['treasuryAddress', beetSolana.publicKey],
+    ['collateralOracleIndex', beet.u8],
+    ['collateralizationRatio', beet.u8],
   ],
   'InitializeCloneInstructionArgs'
 )
@@ -43,8 +49,8 @@ export const initializeCloneStruct = new beet.BeetArgsStruct<
  *
  * @property [_writable_, **signer**] admin
  * @property [_writable_] clone
- * @property [] onusdMint
- * @property [] usdcMint
+ * @property [] collateralMint
+ * @property [] collateralVault
  * @category Instructions
  * @category InitializeClone
  * @category generated
@@ -52,8 +58,8 @@ export const initializeCloneStruct = new beet.BeetArgsStruct<
 export type InitializeCloneInstructionAccounts = {
   admin: web3.PublicKey
   clone: web3.PublicKey
-  onusdMint: web3.PublicKey
-  usdcMint: web3.PublicKey
+  collateralMint: web3.PublicKey
+  collateralVault: web3.PublicKey
   rent?: web3.PublicKey
   tokenProgram?: web3.PublicKey
   systemProgram?: web3.PublicKey
@@ -95,12 +101,12 @@ export function createInitializeCloneInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.onusdMint,
+      pubkey: accounts.collateralMint,
       isWritable: false,
       isSigner: false,
     },
     {
-      pubkey: accounts.usdcMint,
+      pubkey: accounts.collateralVault,
       isWritable: false,
       isSigner: false,
     },

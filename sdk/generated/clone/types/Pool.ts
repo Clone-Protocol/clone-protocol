@@ -9,15 +9,16 @@ import * as web3 from '@solana/web3.js'
 import * as beet from '@metaplex-foundation/beet'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
 import { AssetInfo, assetInfoBeet } from './AssetInfo'
+import { Status, statusBeet } from './Status'
 export type Pool = {
   underlyingAssetTokenAccount: web3.PublicKey
-  committedOnusdLiquidity: beet.bignum
-  onusdIld: beet.bignum
+  committedCollateralLiquidity: beet.bignum
+  collateralIld: beet.bignum
   onassetIld: beet.bignum
-  treasuryTradingFeeBps: beet.bignum
-  liquidityTradingFeeBps: beet.bignum
+  treasuryTradingFeeBps: number
+  liquidityTradingFeeBps: number
   assetInfo: AssetInfo
-  status: beet.bignum
+  status: Status
 }
 
 /**
@@ -27,13 +28,13 @@ export type Pool = {
 export const poolBeet = new beet.BeetArgsStruct<Pool>(
   [
     ['underlyingAssetTokenAccount', beetSolana.publicKey],
-    ['committedOnusdLiquidity', beet.u64],
-    ['onusdIld', beet.i64],
+    ['committedCollateralLiquidity', beet.u64],
+    ['collateralIld', beet.i64],
     ['onassetIld', beet.i64],
-    ['treasuryTradingFeeBps', beet.u64],
-    ['liquidityTradingFeeBps', beet.u64],
+    ['treasuryTradingFeeBps', beet.u16],
+    ['liquidityTradingFeeBps', beet.u16],
     ['assetInfo', assetInfoBeet],
-    ['status', beet.u64],
+    ['status', statusBeet],
   ],
   'Pool'
 )

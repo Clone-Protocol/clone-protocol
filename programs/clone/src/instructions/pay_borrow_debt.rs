@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::events::*;
 use crate::states::*;
-use crate::{return_error_if_false, CLONE_PROGRAM_SEED, TOKEN_DATA_SEED, USER_SEED};
+use crate::{return_error_if_false, CLONE_PROGRAM_SEED, POOLS_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use std::convert::TryInto;
@@ -14,9 +14,9 @@ pub struct PayBorrowDebt<'info> {
         mut,
         seeds = [USER_SEED.as_ref(), user.as_ref()],
         bump,
-        constraint = (borrow_index as u64) < user_account.load()?.borrows.num_positions @ CloneError::InvalidInputPositionIndex,
+        constraint = (borrow_index as usize) < user_account.borrows.len() @ CloneError::InvalidInputPositionIndex,
     )]
-    pub user_account: AccountLoader<'info, User>,
+    pub user_account: Box<Account<'info, User>>,
     #[account(
         mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
@@ -24,11 +24,11 @@ pub struct PayBorrowDebt<'info> {
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
-        seeds = [TOKEN_DATA_SEED.as_ref()],
+        seeds = [POOLS_SEED.as_ref()],
         bump,
-        constraint = token_data.load()?.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].status != Status::Frozen as u64 @ CloneError::StatusPreventsAction
+        constraint = pools.pools[user_account.borrows[borrow_index as usize].pool_index as usize].status != Status::Frozen @ CloneError::StatusPreventsAction
     )]
-    pub token_data: AccountLoader<'info, TokenData>,
+    pub pools: Box<Account<'info, Pools>>,
     #[account(
         mut,
         constraint = payer_onasset_token_account.amount >= amount @ CloneError::InvalidTokenAccountBalance,
@@ -38,7 +38,7 @@ pub struct PayBorrowDebt<'info> {
     pub payer_onasset_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
-        address = token_data.load()?.pools[user_account.load()?.borrows.positions[borrow_index as usize].pool_index as usize].asset_info.onasset_mint,
+        address = pools.pools[user_account.borrows[borrow_index as usize].pool_index as usize].asset_info.onasset_mint,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     pub token_program: Program<'info, Token>,
@@ -51,8 +51,8 @@ pub fn execute(
     amount: u64,
 ) -> Result<()> {
     return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
-    let borrows = &mut ctx.accounts.user_account.load_mut()?.borrows;
-    let borrow_position = borrows.positions[borrow_index as usize];
+    let borrows = &mut ctx.accounts.user_account.borrows;
+    let borrow_position = borrows[borrow_index as usize];
     let amount_value = amount.min(borrow_position.borrowed_onasset);
 
     // burn user onasset to pay back mint position
@@ -69,23 +69,19 @@ pub fn execute(
     token::burn(CpiContext::new(cpi_program, cpi_accounts), amount_value)?;
 
     // update total amount of borrowed onasset
-    borrows.positions[borrow_index as usize].borrowed_onasset -= amount_value;
+    borrows[borrow_index as usize].borrowed_onasset -= amount_value;
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: user,
-        pool_index: borrows.positions[borrow_index as usize]
+        pool_index: borrows[borrow_index as usize]
             .pool_index
             .try_into()
             .unwrap(),
         is_liquidation: false,
-        collateral_supplied: borrows.positions[borrow_index as usize].collateral_amount,
+        collateral_supplied: borrows[borrow_index as usize].collateral_amount,
         collateral_delta: 0,
-        collateral_index: borrows.positions[borrow_index as usize]
-            .collateral_index
-            .try_into()
-            .unwrap(),
-        borrowed_amount: borrows.positions[borrow_index as usize].borrowed_onasset,
+        borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
         borrowed_delta: -(amount_value as i64)
     });
     ctx.accounts.clone.event_counter += 1;

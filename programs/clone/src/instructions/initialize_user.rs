@@ -1,7 +1,5 @@
-////use crate::instructions::InitializeUser;
 use crate::states::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token::Token;
 
 pub const USER_SEED: &str = "user";
 
@@ -12,14 +10,12 @@ pub struct InitializeUser<'info> {
     pub payer: Signer<'info>,
     #[account(
         init,
-        space = 8 + 3096,
+        space = 10240,
         seeds = [USER_SEED.as_ref(), authority.as_ref()],
         bump,
-        payer = payer
+        payer = payer,
     )]
-    pub user_account: AccountLoader<'info, User>,
-    pub rent: Sysvar<'info, Rent>,
-    pub token_program: Program<'info, Token>,
+    pub user_account: Account<'info, User>,
     pub system_program: Program<'info, System>,
 }
 

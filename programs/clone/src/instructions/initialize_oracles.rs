@@ -2,10 +2,10 @@ use crate::states::*;
 use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
 
-pub const TOKEN_DATA_SEED: &str = "token-data";
+pub const ORACLES_SEED: &str = "oracles";
 
 #[derive(Accounts)]
-pub struct InitializeTokenData<'info> {
+pub struct InitializeOracles<'info> {
     #[account(mut, address = clone.admin)]
     pub admin: Signer<'info>,
     #[account(
@@ -17,14 +17,14 @@ pub struct InitializeTokenData<'info> {
     #[account(
         init,
         space = 10240,
-        seeds = [TOKEN_DATA_SEED.as_ref()],
+        seeds = [ORACLES_SEED.as_ref()],
         bump,
         payer = admin,
     )]
-    pub token_data: AccountLoader<'info, TokenData>,
+    pub oracles: Account<'info, Oracles>,
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(_ctx: Context<InitializeTokenData>) -> Result<()> {
+pub fn execute(_ctx: Context<InitializeOracles>) -> Result<()> {
     Ok(())
 }
