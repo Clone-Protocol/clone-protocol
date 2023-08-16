@@ -314,7 +314,7 @@ describe("tests", async () => {
     assert(foundAddress === undefined, "Auth not removed");
   });
 
-  it("initialize feeds + create mock assets + add oracles", async () => {
+  it("initialize mock feeds and oracles", async () => {
     const usdcPriceFeed = await createPriceFeed(
       provider,
       pythProgramId,
@@ -360,6 +360,32 @@ describe("tests", async () => {
     assert.equal(oracle2Price, 10);
   });
 
+
+  it("add and check pyth oracle", async () => {
+    let pythFeedAddress = new PublicKey(
+      "H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG"
+    );
+    await cloneClient.updateOracles({
+      params: {
+        __kind: "Add",
+        source: OracleSource.PYTH,
+        address: pythFeedAddress,
+      },
+    });
+    let oracles = await cloneClient.getOracles();
+    assert.equal(oracles.oracles.length, 3);
+    // Update prices
+    await provider.sendAndConfirm(
+      new Transaction().add(cloneClient.updatePricesInstruction(oracles))
+    );
+    oracles = await cloneClient.getOracles();
+
+    let pythOracle = oracles.oracles[2];
+    let price = fromScale(pythOracle.price, pythOracle.expo);
+
+    assert.isTrue(price !== 0, "switchboard price is not updated");
+  });
+
   it("add and check switchboard oracle", async () => {
     let switchboardFeedAddress = new PublicKey(
       "GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR"
@@ -372,14 +398,14 @@ describe("tests", async () => {
       },
     });
     let oracles = await cloneClient.getOracles();
-    assert.equal(oracles.oracles.length, 3);
+    assert.equal(oracles.oracles.length, 4);
     // Update prices
     await provider.sendAndConfirm(
       new Transaction().add(cloneClient.updatePricesInstruction(oracles))
     );
     oracles = await cloneClient.getOracles();
 
-    let switchboardOracle = oracles.oracles[2];
+    let switchboardOracle = oracles.oracles[3];
     let price = fromScale(switchboardOracle.price, switchboardOracle.expo);
 
     assert.isTrue(price !== 0, "switchboard price is not updated");
