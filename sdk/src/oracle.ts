@@ -6,21 +6,22 @@ import {
   createSetPriceInstruction,
 } from "../generated/pyth";
 import { PublicKey, Transaction } from "@solana/web3.js";
+import { toScale } from "./clone";
 
 export const createPriceFeed = async (
   provider: anchor.AnchorProvider,
   programId: PublicKey,
   price: number,
   expo: number,
-  conf: BN
-): Promise<PublicKey> => {
-  const priceFeed = anchor.web3.Keypair.generate();
+  priceFeed?: anchor.web3.Keypair
+): Promise<anchor.web3.PublicKey> => {
+  const kp = priceFeed ?? anchor.web3.Keypair.generate();
 
   let space = 3312;
   let tx = new Transaction().add(
     anchor.web3.SystemProgram.createAccount({
       fromPubkey: provider.publicKey!,
-      newAccountPubkey: priceFeed.publicKey,
+      newAccountPubkey: kp.publicKey,
       space,
       lamports: await provider.connection.getMinimumBalanceForRentExemption(
         space
@@ -29,39 +30,36 @@ export const createPriceFeed = async (
     }),
     createInitializeInstruction(
       {
-        price: priceFeed.publicKey,
+        priceAccount: kp.publicKey,
       },
       {
-        price: new BN(price * 10 ** -expo),
+        price: toScale(price, -expo),
         expo,
-        conf,
-      }
+      },
+      programId
     )
   );
 
-  await provider.sendAndConfirm(tx, [priceFeed]);
+  await provider.sendAndConfirm(tx, [kp]);
 
-  return priceFeed.publicKey;
+  return kp.publicKey;
 };
 
 export const setPrice = async (
-  //pythProgram: any,
   provider: anchor.AnchorProvider,
   price: number,
   priceFeed: anchor.web3.PublicKey
 ) => {
-  const priceFeedInfo = await provider.connection.getAccountInfo(priceFeed);
-  if (priceFeedInfo === null) {
-    throw new Error("Price feed info null!");
-  }
-  const data = parsePriceData(priceFeedInfo.data);
+  const data = await getFeedData(provider, priceFeed);
+  const priceUpdate = toScale(price, -data.exponent);
+
   let tx = new Transaction().add(
     createSetPriceInstruction(
       {
-        price: priceFeed,
+        priceAccount: priceFeed,
       },
       {
-        price: new BN(price * 10 ** -data.exponent),
+        price: priceUpdate,
       }
     )
   );

@@ -79,6 +79,8 @@ describe("tests", async () => {
   const treasuryAddress = anchor.web3.Keypair.generate();
   const clnTokenMint = anchor.web3.Keypair.generate();
   const mockAssetMint = anchor.web3.Keypair.generate();
+  const usdcPriceKp = anchor.web3.Keypair.generate();
+  const pool0PriceKp = anchor.web3.Keypair.generate();
   let treasuryCollateralTokenAccount;
   let treasuryOnassetTokenAccount;
 
@@ -275,35 +277,39 @@ describe("tests", async () => {
   });
 
   it("add auth test", async () => {
-    const address = anchor.web3.Keypair.generate().publicKey
-    await cloneClient.updateCloneParameters({ params :{
+    const address = anchor.web3.Keypair.generate().publicKey;
+    await cloneClient.updateCloneParameters({
+      params: {
         __kind: "AddAuth",
-        address
-    }})
+        address,
+      },
+    });
 
-    let clone = await CloneAccount.fromAccountAddress(provider.connection, cloneAccountAddress)
+    let clone = await CloneAccount.fromAccountAddress(
+      provider.connection,
+      cloneAccountAddress
+    );
     let foundAddress = clone.auth.find((v) => {
-      return v.equals(address)
-    })
-    assert(
-      foundAddress !== undefined,
-      "Auth not added"
-    )
+      return v.equals(address);
+    });
+    assert(foundAddress !== undefined, "Auth not added");
 
-    await cloneClient.updateCloneParameters({ params :{
-      __kind: "RemoveAuth",
-      address
-    }})
+    await cloneClient.updateCloneParameters({
+      params: {
+        __kind: "RemoveAuth",
+        address,
+      },
+    });
 
-    clone = await CloneAccount.fromAccountAddress(provider.connection, cloneAccountAddress)
+    clone = await CloneAccount.fromAccountAddress(
+      provider.connection,
+      cloneAccountAddress
+    );
     foundAddress = clone.auth.find((v) => {
-      return v.equals(address)
-    })
-    assert(
-      foundAddress === undefined,
-      "Auth not removed"
-    )
-  })
+      return v.equals(address);
+    });
+    assert(foundAddress === undefined, "Auth not removed");
+  });
 
   it("initialize feeds + create mock assets + add oracles", async () => {
     const usdcPriceFeed = await createPriceFeed(
@@ -311,14 +317,14 @@ describe("tests", async () => {
       pythProgramId,
       1,
       -7,
-      new BN(0.05 * Math.pow(10, -7))
+      usdcPriceKp
     );
     const pool0PriceFeed = await createPriceFeed(
       provider,
       pythProgramId,
       10,
       -8,
-      new BN(0.5 * Math.pow(10, -8))
+      pool0PriceKp
     );
     await cloneClient.updateOracles({
       params: {
@@ -334,9 +340,21 @@ describe("tests", async () => {
         address: pool0PriceFeed,
       },
     });
-
     let oracles = await cloneClient.getOracles();
+
+    await provider.sendAndConfirm(
+      new Transaction().add(cloneClient.updatePricesInstruction(oracles))
+    );
+    oracles = await cloneClient.getOracles();
     assert.equal(oracles.oracles.length, 2);
+
+    let oracle1 = oracles.oracles[0];
+    let oracle1Price = fromScale(oracle1.price, oracle1.expo);
+    assert.equal(oracle1Price, 1);
+
+    let oracle2 = oracles.oracles[1];
+    let oracle2Price = fromScale(oracle2.price, oracle2.expo);
+    assert.equal(oracle2Price, 10);
   });
 
   it("add and check switchboard oracle", async () => {
@@ -669,7 +687,7 @@ describe("tests", async () => {
       (fromScale(pool.assetInfo.minOvercollateralRatio, 2) *
         fromCloneScale(position.borrowedOnasset));
 
-    await setPrice(provider, priceThreshold * 1.1, oracle.address);
+    await setPrice(provider, priceThreshold * 1.1, pool0PriceKp.publicKey);
 
     let initialOvercollateralRatio =
       collateralAmount /
@@ -1906,5 +1924,4 @@ describe("tests", async () => {
       },
     });
   });
-
 });

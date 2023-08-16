@@ -16,7 +16,6 @@ import * as web3 from '@solana/web3.js'
 export type InitializeInstructionArgs = {
   price: beet.bignum
   expo: number
-  conf: beet.bignum
 }
 /**
  * @category Instructions
@@ -32,20 +31,19 @@ export const initializeStruct = new beet.BeetArgsStruct<
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['price', beet.i64],
     ['expo', beet.i32],
-    ['conf', beet.u64],
   ],
   'InitializeInstructionArgs'
 )
 /**
  * Accounts required by the _initialize_ instruction
  *
- * @property [_writable_] price
+ * @property [_writable_] priceAccount
  * @category Instructions
  * @category Initialize
  * @category generated
  */
 export type InitializeInstructionAccounts = {
-  price: web3.PublicKey
+  priceAccount: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
@@ -74,7 +72,7 @@ export function createInitializeInstruction(
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.price,
+      pubkey: accounts.priceAccount,
       isWritable: true,
       isSigner: false,
     },

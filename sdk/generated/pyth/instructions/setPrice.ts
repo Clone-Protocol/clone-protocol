@@ -35,13 +35,13 @@ export const setPriceStruct = new beet.BeetArgsStruct<
 /**
  * Accounts required by the _setPrice_ instruction
  *
- * @property [_writable_] price
+ * @property [_writable_] priceAccount
  * @category Instructions
  * @category SetPrice
  * @category generated
  */
 export type SetPriceInstructionAccounts = {
-  price: web3.PublicKey
+  priceAccount: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
@@ -70,7 +70,7 @@ export function createSetPriceInstruction(
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.price,
+      pubkey: accounts.priceAccount,
       isWritable: true,
       isSigner: false,
     },
