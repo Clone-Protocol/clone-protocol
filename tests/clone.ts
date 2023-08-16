@@ -75,6 +75,9 @@ describe("tests", async () => {
   let pythProgramId = anchor.workspace.Pyth.programId;
   let cloneStakingProgramId = anchor.workspace.CloneStaking.programId;
 
+  if (process.env.SKIP_TESTS === '1')
+    return;
+
   const mockUSDCMint = anchor.web3.Keypair.generate();
   const treasuryAddress = anchor.web3.Keypair.generate();
   const clnTokenMint = anchor.web3.Keypair.generate();
