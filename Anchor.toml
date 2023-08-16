@@ -32,3 +32,61 @@ address = "CyZuD7RPDcrqCGbNvLCyqk6Py9cEZTKmNKujfPi3ynDd"
 
 [[test.validator.clone]] # sbv2 SOL/USD Feed
 address = "GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR"
+
+[[test.validator.clone]] # pyth programID
+address = "FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH"
+
+[[test.validator.clone]] # pyth USDC/USD Feed
+address = "Gnt27xtC473ZT2Mw5u8wZ68Z3gULkSTb5DuxJy7eJotD"
+[[test.validator.clone]] # pyth USDC/USD product info
+address = "8GWTTbNiXdmyZREXbjsZBmCRuzdPrW55dnZGDkTRjWvb"
+
+[[test.validator.clone]] # pyth EUR/USD Feed
+address = "CQzPyC5xVhkuBfWFJiPCvPEnBshmRium4xxUxnX1ober"
+[[test.validator.clone]] # pyth EUR/USD product info
+address = "8ymGyiCjLT8XwPzR2DZRBaacPiiWz21dwz6tYoZDGfCM"
+
+[[test.validator.clone]] # pyth XAU/USD Feed
+address = "8y3WWjvmSmVGWVKH1rCA7VTRmuU7QbJ9axafSsBX5FcD"
+[[test.validator.clone]] # pyth XAU/USD product info
+address = "9HaWvL7bACK8giZEvAbsaMXDo9Dudu18Ph921NKGuU7i"
+
+[[test.validator.clone]] # pyth SOL/USD Feed
+address = "H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG"
+[[test.validator.clone]] # pyth SOL/USD product info
+address = "ALP8SdU9oARYVLgLR7LrqMNCYBnhtnQz1cj6bwgwQmgj"
+
+[[test.validator.clone]] # pyth ETH/USD Feed
+address = "JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB"
+[[test.validator.clone]] # pyth ETH/USD product info
+address = "EMkxjGC1CQ7JLiutDbfYb7UKb3zm9SJcUmr1YicBsdpZ"
+
+[[test.validator.clone]] # pyth BTC/USD Feed
+address = "GVXRSBjFk6e6J3NbVPXohDJetcTjaeeuykUpbQF8UoMU"
+[[test.validator.clone]] # pyth BTC/USD product info
+address = "4aDoSXJ5o3AuvL7QFeR6h44jALQfTmUUCTVGDD6aoJTM"
+
+[[test.validator.clone]] # pyth ATOM/USD Feed
+address = "CrCpTerNqtZvqLcKqz1k13oVeXV9WkMD2zA9hBKXrsbN"
+[[test.validator.clone]] # pyth ATOM/USD product info
+address = "Hw2hErrSFYYZ2ycBpjoYYRMLkLaSnCrXCKZSQ4po2PNq"
+
+[[test.validator.clone]] # pyth AVAX/USD Feed
+address = "Ax9ujW5B9oqcv59N8m6f1BpTBq2rGeGaBcpKjC5UYsXU"
+[[test.validator.clone]] # pyth AVAX/USD product info
+address = "EtZQCg1z17J4Xz2zzLGRiRVArF9M5YVxezUPnWXqNou8"
+
+[[test.validator.clone]] # pyth SUI/USD Feed
+address = "3Qub3HaAJaa2xNY7SUqPKd3vVwTqDfDDkEUMPjXD2c1q"
+[[test.validator.clone]] # pyth SUI/USD product info
+address = "2F8rfBf4z4SzNpeQstFTpLXTQQ7RNKsLFqPdbpybooCc"
+
+[[test.validator.clone]] # pyth APT/USD Feed
+address = "FNNvb1AFDnDVPkocEri8mWbJ1952HQZtFLuwPiUjSJQ"
+[[test.validator.clone]] # pyth APT/USD product info
+address = "6bQMDtuAmRgjvymdWk9w4tTc9YyuXcjMxF8MyPHXejsx"
+
+[[test.validator.clone]] # pyth ADA/USD Feed
+address = "3pyn4svBbxJ9Wnn3RVeafyLWfzie6yC5eTig2S62v9SC"
+[[test.validator.clone]] # pyth ADA/USD product info
+address = "6TZHVFzEmF1rCLAJv3gkTFk9QGniqsrSJmNnVm7mMRPK"
