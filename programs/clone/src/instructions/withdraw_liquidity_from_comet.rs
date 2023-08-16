@@ -102,7 +102,10 @@ pub fn withdraw_liquidity(
     let pool = &pools.pools[pool_index as usize];
     let oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
-    let pool_price = oracle.get_price() / collateral_oracle.get_price();
+    let pool_price = rescale_toward_zero(
+        oracle.get_price() / collateral_oracle.get_price(),
+        CLONE_TOKEN_SCALE,
+    );
 
     emit!(PoolState {
         event_id: event_counter,

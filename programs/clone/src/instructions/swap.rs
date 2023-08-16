@@ -1,3 +1,4 @@
+use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
 use crate::error::*;
 use crate::events::*;
 use crate::math::*;
@@ -332,7 +333,10 @@ pub fn execute(
     });
 
     let pool = &pools.pools[pool_index as usize];
-    let pool_price = pool_oracle.get_price() / collateral_oracle.get_price();
+    let pool_price = rescale_toward_zero(
+        pool_oracle.get_price() / collateral_oracle.get_price(),
+        CLONE_TOKEN_SCALE,
+    );
 
     emit!(PoolState {
         event_id: ctx.accounts.clone.event_counter,
