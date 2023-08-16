@@ -15,6 +15,7 @@ import {
   getAssociatedTokenAddress,
   createInitializeMintInstruction,
   getMinimumBalanceForRentExemptMint,
+  getAccount,
 } from "@solana/spl-token";
 import {
   Clone,
@@ -217,76 +218,81 @@ export class CloneClient {
       this.cloneAddress,
       true
     );
-    const underlyingAssetTokenAccount = await getAssociatedTokenAddress(
+    const underlyingAssetTokenAddress = await getAssociatedTokenAddress(
       underlyingAssetMint,
       this.cloneAddress,
       true
     );
 
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(
-        // create onasset mint account
-        SystemProgram.createAccount({
-          fromPubkey: this.provider.publicKey!,
-          newAccountPubkey: onassetMint.publicKey,
-          space: MINT_SIZE,
-          lamports: await getMinimumBalanceForRentExemptMint(
-            this.provider.connection
-          ),
-          programId: TOKEN_PROGRAM_ID,
-        }),
-        // init clone mint account
-        createInitializeMintInstruction(
-          onassetMint.publicKey,
-          CLONE_TOKEN_SCALE,
-          this.cloneAddress,
-          null
+    let txn = new Transaction();
+    txn.add(
+      // create onasset mint account
+      SystemProgram.createAccount({
+        fromPubkey: this.provider.publicKey!,
+        newAccountPubkey: onassetMint.publicKey,
+        space: MINT_SIZE,
+        lamports: await getMinimumBalanceForRentExemptMint(
+          this.provider.connection
         ),
+        programId: TOKEN_PROGRAM_ID,
+      }),
+      // init clone mint account
+      createInitializeMintInstruction(
+        onassetMint.publicKey,
+        CLONE_TOKEN_SCALE,
+        this.cloneAddress,
+        null
+      ),
+      createAssociatedTokenAccountInstruction(
+        this.provider.publicKey!,
+        onassetTokenAccount,
+        this.cloneAddress,
+        onassetMint.publicKey
+      )
+    );
+
+    try {
+      const _underlyingAssetTokenAccount = await getAccount(
+        this.provider.connection,
+        underlyingAssetTokenAddress
+      );
+    } catch {
+      txn.add(
         createAssociatedTokenAccountInstruction(
           this.provider.publicKey!,
-          onassetTokenAccount,
-          this.cloneAddress,
-          onassetMint.publicKey
-        ),
-        createAssociatedTokenAccountInstruction(
-          this.provider.publicKey!,
-          underlyingAssetTokenAccount,
+          underlyingAssetTokenAddress,
           this.cloneAddress,
           underlyingAssetMint
         )
-      ),
-      [onassetMint],
-      this.opts
+      );
+    }
+
+    txn.add(
+      createAddPoolInstruction(
+        {
+          admin: this.provider.publicKey!,
+          clone: this.cloneAddress,
+          pools: this.poolsAddress,
+          onassetMint: onassetMint.publicKey,
+          onassetTokenAccount,
+          underlyingAssetMint,
+          underlyingAssetTokenAccount: underlyingAssetTokenAddress,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        },
+        {
+          minOvercollateralRatio,
+          maxLiquidationOvercollateralRatio,
+          liquidityTradingFeeBps,
+          treasuryTradingFeeBps,
+          ilHealthScoreCoefficient,
+          positionHealthScoreCoefficient,
+          oracleInfoIndex: oracleIndex,
+        },
+        this.programId
+      )
     );
 
-    await this.provider.sendAndConfirm!(
-      new Transaction().add(
-        createAddPoolInstruction(
-          {
-            admin: this.provider.publicKey!,
-            clone: this.cloneAddress,
-            pools: this.poolsAddress,
-            onassetMint: onassetMint.publicKey,
-            onassetTokenAccount,
-            underlyingAssetMint,
-            underlyingAssetTokenAccount,
-            systemProgram: SYSTEM_PROGRAM_ID,
-          },
-          {
-            minOvercollateralRatio,
-            maxLiquidationOvercollateralRatio,
-            liquidityTradingFeeBps,
-            treasuryTradingFeeBps,
-            ilHealthScoreCoefficient,
-            positionHealthScoreCoefficient,
-            oracleInfoIndex: oracleIndex,
-          },
-          this.programId
-        )
-      ),
-      [],
-      this.opts
-    );
+    await this.provider.sendAndConfirm!(txn, [onassetMint], this.opts);
   }
 
   public async updateOracles(params: UpdateOraclesInstructionArgs) {
