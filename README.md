@@ -1,8 +1,8 @@
 # Clone Protocol
 This repository contains the on-chain programs for the Clone Protocol:
 - `clone` the main program which contains all logic for minting, borrowing, trading and liquidity provisioning
+- `clone-staking` program that allows users to stake CLN tokens and receive discounted trading fees.
 - `pyth` a substitute program only used for testing, allows you to change oracle prices at will, used for scenario testing.
-- `jupiter-mock-agg` a mock program of the Jupiter Aggregator, used for local and dev environments.
 
 ## How to Run
 Clone is built using [Anchor](https://project-serum.github.io/anchor/getting-started/installation.html#install-rust) and requires its installation.
