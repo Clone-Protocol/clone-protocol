@@ -2,6 +2,7 @@
 clone = "F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v"
 pyth = "9inbbNkKUi2VwaSH7QiXcHteeHZiXWoTkgYSdX6RmtmW"
 clone_staking = "6yb6cqAvngy2do4qAFmM24Jda2FfyXcPuQxu4P3Va2F4"
+mock_asset_faucet = "7EtBBf3vKfP2m8mc6TwvQEKpBqfJgbH9VNhZ7kHeFTMP"
 
 [registry]
 url = "https://anchor.projectserum.com"

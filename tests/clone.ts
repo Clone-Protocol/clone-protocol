@@ -37,6 +37,10 @@ import {
   Status,
 } from "../sdk/generated/clone";
 import * as CloneStaking from "../sdk/generated/clone-staking";
+import {
+  createInitializeInstruction,
+  createMintAssetInstruction
+} from "../sdk/generated/mock-asset-faucet"
 
 const COLLATERAL_SCALE = 7;
 
@@ -74,6 +78,7 @@ describe("tests", async () => {
   let cloneProgramId = anchor.workspace.Clone.programId;
   let pythProgramId = anchor.workspace.Pyth.programId;
   let cloneStakingProgramId = anchor.workspace.CloneStaking.programId;
+  let mockAssetFaucetProgramId = anchor.workspace.MockAssetFaucet.programId;
 
   if (process.env.SKIP_TESTS === '1')
     return;
@@ -223,32 +228,52 @@ describe("tests", async () => {
     );
   });
 
-  it("mock usdc initialized + mock asset initialized!", async () => {
+  it("mock usdc initialized as faucet", async () => {
+    let usdcMintAmount = 2_500_000;
+
+    let [faucetAddress, _] = PublicKey.findProgramAddressSync(
+      [Buffer.from("faucet")],
+      mockAssetFaucetProgramId
+    );
+
     await createTokenMint(provider, {
       mint: mockUSDCMint,
       scale: COLLATERAL_SCALE,
+      authority: faucetAddress
     });
-    await createTokenMint(provider, { mint: mockAssetMint });
 
     let usdcAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
       provider,
       mockUSDCMint.publicKey
     );
+
+    let tx = new Transaction().add(
+      createInitializeInstruction({
+        payer: provider.publicKey!,
+        faucet: faucetAddress,
+        mint: mockUSDCMint.publicKey,
+      }),
+      createMintAssetInstruction({
+        minter: provider.publicKey!,
+        faucet: faucetAddress,
+        mint: mockUSDCMint.publicKey,
+        tokenAccount: usdcAssociatedTokenAccount.address
+      }, { amount: toScale(usdcMintAmount, COLLATERAL_SCALE)})
+    )
+
+    await provider.sendAndConfirm(tx)
+  })
+
+  it("mock asset initialized!", async () => {
+    await createTokenMint(provider, { mint: mockAssetMint });
+
     let assetAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
       provider,
       mockAssetMint.publicKey
     );
-    let usdcMintAmount = 2_500_000;
     let assetMintAmount = 400_000;
     await provider.sendAndConfirm(
       new Transaction().add(
-        createMintToCheckedInstruction(
-          mockUSDCMint.publicKey,
-          usdcAssociatedTokenAccount.address,
-          provider.publicKey!,
-          toScale(usdcMintAmount, COLLATERAL_SCALE).toNumber(),
-          COLLATERAL_SCALE
-        ),
         createMintToCheckedInstruction(
           mockAssetMint.publicKey,
           assetAssociatedTokenAccount.address,
@@ -383,7 +408,7 @@ describe("tests", async () => {
     let pythOracle = oracles.oracles[2];
     let price = fromScale(pythOracle.price, pythOracle.expo);
 
-    assert.isTrue(price !== 0, "switchboard price is not updated");
+    assert.isTrue(price !== 0, "pyth price is not updated");
   });
 
   it("add and check switchboard oracle", async () => {
