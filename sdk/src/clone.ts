@@ -440,14 +440,14 @@ export class CloneClient {
       oracleIndices = new Uint8Array(indices);
     } else {
       let temp: number[] = [];
-      for (const [index, oracle] of oracles.oracles.entries()) {
+      oracles.oracles.forEach((oracle, index) => {
         temp.push(index);
         anchorRemainingAccounts.push({
           pubkey: oracle.address,
           isWritable: false,
           isSigner: false,
         });
-      }
+      });
       oracleIndices = new Uint8Array(temp);
     }
 
