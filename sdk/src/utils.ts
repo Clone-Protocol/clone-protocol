@@ -58,17 +58,17 @@ export const calculateMantissa = (
   return Math.floor(x * Math.pow(10, scale));
 };
 
-// export const getPoolLiquidity = (pool: Pool, oraclePrice: number) => {
-//   const poolCollateral =
-//     Number(pool.committedOnusdLiquidity) - Number(pool.onusdIld);
-//   const poolOnasset =
-//     Number(pool.committedOnusdLiquidity) / oraclePrice -
-//     Number(pool.onassetIld);
-//   return {
-//     poolCollateral,
-//     poolOnasset,
-//   };
-// };
+export const getPoolLiquidity = (pool: Pool, oraclePrice: number) => {
+  const poolCollateral =
+    Number(pool.committedCollateralLiquidity) - Number(pool.collateralIld);
+  const poolOnasset =
+    Number(pool.committedCollateralLiquidity) / oraclePrice -
+    Number(pool.onassetIld);
+  return {
+    poolCollateral,
+    poolOnasset,
+  };
+};
 
 export const calculateOutputFromInputFromParams = (
   poolCollateral: number,

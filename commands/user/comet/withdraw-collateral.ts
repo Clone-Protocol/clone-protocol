@@ -17,18 +17,13 @@ interface CommandArguments extends Argv {
   amount: number;
 }
 
-exports.command = "withdraw-collateral <collateral-index> <amount>";
+exports.command = "withdraw-collateral <amount>";
 exports.desc = "Withdraws collateral from your borrow position";
 exports.builder = (yargs: CommandArguments) => {
-  yargs
-    .positional("collateral-index", {
-      describe: "The index of the collateral you are withdrawing",
-      type: "number",
-    })
-    .positional("amount", {
-      describe: "The amount of collateral to withdraw from the comet position",
-      type: "number",
-    });
+  yargs.positional("amount", {
+    describe: "The amount of collateral to withdraw from the comet position",
+    type: "number",
+  });
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
@@ -39,10 +34,7 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneProgramID,
       cloneAccountAddress
     );
-
-    const tokenData = await cloneClient.getTokenData();
-    const user = await cloneClient.getUserAccount();
-    const collateral = tokenData.collaterals[yargs.collateralIndex];
+    const collateral = cloneClient.clone.collateral;
 
     const collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       provider,
@@ -52,11 +44,8 @@ exports.handler = async function (yargs: CommandArguments) {
     const amount = new BN(`${toScale(yargs.amount, Number(collateral.scale))}`);
 
     let ix = cloneClient.withdrawCollateralFromCometInstruction(
-      tokenData,
-      user,
       collateralTokenAccountInfo.address,
-      amount,
-      yargs.collateralIndex
+      amount
     );
     await provider.sendAndConfirm(new Transaction().add(ix));
 

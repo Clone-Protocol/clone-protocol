@@ -1,9 +1,5 @@
 import { Transaction } from "@solana/web3.js";
 import {
-  ONUSD_COLLATERAL_INDEX,
-  USDC_COLLATERAL_INDEX,
-} from "../../../sdk/src/clone";
-import {
   successLog,
   errorLog,
   anchorSetup,
@@ -27,32 +23,23 @@ exports.handler = async function () {
       cloneAccountAddress
     );
 
-    const tokenData = await cloneClient.getTokenData();
+    const pools = await cloneClient.getPools();
+    const oracles = await cloneClient.getOracles();
+    const collateral = cloneClient.clone.collateral;
 
-    let ix = cloneClient.updatePricesInstruction(tokenData);
+    let ix = cloneClient.updatePricesInstruction(oracles);
     await provider.sendAndConfirm(new Transaction().add(ix));
 
     const user = await cloneClient.getUserAccount();
     const borrows = user.borrows;
 
-    for (let i = 0; i < Number(borrows.numPositions); i++) {
-      const borrowPosition = borrows.positions[i];
+    for (let i = 0; i < Number(borrows.length); i++) {
+      const borrowPosition = borrows[i];
+      const pool = pools.pools[Number(borrowPosition.poolIndex)];
 
-      const pool = tokenData.pools[Number(borrowPosition.poolIndex)];
-      const collateralIndex = Number(borrowPosition.collateralIndex);
-      const collateral = tokenData.collaterals[collateralIndex];
-
-      const hasOracle =
-        collateralIndex !== ONUSD_COLLATERAL_INDEX &&
-        collateralIndex !== USDC_COLLATERAL_INDEX;
-      let collateralPrice: number;
-      if (hasOracle) {
-        collateralPrice = Number(
-          tokenData.oracles[Number(collateral.oracleInfoIndex)].price
-        );
-      } else {
-        collateralPrice = 1;
-      }
+      const collateralPrice = Number(
+        oracles.oracles[Number(collateral.oracleInfoIndex)].price
+      );
 
       let minOvercollateralRatio = Number(
         pool.assetInfo.minOvercollateralRatio
@@ -62,7 +49,7 @@ exports.handler = async function () {
       );
 
       let onAssetPrice = Number(
-        tokenData.oracles[Number(pool.assetInfo.oracleInfoIndex)].price
+        oracles.oracles[Number(pool.assetInfo.oracleInfoIndex)].price
       );
 
       const title = `Borrow Position ${i}`;
@@ -104,7 +91,7 @@ exports.handler = async function () {
       console.log(boxen(assetInfo, assetBoxenOptions));
     }
 
-    successLog(`Viewing ${Number(borrows.numPositions)} Borrow Positions!`);
+    successLog(`Viewing ${Number(borrows.length)} Borrow Positions!`);
   } catch (error: any) {
     errorLog(`Failed to view borrow positions:\n${error.message}`);
   }

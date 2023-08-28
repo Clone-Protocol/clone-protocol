@@ -15,6 +15,7 @@ import {
 
 import chalk from "chalk";
 import boxen from "boxen";
+import { Collateral } from "../../../sdk/generated/clone/types/Collateral";
 
 exports.command = "comet";
 exports.desc = "View your comet position";
@@ -29,9 +30,11 @@ exports.handler = async function () {
       cloneAccountAddress
     );
 
-    const tokenData = await cloneClient.getTokenData();
+    const pools = await cloneClient.getPools();
+    const oracles = await cloneClient.getOracles();
+    const collateral = cloneClient.clone.collateral;
 
-    let ix = cloneClient.updatePricesInstruction(tokenData);
+    let ix = cloneClient.updatePricesInstruction(oracles);
     await provider.sendAndConfirm(new Transaction().add(ix));
 
     const user = await cloneClient.getUserAccount();
@@ -46,50 +49,31 @@ exports.handler = async function () {
       backgroundColor: "#CCCCCC",
     };
 
-    for (let i = 0; i < Number(comet.numCollaterals); i++) {
-      const collateralPosition = comet.collaterals[i];
+    const collateralPrice = Number(
+      oracles.oracles[Number(collateral.oracleInfoIndex)].price
+    );
 
-      const collateral =
-        tokenData.collaterals[Number(collateralPosition.collateralIndex)];
-      const hasOracle =
-        i !== ONUSD_COLLATERAL_INDEX && i !== USDC_COLLATERAL_INDEX;
+    let title = `Collateral Position`;
+    let underline = new Array(title.length).fill("-").join("");
 
-      let collateralPrice: number;
-      if (hasOracle) {
-        collateralPrice = Number(
-          tokenData.oracles[Number(collateral.oracleInfoIndex)].price
-        );
-      } else {
-        collateralPrice = 1;
-      }
+    let assetInfo =
+      `${chalk.bold(title)}\n` +
+      `${underline}\n` +
+      `Collateral Amount: ${chalk.bold(Number(comet.collateralAmount))}\n` +
+      `Collateral Oracle Price: ${chalk.bold(collateralPrice)}\n` +
+      `Position Value: $${chalk.bold(
+        Number(comet.collateralAmount) * collateralPrice
+      )}\n`;
 
-      const title = `Collateral Position ${i}`;
-      const underline = new Array(title.length).fill("-").join("");
+    console.log(boxen(assetInfo, assetBoxenOptions));
 
-      const assetInfo =
-        `${chalk.bold(title)}\n` +
-        `${underline}\n` +
-        `Collateral Index: ${chalk.bold(
-          collateralPosition.collateralIndex
-        )}\n` +
-        `Collateral Amount: ${chalk.bold(
-          Number(collateralPosition.collateralAmount)
-        )}\n` +
-        `Collateral Oracle Price: ${chalk.bold(collateralPrice)}\n` +
-        `Position Value: $${chalk.bold(
-          Number(collateralPosition.collateralAmount) * collateralPrice
-        )}\n`;
-
-      console.log(boxen(assetInfo, assetBoxenOptions));
-    }
-
-    for (let i = 0; i < Number(comet.numPositions); i++) {
+    for (let i = 0; i < Number(comet.positions.length); i++) {
       const position = comet.positions[i];
 
       const title = `Liquidity Position ${i}`;
       const underline = new Array(title.length).fill("-").join("");
 
-      const ild = getILD(tokenData, comet)[i];
+      const ild = getILD(collateral, pools, oracles, comet)[i];
 
       const assetInfo =
         `${chalk.bold(title)}\n` +
@@ -97,21 +81,26 @@ exports.handler = async function () {
         `onAsset Pool Index: ${chalk.bold(
           fromCloneScale(Number(position.poolIndex))
         )}\n` +
-        `onUSD Liquidity Committed: ${chalk.bold(
-          Number(position.committedOnusdLiquidity)
+        `Collateral Liquidity Committed: ${chalk.bold(
+          Number(position.committedCollateralLiquidity)
         )}\n` +
-        `onUSD Impermanent Loss Debt: ${chalk.bold(ild.onusdILD)}\n` +
+        `Collateral Impermanent Loss Debt: ${chalk.bold(ild.collateralILD)}\n` +
         `onAsset Impermanent Loss Debt: ${chalk.bold(ild.onAssetILD)}\n`;
 
       console.log(boxen(assetInfo, assetBoxenOptions));
     }
 
-    const healthScore = getHealthScore(tokenData, comet).healthScore;
+    const healthScore = getHealthScore(
+      oracles,
+      pools,
+      comet,
+      collateral
+    ).healthScore;
 
-    const title = `Health Score`;
-    const underline = new Array(title.length).fill("-").join("");
+    title = `Health Score`;
+    underline = new Array(title.length).fill("-").join("");
 
-    const assetInfo =
+    assetInfo =
       `${chalk.bold(title)}\n` +
       `${underline}\n` +
       `${chalk.bold(healthScore)}`;
@@ -119,11 +108,9 @@ exports.handler = async function () {
     console.log(boxen(assetInfo, assetBoxenOptions));
 
     successLog(
-      `Viewing ${Number(
-        comet.numCollaterals
-      )} Collateral Positions and ${Number(
-        comet.numPositions
-      )} Liquidity Positions From Your Comet!`
+      `Viewing Comet with ${Number(
+        comet.positions.length
+      )} Liquidity Positions!`
     );
   } catch (error: any) {
     errorLog(`Failed to view comet:\n${error.message}`);

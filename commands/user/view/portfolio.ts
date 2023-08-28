@@ -24,7 +24,8 @@ exports.handler = async function () {
       cloneAccountAddress
     );
 
-    const tokenData = await cloneClient.getTokenData();
+    const pools = await cloneClient.getPools();
+    const oracles = await cloneClient.getOracles();
 
     const assetBoxenOptions: boxen.Options = {
       padding: 1,
@@ -40,28 +41,30 @@ exports.handler = async function () {
 
     let assetInfo = `${chalk.bold(title)}\n` + `${underline}\n`;
 
-    let onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+    let collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       provider,
-      cloneClient.clone!.onusdMint
+      cloneClient.clone.collateral.mint
     );
-    const onusdBalance = fromCloneScale(Number(onusdTokenAccountInfo.amount));
-    assetInfo += `onUSD Balance: ${onusdBalance}\n\n`;
-    let totalBalance = onusdBalance;
+    const collateralBalance = fromCloneScale(
+      Number(collateralTokenAccountInfo.amount)
+    );
+    assetInfo += `collateral Balance: ${collateralBalance}\n\n`;
+    let totalBalance = collateralBalance;
 
-    for (let i = 0; i < Number(tokenData.numPools); i++) {
-      const pool = tokenData.pools[i];
-      const oracle = tokenData.oracles[Number(pool.assetInfo.oracleInfoIndex)];
+    for (let i = 0; i < Number(pools.pools.length); i++) {
+      const pool = pools.pools[i];
+      const oracle = oracles.oracles[Number(pool.assetInfo.oracleInfoIndex)];
 
       let onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
         provider,
         pool.assetInfo.onassetMint
       );
 
-      let { poolOnusd, poolOnasset } = getPoolLiquidity(
+      let { poolCollateral, poolOnasset } = getPoolLiquidity(
         pool,
         Number(oracle.price)
       );
-      const quotePrice = poolOnusd / poolOnasset;
+      const quotePrice = poolCollateral / poolOnasset;
       const onassetBalance = fromCloneScale(
         Number(onassetTokenAccountInfo.amount)
       );
@@ -72,7 +75,7 @@ exports.handler = async function () {
     assetInfo += `Total Balance: ${totalBalance}`;
     console.log(boxen(assetInfo, assetBoxenOptions));
 
-    successLog(`Viewing ${Number(tokenData.numPools)} Pools`);
+    successLog(`Viewing ${Number(pools.pools.length)} Pools`);
   } catch (error: any) {
     errorLog(`Failed to view pools:\n${error.message}`);
   }

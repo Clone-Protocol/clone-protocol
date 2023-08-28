@@ -39,11 +39,11 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneAccountAddress
     );
 
-    const tokenData = await cloneClient.getTokenData();
+    const pools = await cloneClient.getPools();
     const user = await cloneClient.getUserAccount();
-    const borrowPosition = user.borrows.positions[yargs.borrowIndex];
+    const borrowPosition = user.borrows[yargs.borrowIndex];
 
-    const pool = tokenData.pools[Number(borrowPosition.poolIndex)];
+    const pool = pools.pools[Number(borrowPosition.poolIndex)];
 
     const onAssetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       provider,
@@ -53,7 +53,7 @@ exports.handler = async function (yargs: CommandArguments) {
     const amount = new BN(`${toCloneScale(yargs.amount)}`);
 
     let ix = cloneClient.payBorrowDebtInstruction(
-      tokenData,
+      pools,
       user,
       onAssetTokenAccountInfo.address,
       amount,

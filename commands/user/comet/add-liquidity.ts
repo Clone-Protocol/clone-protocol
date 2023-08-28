@@ -38,21 +38,20 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneAccountAddress
     );
 
-    const tokenData = await cloneClient.getTokenData();
+    const oracles = await cloneClient.getOracles();
 
-    let updatePricesIx = cloneClient.updatePricesInstruction(tokenData)
-    ;
+    let updatePricesIx = cloneClient.updatePricesInstruction(oracles);
     const amount = new BN(`${toCloneScale(yargs.amount)}`);
 
     let ix = cloneClient.addLiquidityToCometInstruction(
-        amount,
-        yargs.poolIndex
-      );
-      await provider.sendAndConfirm(
-        new Transaction().add(updatePricesIx).add(ix)
-      );
+      amount,
+      yargs.poolIndex
+    );
+    await provider.sendAndConfirm(
+      new Transaction().add(updatePricesIx).add(ix)
+    );
 
-    successLog(`${yargs.amount} onUSD Liquidity Added!`);
+    successLog(`${yargs.amount} USD Liquidity Added!`);
   } catch (error: any) {
     errorLog(`Failed to add liquidity to comet position:\n${error.message}`);
   }

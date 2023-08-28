@@ -50,9 +50,10 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneAccountAddress
     );
 
-    const tokenData = await cloneClient.getTokenData();
-    const pool = tokenData.pools[yargs.poolIndex];
-    const collateral = tokenData.collaterals[yargs.collateralIndex];
+    const pools = await cloneClient.getPools();
+    const oracles = await cloneClient.getOracles();
+    const pool = pools.pools[yargs.poolIndex];
+    const collateral = cloneClient.clone.collateral;
 
     const onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       provider,
@@ -68,16 +69,15 @@ exports.handler = async function (yargs: CommandArguments) {
       `${toScale(yargs.collateralAmount, Number(collateral.scale))}`
     );
 
-    let updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
+    let updatePricesIx = cloneClient.updatePricesInstruction(oracles);
 
-    let ix =  cloneClient.initializeBorrowPositionInstruction(
-      tokenData,
+    let ix = cloneClient.initializeBorrowPositionInstruction(
+      pools,
       collateralTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       borrowAmount,
       collateralAmount,
-      yargs.poolIndex,
-      yargs.collateralIndex
+      yargs.poolIndex
     );
     await provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(ix)

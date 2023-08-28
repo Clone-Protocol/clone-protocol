@@ -4,9 +4,7 @@ import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneStakingData,
   getCLN,
-  getCloneStakingAccount,
   getOrCreateAssociatedTokenAccount,
 } from "../utils";
 import { Argv } from "yargs";
@@ -16,7 +14,7 @@ interface CommandArguments extends Argv {
   amount: number;
 }
 
-exports.command = "mint-mock-cln <amount>";
+exports.command = "mint-cln <amount>";
 exports.desc = "Mint mock $CLN to user account";
 exports.builder = (yargs: CommandArguments) => {
   return yargs.option("amount", {

@@ -38,9 +38,9 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneAccountAddress
     );
 
-    const tokenData = await cloneClient.getTokenData();
+    const oracles = await cloneClient.getOracles();
 
-    let updatePricesIx = await cloneClient.updatePricesInstruction(tokenData);
+    let updatePricesIx = await cloneClient.updatePricesInstruction(oracles);
     const amount = new BN(`${toCloneScale(yargs.amount)}`);
 
     let ix = cloneClient.withdrawLiquidityFromCometInstruction(

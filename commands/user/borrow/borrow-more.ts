@@ -10,6 +10,7 @@ import {
   getOrCreateAssociatedTokenAccount,
 } from "../../utils";
 import { Argv } from "yargs";
+import { oracleInfoBeet } from "../../../sdk/generated/clone/types/OracleInfo";
 
 interface CommandArguments extends Argv {
   borrowIndex: number;
@@ -39,23 +40,24 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneAccountAddress
     );
 
-    const tokenData = await cloneClient.getTokenData();
+    const pools = await cloneClient.getPools();
+    const oracles = await cloneClient.getOracles();
     const user = await cloneClient.getUserAccount();
-    const borrowPosition = user.borrows.positions[yargs.borrowIndex];
+    const borrowPosition = user.borrows[yargs.borrowIndex];
 
-    const pool = tokenData.pools[Number(borrowPosition.poolIndex)];
+    const pool = pools.pools[Number(borrowPosition.poolIndex)];
 
     const onAssetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       provider,
       pool.assetInfo.onassetMint
     );
 
-    let upgradePricesIx = cloneClient.updatePricesInstruction(tokenData);
+    let upgradePricesIx = cloneClient.updatePricesInstruction(oracles);
 
     const amount = new BN(`${toCloneScale(yargs.amount)}`);
 
     let ix = cloneClient.borrowMoreInstruction(
-      tokenData,
+      pools,
       user,
       onAssetTokenAccountInfo.address,
       amount,
