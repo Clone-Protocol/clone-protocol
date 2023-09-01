@@ -7,9 +7,11 @@ import {
   getCloneClient,
   getOrCreateAssociatedTokenAccount,
   fromCloneScale,
+  COLLATERAL_SCALE,
 } from "../../utils";
 import chalk from "chalk";
 import boxen from "boxen";
+import { fromScale } from "../../../sdk/src/clone";
 
 exports.command = "portfolio";
 exports.desc = "View your wallet balances for all of Clone's assets";
@@ -45,10 +47,11 @@ exports.handler = async function () {
       provider,
       cloneClient.clone.collateral.mint
     );
-    const collateralBalance = fromCloneScale(
-      Number(collateralTokenAccountInfo.amount)
+    const collateralBalance = fromScale(
+      Number(collateralTokenAccountInfo.amount),
+      cloneClient.clone.collateral.scale
     );
-    assetInfo += `collateral Balance: ${collateralBalance}\n\n`;
+    assetInfo += `Collateral Balance: ${collateralBalance}\n\n`;
     let totalBalance = collateralBalance;
 
     for (let i = 0; i < Number(pools.pools.length); i++) {
@@ -60,11 +63,13 @@ exports.handler = async function () {
         pool.assetInfo.onassetMint
       );
 
-      let { poolCollateral, poolOnasset } = getPoolLiquidity(
+      let { poolCollateralZeroScale, poolOnassetZeroScale } = getPoolLiquidity(
         pool,
-        Number(oracle.price)
+        Number(oracle.price),
+        COLLATERAL_SCALE,
+        oracle.expo
       );
-      const quotePrice = poolCollateral / poolOnasset;
+      const quotePrice = poolCollateralZeroScale / poolOnassetZeroScale;
       const onassetBalance = fromCloneScale(
         Number(onassetTokenAccountInfo.amount)
       );
@@ -75,8 +80,8 @@ exports.handler = async function () {
     assetInfo += `Total Balance: ${totalBalance}`;
     console.log(boxen(assetInfo, assetBoxenOptions));
 
-    successLog(`Viewing ${Number(pools.pools.length)} Pools`);
+    successLog(`Viewing Portfolio`);
   } catch (error: any) {
-    errorLog(`Failed to view pools:\n${error.message}`);
+    errorLog(`Failed to view portfolio:\n${error.message}`);
   }
 };

@@ -1,5 +1,5 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient, toCloneScale } from "../../sdk/src/clone";
+import { CloneClient, fromScale, toCloneScale } from "../../sdk/src/clone";
 import { calculateSwapExecution } from "../../sdk/src/utils";
 import {
   TOKEN_PROGRAM_ID,
@@ -167,10 +167,9 @@ exports.handler = async function (yargs: CommandArguments) {
       const newCollateralBalance = Number(collateralTokenAccountInfo.amount);
 
       successLog(
-        `${yargs.amount} onAsset ${
-          yargs.poolIndex
-        } Sold!\nBought ${fromCloneScale(
-          newCollateralBalance - initialCollateralBalance
+        `${yargs.amount} onAsset ${yargs.poolIndex} Sold!\nBought ${fromScale(
+          newCollateralBalance - initialCollateralBalance,
+          cloneClient.clone.collateral.scale
         )} collateral tokens`
       );
     } else if (!yargs.quantityIsInput && yargs.quantityIsCollateral) {
@@ -181,7 +180,7 @@ exports.handler = async function (yargs: CommandArguments) {
       const newOnassetBalance = Number(onassetTokenAccountInfo.amount);
 
       successLog(
-        `${yargs.amount} collatearl Bought!\nSold ${fromCloneScale(
+        `${yargs.amount} collateral Bought!\nSold ${fromCloneScale(
           initialOnassetBalance - newOnassetBalance
         )} onAsset ${yargs.poolIndex}`
       );
@@ -193,11 +192,10 @@ exports.handler = async function (yargs: CommandArguments) {
       const newCollateralBalance = Number(collateralTokenAccountInfo.amount);
 
       successLog(
-        `${yargs.amount} onAsset ${
-          yargs.poolIndex
-        } Bought!\nSold ${fromCloneScale(
-          initialCollateralBalance - newCollateralBalance
-        )} collatral tokens`
+        `${yargs.amount} onAsset ${yargs.poolIndex} Bought!\nSold ${fromScale(
+          initialCollateralBalance - newCollateralBalance,
+          cloneClient.clone.collateral.scale
+        )} collateral tokens`
       );
     }
   } catch (error: any) {

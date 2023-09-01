@@ -1,5 +1,5 @@
 import { Transaction } from "@solana/web3.js";
-import { toCloneScale } from "../../../sdk/src/clone";
+import { CloneClient, toCloneScale, toScale } from "../../../sdk/src/clone";
 import { BN } from "@coral-xyz/anchor";
 import {
   successLog,
@@ -24,7 +24,7 @@ exports.builder = (yargs: CommandArguments) => {
       type: "number",
     })
     .positional("amount", {
-      describe: "The amount of onUSD liquidity to provide to the pool",
+      describe: "The amount of collateral liquidity to provide to the pool",
       type: "number",
     });
 };
@@ -37,11 +37,12 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneProgramID,
       cloneAccountAddress
     );
-
     const oracles = await cloneClient.getOracles();
 
     let updatePricesIx = cloneClient.updatePricesInstruction(oracles);
-    const amount = new BN(`${toCloneScale(yargs.amount)}`);
+    const amount = new BN(
+      `${toScale(yargs.amount, cloneClient.clone.collateral.scale)}`
+    );
 
     let ix = cloneClient.addLiquidityToCometInstruction(
       amount,

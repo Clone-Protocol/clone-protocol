@@ -18,7 +18,7 @@ interface CommandArguments extends Argv {
   amount: number;
 }
 
-exports.command = "pay-ild <comet-position-index> [amount] [payment-type]";
+exports.command = "pay-ild <comet-position-index> <amount> [payment-type]";
 exports.desc = "Pay impermanent loss debt to protect your comet";
 exports.builder = (yargs: CommandArguments) => {
   yargs

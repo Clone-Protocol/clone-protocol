@@ -5,10 +5,12 @@ import {
   anchorSetup,
   getCloneData,
   getCloneClient,
+  fromCloneScale,
 } from "../../utils";
 
 import chalk from "chalk";
 import boxen from "boxen";
+import { fromScale, toScale } from "../../../sdk/src/clone";
 
 exports.command = "borrow-positions";
 exports.desc = "View your borrow positions";
@@ -37,8 +39,9 @@ exports.handler = async function () {
       const borrowPosition = borrows[i];
       const pool = pools.pools[Number(borrowPosition.poolIndex)];
 
-      const collateralPrice = Number(
-        oracles.oracles[Number(collateral.oracleInfoIndex)].price
+      const collateralPrice = fromScale(
+        oracles.oracles[Number(collateral.oracleInfoIndex)].price,
+        oracles.oracles[Number(collateral.oracleInfoIndex)].expo
       );
 
       let minOvercollateralRatio = Number(
@@ -48,8 +51,9 @@ exports.handler = async function () {
         pool.assetInfo.maxLiquidationOvercollateralRatio
       );
 
-      let onAssetPrice = Number(
-        oracles.oracles[Number(pool.assetInfo.oracleInfoIndex)].price
+      let onAssetPrice = fromScale(
+        oracles.oracles[Number(pool.assetInfo.oracleInfoIndex)].price,
+        oracles.oracles[Number(pool.assetInfo.oracleInfoIndex)].expo
       );
 
       const title = `Borrow Position ${i}`;
@@ -69,17 +73,27 @@ exports.handler = async function () {
         `${underline}\n` +
         `Collateral Mint: ${chalk.bold(collateral.mint)}\n` +
         `onAsset Mint: ${chalk.bold(pool.assetInfo.onassetMint)}\n` +
+        `Pool Index: ${chalk.bold(borrowPosition.poolIndex)}\n` +
         `Collateral Amount: ${chalk.bold(
-          Number(borrowPosition.collateralAmount)
+          fromScale(
+            borrowPosition.collateralAmount,
+            cloneClient.clone.collateral.scale
+          )
         )}\n` +
         `Borrowed onAsset Amount: ${chalk.bold(
-          Number(borrowPosition.borrowedOnasset)
+          fromCloneScale(Number(borrowPosition.borrowedOnasset))
         )}\n` +
         `Collateral Oracle Price: $${chalk.bold(collateralPrice)}\n` +
         `onAsset Oracle Price: $${chalk.bold(onAssetPrice)}\n` +
         `Current Collateral Ratio: %${chalk.bold(
-          (100 * (Number(borrowPosition.collateralAmount) * collateralPrice)) /
-            (Number(borrowPosition.borrowedOnasset) * onAssetPrice)
+          (100 *
+            (fromScale(
+              borrowPosition.collateralAmount,
+              cloneClient.clone.collateral.scale
+            ) *
+              collateralPrice)) /
+            (fromCloneScale(Number(borrowPosition.borrowedOnasset)) *
+              onAssetPrice)
         )}\n` +
         `Minimum Overcollateral Ratio: %${chalk.bold(
           minOvercollateralRatio

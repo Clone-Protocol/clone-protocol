@@ -1,8 +1,5 @@
 import { Transaction } from "@solana/web3.js";
-import {
-  ONUSD_COLLATERAL_INDEX,
-  USDC_COLLATERAL_INDEX,
-} from "../../../sdk/src/clone";
+import { fromScale } from "../../../sdk/src/clone";
 import { getHealthScore, getILD } from "../../../sdk/src/healthscore";
 import {
   successLog,
@@ -49,8 +46,9 @@ exports.handler = async function () {
       backgroundColor: "#CCCCCC",
     };
 
-    const collateralPrice = Number(
-      oracles.oracles[Number(collateral.oracleInfoIndex)].price
+    const collateralPrice = fromScale(
+      oracles.oracles[Number(collateral.oracleInfoIndex)].price,
+      oracles.oracles[Number(collateral.oracleInfoIndex)].expo
     );
 
     let title = `Collateral Position`;
@@ -59,10 +57,13 @@ exports.handler = async function () {
     let assetInfo =
       `${chalk.bold(title)}\n` +
       `${underline}\n` +
-      `Collateral Amount: ${chalk.bold(Number(comet.collateralAmount))}\n` +
+      `Collateral Amount: ${chalk.bold(
+        fromScale(comet.collateralAmount, cloneClient.clone.collateral.scale)
+      )}\n` +
       `Collateral Oracle Price: ${chalk.bold(collateralPrice)}\n` +
       `Position Value: $${chalk.bold(
-        Number(comet.collateralAmount) * collateralPrice
+        fromScale(comet.collateralAmount, cloneClient.clone.collateral.scale) *
+          collateralPrice
       )}\n`;
 
     console.log(boxen(assetInfo, assetBoxenOptions));
@@ -78,14 +79,19 @@ exports.handler = async function () {
       const assetInfo =
         `${chalk.bold(title)}\n` +
         `${underline}\n` +
-        `onAsset Pool Index: ${chalk.bold(
-          fromCloneScale(Number(position.poolIndex))
-        )}\n` +
+        `onAsset Pool Index: ${chalk.bold(position.poolIndex)}\n` +
         `Collateral Liquidity Committed: ${chalk.bold(
-          Number(position.committedCollateralLiquidity)
+          fromScale(
+            Number(position.committedCollateralLiquidity),
+            cloneClient.clone.collateral.scale
+          )
         )}\n` +
-        `Collateral Impermanent Loss Debt: ${chalk.bold(ild.collateralILD)}\n` +
-        `onAsset Impermanent Loss Debt: ${chalk.bold(ild.onAssetILD)}\n`;
+        `Collateral Impermanent Loss Debt: ${chalk.bold(
+          fromScale(ild.collateralILD, cloneClient.clone.collateral.scale)
+        )}\n` +
+        `onAsset Impermanent Loss Debt: ${chalk.bold(
+          fromCloneScale(ild.onAssetILD)
+        )}\n`;
 
       console.log(boxen(assetInfo, assetBoxenOptions));
     }

@@ -10,7 +10,6 @@ import {
   getOrCreateAssociatedTokenAccount,
 } from "../../utils";
 import { Argv } from "yargs";
-import { User } from "../../../sdk/generated/clone";
 
 interface CommandArguments extends Argv {
   collateralIndex: number;
@@ -18,7 +17,7 @@ interface CommandArguments extends Argv {
 }
 
 exports.command = "withdraw-collateral <amount>";
-exports.desc = "Withdraws collateral from your borrow position";
+exports.desc = "Withdraws collateral from your comet";
 exports.builder = (yargs: CommandArguments) => {
   yargs.positional("amount", {
     describe: "The amount of collateral to withdraw from the comet position",
@@ -47,6 +46,7 @@ exports.handler = async function (yargs: CommandArguments) {
       collateralTokenAccountInfo.address,
       amount
     );
+
     await provider.sendAndConfirm(new Transaction().add(ix));
 
     successLog(`${yargs.amount} Collateral Withdrawn!`);

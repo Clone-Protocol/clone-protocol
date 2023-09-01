@@ -7,23 +7,16 @@ import {
   anchorSetup,
   getFaucetData,
   createTokenMint,
-  getCloneData,
-  getCloneClient,
+  COLLATERAL_SCALE,
 } from "../utils";
 import { createInitializeInstruction } from "../../sdk/generated/mock-asset-faucet";
 
-exports.command = "initialize-collateral";
+exports.command = "init-collateral";
 exports.desc = "Initializes mock collateral";
 exports.builder = () => {};
 exports.handler = async function () {
   try {
     const provider = anchorSetup();
-    const [cloneProgramID, cloneAccountAddress] = getCloneData();
-    const cloneClient = await getCloneClient(
-      provider,
-      cloneProgramID,
-      cloneAccountAddress
-    );
 
     const [__, faucetAddress] = getFaucetData();
 
@@ -31,7 +24,7 @@ exports.handler = async function () {
 
     await createTokenMint(provider, {
       mint: mockCollateralMint,
-      scale: cloneClient.clone!.collateral.scale,
+      scale: COLLATERAL_SCALE,
       authority: faucetAddress,
     });
 
@@ -41,9 +34,7 @@ exports.handler = async function () {
       mint: mockCollateralMint.publicKey,
     });
 
-    await provider.sendAndConfirm(new Transaction().add(ix), [
-      mockCollateralMint,
-    ]);
+    await provider.sendAndConfirm(new Transaction().add(ix));
 
     // Update the config file
     const config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
@@ -52,8 +43,8 @@ exports.handler = async function () {
 
     fs.writeFileSync("./config.json", JSON.stringify(config));
 
-    successLog("Mock Jupiter Program Initialized!");
+    successLog("Collateral Initialized!");
   } catch (error: any) {
-    errorLog(`Failed to Initialize Mock Jupiter Program:\n${error.message}`);
+    errorLog(`Failed to Initialize Collateral:\n${error.message}`);
   }
 };

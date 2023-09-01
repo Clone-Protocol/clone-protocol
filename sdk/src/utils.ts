@@ -1,4 +1,4 @@
-import { CLONE_TOKEN_SCALE } from "./clone";
+import { CLONE_TOKEN_SCALE, fromScale } from "./clone";
 //import { Pool } from "./interfaces";
 import { Collateral, Pool } from "../generated/clone";
 import {
@@ -19,6 +19,7 @@ import {
   TokenAccountNotFoundError,
 } from "@solana/spl-token";
 import { Provider } from "@coral-xyz/anchor";
+import { fromCloneScale } from "../../commands/utils";
 
 export const sleep = async (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -58,15 +59,23 @@ export const calculateMantissa = (
   return Math.floor(x * Math.pow(10, scale));
 };
 
-export const getPoolLiquidity = (pool: Pool, oraclePrice: number) => {
+export const getPoolLiquidity = (
+  pool: Pool,
+  oraclePrice: number,
+  collateralScale: number,
+  oracleScale: number
+) => {
   const poolCollateral =
     Number(pool.committedCollateralLiquidity) - Number(pool.collateralIld);
-  const poolOnasset =
-    Number(pool.committedCollateralLiquidity) / oraclePrice -
-    Number(pool.onassetIld);
+  const poolCollateralZeroScale = fromScale(poolCollateral, collateralScale);
+
+  const poolOnassetZeroScale =
+    fromScale(pool.committedCollateralLiquidity, collateralScale) /
+      fromScale(oraclePrice, oracleScale) -
+    fromCloneScale(Number(pool.onassetIld));
   return {
-    poolCollateral,
-    poolOnasset,
+    poolCollateralZeroScale,
+    poolOnassetZeroScale,
   };
 };
 

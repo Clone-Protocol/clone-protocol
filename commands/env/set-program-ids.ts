@@ -10,7 +10,7 @@ interface CommandArguments extends Argv {
 }
 
 exports.command = "set-program-ids";
-exports.desc = "Sets the current network";
+exports.desc = "Sets the ProgramIDs";
 exports.builder = (yargs: CommandArguments) => {
   return yargs
     .option("clone", {

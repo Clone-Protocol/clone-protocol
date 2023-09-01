@@ -2,7 +2,7 @@ import os from "os";
 import toml from "toml";
 import fs from "fs";
 import * as anchor from "@coral-xyz/anchor";
-import { PublicKey, Transaction, SystemProgram } from "@solana/web3.js";
+import { PublicKey, Transaction, SystemProgram, Keypair } from "@solana/web3.js";
 import {
   Account,
   getAccount,
@@ -15,7 +15,7 @@ import {
   getMinimumBalanceForRentExemptMint,
   createInitializeMintInstruction,
 } from "@solana/spl-token";
-import { Provider, BN } from "@coral-xyz/anchor";
+import { Provider } from "@coral-xyz/anchor";
 import { CloneClient, CLONE_TOKEN_SCALE, toCloneScale } from "../sdk/src/clone";
 import { Clone as CloneAccount } from "../sdk/generated/clone";
 import { CloneStaking } from "../sdk/generated/clone-staking";
@@ -41,8 +41,8 @@ export function anchorSetup() {
     provider = anchor.AnchorProvider.local();
   } else {
     const walletKeyPair = JSON.parse(fs.readFileSync(wallet, "utf8"));
-
-    const walletInstance = new anchor.Wallet(walletKeyPair);
+    const kp = new Keypair({publicKey: walletKeyPair.slice(32), secretKey: walletKeyPair.slice(0,32)})
+    const walletInstance = new anchor.Wallet(kp)
 
     provider = new anchor.AnchorProvider(
       new anchor.web3.Connection(network),
@@ -50,7 +50,6 @@ export function anchorSetup() {
       anchor.AnchorProvider.defaultOptions()
     );
   }
-
   anchor.setProvider(provider);
 
   return provider;
@@ -121,7 +120,7 @@ export async function getCloneStakingAccount(
 export function getPythData() {
   const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
-  const pythProgramId = new PublicKey(config.jup);
+  const pythProgramId = new PublicKey(config.pyth);
 
   const [pythAddress, ___] = PublicKey.findProgramAddressSync(
     [Buffer.from("pyth")],

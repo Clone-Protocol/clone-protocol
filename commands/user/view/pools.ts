@@ -7,9 +7,12 @@ import {
   getCloneData,
   getCloneClient,
   getStatus,
+  COLLATERAL_SCALE,
+  fromCloneScale,
 } from "../../utils";
 import chalk from "chalk";
 import boxen from "boxen";
+import { fromScale } from "../../../sdk/src/clone";
 
 exports.command = "pools";
 exports.desc = "View all pools on Clone";
@@ -46,9 +49,11 @@ exports.handler = async function () {
         backgroundColor: "#CCCCCC",
       };
 
-      let { poolCollateral, poolOnasset } = getPoolLiquidity(
+      let { poolCollateralZeroScale, poolOnassetZeroScale } = getPoolLiquidity(
         pool,
-        Number(oracle.price)
+        Number(oracle.price),
+        COLLATERAL_SCALE,
+        oracle.expo
       );
 
       const status = getStatus(Number(pool.status));
@@ -58,17 +63,23 @@ exports.handler = async function () {
         `${underline}\n` +
         `onAsset Mint: ${chalk.bold(pool.assetInfo.onassetMint)}\n` +
         //this will change to called quotePrice function on sdk/utils
-        `Quote Price: $${chalk.bold(poolCollateral / poolOnasset)}\n` +
-        `onUSD Pool Balance: ${chalk.bold(poolCollateral)}\n` +
-        `onAsset ILD: ${chalk.bold(Number(pool.onassetIld))}\n` +
-        `onUSD ILD: ${chalk.bold(Number(pool.collateralIld))}\n` +
+        `Quote Price: $${chalk.bold(
+          poolCollateralZeroScale / poolOnassetZeroScale
+        )}\n` +
+        `Collateral Pool Balance: ${chalk.bold(poolCollateralZeroScale)}\n` +
+        `onAsset ILD: ${chalk.bold(
+          Number(fromCloneScale(Number(pool.onassetIld)))
+        )}\n` +
+        `Collateral ILD: ${chalk.bold(
+          fromScale(pool.collateralIld, cloneClient.clone.collateral.scale)
+        )}\n` +
         `Liquidity Trading Fee: %${chalk.bold(
           Number(pool.liquidityTradingFeeBps)
         )}\n` +
         `Treasury Trading Fee: %${chalk.bold(
           Number(pool.treasuryTradingFeeBps)
         )}\n` +
-        `Oracle Price: $${chalk.bold(Number(oracle.price))}\n` +
+        `Oracle Price: $${chalk.bold(fromScale(oracle.price, oracle.expo))}\n` +
         `Oracle Type: ${chalk.bold(
           oracle.source == 0 ? "Pyth" : "Switchboard"
         )}\n` +

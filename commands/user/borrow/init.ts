@@ -13,13 +13,12 @@ import { Argv } from "yargs";
 
 interface CommandArguments extends Argv {
   poolIndex: number;
-  collateralIndex: number;
   collateralAmount: number;
   borrowAmount: number;
 }
 
 exports.command =
-  "init <pool-index> <collateral-index> <collateral-amount> <borrow-amount>";
+  "init <pool-index> <collateral-amount> <borrow-amount>";
 exports.desc = "Initializes your borrow position";
 exports.builder = (yargs: CommandArguments) => {
   yargs
@@ -84,7 +83,7 @@ exports.handler = async function (yargs: CommandArguments) {
     );
 
     successLog(
-      `Borrowed Initialized:\nPool Index: ${yargs.poolIndex}\nCollateral Index: ${yargs.collateralIndex}\nCollateral Amount: ${yargs.collateralAmount}\nBorrowed Amount: ${yargs.borrowAmount}`
+      `Borrowed Initialized:\nPool Index: ${yargs.poolIndex}\nCollateral Amount: ${yargs.collateralAmount}\nBorrowed Amount: ${yargs.borrowAmount}`
     );
   } catch (error: any) {
     errorLog(`Failed to initialize borrow:\n${error.message}`);

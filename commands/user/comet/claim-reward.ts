@@ -59,6 +59,6 @@ exports.handler = async function (yargs: CommandArguments) {
 
     successLog(`Reward Claimed!`);
   } catch (error: any) {
-    errorLog(`Failed to pay ILD:\n${error.message}`);
+    errorLog(`Failed to claim reward:\n${error.message}`);
   }
 };
