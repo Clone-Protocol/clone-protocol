@@ -31,6 +31,7 @@ pub struct CollectLpRewards<'info> {
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
+        mut,
         address = clone.collateral.vault
     )]
     pub collateral_vault: Box<Account<'info, TokenAccount>>,
