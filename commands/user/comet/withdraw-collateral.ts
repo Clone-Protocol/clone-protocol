@@ -40,6 +40,10 @@ exports.handler = async function (yargs: CommandArguments) {
       collateral.mint
     );
 
+
+    const oracles = await cloneClient.getOracles();
+    let updatePricesIx = await cloneClient.updatePricesInstruction(oracles);
+
     const amount = new BN(`${toScale(yargs.amount, Number(collateral.scale))}`);
 
     let ix = cloneClient.withdrawCollateralFromCometInstruction(
@@ -47,7 +51,7 @@ exports.handler = async function (yargs: CommandArguments) {
       amount
     );
 
-    await provider.sendAndConfirm(new Transaction().add(ix));
+    await provider.sendAndConfirm(new Transaction().add(updatePricesIx).add(ix));
 
     successLog(`${yargs.amount} Collateral Withdrawn!`);
   } catch (error: any) {
