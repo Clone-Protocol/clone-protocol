@@ -40,7 +40,7 @@ export const collectLpRewardsStruct = new beet.BeetArgsStruct<
  * @property [_writable_] userAccount
  * @property [_writable_] clone
  * @property [] pools
- * @property [] collateralVault
+ * @property [_writable_] collateralVault
  * @property [_writable_] onassetMint
  * @property [_writable_] userCollateralTokenAccount
  * @property [_writable_] userOnassetTokenAccount
@@ -107,7 +107,7 @@ export function createCollectLpRewardsInstruction(
     },
     {
       pubkey: accounts.collateralVault,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {
