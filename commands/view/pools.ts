@@ -1,37 +1,44 @@
-import { Transaction } from "@solana/web3.js";
-import { getPoolLiquidity } from "../../../sdk/src/utils";
+import { PublicKey } from "@solana/web3.js";
+import { getPoolLiquidity } from "../../sdk/src/utils";
 import {
   successLog,
   errorLog,
-  anchorSetup,
   getCloneData,
-  getCloneClient,
   getStatus,
   COLLATERAL_SCALE,
   fromCloneScale,
-} from "../../utils";
+  getConnection,
+} from "../utils";
+import { Pools, Oracles, Clone } from "../../sdk/generated/clone/accounts";
 import chalk from "chalk";
 import boxen from "boxen";
-import { fromScale } from "../../../sdk/src/clone";
+import { fromScale } from "../../sdk/src/clone";
 
 exports.command = "pools";
 exports.desc = "View all pools on Clone";
 exports.builder = {};
 exports.handler = async function () {
   try {
-    const provider = anchorSetup();
-    const [cloneProgramID, cloneAccountAddress] = getCloneData();
-    const cloneClient = await getCloneClient(
-      provider,
-      cloneProgramID,
-      cloneAccountAddress
+    const connection = getConnection();
+    const [cloneProgramID, cloneAddress] = getCloneData();
+
+    const [poolsAddress, _] = PublicKey.findProgramAddressSync(
+      [Buffer.from("pools")],
+      cloneProgramID
+    );
+    const [oraclesAddress, __] = PublicKey.findProgramAddressSync(
+      [Buffer.from("oracles")],
+      cloneProgramID
     );
 
-    const pools = await cloneClient.getPools();
-    const oracles = await cloneClient.getOracles();
+    const pools = await Pools.fromAccountAddress(connection, poolsAddress);
+    const oracles = await Oracles.fromAccountAddress(
+      connection,
+      oraclesAddress
+    );
+    const clone = await Clone.fromAccountAddress(connection, cloneAddress);
 
-    let ix = cloneClient.updatePricesInstruction(oracles);
-    await provider.sendAndConfirm(new Transaction().add(ix));
+    const collateral = clone.collateral;
 
     for (let i = 0; i < Number(pools.pools.length); i++) {
       const pool = pools.pools[i];
@@ -71,7 +78,7 @@ exports.handler = async function () {
           Number(fromCloneScale(Number(pool.onassetIld)))
         )}\n` +
         `Collateral ILD: ${chalk.bold(
-          fromScale(pool.collateralIld, cloneClient.clone.collateral.scale)
+          fromScale(pool.collateralIld, collateral.scale)
         )}\n` +
         `Liquidity Trading Fee: %${chalk.bold(
           Number(pool.liquidityTradingFeeBps)

@@ -1,40 +1,70 @@
-import { Transaction } from "@solana/web3.js";
-import { fromScale } from "../../../sdk/src/clone";
-import { getHealthScore, getILD } from "../../../sdk/src/healthscore";
+import { PublicKey } from "@solana/web3.js";
+import { fromScale } from "../../sdk/src/clone";
+import { getHealthScore, getILD } from "../../sdk/src/healthscore";
 import {
   successLog,
   errorLog,
-  fromCloneScale,
-  anchorSetup,
   getCloneData,
-  getCloneClient,
-} from "../../utils";
-
+  getConnection,
+  getUserAddress,
+} from "../utils";
+import {
+  Pools,
+  Oracles,
+  Clone,
+  User,
+} from "../../sdk/generated/clone/accounts";
 import chalk from "chalk";
 import boxen from "boxen";
-import { Collateral } from "../../../sdk/generated/clone/types/Collateral";
+import { Argv } from "yargs";
+
+interface CommandArguments extends Argv {
+  userAddress: string;
+}
 
 exports.command = "comet";
-exports.desc = "View your comet position";
-exports.builder = {};
-exports.handler = async function () {
+exports.desc = "View your comet position [user-address]";
+exports.builder = (yargs: CommandArguments) => {
+  yargs.positional("user-address", {
+    describe: "The address of the user whose comet you wish to view",
+    type: "string",
+    default: "",
+  });
+};
+exports.handler = async function (yargs: CommandArguments) {
   try {
-    const provider = anchorSetup();
-    const [cloneProgramID, cloneAccountAddress] = getCloneData();
-    const cloneClient = await getCloneClient(
-      provider,
-      cloneProgramID,
-      cloneAccountAddress
+    const connection = getConnection();
+    const [cloneProgramID, cloneAddress] = getCloneData();
+
+    const [poolsAddress, _] = PublicKey.findProgramAddressSync(
+      [Buffer.from("pools")],
+      cloneProgramID
+    );
+    const [oraclesAddress, __] = PublicKey.findProgramAddressSync(
+      [Buffer.from("oracles")],
+      cloneProgramID
     );
 
-    const pools = await cloneClient.getPools();
-    const oracles = await cloneClient.getOracles();
-    const collateral = cloneClient.clone.collateral;
+    const pools = await Pools.fromAccountAddress(connection, poolsAddress);
+    const oracles = await Oracles.fromAccountAddress(
+      connection,
+      oraclesAddress
+    );
+    const clone = await Clone.fromAccountAddress(connection, cloneAddress);
 
-    let ix = cloneClient.updatePricesInstruction(oracles);
-    await provider.sendAndConfirm(new Transaction().add(ix));
+    const collateral = clone.collateral;
 
-    const user = await cloneClient.getUserAccount();
+    let userAddress: PublicKey;
+    if (yargs.userAddress) {
+      userAddress = new PublicKey(yargs.userAddress);
+    } else {
+      userAddress = getUserAddress();
+    }
+    const [userAccountAddress, ___] = PublicKey.findProgramAddressSync(
+      [Buffer.from("user"), userAddress.toBuffer()],
+      cloneProgramID
+    );
+    const user = await User.fromAccountAddress(connection, userAccountAddress);
     const comet = user.comet;
 
     const assetBoxenOptions: boxen.Options = {
@@ -58,12 +88,11 @@ exports.handler = async function () {
       `${chalk.bold(title)}\n` +
       `${underline}\n` +
       `Collateral Amount: ${chalk.bold(
-        fromScale(comet.collateralAmount, cloneClient.clone.collateral.scale)
+        fromScale(comet.collateralAmount, collateral.scale)
       )}\n` +
       `Collateral Oracle Price: ${chalk.bold(collateralPrice)}\n` +
       `Position Value: $${chalk.bold(
-        fromScale(comet.collateralAmount, cloneClient.clone.collateral.scale) *
-          collateralPrice
+        fromScale(comet.collateralAmount, collateral.scale) * collateralPrice
       )}\n`;
 
     console.log(boxen(assetInfo, assetBoxenOptions));
@@ -83,15 +112,11 @@ exports.handler = async function () {
         `Collateral Liquidity Committed: ${chalk.bold(
           fromScale(
             Number(position.committedCollateralLiquidity),
-            cloneClient.clone.collateral.scale
+            collateral.scale
           )
         )}\n` +
-        `Collateral Impermanent Loss Debt: ${chalk.bold(
-          fromScale(ild.collateralILD, cloneClient.clone.collateral.scale)
-        )}\n` +
-        `onAsset Impermanent Loss Debt: ${chalk.bold(
-          fromCloneScale(ild.onAssetILD)
-        )}\n`;
+        `Collateral Impermanent Loss Debt: ${chalk.bold(ild.collateralILD)}\n` +
+        `onAsset Impermanent Loss Debt: ${chalk.bold(ild.onAssetILD)}\n`;
 
       console.log(boxen(assetInfo, assetBoxenOptions));
     }

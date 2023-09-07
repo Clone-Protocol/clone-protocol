@@ -2,7 +2,14 @@ import os from "os";
 import toml from "toml";
 import fs from "fs";
 import * as anchor from "@coral-xyz/anchor";
-import { PublicKey, Transaction, SystemProgram, Keypair } from "@solana/web3.js";
+import {
+  PublicKey,
+  Transaction,
+  SystemProgram,
+  Keypair,
+  AccountInfo,
+  Connection,
+} from "@solana/web3.js";
 import {
   Account,
   getAccount,
@@ -41,8 +48,11 @@ export function anchorSetup() {
     provider = anchor.AnchorProvider.local();
   } else {
     const walletKeyPair = JSON.parse(fs.readFileSync(wallet, "utf8"));
-    const kp = new Keypair({publicKey: walletKeyPair.slice(32), secretKey: walletKeyPair.slice(0,32)})
-    const walletInstance = new anchor.Wallet(kp)
+    const kp = new Keypair({
+      publicKey: walletKeyPair.slice(32),
+      secretKey: walletKeyPair.slice(0, 32),
+    });
+    const walletInstance = new anchor.Wallet(kp);
 
     provider = new anchor.AnchorProvider(
       new anchor.web3.Connection(network),
@@ -53,6 +63,33 @@ export function anchorSetup() {
   anchor.setProvider(provider);
 
   return provider;
+}
+
+export function getUserAddress() {
+  // Read the network and wallet from the config file
+  const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
+  let wallet = config.wallet;
+  let userAddress: PublicKey;
+
+  if (!wallet) {
+    const anchorConfig = toml.parse(fs.readFileSync("./Anchor.toml", "utf-8"));
+    const homeDir = os.homedir();
+    wallet = anchorConfig.provider.wallet.replace("~", homeDir);
+    const walletKeyPair = JSON.parse(fs.readFileSync(wallet, "utf8"));
+    userAddress = new PublicKey(walletKeyPair.slice(32));
+  } else {
+    const walletKeyPair = JSON.parse(fs.readFileSync(wallet, "utf8"));
+    userAddress = new PublicKey(walletKeyPair.slice(32));
+  }
+
+  return userAddress;
+}
+
+export function getConnection() {
+  const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
+  const network = config.network;
+
+  return new anchor.web3.Connection(network);
 }
 
 export function getCloneData() {
