@@ -52,6 +52,7 @@ import {
   PaymentType,
   createLiquidateCometCollateralIldInstruction,
   createLiquidateCometOnassetIldInstruction,
+  createRemoveCometPositionInstruction,
 } from "../generated/clone";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
@@ -930,5 +931,18 @@ export class CloneClient {
       { cometPositionIndex },
       this.programId
     );
+  }
+
+  public removeCometPositionInstruction(cometPositionIndex: number): TransactionInstruction {
+    return createRemoveCometPositionInstruction(
+      {
+        user: this.provider.publicKey!,
+        userAccount: this.getUserAccountAddress(),
+        pools: this.poolsAddress,
+      }, {
+        cometPositionIndex,
+      },
+      this.programId
+    )
   }
 }
