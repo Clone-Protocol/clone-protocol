@@ -39,8 +39,8 @@ import {
 import * as CloneStaking from "../sdk/generated/clone-staking";
 import {
   createInitializeInstruction,
-  createMintAssetInstruction
-} from "../sdk/generated/mock-asset-faucet"
+  createMintAssetInstruction,
+} from "../sdk/generated/mock-asset-faucet";
 
 const COLLATERAL_SCALE = 7;
 
@@ -80,8 +80,7 @@ describe("tests", async () => {
   let cloneStakingProgramId = anchor.workspace.CloneStaking.programId;
   let mockAssetFaucetProgramId = anchor.workspace.MockAssetFaucet.programId;
 
-  if (process.env.SKIP_TESTS === '1')
-    return;
+  if (process.env.SKIP_TESTS === "1") return;
 
   const mockUSDCMint = anchor.web3.Keypair.generate();
   const treasuryAddress = anchor.web3.Keypair.generate();
@@ -239,7 +238,7 @@ describe("tests", async () => {
     await createTokenMint(provider, {
       mint: mockUSDCMint,
       scale: COLLATERAL_SCALE,
-      authority: faucetAddress
+      authority: faucetAddress,
     });
 
     let usdcAssociatedTokenAccount = await getOrCreateAssociatedTokenAccount(
@@ -253,16 +252,19 @@ describe("tests", async () => {
         faucet: faucetAddress,
         mint: mockUSDCMint.publicKey,
       }),
-      createMintAssetInstruction({
-        minter: provider.publicKey!,
-        faucet: faucetAddress,
-        mint: mockUSDCMint.publicKey,
-        tokenAccount: usdcAssociatedTokenAccount.address
-      }, { amount: toScale(usdcMintAmount, COLLATERAL_SCALE)})
-    )
+      createMintAssetInstruction(
+        {
+          minter: provider.publicKey!,
+          faucet: faucetAddress,
+          mint: mockUSDCMint.publicKey,
+          tokenAccount: usdcAssociatedTokenAccount.address,
+        },
+        { amount: toScale(usdcMintAmount, COLLATERAL_SCALE) }
+      )
+    );
 
-    await provider.sendAndConfirm(tx)
-  })
+    await provider.sendAndConfirm(tx);
+  });
 
   it("mock asset initialized!", async () => {
     await createTokenMint(provider, { mint: mockAssetMint });
@@ -384,7 +386,6 @@ describe("tests", async () => {
     let oracle2Price = fromScale(oracle2.price, oracle2.expo);
     assert.equal(oracle2Price, 10);
   });
-
 
   it("add and check pyth oracle", async () => {
     let pythFeedAddress = new PublicKey(
@@ -1031,6 +1032,42 @@ describe("tests", async () => {
       fromCloneScale(onassetTokenAccountInfo.amount),
       startingOnassetAmount,
       "check onasset user balance"
+    );
+  });
+
+  it("comet position closed and reinitialized!", async () => {
+    const pools = await cloneClient.getPools();
+    let userAccount = await cloneClient.getUserAccount();
+    let comet = userAccount.comet;
+    let numCometPositions = comet.positions.length;
+    const positionIndex = 0;
+    let position = comet.positions[positionIndex];
+    const poolIndex = Number(position.poolIndex);
+    const pool = pools.pools[poolIndex];
+
+    let ix = cloneClient.withdrawLiquidityFromCometInstruction(
+      new BN(position.committedCollateralLiquidity),
+      positionIndex
+    );
+    let removeIx = cloneClient.removeCometPositionInstruction(positionIndex);
+    await provider.sendAndConfirm(new Transaction().add(ix, removeIx));
+
+    userAccount = await cloneClient.getUserAccount();
+    comet = userAccount.comet;
+    assert.equal(
+      comet.positions.length,
+      numCometPositions - 1,
+      "check comet position removed"
+    );
+
+    await provider.sendAndConfirm(
+      new Transaction().add(
+        cloneClient.updatePricesInstruction(await cloneClient.getOracles()),
+        cloneClient.addLiquidityToCometInstruction(
+          new BN(position.committedCollateralLiquidity),
+          poolIndex
+        )
+      )
     );
   });
 
