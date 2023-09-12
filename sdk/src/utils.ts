@@ -1,4 +1,9 @@
-import { CLONE_TOKEN_SCALE } from "./clone";
+import {
+  CLONE_TOKEN_SCALE,
+  fromScale,
+  fromCloneScale,
+  toCloneScale,
+} from "./clone";
 //import { Pool } from "./interfaces";
 import { Collateral, Pool } from "../generated/clone";
 import {
@@ -58,17 +63,25 @@ export const calculateMantissa = (
   return Math.floor(x * Math.pow(10, scale));
 };
 
-// export const getPoolLiquidity = (pool: Pool, oraclePrice: number) => {
-//   const poolCollateral =
-//     Number(pool.committedOnusdLiquidity) - Number(pool.onusdIld);
-//   const poolOnasset =
-//     Number(pool.committedOnusdLiquidity) / oraclePrice -
-//     Number(pool.onassetIld);
-//   return {
-//     poolCollateral,
-//     poolOnasset,
-//   };
-// };
+export const getPoolLiquidity = (
+  pool: Pool,
+  oraclePrice: number,
+  collateralScale: number,
+  oracleScale: number
+) => {
+  const poolCollateral =
+    Number(pool.committedCollateralLiquidity) - Number(pool.collateralIld);
+
+  const poolOnasset = toCloneScale(
+    fromScale(pool.committedCollateralLiquidity, collateralScale) /
+      fromScale(oraclePrice, oracleScale) -
+      fromCloneScale(Number(pool.onassetIld))
+  );
+  return {
+    poolCollateral,
+    poolOnasset,
+  };
+};
 
 export const calculateOutputFromInputFromParams = (
   poolCollateral: number,
