@@ -237,7 +237,9 @@ pub fn execute(
         )?;
 
         (
-            (mint_amount + treasury_fees).try_into().unwrap(),
+            (mint_amount.checked_add(treasury_fees).unwrap())
+                .try_into()
+                .unwrap(),
             -(TryInto::<i64>::try_into(transfer_amount).unwrap()),
         )
     } else {
@@ -296,12 +298,20 @@ pub fn execute(
         )?;
         (
             -(TryInto::<i64>::try_into(burn_amount).unwrap()),
-            (transfer_amount + treasury_fees).try_into().unwrap(),
+            (transfer_amount.checked_add(treasury_fees).unwrap())
+                .try_into()
+                .unwrap(),
         )
     };
 
-    pools.pools[pool_index as usize].onasset_ild += onasset_ild_delta;
-    pools.pools[pool_index as usize].collateral_ild += collateral_ild_delta;
+    pools.pools[pool_index as usize].onasset_ild = pools.pools[pool_index as usize]
+        .onasset_ild
+        .checked_add(onasset_ild_delta)
+        .unwrap();
+    pools.pools[pool_index as usize].collateral_ild = pools.pools[pool_index as usize]
+        .collateral_ild
+        .checked_add(collateral_ild_delta)
+        .unwrap();
 
     let (input, output) = if quantity_is_input {
         return_error_if_false!(
@@ -334,7 +344,10 @@ pub fn execute(
 
     let pool = &pools.pools[pool_index as usize];
     let pool_price = rescale_toward_zero(
-        pool_oracle.get_price() / collateral_oracle.get_price(),
+        pool_oracle
+            .get_price()
+            .checked_div(collateral_oracle.get_price())
+            .unwrap(),
         CLONE_TOKEN_SCALE,
     );
 
@@ -347,7 +360,7 @@ pub fn execute(
         pool_price: pool_price.mantissa().try_into().unwrap(),
         pool_scale: pool_price.scale()
     });
-    ctx.accounts.clone.event_counter += 1;
+    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
 
     Ok(())
 }

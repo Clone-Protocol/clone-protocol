@@ -43,7 +43,14 @@ pub fn execute<'info>(
                     if info.expo <= 0 {
                         (info.price, (-info.expo).try_into().unwrap())
                     } else {
-                        (info.price * 10_i64.pow(info.expo.try_into().unwrap()), 0)
+                        (
+                            info.price
+                                .checked_mul(
+                                    10_i64.checked_pow(info.expo.try_into().unwrap()).unwrap(),
+                                )
+                                .unwrap(),
+                            0,
+                        )
                     }
                 } else {
                     return Err(error!(CloneError::FailedToLoadPyth));

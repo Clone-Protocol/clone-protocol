@@ -110,13 +110,23 @@ pub fn execute(
 
     // calculate reward for liquidator
     let collateral_reward = rescale_toward_zero(
-        (Decimal::one() + liquidator_fee) * pool_price * burn_amount,
+        Decimal::one()
+            .checked_add(liquidator_fee)
+            .unwrap()
+            .checked_mul(pool_price)
+            .unwrap()
+            .checked_mul(burn_amount)
+            .unwrap(),
         collateral_scale,
     );
 
     if ild_share.onasset_ild_share > Decimal::ZERO {
         let ild_rebate_increase: i64 = burn_amount.mantissa().try_into().unwrap();
-        comet.positions[comet_position_index as usize].onasset_ild_rebate += ild_rebate_increase;
+        comet.positions[comet_position_index as usize].onasset_ild_rebate = comet.positions
+            [comet_position_index as usize]
+            .onasset_ild_rebate
+            .checked_add(ild_rebate_increase)
+            .unwrap();
         let cpi_accounts = Burn {
             mint: ctx.accounts.onasset_mint.to_account_info().clone(),
             from: ctx
@@ -149,7 +159,10 @@ pub fn execute(
         )?;
 
         // Remove equivalent reward from user's collateral
-        comet.collateral_amount -= collateral_reward.mantissa() as u64;
+        comet.collateral_amount = comet
+            .collateral_amount
+            .checked_sub(collateral_reward.mantissa() as u64)
+            .unwrap();
     }
 
     // Withdraw liquidity position
@@ -164,8 +177,8 @@ pub fn execute(
             user,
             ctx.accounts.clone.event_counter,
         )?;
-    };
-    ctx.accounts.clone.event_counter += 1;
+    }
+    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
 
     if comet.positions[comet_position_index as usize].is_empty() {
         comet.positions.remove(comet_position_index as usize);

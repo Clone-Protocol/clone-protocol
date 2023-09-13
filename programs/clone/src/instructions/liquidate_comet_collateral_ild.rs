@@ -93,9 +93,12 @@ pub fn execute(
         let liquidator_fee =
             to_bps_decimal!(ctx.accounts.clone.comet_collateral_ild_liquidator_fee_bps);
         let collateral_reward: u64 = rescale_toward_zero(
-            liquidator_fee * ild_share.collateral_ild_share,
+            liquidator_fee
+                .checked_mul(ild_share.collateral_ild_share)
+                .unwrap(),
             collateral_scale,
         )
+        .mantissa()
         .try_into()
         .unwrap();
         // Remove equivalent reward from user's collateral
@@ -104,13 +107,20 @@ pub fn execute(
             .mantissa()
             .try_into()
             .unwrap();
-        let collateral_reduction: u64 = collateral_reward + ild_share;
+        let collateral_reduction = collateral_reward.checked_add(ild_share).unwrap();
         return_error_if_false!(
             collateral_reduction <= comet.collateral_amount,
             CloneError::InvalidTokenAmount
         );
-        comet.collateral_amount -= collateral_reduction;
-        comet.positions[comet_position_index as usize].collateral_ild_rebate += ild_share as i64;
+        comet.collateral_amount = comet
+            .collateral_amount
+            .checked_sub(collateral_reduction)
+            .unwrap();
+        comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
+            [comet_position_index as usize]
+            .collateral_ild_rebate
+            .checked_add(ild_share.try_into().unwrap())
+            .unwrap();
 
         // Transfer collateral to liquidator
         let cpi_accounts = Transfer {
@@ -142,7 +152,7 @@ pub fn execute(
             ctx.accounts.clone.event_counter,
         )?;
     };
-    ctx.accounts.clone.event_counter += 1;
+    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
 
     if comet.positions[comet_position_index as usize].is_empty() {
         comet.positions.remove(comet_position_index as usize);

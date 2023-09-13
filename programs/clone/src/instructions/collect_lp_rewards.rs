@@ -71,7 +71,11 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
         let collateral_reward = ild_share.collateral_ild_share.abs().mantissa() as i64;
 
         // Update rebate amount such that the ild_share is now zero.
-        comet.positions[comet_position_index as usize].collateral_ild_rebate -= collateral_reward;
+        comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
+            [comet_position_index as usize]
+            .collateral_ild_rebate
+            .checked_sub(collateral_reward)
+            .unwrap();
 
         // Mint reward amount to user
         let cpi_accounts = Transfer {
@@ -97,7 +101,11 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
         let onasset_reward = ild_share.onasset_ild_share.abs().mantissa() as i64;
 
         // Update rebate amount such that the ild_share is now zero.
-        comet.positions[comet_position_index as usize].onasset_ild_rebate -= onasset_reward;
+        comet.positions[comet_position_index as usize].onasset_ild_rebate = comet.positions
+            [comet_position_index as usize]
+            .onasset_ild_rebate
+            .checked_sub(onasset_reward)
+            .unwrap();
 
         // Mint reward amount to user
         let cpi_accounts = MintTo {

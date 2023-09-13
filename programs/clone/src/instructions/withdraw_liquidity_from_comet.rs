@@ -67,43 +67,72 @@ pub fn withdraw_liquidity(
         collateral_amount.min(comet_position.committed_collateral_liquidity);
 
     let proportional_value = to_clone_decimal!(collateral_value_to_withdraw)
-        / collateral.to_collateral_decimal(pool.committed_collateral_liquidity)?;
+        .checked_div(collateral.to_collateral_decimal(pool.committed_collateral_liquidity)?)
+        .unwrap();
 
     let collateral_ild_claim = rescale_toward_zero(
-        collateral.to_collateral_decimal(pool.collateral_ild)? * proportional_value,
+        collateral
+            .to_collateral_decimal(pool.collateral_ild)?
+            .checked_mul(proportional_value)
+            .unwrap(),
         collateral.scale.try_into().unwrap(),
     );
     let onasset_ild_claim = rescale_toward_zero(
-        to_clone_decimal!(pool.onasset_ild) * proportional_value,
+        to_clone_decimal!(pool.onasset_ild)
+            .checked_mul(proportional_value)
+            .unwrap(),
         CLONE_TOKEN_SCALE,
     );
 
     // Update pool values:
-    pools.pools[pool_index as usize].onasset_ild -= onasset_ild_claim.mantissa() as i64;
-    pools.pools[pool_index as usize].collateral_ild -= collateral_ild_claim.mantissa() as i64;
-    pools.pools[pool_index as usize].committed_collateral_liquidity -= collateral_value_to_withdraw;
+    pools.pools[pool_index as usize].onasset_ild = pools.pools[pool_index as usize]
+        .onasset_ild
+        .checked_sub(onasset_ild_claim.mantissa().try_into().unwrap())
+        .unwrap();
+    pools.pools[pool_index as usize].collateral_ild = pools.pools[pool_index as usize]
+        .collateral_ild
+        .checked_sub(collateral_ild_claim.mantissa().try_into().unwrap())
+        .unwrap();
+    pools.pools[pool_index as usize].committed_collateral_liquidity = pools.pools
+        [pool_index as usize]
+        .committed_collateral_liquidity
+        .checked_sub(collateral_value_to_withdraw)
+        .unwrap();
     // Update position values:
-    comet.positions[comet_position_index as usize].onasset_ild_rebate -=
-        onasset_ild_claim.mantissa() as i64;
-    comet.positions[comet_position_index as usize].collateral_ild_rebate -=
-        collateral_ild_claim.mantissa() as i64;
-    comet.positions[comet_position_index as usize].committed_collateral_liquidity -=
-        collateral_value_to_withdraw;
+    comet.positions[comet_position_index as usize].onasset_ild_rebate = comet.positions
+        [comet_position_index as usize]
+        .onasset_ild_rebate
+        .checked_sub(onasset_ild_claim.mantissa().try_into().unwrap())
+        .unwrap();
+    comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
+        [comet_position_index as usize]
+        .collateral_ild_rebate
+        .checked_sub(collateral_ild_claim.mantissa().try_into().unwrap())
+        .unwrap();
+    comet.positions[comet_position_index as usize].committed_collateral_liquidity = comet.positions
+        [comet_position_index as usize]
+        .committed_collateral_liquidity
+        .checked_sub(collateral_value_to_withdraw)
+        .unwrap();
 
     emit!(LiquidityDelta {
         event_id: event_counter,
         user_address: user,
         pool_index: pool_index.try_into().unwrap(),
-        committed_collateral_delta: -(collateral_value_to_withdraw as i64),
-        onasset_ild_delta: -(onasset_ild_claim.mantissa() as i64),
-        collateral_ild_delta: -(collateral_ild_claim.mantissa() as i64)
+        committed_collateral_delta: -TryInto::<i64>::try_into(collateral_value_to_withdraw)
+            .unwrap(),
+        onasset_ild_delta: -TryInto::<i64>::try_into(onasset_ild_claim.mantissa()).unwrap(),
+        collateral_ild_delta: -TryInto::<i64>::try_into(collateral_ild_claim.mantissa()).unwrap()
     });
 
     let pool = &pools.pools[pool_index as usize];
     let oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
     let pool_price = rescale_toward_zero(
-        oracle.get_price() / collateral_oracle.get_price(),
+        oracle
+            .get_price()
+            .checked_div(collateral_oracle.get_price())
+            .unwrap(),
         CLONE_TOKEN_SCALE,
     );
 

@@ -122,9 +122,13 @@ pub fn execute(
     let pool_price = pool_oracle.get_price() / collateral_oracle.get_price();
 
     let collateral_reward = rescale_toward_zero(
-        (Decimal::one() + borrow_liquidation_fee_rate)
-            * to_clone_decimal!(burn_amount)
-            * pool_price,
+        (Decimal::one()
+            .checked_add(borrow_liquidation_fee_rate)
+            .unwrap())
+        .checked_mul(to_clone_decimal!(burn_amount))
+        .unwrap()
+        .checked_mul(pool_price)
+        .unwrap(),
         collateral.scale.try_into().unwrap(),
     )
     .min(collateral_position_amount);
@@ -167,8 +171,14 @@ pub fn execute(
     )?;
 
     // Update data
-    borrows[borrow_index as usize].borrowed_onasset -= burn_amount;
-    borrows[borrow_index as usize].collateral_amount -= collateral_reward.mantissa() as u64;
+    borrows[borrow_index as usize].borrowed_onasset = borrows[borrow_index as usize]
+        .borrowed_onasset
+        .checked_sub(burn_amount)
+        .unwrap();
+    borrows[borrow_index as usize].collateral_amount = borrows[borrow_index as usize]
+        .collateral_amount
+        .checked_sub(collateral_reward.mantissa() as u64)
+        .unwrap();
 
     // Remove position if empty
     if borrows[borrow_index as usize].is_empty() {
@@ -184,7 +194,11 @@ pub fn execute(
         );
         let max_liquidation_overcollateral_ratio =
             to_ratio_decimal!(pool.asset_info.max_liquidation_overcollateral_ratio);
-        let c_ratio = collateral_amount * collateralization_ratio / (pool_price * borrowed_onasset);
+        let c_ratio = collateral_amount
+            .checked_mul(collateralization_ratio)
+            .unwrap()
+            .checked_div(pool_price.checked_mul(borrowed_onasset).unwrap())
+            .unwrap();
         return_error_if_false!(
             c_ratio <= max_liquidation_overcollateral_ratio,
             CloneError::InvalidMintCollateralRatio
@@ -201,7 +215,7 @@ pub fn execute(
         borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
         borrowed_delta: -(burn_amount as i64)
     });
-    ctx.accounts.clone.event_counter += 1;
+    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
 
     Ok(())
 }

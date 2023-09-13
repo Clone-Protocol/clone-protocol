@@ -65,10 +65,12 @@ pub fn execute(ctx: Context<AddStake>, amount: u64) -> Result<()> {
         transfer(CpiContext::new(cpi_program, cpi_accounts), amount)?;
 
         // Update user account
-        user_account.staked_tokens += amount;
+        user_account.staked_tokens = user_account.staked_tokens.checked_add(amount).unwrap();
 
         let current_slot = Clock::get()?.slot;
-        user_account.min_slot_withdrawal = current_slot + clone_staking.staking_period_slots;
+        user_account.min_slot_withdrawal = current_slot
+            .checked_add(clone_staking.staking_period_slots)
+            .unwrap();
     }
 
     Ok(())
