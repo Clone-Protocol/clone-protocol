@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 
-
 declare_id!("7EtBBf3vKfP2m8mc6TwvQEKpBqfJgbH9VNhZ7kHeFTMP");
 
 const MOCK_FAUCET_SEED: &str = "faucet";
@@ -53,7 +52,6 @@ pub struct MintAsset<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-
 #[program]
 pub mod mock_asset_faucet {
     use super::*;
@@ -65,18 +63,11 @@ pub mod mock_asset_faucet {
 
     pub fn mint_asset(ctx: Context<MintAsset>, amount: u64) -> Result<()> {
         let bump = ctx.bumps.get("faucet").unwrap();
-        let seeds = &[&[
-            MOCK_FAUCET_SEED.as_ref(),
-            bytemuck::bytes_of(bump),
-        ][..]];
-        
+        let seeds = &[&[MOCK_FAUCET_SEED.as_ref(), bytemuck::bytes_of(bump)][..]];
+
         let cpi_accounts = MintTo {
             mint: ctx.accounts.mint.to_account_info().clone(),
-            to: ctx
-                .accounts
-                .token_account
-                .to_account_info()
-                .clone(),
+            to: ctx.accounts.token_account.to_account_info().clone(),
             authority: ctx.accounts.faucet.to_account_info().clone(),
         };
         mint_to(
@@ -90,7 +81,3 @@ pub mod mock_asset_faucet {
         Ok(())
     }
 }
-
-
-
-
