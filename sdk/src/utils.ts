@@ -1,4 +1,9 @@
-import { CLONE_TOKEN_SCALE, fromScale } from "./clone";
+import {
+  CLONE_TOKEN_SCALE,
+  fromScale,
+  fromCloneScale,
+  toCloneScale,
+} from "./clone";
 //import { Pool } from "./interfaces";
 import { Collateral, Pool } from "../generated/clone";
 import {
@@ -19,7 +24,6 @@ import {
   TokenAccountNotFoundError,
 } from "@solana/spl-token";
 import { Provider } from "@coral-xyz/anchor";
-import { fromCloneScale } from "../../commands/utils";
 
 export const sleep = async (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -67,15 +71,16 @@ export const getPoolLiquidity = (
 ) => {
   const poolCollateral =
     Number(pool.committedCollateralLiquidity) - Number(pool.collateralIld);
-  const poolCollateralZeroScale = fromScale(poolCollateral, collateralScale);
-
-  const poolOnassetZeroScale =
-    fromScale(pool.committedCollateralLiquidity, collateralScale) /
-      fromScale(oraclePrice, oracleScale) -
-    fromCloneScale(Number(pool.onassetIld));
+  const poolOnasset = Number(
+    toCloneScale(
+      Number(fromScale(pool.committedCollateralLiquidity, collateralScale)) /
+        Number(fromScale(oraclePrice, oracleScale)) -
+        Number(fromCloneScale(Number(pool.onassetIld)))
+    )
+  );
   return {
-    poolCollateralZeroScale,
-    poolOnassetZeroScale,
+    poolCollateral,
+    poolOnasset,
   };
 };
 
@@ -85,13 +90,13 @@ export const calculateOutputFromInputFromParams = (
   treasuryFeeRate: number,
   liquidityTradingFeeRate: number,
   input: number,
-  isInputOnusd: boolean
+  isInputCollateral: boolean
 ) => {
   const totalFeeRate = liquidityTradingFeeRate + treasuryFeeRate;
   const feeAdjustment = 1 - totalFeeRate;
   const invariant = poolOnasset * poolCollateral;
 
-  const outputBeforeFees = isInputOnusd
+  const outputBeforeFees = isInputCollateral
     ? poolOnasset - invariant / (poolCollateral + input)
     : poolCollateral - invariant / (poolOnasset + input);
   const output = floortoCloneScale(feeAdjustment * outputBeforeFees);
@@ -100,7 +105,7 @@ export const calculateOutputFromInputFromParams = (
     (totalFees * treasuryFeeRate) / totalFeeRate
   );
   const [resultpoolCollateral, resultPoolOnasset] = (() => {
-    if (isInputOnusd) {
+    if (isInputCollateral) {
       return [poolCollateral + input, poolOnasset - output - treasuryFee];
     } else {
       return [poolCollateral - output - treasuryFee, poolOnasset + input];
