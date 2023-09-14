@@ -7,8 +7,7 @@ import {
   Transaction,
   SystemProgram,
   Keypair,
-  AccountInfo,
-  Connection,
+  Signer,
 } from "@solana/web3.js";
 import {
   Account,
@@ -21,6 +20,7 @@ import {
   MINT_SIZE,
   getMinimumBalanceForRentExemptMint,
   createInitializeMintInstruction,
+  createAssociatedTokenAccount,
 } from "@solana/spl-token";
 import { Provider } from "@coral-xyz/anchor";
 import { CloneClient, CLONE_TOKEN_SCALE, toCloneScale } from "../sdk/src/clone";
@@ -258,6 +258,32 @@ export const createTokenMint = async (
   await provider.sendAndConfirm(tx, [tokenMint]);
   return tokenMint.publicKey;
 };
+
+// export async function ensureTokenAccountExists(
+//   provider: anchor.AnchorProvider,
+//   associatedTokenAddress: PublicKey,
+//   mintAddress: PublicKey,
+//   ownerAddress: PublicKey,
+// ) {
+//   try {
+//     const accountInfo = await getAccount(
+//       provider.connection,
+//       associatedTokenAddress,
+//       "recent"
+//     );
+//     if (!accountInfo) {
+//       await createAssociatedTokenAccount(
+//         provider.connection,
+//         provider.publicKey!,
+//         mintAddress,
+//         ownerAddress
+//       );
+//     }
+//   } catch (error) {
+//     console.error("Error ensuring token account exists:", error);
+//     throw error;
+//   }
+// }
 
 export const getStatus = (num: number) => {
   let status: string;

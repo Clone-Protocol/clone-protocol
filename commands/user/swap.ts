@@ -1,12 +1,6 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient, fromScale, toCloneScale } from "../../sdk/src/clone";
+import { fromScale, toCloneScale } from "../../sdk/src/clone";
 import { calculateSwapExecution } from "../../sdk/src/utils";
-import {
-  TOKEN_PROGRAM_ID,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  getAssociatedTokenAddress,
-  getAccount,
-} from "@solana/spl-token";
 import { BN } from "@coral-xyz/anchor";
 import {
   successLog,
@@ -97,33 +91,18 @@ exports.handler = async function (yargs: CommandArguments) {
     );
     const initialOnassetBalance = Number(onassetTokenAccountInfo.amount);
 
-    const treasuryOnassetAssociatedTokenAddress =
-      await getAssociatedTokenAddress(
-        pool.assetInfo.onassetMint,
-        cloneClient.clone!.treasuryAddress,
-        false,
-        TOKEN_PROGRAM_ID,
-        ASSOCIATED_TOKEN_PROGRAM_ID
-      );
-    const treasuryOnassetTokenAccount = await getAccount(
-      cloneClient.provider.connection,
-      treasuryOnassetAssociatedTokenAddress,
-      "recent"
+    const treasuryOnassetTokenAccount = await getOrCreateAssociatedTokenAccount(
+      provider,
+      pool.assetInfo.onassetMint,
+      cloneClient.clone!.treasuryAddress
     );
 
-    const treasuryCollateralAssociatedTokenAddress =
-      await getAssociatedTokenAddress(
+    const treasuryCollateralTokenAccount =
+      await getOrCreateAssociatedTokenAccount(
+        provider,
         collateral.mint,
-        cloneClient.clone!.treasuryAddress,
-        false,
-        TOKEN_PROGRAM_ID,
-        ASSOCIATED_TOKEN_PROGRAM_ID
+        cloneClient.clone!.treasuryAddress
       );
-    const treasuryCollateralTokenAccount = await getAccount(
-      cloneClient.provider.connection,
-      treasuryCollateralAssociatedTokenAddress,
-      "recent"
-    );
 
     const updatePricesIx = cloneClient.updatePricesInstruction(oracles);
 
