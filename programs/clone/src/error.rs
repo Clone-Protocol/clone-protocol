@@ -149,6 +149,10 @@ pub enum CloneError {
     /// 36. Invalid Conversion
     #[msg("Invalid Conversion")]
     InvalidConversion,
+
+    /// 37. Auth already exists
+    #[msg("Auth Already Exists")]
+    AuthAlreadyExists,
 }
 
 impl From<CloneError> for ProgramError {
