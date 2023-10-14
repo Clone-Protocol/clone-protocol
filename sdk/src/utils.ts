@@ -49,7 +49,8 @@ export const deepCopy = <T>(source: T): T => {
 };
 
 export const floorToScale = (x: number, scale: number) => {
-  return Math.floor(x * Math.pow(10, scale)) * Math.pow(10, -scale);
+  let sign = x < 0 ? -1 : 1;
+  return sign * Math.floor(Math.abs(x) * Math.pow(10, scale)) * Math.pow(10, -scale);
 };
 
 export const floortoCloneScale = (x: number) => {
