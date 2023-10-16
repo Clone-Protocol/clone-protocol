@@ -92,5 +92,11 @@ pub fn execute(
             pool.asset_info.position_health_score_coefficient = value;
         }
     }
+
+    return_error_if_false!(
+        pool.asset_info.is_valid_overcollateral_ratios(),
+        CloneError::InvalidOvercollateralizationRatios
+    );
+
     Ok(())
 }

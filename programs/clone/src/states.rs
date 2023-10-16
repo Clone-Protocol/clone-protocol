@@ -67,6 +67,13 @@ pub struct AssetInfo {
     pub max_liquidation_overcollateral_ratio: u16,
 }
 
+impl AssetInfo {
+    pub fn is_valid_overcollateral_ratios(&self) -> bool {
+        self.min_overcollateral_ratio > 100
+            && self.max_liquidation_overcollateral_ratio > self.min_overcollateral_ratio
+    }
+}
+
 #[derive(Clone, PartialEq, Default, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
 pub enum OracleSource {
     #[default]

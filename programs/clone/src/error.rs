@@ -82,9 +82,9 @@ pub enum CloneError {
     #[msg("No remaining accounts supplied")]
     NoRemainingAccountsSupplied,
 
-    /// 20. Non-zero collateralization ratio required
-    #[msg("Non-zero collateralization ratio required")]
-    NonZeroCollateralizationRatioRequired,
+    /// 20. Invalid over-collateralization ratios
+    #[msg("Invalid over-collateralization ratios")]
+    InvalidOvercollateralizationRatios,
 
     /// 21. Incorrect Oracle Address
     #[msg("Incorrect oracle address provided")]
