@@ -21,6 +21,7 @@ export const getHealthScore = (
 ): {
   healthScore: number;
   ildHealthImpact: number;
+  effectiveCollateralValue: number;
 } => {
   const totalCollateralValue = getEffectiveCollateralValue(comet, collateral);
   const positionILD = getILD(collateral, pools, oracles, comet, oraclePrices);
@@ -61,6 +62,7 @@ export const getHealthScore = (
   return {
     healthScore: 100 - loss,
     ildHealthImpact: totalIldHealthImpact / totalCollateralValue,
+    effectiveCollateralValue: totalCollateralValue,
   };
 };
 
