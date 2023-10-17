@@ -78,7 +78,7 @@ pub fn execute(
     let comet = &mut ctx.accounts.user_account.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
-    let ild_share = calculate_ild_share(&comet_position, &pools, &ctx.accounts.clone.collateral);
+    let ild_share = calculate_ild_share(&comet_position, &pools, &ctx.accounts.clone.collateral)?;
 
     match payment_type {
         PaymentType::Onasset => {
@@ -87,7 +87,11 @@ pub fn execute(
                 CloneError::InvalidPaymentType
             );
 
-            let ild_share: u64 = ild_share.onasset_ild_share.mantissa().try_into().unwrap();
+            let ild_share: u64 = ild_share
+                .onasset_ild_share
+                .mantissa()
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?;
             let burn_amount = ild_share.min(amount);
 
             comet.positions[comet_position_index as usize].onasset_ild_rebate += burn_amount as i64;
@@ -116,7 +120,7 @@ pub fn execute(
                 .collateral_ild_share
                 .mantissa()
                 .try_into()
-                .unwrap();
+                .map_err(|_| CloneError::IntTypeConversionError)?;
             let transfer_amount = ild_share.min(amount);
             comet.positions[comet_position_index as usize].collateral_ild_rebate +=
                 transfer_amount as i64;
@@ -146,7 +150,7 @@ pub fn execute(
                 .collateral_ild_share
                 .mantissa()
                 .try_into()
-                .unwrap();
+                .map_err(|_| CloneError::IntTypeConversionError)?;
             let from_wallet_amount = ild_share.min(amount).min(comet.collateral_amount);
             comet.positions[comet_position_index as usize].collateral_ild_rebate +=
                 from_wallet_amount as i64;

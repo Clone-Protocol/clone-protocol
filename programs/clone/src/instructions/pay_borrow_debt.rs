@@ -77,7 +77,7 @@ pub fn execute(
         pool_index: borrows[borrow_index as usize]
             .pool_index
             .try_into()
-            .unwrap(),
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         is_liquidation: false,
         collateral_supplied: borrows[borrow_index as usize].collateral_amount,
         collateral_delta: 0,

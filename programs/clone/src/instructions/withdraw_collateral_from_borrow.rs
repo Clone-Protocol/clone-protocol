@@ -112,7 +112,9 @@ pub fn execute(
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index: pool_index
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         is_liquidation: false,
         collateral_supplied: borrow_position.collateral_amount,
         collateral_delta: -(amount_to_withdraw as i64),

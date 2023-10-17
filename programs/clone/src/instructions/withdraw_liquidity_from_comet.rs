@@ -71,7 +71,10 @@ pub fn withdraw_liquidity(
 
     let collateral_ild_claim = rescale_toward_zero(
         collateral.to_collateral_decimal(pool.collateral_ild)? * proportional_value,
-        collateral.scale.try_into().unwrap(),
+        collateral
+            .scale
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
     );
     let onasset_ild_claim = rescale_toward_zero(
         to_clone_decimal!(pool.onasset_ild) * proportional_value,
@@ -93,7 +96,9 @@ pub fn withdraw_liquidity(
     emit!(LiquidityDelta {
         event_id: event_counter,
         user_address: user,
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index: pool_index
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         committed_collateral_delta: -(collateral_value_to_withdraw as i64),
         onasset_ild_delta: -(onasset_ild_claim.mantissa() as i64),
         collateral_ild_delta: -(collateral_ild_claim.mantissa() as i64)
@@ -109,11 +114,16 @@ pub fn withdraw_liquidity(
 
     emit!(PoolState {
         event_id: event_counter,
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index: pool_index
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         onasset_ild: pool.onasset_ild,
         collateral_ild: pool.collateral_ild,
         committed_collateral_liquidity: pool.committed_collateral_liquidity,
-        pool_price: pool_price.mantissa().try_into().unwrap(),
+        pool_price: pool_price
+            .mantissa()
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         pool_scale: pool_price.scale()
     });
 

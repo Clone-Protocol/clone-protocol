@@ -10,25 +10,25 @@ pub enum CloneError {
     #[msg("Invalid Mint Collateral Ratio")]
     InvalidMintCollateralRatio,
 
-    /// 2. Collateral Not Found
-    #[msg("Collateral Not Found")]
-    CollateralNotFound,
+    /// 2. Integer Type Conversion Error
+    #[msg("Integer Type Conversion Error")]
+    IntTypeConversionError,
 
     /// 3. Pool Not Found
     #[msg("Pool Not Found")]
     PoolNotFound,
 
-    /// 4. Invalid Collateral Type
-    #[msg("Invalid Collateral Type")]
-    InvalidCollateralType,
+    /// 4. Bump not found
+    #[msg("Bump not found")]
+    BumpNotFound,
 
     /// 5. Invalid Token Amount
     #[msg("Invalid Token Amount")]
     InvalidTokenAmount,
 
-    /// 6. Invalid Bool
-    #[msg("Invalid Bool")]
-    InvalidBool,
+    /// 6. Expected Account Not Found
+    #[msg("Expected Account Not Found")]
+    ExpectedAccountNotFound,
 
     /// 7. Outdated Oracle
     #[msg("Outdated Oracle")]

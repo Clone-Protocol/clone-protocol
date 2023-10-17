@@ -137,7 +137,9 @@ pub fn execute(
     let user_account = &mut ctx.accounts.user_account;
     user_account.borrows.push(Borrow {
         collateral_amount,
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index: pool_index
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         borrowed_onasset: onasset_amount,
     });
 
@@ -147,9 +149,13 @@ pub fn execute(
         pool_index,
         is_liquidation: false,
         collateral_supplied: collateral_amount,
-        collateral_delta: collateral_amount.try_into().unwrap(),
+        collateral_delta: collateral_amount
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         borrowed_amount: onasset_amount,
-        borrowed_delta: onasset_amount.try_into().unwrap()
+        borrowed_delta: onasset_amount
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?
     });
     ctx.accounts.clone.event_counter += 1;
 

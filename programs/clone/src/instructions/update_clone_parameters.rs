@@ -1,5 +1,4 @@
 use crate::error::*;
-use crate::return_error_if_false;
 use crate::states::*;
 use crate::CLONE_PROGRAM_SEED;
 use anchor_lang::prelude::*;
@@ -35,12 +34,16 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
     match params {
         CloneParameters::AddAuth { address } => {
             let auth_array = clone.auth;
-            let empty_slot = auth_array
+
+            if let Some(empty_slot) = auth_array
                 .iter()
                 .enumerate()
-                .find(|(_, slot)| (**slot).eq(&Pubkey::default()));
-            return_error_if_false!(empty_slot.is_some(), CloneError::AuthArrayFull);
-            clone.auth[empty_slot.unwrap().0] = address;
+                .find(|(_, slot)| (**slot).eq(&Pubkey::default()))
+            {
+                clone.auth[empty_slot.0] = address;
+            } else {
+                return Err(error!(CloneError::AuthArrayFull));
+            }
         }
         CloneParameters::CometCollateralLiquidationFee { value } => {
             ctx.accounts.clone.comet_collateral_ild_liquidator_fee_bps = value;
@@ -53,13 +56,16 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
         }
         CloneParameters::RemoveAuth { address } => {
             let auth_array = clone.auth;
-            let auth_slot = auth_array
+
+            if let Some(auth_slot) = auth_array
                 .iter()
                 .enumerate()
-                .find(|(_, slot)| (**slot).eq(&address));
-
-            return_error_if_false!(auth_slot.is_some(), CloneError::AuthNotFound);
-            clone.auth[auth_slot.unwrap().0] = Pubkey::default();
+                .find(|(_, slot)| (**slot).eq(&address))
+            {
+                clone.auth[auth_slot.0] = Pubkey::default();
+            } else {
+                return Err(error!(CloneError::AuthNotFound));
+            }
         }
         CloneParameters::TreasuryAddress { address } => {
             clone.treasury_address = address;

@@ -1,3 +1,4 @@
+use crate::error::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
@@ -37,7 +38,10 @@ pub fn execute(ctx: Context<Initialize>, staking_period_slots: u64) -> Result<()
     clone_staking.cln_token_mint = ctx.accounts.cln_token_mint.key();
     clone_staking.cln_token_vault = ctx.accounts.cln_token_vault.key();
     clone_staking.staking_period_slots = staking_period_slots;
-    clone_staking.bump = *ctx.bumps.get("clone_staking").unwrap();
+    clone_staking.bump = *ctx
+        .bumps
+        .get("clone_staking")
+        .ok_or_else(|| CloneStakingError::BumpNotFound)?;
     clone_staking.tiers = [Tier::default(); MAX_TIERS];
 
     Ok(())

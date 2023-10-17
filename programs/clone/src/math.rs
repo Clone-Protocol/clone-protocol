@@ -94,7 +94,10 @@ pub fn calculate_liquidity_position_loss(
     let collateral_ild_share = rescale_toward_zero(
         collateral.to_collateral_decimal(pool.collateral_ild)? * proportional_value
             - collateral.to_collateral_decimal(liquidity_position.collateral_ild_rebate)?,
-        collateral.scale.try_into().unwrap(),
+        collateral
+            .scale
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
     );
     let onasset_ild_share = rescale_toward_zero(
         to_clone_decimal!(pool.onasset_ild) * proportional_value
@@ -170,15 +173,15 @@ pub fn calculate_ild_share(
     liquidity_position: &LiquidityPosition,
     pools: &Pools,
     collateral: &Collateral,
-) -> ILDShare {
+) -> Result<ILDShare> {
     let pool_index = liquidity_position.pool_index as usize;
     let pool = &pools.pools[pool_index];
     let position_committed_collateral_liquidity = collateral
         .to_collateral_decimal(liquidity_position.committed_collateral_liquidity)
-        .unwrap();
+        .map_err(|_| CloneError::IntTypeConversionError)?;
     let total_committed_collateral_liquidity = collateral
         .to_collateral_decimal(pool.committed_collateral_liquidity)
-        .unwrap();
+        .map_err(|_| CloneError::IntTypeConversionError)?;
 
     let claimable_ratio = if total_committed_collateral_liquidity > Decimal::ZERO {
         position_committed_collateral_liquidity / total_committed_collateral_liquidity
@@ -189,9 +192,12 @@ pub fn calculate_ild_share(
     let collateral_ild_claim = rescale_toward_zero(
         collateral
             .to_collateral_decimal(pool.collateral_ild)
-            .unwrap()
+            .map_err(|_| CloneError::IntTypeConversionError)?
             * claimable_ratio,
-        collateral.scale.try_into().unwrap(),
+        collateral
+            .scale
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
     );
     let onasset_ild_claim = rescale_toward_zero(
         to_clone_decimal!(pool.onasset_ild) * claimable_ratio,
@@ -202,18 +208,21 @@ pub fn calculate_ild_share(
         collateral_ild_claim
             - collateral
                 .to_collateral_decimal(liquidity_position.collateral_ild_rebate)
-                .unwrap(),
-        collateral.scale.try_into().unwrap(),
+                .map_err(|_| CloneError::IntTypeConversionError)?,
+        collateral
+            .scale
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
     );
     let onasset_ild_share = rescale_toward_zero(
         onasset_ild_claim - to_clone_decimal!(liquidity_position.onasset_ild_rebate),
         CLONE_TOKEN_SCALE,
     );
 
-    ILDShare {
+    Ok(ILDShare {
         collateral_ild_claim,
         onasset_ild_claim,
         collateral_ild_share,
         onasset_ild_share,
-    }
+    })
 }

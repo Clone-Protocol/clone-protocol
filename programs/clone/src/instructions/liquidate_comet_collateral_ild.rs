@@ -71,7 +71,7 @@ pub fn execute(
     let comet = &mut ctx.accounts.user_account.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
-    let ild_share = calculate_ild_share(&comet_position, pools, collateral);
+    let ild_share = calculate_ild_share(&comet_position, pools, collateral)?;
     let pool_index = comet_position.pool_index as usize;
     let pool = &pools.pools[pool_index];
     return_error_if_false!(
@@ -97,13 +97,13 @@ pub fn execute(
             collateral_scale,
         )
         .try_into()
-        .unwrap();
+        .map_err(|_| CloneError::IntTypeConversionError)?;
         // Remove equivalent reward from user's collateral
         let ild_share: u64 = ild_share
             .collateral_ild_share
             .mantissa()
             .try_into()
-            .unwrap();
+            .map_err(|_| CloneError::IntTypeConversionError)?;
         let collateral_reduction: u64 = collateral_reward + ild_share;
         return_error_if_false!(
             collateral_reduction <= comet.collateral_amount,

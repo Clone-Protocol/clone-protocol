@@ -105,12 +105,16 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index: pool_index
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         is_liquidation: false,
         collateral_supplied: borrows[borrow_index as usize].collateral_amount,
         collateral_delta: 0,
         borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
-        borrowed_delta: amount.try_into().unwrap()
+        borrowed_delta: amount
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?
     });
     ctx.accounts.clone.event_counter += 1;
 
