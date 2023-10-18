@@ -66,7 +66,7 @@ pub fn withdraw_liquidity(
     let collateral_value_to_withdraw =
         collateral_amount.min(comet_position.committed_collateral_liquidity);
 
-    let proportional_value = to_clone_decimal!(collateral_value_to_withdraw)
+    let proportional_value = collateral.to_collateral_decimal(collateral_value_to_withdraw)?
         / collateral.to_collateral_decimal(pool.committed_collateral_liquidity)?;
 
     let collateral_ild_claim = rescale_toward_zero(
