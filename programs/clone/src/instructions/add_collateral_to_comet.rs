@@ -1,3 +1,4 @@
+use crate::events::*;
 use crate::states::*;
 use crate::{CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
@@ -14,6 +15,7 @@ pub struct AddCollateralToComet<'info> {
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
+        mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
     )]
@@ -49,6 +51,15 @@ pub fn execute(ctx: Context<AddCollateralToComet>, amount: u64) -> Result<()> {
     token::transfer(CpiContext::new(cpi_program, cpi_accounts), amount)?;
 
     comet.collateral_amount += amount;
+
+    emit!(CometCollateralUpdate {
+        event_id: ctx.accounts.clone.event_counter,
+        user_address: *ctx.accounts.user.key,
+        collateral_supplied: comet.collateral_amount,
+        collateral_delta: amount as i64,
+    });
+
+    ctx.accounts.clone.event_counter += 1;
 
     Ok(())
 }

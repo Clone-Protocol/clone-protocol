@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::math::*;
 use crate::states::*;
 use crate::{return_error_if_false, CLONE_PROGRAM_SEED, POOLS_SEED, USER_SEED};
@@ -152,6 +153,15 @@ pub fn execute(
                 from_wallet_amount as i64;
 
             comet.collateral_amount -= from_wallet_amount;
+
+            emit!(CometCollateralUpdate {
+                event_id: ctx.accounts.clone.event_counter,
+                user_address: user.key(),
+                collateral_supplied: comet.collateral_amount,
+                collateral_delta: -(from_wallet_amount as i64),
+            });
+
+            ctx.accounts.clone.event_counter += 1;
         }
     }
 

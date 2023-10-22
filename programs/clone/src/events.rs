@@ -48,3 +48,12 @@ pub struct BorrowUpdate {
     pub borrowed_amount: u64,
     pub borrowed_delta: i64,
 }
+
+// COMET COLLATERAL CHANGE EVENT
+#[event]
+pub struct CometCollateralUpdate {
+    pub event_id: u64,
+    pub user_address: Pubkey,
+    pub collateral_supplied: u64,
+    pub collateral_delta: i64,
+}

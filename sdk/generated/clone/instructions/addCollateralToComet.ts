@@ -38,7 +38,7 @@ export const addCollateralToCometStruct = new beet.BeetArgsStruct<
  *
  * @property [**signer**] user
  * @property [_writable_] userAccount
- * @property [] clone
+ * @property [_writable_] clone
  * @property [_writable_] vault
  * @property [_writable_] userCollateralTokenAccount
  * @category Instructions
@@ -91,7 +91,7 @@ export function createAddCollateralToCometInstruction(
     },
     {
       pubkey: accounts.clone,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {

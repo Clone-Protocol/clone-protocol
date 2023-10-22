@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
@@ -17,6 +18,7 @@ pub struct WithdrawCollateralFromComet<'info> {
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
+        mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
     )]
@@ -82,6 +84,15 @@ pub fn execute(ctx: Context<WithdrawCollateralFromComet>, collateral_amount: u64
     let health_score = calculate_health_score(comet, pools, oracles, collateral)?;
 
     return_error_if_false!(health_score.is_healthy(), CloneError::HealthScoreTooLow);
+
+    emit!(CometCollateralUpdate {
+        event_id: ctx.accounts.clone.event_counter,
+        user_address: *ctx.accounts.user.key,
+        collateral_supplied: comet.collateral_amount,
+        collateral_delta: -(collateral_to_withdraw as i64),
+    });
+
+    ctx.accounts.clone.event_counter += 1;
 
     Ok(())
 }
