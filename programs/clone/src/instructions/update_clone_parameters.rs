@@ -35,6 +35,15 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
     match params {
         CloneParameters::AddAuth { address } => {
             let auth_array = clone.auth;
+
+            return_error_if_false!(
+                auth_array
+                    .iter()
+                    .find(|slot| (**slot).eq(&address))
+                    .is_none(),
+                CloneError::AuthAlreadyExists
+            );
+
             let empty_slot = auth_array
                 .iter()
                 .enumerate()
