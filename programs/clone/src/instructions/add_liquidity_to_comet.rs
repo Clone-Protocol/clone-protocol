@@ -44,6 +44,8 @@ pub fn execute(
     pool_index: u8,
     collateral_amount: u64,
 ) -> Result<()> {
+    return_error_if_false!(collateral_amount > 0, CloneError::InvalidTokenAmount);
+
     let collateral = &ctx.accounts.clone.collateral;
     let pools = &mut ctx.accounts.pools;
     return_error_if_false!(

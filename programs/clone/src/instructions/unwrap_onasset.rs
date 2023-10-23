@@ -56,6 +56,7 @@ pub fn execute(ctx: Context<UnwrapOnAsset>, amount: u64, pool_index: u8) -> Resu
         pool.status == Status::Active || pool.status == Status::Deprecation,
         CloneError::StatusPreventsAction
     );
+    return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
 
     let underlying_mint_scale = ctx.accounts.asset_mint.decimals as u32;
     let unwrapped_amount =

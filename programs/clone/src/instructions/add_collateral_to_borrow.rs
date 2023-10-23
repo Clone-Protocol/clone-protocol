@@ -1,6 +1,7 @@
+use crate::error::*;
 use crate::events::*;
 use crate::states::*;
-use crate::{CLONE_PROGRAM_SEED, USER_SEED};
+use crate::{return_error_if_false, CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
 use std::convert::TryInto;
@@ -35,6 +36,8 @@ pub struct AddCollateralToBorrow<'info> {
 }
 
 pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u64) -> Result<()> {
+    return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
+
     let borrows = &mut ctx.accounts.user_account.borrows;
 
     // add collateral amount to mint data

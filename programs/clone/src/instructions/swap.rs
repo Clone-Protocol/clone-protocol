@@ -110,6 +110,8 @@ pub fn execute(
     quantity_is_collateral: bool,
     result_threshold: u64,
 ) -> Result<()> {
+    return_error_if_false!(quantity > 0, CloneError::InvalidTokenAmount);
+
     let seeds = &[&[
         CLONE_PROGRAM_SEED.as_ref(),
         bytemuck::bytes_of(&ctx.accounts.clone.bump),
