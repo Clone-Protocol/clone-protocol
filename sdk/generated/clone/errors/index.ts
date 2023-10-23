@@ -58,26 +58,26 @@ createErrorFromNameLookup.set(
 )
 
 /**
- * CollateralNotFound: 'Collateral Not Found'
+ * IntTypeConversionError: 'Integer Type Conversion Error'
  *
  * @category Errors
  * @category generated
  */
-export class CollateralNotFoundError extends Error {
+export class IntTypeConversionErrorError extends Error {
   readonly code: number = 0x1772
-  readonly name: string = 'CollateralNotFound'
+  readonly name: string = 'IntTypeConversionError'
   constructor() {
-    super('Collateral Not Found')
+    super('Integer Type Conversion Error')
     if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, CollateralNotFoundError)
+      Error.captureStackTrace(this, IntTypeConversionErrorError)
     }
   }
 }
 
-createErrorFromCodeLookup.set(0x1772, () => new CollateralNotFoundError())
+createErrorFromCodeLookup.set(0x1772, () => new IntTypeConversionErrorError())
 createErrorFromNameLookup.set(
-  'CollateralNotFound',
-  () => new CollateralNotFoundError()
+  'IntTypeConversionError',
+  () => new IntTypeConversionErrorError()
 )
 
 /**
@@ -101,27 +101,24 @@ createErrorFromCodeLookup.set(0x1773, () => new PoolNotFoundError())
 createErrorFromNameLookup.set('PoolNotFound', () => new PoolNotFoundError())
 
 /**
- * InvalidCollateralType: 'Invalid Collateral Type'
+ * BumpNotFound: 'Bump not found'
  *
  * @category Errors
  * @category generated
  */
-export class InvalidCollateralTypeError extends Error {
+export class BumpNotFoundError extends Error {
   readonly code: number = 0x1774
-  readonly name: string = 'InvalidCollateralType'
+  readonly name: string = 'BumpNotFound'
   constructor() {
-    super('Invalid Collateral Type')
+    super('Bump not found')
     if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, InvalidCollateralTypeError)
+      Error.captureStackTrace(this, BumpNotFoundError)
     }
   }
 }
 
-createErrorFromCodeLookup.set(0x1774, () => new InvalidCollateralTypeError())
-createErrorFromNameLookup.set(
-  'InvalidCollateralType',
-  () => new InvalidCollateralTypeError()
-)
+createErrorFromCodeLookup.set(0x1774, () => new BumpNotFoundError())
+createErrorFromNameLookup.set('BumpNotFound', () => new BumpNotFoundError())
 
 /**
  * InvalidTokenAmount: 'Invalid Token Amount'
@@ -147,24 +144,27 @@ createErrorFromNameLookup.set(
 )
 
 /**
- * InvalidBool: 'Invalid Bool'
+ * ExpectedAccountNotFound: 'Expected Account Not Found'
  *
  * @category Errors
  * @category generated
  */
-export class InvalidBoolError extends Error {
+export class ExpectedAccountNotFoundError extends Error {
   readonly code: number = 0x1776
-  readonly name: string = 'InvalidBool'
+  readonly name: string = 'ExpectedAccountNotFound'
   constructor() {
-    super('Invalid Bool')
+    super('Expected Account Not Found')
     if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, InvalidBoolError)
+      Error.captureStackTrace(this, ExpectedAccountNotFoundError)
     }
   }
 }
 
-createErrorFromCodeLookup.set(0x1776, () => new InvalidBoolError())
-createErrorFromNameLookup.set('InvalidBool', () => new InvalidBoolError())
+createErrorFromCodeLookup.set(0x1776, () => new ExpectedAccountNotFoundError())
+createErrorFromNameLookup.set(
+  'ExpectedAccountNotFound',
+  () => new ExpectedAccountNotFoundError()
+)
 
 /**
  * OutdatedOracle: 'Outdated Oracle'
@@ -187,26 +187,26 @@ createErrorFromCodeLookup.set(0x1777, () => new OutdatedOracleError())
 createErrorFromNameLookup.set('OutdatedOracle', () => new OutdatedOracleError())
 
 /**
- * NonStablesNotSupported: 'Non-stables Not Supported'
+ * CheckedMathError: 'Checked Math Error'
  *
  * @category Errors
  * @category generated
  */
-export class NonStablesNotSupportedError extends Error {
+export class CheckedMathErrorError extends Error {
   readonly code: number = 0x1778
-  readonly name: string = 'NonStablesNotSupported'
+  readonly name: string = 'CheckedMathError'
   constructor() {
-    super('Non-stables Not Supported')
+    super('Checked Math Error')
     if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, NonStablesNotSupportedError)
+      Error.captureStackTrace(this, CheckedMathErrorError)
     }
   }
 }
 
-createErrorFromCodeLookup.set(0x1778, () => new NonStablesNotSupportedError())
+createErrorFromCodeLookup.set(0x1778, () => new CheckedMathErrorError())
 createErrorFromNameLookup.set(
-  'NonStablesNotSupported',
-  () => new NonStablesNotSupportedError()
+  'CheckedMathError',
+  () => new CheckedMathErrorError()
 )
 
 /**
@@ -484,29 +484,29 @@ createErrorFromNameLookup.set(
 )
 
 /**
- * NonZeroCollateralizationRatioRequired: 'Non-zero collateralization ratio required'
+ * InvalidOvercollateralizationRatios: 'Invalid over-collateralization ratios'
  *
  * @category Errors
  * @category generated
  */
-export class NonZeroCollateralizationRatioRequiredError extends Error {
+export class InvalidOvercollateralizationRatiosError extends Error {
   readonly code: number = 0x1784
-  readonly name: string = 'NonZeroCollateralizationRatioRequired'
+  readonly name: string = 'InvalidOvercollateralizationRatios'
   constructor() {
-    super('Non-zero collateralization ratio required')
+    super('Invalid over-collateralization ratios')
     if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, NonZeroCollateralizationRatioRequiredError)
+      Error.captureStackTrace(this, InvalidOvercollateralizationRatiosError)
     }
   }
 }
 
 createErrorFromCodeLookup.set(
   0x1784,
-  () => new NonZeroCollateralizationRatioRequiredError()
+  () => new InvalidOvercollateralizationRatiosError()
 )
 createErrorFromNameLookup.set(
-  'NonZeroCollateralizationRatioRequired',
-  () => new NonZeroCollateralizationRatioRequiredError()
+  'InvalidOvercollateralizationRatios',
+  () => new InvalidOvercollateralizationRatiosError()
 )
 
 /**
@@ -872,6 +872,29 @@ createErrorFromCodeLookup.set(0x1794, () => new InvalidConversionError())
 createErrorFromNameLookup.set(
   'InvalidConversion',
   () => new InvalidConversionError()
+)
+
+/**
+ * AuthAlreadyExists: 'Auth Already Exists'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class AuthAlreadyExistsError extends Error {
+  readonly code: number = 0x1795
+  readonly name: string = 'AuthAlreadyExists'
+  constructor() {
+    super('Auth Already Exists')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, AuthAlreadyExistsError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x1795, () => new AuthAlreadyExistsError())
+createErrorFromNameLookup.set(
+  'AuthAlreadyExists',
+  () => new AuthAlreadyExistsError()
 )
 
 /**
