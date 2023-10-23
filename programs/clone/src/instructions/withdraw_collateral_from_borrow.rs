@@ -81,7 +81,10 @@ pub fn execute(
     let amount_to_withdraw = amount.min(borrow_position.collateral_amount);
 
     // subtract collateral amount from mint data
-    borrow_position.collateral_amount -= amount_to_withdraw;
+    borrow_position.collateral_amount = borrow_position
+        .collateral_amount
+        .checked_sub(amount_to_withdraw)
+        .unwrap();
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
@@ -119,7 +122,7 @@ pub fn execute(
         borrowed_amount: borrow_position.borrowed_onasset,
         borrowed_delta: 0
     });
-    ctx.accounts.clone.event_counter += 1;
+    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
 
     // check to see if mint is empty, if so remove
     if borrow_position.is_empty() {

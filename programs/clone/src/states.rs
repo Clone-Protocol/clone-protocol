@@ -127,12 +127,21 @@ impl Pool {
             .to_collateral_decimal(self.committed_collateral_liquidity)
             .unwrap();
         let onasset_ild = to_clone_decimal!(self.onasset_ild);
-        let center_price = onasset_price / collateral_price;
+        let center_price = onasset_price.checked_div(collateral_price).unwrap();
         let pool_collateral = collateral
-            .to_collateral_decimal(self.committed_collateral_liquidity - self.collateral_ild as u64)
+            .to_collateral_decimal(
+                TryInto::<i64>::try_into(self.committed_collateral_liquidity)
+                    .unwrap()
+                    .checked_sub(self.collateral_ild)
+                    .unwrap(),
+            )
             .unwrap();
         let pool_onasset = rescale_toward_zero(
-            committed_collateral_liquidity / center_price - onasset_ild,
+            (committed_collateral_liquidity
+                .checked_div(center_price)
+                .unwrap())
+            .checked_sub(onasset_ild)
+            .unwrap(),
             CLONE_TOKEN_SCALE,
         );
         (pool_collateral, pool_onasset)
@@ -154,7 +163,7 @@ impl Pool {
     ) -> SwapSummary {
         let (pool_collateral, pool_onasset) =
             self.calculate_jit_pool(onasset_price, collateral_price, collateral);
-        let invariant = pool_onasset * pool_collateral;
+        let invariant = pool_onasset.checked_mul(pool_collateral).unwrap();
         let default_liquidity_trading_fee = to_bps_decimal!(self.liquidity_trading_fee_bps);
         let default_treasury_trading_fee = to_bps_decimal!(self.treasury_trading_fee_bps);
         let liquidity_trading_fee =
@@ -167,14 +176,32 @@ impl Pool {
             } else {
                 (pool_onasset, pool_collateral, collateral.scale.into())
             };
-            let output_before_fees =
-                rescale_toward_zero(o_pool - invariant / (i_pool + quantity), o_scale);
-            let liquidity_fees_paid =
-                rescale_toward_zero(output_before_fees * liquidity_trading_fee, o_scale);
-            let treasury_fees_paid =
-                rescale_toward_zero(output_before_fees * treasury_trading_fee, o_scale);
+            let output_before_fees = rescale_toward_zero(
+                o_pool
+                    .checked_sub(
+                        invariant
+                            .checked_div(i_pool.checked_add(quantity).unwrap())
+                            .unwrap(),
+                    )
+                    .unwrap(),
+                o_scale,
+            );
+            let liquidity_fees_paid = rescale_toward_zero(
+                output_before_fees
+                    .checked_mul(liquidity_trading_fee)
+                    .unwrap(),
+                o_scale,
+            );
+            let treasury_fees_paid = rescale_toward_zero(
+                output_before_fees
+                    .checked_mul(treasury_trading_fee)
+                    .unwrap(),
+                o_scale,
+            );
             let result = rescale_toward_zero(
-                output_before_fees - liquidity_fees_paid - treasury_fees_paid,
+                output_before_fees
+                    .checked_sub(liquidity_fees_paid.checked_add(treasury_fees_paid).unwrap())
+                    .unwrap(),
                 o_scale,
             );
             SwapSummary {
@@ -199,15 +226,39 @@ impl Pool {
                 )
             };
             let output_before_fees = rescale_toward_zero(
-                quantity / (Decimal::ONE - liquidity_trading_fee - treasury_trading_fee),
+                quantity
+                    .checked_div(
+                        Decimal::ONE
+                            .checked_sub(
+                                liquidity_trading_fee
+                                    .checked_add(treasury_trading_fee)
+                                    .unwrap(),
+                            )
+                            .unwrap(),
+                    )
+                    .unwrap(),
                 o_scale,
             );
-            let result =
-                rescale_toward_zero(invariant / (o_pool - output_before_fees) - i_pool, i_scale);
-            let liquidity_fees_paid =
-                rescale_toward_zero(output_before_fees * liquidity_trading_fee, o_scale);
-            let treasury_fees_paid =
-                rescale_toward_zero(output_before_fees * treasury_trading_fee, o_scale);
+            let result = rescale_toward_zero(
+                invariant
+                    .checked_div(o_pool.checked_sub(output_before_fees).unwrap())
+                    .unwrap()
+                    .checked_sub(i_pool)
+                    .unwrap(),
+                i_scale,
+            );
+            let liquidity_fees_paid = rescale_toward_zero(
+                output_before_fees
+                    .checked_mul(liquidity_trading_fee)
+                    .unwrap(),
+                o_scale,
+            );
+            let treasury_fees_paid = rescale_toward_zero(
+                output_before_fees
+                    .checked_mul(treasury_trading_fee)
+                    .unwrap(),
+                o_scale,
+            );
             SwapSummary {
                 result,
                 liquidity_fees_paid,
@@ -256,7 +307,10 @@ pub struct Comet {
 
 impl Comet {
     pub fn calculate_effective_collateral_value(&self, collateral: &Collateral) -> Decimal {
-        to_clone_decimal!(self.collateral_amount * (collateral.collateralization_ratio as u64))
+        to_clone_decimal!(self
+            .collateral_amount
+            .checked_mul(collateral.collateralization_ratio.try_into().unwrap())
+            .unwrap())
     }
     pub fn is_empty(&self) -> bool {
         self.positions.len() == 0 && self.collateral_amount == 0

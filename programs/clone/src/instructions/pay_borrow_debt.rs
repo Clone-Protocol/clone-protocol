@@ -69,7 +69,10 @@ pub fn execute(
     token::burn(CpiContext::new(cpi_program, cpi_accounts), amount_value)?;
 
     // update total amount of borrowed onasset
-    borrows[borrow_index as usize].borrowed_onasset -= amount_value;
+    borrows[borrow_index as usize].borrowed_onasset = borrows[borrow_index as usize]
+        .borrowed_onasset
+        .checked_sub(amount_value)
+        .unwrap();
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
@@ -84,7 +87,7 @@ pub fn execute(
         borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
         borrowed_delta: -(amount_value as i64)
     });
-    ctx.accounts.clone.event_counter += 1;
+    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
 
     Ok(())
 }

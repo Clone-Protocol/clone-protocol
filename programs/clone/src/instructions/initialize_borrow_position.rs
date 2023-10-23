@@ -156,7 +156,7 @@ pub fn execute(
         borrowed_amount: onasset_amount,
         borrowed_delta: onasset_amount.try_into().unwrap()
     });
-    ctx.accounts.clone.event_counter += 1;
+    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
 
     Ok(())
 }

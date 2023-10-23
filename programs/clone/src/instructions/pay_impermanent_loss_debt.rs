@@ -90,7 +90,11 @@ pub fn execute(
             let ild_share: u64 = ild_share.onasset_ild_share.mantissa().try_into().unwrap();
             let burn_amount = ild_share.min(amount);
 
-            comet.positions[comet_position_index as usize].onasset_ild_rebate += burn_amount as i64;
+            comet.positions[comet_position_index as usize].onasset_ild_rebate = comet.positions
+                [comet_position_index as usize]
+                .onasset_ild_rebate
+                .checked_add(burn_amount.try_into().unwrap())
+                .unwrap();
 
             let cpi_accounts = Burn {
                 mint: ctx.accounts.onasset_mint.to_account_info().clone(),
@@ -118,8 +122,12 @@ pub fn execute(
                 .try_into()
                 .unwrap();
             let transfer_amount = ild_share.min(amount);
-            comet.positions[comet_position_index as usize].collateral_ild_rebate +=
-                transfer_amount as i64;
+
+            comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
+                [comet_position_index as usize]
+                .collateral_ild_rebate
+                .checked_add(transfer_amount.try_into().unwrap())
+                .unwrap();
 
             let cpi_accounts = Transfer {
                 to: ctx.accounts.collateral_vault.to_account_info().clone(),
@@ -148,10 +156,17 @@ pub fn execute(
                 .try_into()
                 .unwrap();
             let from_wallet_amount = ild_share.min(amount).min(comet.collateral_amount);
-            comet.positions[comet_position_index as usize].collateral_ild_rebate +=
-                from_wallet_amount as i64;
 
-            comet.collateral_amount -= from_wallet_amount;
+            comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
+                [comet_position_index as usize]
+                .collateral_ild_rebate
+                .checked_add(from_wallet_amount.try_into().unwrap())
+                .unwrap();
+
+            comet.collateral_amount = comet
+                .collateral_amount
+                .checked_sub(from_wallet_amount.try_into().unwrap())
+                .unwrap();
         }
     }
 
