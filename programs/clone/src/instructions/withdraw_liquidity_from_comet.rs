@@ -69,20 +69,22 @@ pub fn withdraw_liquidity(
     let proportional_value = collateral
         .to_collateral_decimal(collateral_value_to_withdraw)?
         .checked_div(collateral.to_collateral_decimal(pool.committed_collateral_liquidity)?)
-        ..ok_or(error!(CloneError::CheckedMathError))?;
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     let collateral_ild_claim = rescale_toward_zero(
         collateral
             .to_collateral_decimal(pool.collateral_ild)?
-            .checked_mul(proportional_value)..ok_or(error!(CloneError::CheckedMathError))?,
+            .checked_mul(proportional_value)
+            .ok_or(error!(CloneError::CheckedMathError))?,
         collateral
             .scale
             .try_into()
             .map_err(|_| CloneError::IntTypeConversionError)?,
     );
     let onasset_ild_claim = rescale_toward_zero(
-        to_clone_decimal!(pool.onasset_ild).checked_mul(proportional_value)
-            ..ok_or(error!(CloneError::CheckedMathError))?,
+        to_clone_decimal!(pool.onasset_ild)
+            .checked_mul(proportional_value)
+            .ok_or(error!(CloneError::CheckedMathError))?,
         CLONE_TOKEN_SCALE,
     );
 
@@ -158,8 +160,7 @@ pub fn withdraw_liquidity(
         oracle
             .get_price()
             .checked_div(collateral_oracle.get_price())
-            .try_into()
-            .map_err(|_| CloneError::IntTypeConversionError)?,
+            .ok_or(error!(CloneError::CheckedMathError))?,
         CLONE_TOKEN_SCALE,
     );
 

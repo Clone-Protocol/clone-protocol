@@ -48,20 +48,20 @@ pub fn execute<'info>(
                                 .map_err(|_| CloneError::IntTypeConversionError)?,
                         )
                     } else {
-                        (info
-                            .price
-                            .checked_mul(
-                                10_i64
-                                    .checked_pow(
-                                        info.expo
-                                            .try_into()
-                                            .map_err(|_| CloneError::IntTypeConversionError),
-                                    )
-                                    .try_into()
-                                    .map_err(|_| CloneError::CheckedMathError),
-                            )
-                            .try_into()
-                            .map_err(|_| CloneError::CheckedMathError),)
+                        (
+                            info.price
+                                .checked_mul(
+                                    10_i64
+                                        .checked_pow(
+                                            info.expo
+                                                .try_into()
+                                                .map_err(|_| CloneError::IntTypeConversionError)?,
+                                        )
+                                        .ok_or(error!(CloneError::CheckedMathError))?,
+                                )
+                                .ok_or(error!(CloneError::CheckedMathError))?,
+                            0,
+                        )
                     }
                 } else {
                     return Err(error!(CloneError::FailedToLoadPyth));

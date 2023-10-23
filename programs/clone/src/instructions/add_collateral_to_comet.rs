@@ -51,7 +51,10 @@ pub fn execute(ctx: Context<AddCollateralToComet>, amount: u64) -> Result<()> {
     let cpi_program = ctx.accounts.token_program.to_account_info();
     token::transfer(CpiContext::new(cpi_program, cpi_accounts), amount)?;
 
-    comet.collateral_amount = comet.collateral_amount.checked_add(amount).unwrap();
+    comet.collateral_amount = comet
+        .collateral_amount
+        .checked_add(amount)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     Ok(())
 }

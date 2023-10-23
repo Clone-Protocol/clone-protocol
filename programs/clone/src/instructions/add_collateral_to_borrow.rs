@@ -45,7 +45,7 @@ pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u6
     borrows[borrow_index as usize].collateral_amount = borrows[borrow_index as usize]
         .collateral_amount
         .checked_add(amount)
-        .unwrap();
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     // send collateral to vault
     let cpi_accounts = Transfer {
@@ -76,7 +76,12 @@ pub fn execute(ctx: Context<AddCollateralToBorrow>, borrow_index: u8, amount: u6
         borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
         borrowed_delta: 0
     });
-    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     Ok(())
 }

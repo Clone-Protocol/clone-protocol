@@ -72,7 +72,7 @@ pub fn execute(
     borrows[borrow_index as usize].borrowed_onasset = borrows[borrow_index as usize]
         .borrowed_onasset
         .checked_sub(amount_value)
-        .unwrap();
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
@@ -87,7 +87,12 @@ pub fn execute(
         borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
         borrowed_delta: -(amount_value as i64)
     });
-    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     Ok(())
 }

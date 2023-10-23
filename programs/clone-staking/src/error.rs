@@ -10,4 +10,7 @@ pub enum CloneStakingError {
 
     #[msg("Bump not found")]
     BumpNotFound,
+
+    #[msg("Checked Math Error")]
+    CheckedMathError,
 }

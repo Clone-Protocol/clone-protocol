@@ -97,8 +97,12 @@ pub fn execute(
             comet.positions[comet_position_index as usize].onasset_ild_rebate = comet.positions
                 [comet_position_index as usize]
                 .onasset_ild_rebate
-                .checked_add(burn_amount.try_into().unwrap())
-                .unwrap();
+                .checked_add(
+                    burn_amount
+                        .try_into()
+                        .map_err(|_| CloneError::IntTypeConversionError)?,
+                )
+                .ok_or(error!(CloneError::CheckedMathError))?;
 
             let cpi_accounts = Burn {
                 mint: ctx.accounts.onasset_mint.to_account_info().clone(),
@@ -130,8 +134,12 @@ pub fn execute(
             comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
                 [comet_position_index as usize]
                 .collateral_ild_rebate
-                .checked_add(transfer_amount.try_into().unwrap())
-                .unwrap();
+                .checked_add(
+                    transfer_amount
+                        .try_into()
+                        .map_err(|_| CloneError::IntTypeConversionError)?,
+                )
+                .ok_or(error!(CloneError::CheckedMathError))?;
 
             let cpi_accounts = Transfer {
                 to: ctx.accounts.collateral_vault.to_account_info().clone(),
@@ -164,13 +172,21 @@ pub fn execute(
             comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
                 [comet_position_index as usize]
                 .collateral_ild_rebate
-                .checked_add(from_wallet_amount.try_into().unwrap())
-                .unwrap();
+                .checked_add(
+                    from_wallet_amount
+                        .try_into()
+                        .map_err(|_| CloneError::IntTypeConversionError)?,
+                )
+                .ok_or(error!(CloneError::CheckedMathError))?;
 
             comet.collateral_amount = comet
                 .collateral_amount
-                .checked_sub(from_wallet_amount.try_into().unwrap())
-                .unwrap();
+                .checked_sub(
+                    from_wallet_amount
+                        .try_into()
+                        .map_err(|_| CloneError::IntTypeConversionError)?,
+                )
+                .ok_or(error!(CloneError::CheckedMathError))?;
         }
     }
 

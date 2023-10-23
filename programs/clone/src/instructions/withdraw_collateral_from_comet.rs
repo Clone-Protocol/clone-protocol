@@ -65,7 +65,7 @@ pub fn execute(ctx: Context<WithdrawCollateralFromComet>, collateral_amount: u64
     comet.collateral_amount = comet
         .collateral_amount
         .checked_sub(collateral_to_withdraw)
-        .unwrap();
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     // send collateral from vault to user
     let cpi_accounts = Transfer {

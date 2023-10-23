@@ -75,7 +75,7 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
             [comet_position_index as usize]
             .collateral_ild_rebate
             .checked_sub(collateral_reward)
-            .unwrap();
+            .ok_or(error!(CloneError::CheckedMathError))?;
 
         // Mint reward amount to user
         let cpi_accounts = Transfer {
@@ -107,7 +107,7 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
             [comet_position_index as usize]
             .onasset_ild_rebate
             .checked_sub(onasset_reward)
-            .unwrap();
+            .ok_or(error!(CloneError::CheckedMathError))?;
 
         // Mint reward amount to user
         let cpi_accounts = MintTo {

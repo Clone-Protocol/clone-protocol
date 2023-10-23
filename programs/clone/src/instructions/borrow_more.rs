@@ -79,7 +79,7 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
     borrows[borrow_index as usize].borrowed_onasset = borrows[borrow_index as usize]
         .borrowed_onasset
         .checked_add(amount)
-        .unwrap();
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     // ensure position sufficiently over collateralized and oracle prices are up to date
     check_mint_collateral_sufficient(
@@ -121,7 +121,12 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
             .try_into()
             .map_err(|_| CloneError::IntTypeConversionError)?
     });
-    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     Ok(())
 }

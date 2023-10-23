@@ -177,6 +177,7 @@ impl Pool {
             } else {
                 (pool_onasset, pool_collateral, collateral.scale.into())
             };
+            // o_pool - (invariant / (i_pool + quantity)) = output_before_fees
             let output_before_fees = rescale_toward_zero(
                 o_pool
                     .checked_sub(
@@ -248,6 +249,7 @@ impl Pool {
                     .ok_or(error!(CloneError::CheckedMathError))?,
                 o_scale,
             );
+            // invariant / (o_pool - output_before_fees) - i_pool = result
             let result = rescale_toward_zero(
                 invariant
                     .checked_div(
@@ -257,30 +259,6 @@ impl Pool {
                     )
                     .ok_or(error!(CloneError::CheckedMathError))?
                     .checked_sub(i_pool)
-                    .ok_or(error!(CloneError::CheckedMathError))?,
-                i_scale,
-            );
-            let liquidity_fees_paid = rescale_toward_zero(
-                output_before_fees
-                    .checked_mul(liquidity_trading_fee)
-                    .ok_or(error!(CloneError::CheckedMathError))?,
-                o_scale,
-            );
-            let treasury_fees_paid = rescale_toward_zero(
-                output_before_fees
-                    .checked_mul(treasury_trading_fee)
-                    .ok_or(error!(CloneError::CheckedMathError))?,
-                o_scale,
-            );
-            let result = rescale_toward_zero(
-                invariant
-                    .checked_div(
-                        (o_pool
-                            .checked_sub(output_before_fees)
-                            .ok_or(error!(CloneError::CheckedMathError))?)
-                        .checked_sub(i_pool)
-                        .ok_or(error!(CloneError::CheckedMathError))?,
-                    )
                     .ok_or(error!(CloneError::CheckedMathError))?,
                 i_scale,
             );

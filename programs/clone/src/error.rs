@@ -34,9 +34,9 @@ pub enum CloneError {
     #[msg("Outdated Oracle")]
     OutdatedOracle,
 
-    /// 8. Non Stables not Supported
-    #[msg("Non-stables Not Supported")]
-    NonStablesNotSupported,
+    /// 8. Checked Math Error
+    #[msg("Checked Math Error")]
+    CheckedMathError,
 
     /// 9. Mint Position Unable To Liquidate
     #[msg("Mint Position Unable to Liquidate")]
