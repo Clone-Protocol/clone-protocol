@@ -71,7 +71,7 @@ pub fn execute(
     let comet = &mut ctx.accounts.user_account.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
-    let ild_share = calculate_ild_share(&comet_position, pools, collateral);
+    let ild_share = calculate_ild_share(&comet_position, pools, collateral)?;
     let pool_index = comet_position.pool_index as usize;
     let pool = &pools.pools[pool_index];
     return_error_if_false!(
@@ -95,19 +95,21 @@ pub fn execute(
         let collateral_reward: u64 = rescale_toward_zero(
             liquidator_fee
                 .checked_mul(ild_share.collateral_ild_share)
-                .unwrap(),
+                .ok_or(error!(CloneError::CheckedMathError))?,
             collateral_scale,
         )
         .mantissa()
         .try_into()
-        .unwrap();
+        .map_err(|_| CloneError::IntTypeConversionError)?;
         // Remove equivalent reward from user's collateral
         let ild_share: u64 = ild_share
             .collateral_ild_share
             .mantissa()
             .try_into()
-            .unwrap();
-        let collateral_reduction = collateral_reward.checked_add(ild_share).unwrap();
+            .map_err(|_| CloneError::IntTypeConversionError)?;
+        let collateral_reduction = collateral_reward
+            .checked_add(ild_share)
+            .ok_or(error!(CloneError::CheckedMathError))?;
         return_error_if_false!(
             collateral_reduction <= comet.collateral_amount,
             CloneError::InvalidTokenAmount
@@ -115,12 +117,16 @@ pub fn execute(
         comet.collateral_amount = comet
             .collateral_amount
             .checked_sub(collateral_reduction)
-            .unwrap();
+            .ok_or(error!(CloneError::CheckedMathError))?;
         comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
             [comet_position_index as usize]
             .collateral_ild_rebate
-            .checked_add(ild_share.try_into().unwrap())
-            .unwrap();
+            .checked_add(
+                ild_share
+                    .try_into()
+                    .map_err(|_| CloneError::IntTypeConversionError)?,
+            )
+            .ok_or(error!(CloneError::CheckedMathError))?;
 
         // Transfer collateral to liquidator
         let cpi_accounts = Transfer {
@@ -152,7 +158,12 @@ pub fn execute(
             ctx.accounts.clone.event_counter,
         )?;
     };
-    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     if comet.positions[comet_position_index as usize].is_empty() {
         comet.positions.remove(comet_position_index as usize);

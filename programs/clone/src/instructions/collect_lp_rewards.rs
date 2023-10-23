@@ -65,7 +65,7 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
 
     let comet_position = comet.positions[comet_position_index as usize];
 
-    let ild_share = calculate_ild_share(&comet_position, pools, &ctx.accounts.clone.collateral);
+    let ild_share = calculate_ild_share(&comet_position, pools, &ctx.accounts.clone.collateral)?;
 
     if ild_share.collateral_ild_share < Decimal::ZERO {
         let collateral_reward = ild_share.collateral_ild_share.abs().mantissa() as i64;
@@ -93,7 +93,9 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
                 cpi_accounts,
                 seeds,
             ),
-            collateral_reward.try_into().unwrap(),
+            collateral_reward
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?,
         )?;
     }
 
@@ -123,7 +125,9 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
                 cpi_accounts,
                 seeds,
             ),
-            onasset_reward.try_into().unwrap(),
+            onasset_reward
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?,
         )?;
     }
 

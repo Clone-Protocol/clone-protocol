@@ -124,12 +124,15 @@ pub fn execute(
     let collateral_reward = rescale_toward_zero(
         (Decimal::one()
             .checked_add(borrow_liquidation_fee_rate)
-            .unwrap())
+            .ok_or(error!(CloneError::CheckedMathError))?)
         .checked_mul(to_clone_decimal!(burn_amount))
-        .unwrap()
+        .ok_or(error!(CloneError::CheckedMathError))?
         .checked_mul(pool_price)
-        .unwrap(),
-        collateral.scale.try_into().unwrap(),
+        .ok_or(error!(CloneError::CheckedMathError))?,
+        collateral
+            .scale
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
     )
     .min(collateral_position_amount);
 
@@ -167,18 +170,21 @@ pub fn execute(
     );
     token::transfer(
         send_collateral_context,
-        collateral_reward.mantissa().try_into().unwrap(),
+        collateral_reward
+            .mantissa()
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
     )?;
 
     // Update data
     borrows[borrow_index as usize].borrowed_onasset = borrows[borrow_index as usize]
         .borrowed_onasset
         .checked_sub(burn_amount)
-        .unwrap();
+        .ok_or(error!(CloneError::CheckedMathError))?;
     borrows[borrow_index as usize].collateral_amount = borrows[borrow_index as usize]
         .collateral_amount
         .checked_sub(collateral_reward.mantissa() as u64)
-        .unwrap();
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     // Remove position if empty
     if borrows[borrow_index as usize].is_empty() {
@@ -189,16 +195,23 @@ pub fn execute(
             borrows[borrow_index as usize]
                 .collateral_amount
                 .try_into()
-                .unwrap(),
-            collateral.scale.try_into().unwrap(),
+                .map_err(|_| CloneError::IntTypeConversionError)?,
+            collateral
+                .scale
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?,
         );
         let max_liquidation_overcollateral_ratio =
             to_ratio_decimal!(pool.asset_info.max_liquidation_overcollateral_ratio);
         let c_ratio = collateral_amount
             .checked_mul(collateralization_ratio)
-            .unwrap()
-            .checked_div(pool_price.checked_mul(borrowed_onasset).unwrap())
-            .unwrap();
+            .ok_or(error!(CloneError::CheckedMathError))?
+            .checked_div(
+                pool_price
+                    .checked_mul(borrowed_onasset)
+                    .ok_or(error!(CloneError::CheckedMathError))?,
+            )
+            .ok_or(error!(CloneError::CheckedMathError))?;
         return_error_if_false!(
             c_ratio <= max_liquidation_overcollateral_ratio,
             CloneError::InvalidMintCollateralRatio
@@ -208,14 +221,21 @@ pub fn execute(
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
         user_address: user,
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index: pool_index
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         is_liquidation: true,
         collateral_supplied: borrows[borrow_index as usize].collateral_amount,
         collateral_delta: -(collateral_reward.mantissa() as i64),
         borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
         borrowed_delta: -(burn_amount as i64)
     });
-    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     Ok(())
 }

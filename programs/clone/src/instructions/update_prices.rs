@@ -41,16 +41,27 @@ pub fn execute<'info>(
                     // TODO: Consider updating this to check latest ts/conf
                     let info = price_info.get_price_unchecked();
                     if info.expo <= 0 {
-                        (info.price, (-info.expo).try_into().unwrap())
-                    } else {
                         (
-                            info.price
-                                .checked_mul(
-                                    10_i64.checked_pow(info.expo.try_into().unwrap()).unwrap(),
-                                )
-                                .unwrap(),
-                            0,
+                            info.price,
+                            (-info.expo)
+                                .try_into()
+                                .map_err(|_| CloneError::IntTypeConversionError)?,
                         )
+                    } else {
+                        (info
+                            .price
+                            .checked_mul(
+                                10_i64
+                                    .checked_pow(
+                                        info.expo
+                                            .try_into()
+                                            .map_err(|_| CloneError::IntTypeConversionError),
+                                    )
+                                    .try_into()
+                                    .map_err(|_| CloneError::CheckedMathError),
+                            )
+                            .try_into()
+                            .map_err(|_| CloneError::CheckedMathError),)
                     }
                 } else {
                     return Err(error!(CloneError::FailedToLoadPyth));
@@ -61,8 +72,14 @@ pub fn execute<'info>(
                 let data_feed = AggregatorAccountData::new_from_bytes(*raw)?;
                 let result = data_feed.get_result()?;
                 (
-                    result.mantissa.try_into().unwrap(),
-                    result.scale.try_into().unwrap(),
+                    result
+                        .mantissa
+                        .try_into()
+                        .map_err(|_| CloneError::IntTypeConversionError)?,
+                    result
+                        .scale
+                        .try_into()
+                        .map_err(|_| CloneError::IntTypeConversionError)?,
                 )
             }
         };

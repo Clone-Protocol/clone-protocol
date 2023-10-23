@@ -90,13 +90,13 @@ pub struct Swap<'info> {
     #[account(
         seeds = [CLONE_STAKING_SEED.as_ref()],
         bump,
-        seeds::program = clone_staking_program.clone().unwrap().key(),
+        seeds::program = clone_staking_program.clone().ok_or_else(|| CloneError::ExpectedAccountNotFound)?.key(),
     )]
     pub clone_staking: Option<Account<'info, CloneStaking>>,
     #[account(
         seeds = [USER_STAKING_SEED.as_ref(), user.key.as_ref()],
         bump,
-        seeds::program = clone_staking_program.clone().unwrap().key(),
+        seeds::program = clone_staking_program.clone().ok_or_else(|| CloneError::ExpectedAccountNotFound)?.key(),
     )]
     pub user_staking_account: Option<Account<'info, UserStaking>>,
     pub clone_staking_program: Option<Program<'info, CloneStakingProgram>>,
@@ -130,8 +130,16 @@ pub fn execute(
         && ctx.accounts.user_staking_account.is_some()
         && ctx.accounts.clone_staking_program.is_some()
     {
-        let user_staking_account = ctx.accounts.user_staking_account.as_ref().unwrap();
-        let clone_staking = ctx.accounts.clone_staking.as_ref().unwrap();
+        let user_staking_account = ctx
+            .accounts
+            .user_staking_account
+            .as_ref()
+            .ok_or_else(|| CloneError::ExpectedAccountNotFound)?;
+        let clone_staking = ctx
+            .accounts
+            .clone_staking
+            .as_ref()
+            .ok_or_else(|| CloneError::ExpectedAccountNotFound)?;
         if let Some((lp_fees, treasury_fees)) =
             clone_staking.get_tier_fees(user_staking_account.staked_tokens)
         {
@@ -162,7 +170,7 @@ pub fn execute(
         collateral,
         override_liquidity_trading_fee,
         override_treasury_trading_fee,
-    );
+    )?;
 
     return_error_if_false!(
         user_specified_quantity > Decimal::ZERO
@@ -176,8 +184,12 @@ pub fn execute(
         .treasury_fees_paid
         .mantissa()
         .try_into()
-        .unwrap();
-    let result_amount: u64 = swap_summary.result.mantissa().try_into().unwrap();
+        .map_err(|_| CloneError::IntTypeConversionError)?;
+    let result_amount: u64 = swap_summary
+        .result
+        .mantissa()
+        .try_into()
+        .map_err(|_| CloneError::IntTypeConversionError)?;
     let mut input_is_collateral = false;
 
     let (onasset_ild_delta, collateral_ild_delta) = if (quantity_is_input && quantity_is_collateral)
@@ -239,10 +251,13 @@ pub fn execute(
         )?;
 
         (
-            (mint_amount.checked_add(treasury_fees).unwrap())
-                .try_into()
-                .unwrap(),
-            -(TryInto::<i64>::try_into(transfer_amount).unwrap()),
+            (mint_amount
+                .checked_add(treasury_fees)
+                .ok_or(error!(CloneError::CheckedMathError))?)
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
+            -(TryInto::<i64>::try_into(transfer_amount)
+                .map_err(|_| CloneError::IntTypeConversionError)?),
         )
     } else {
         // User burns onasset, transfer collateral from vault to user, transfer collateral as fees.
@@ -299,21 +314,22 @@ pub fn execute(
             treasury_fees,
         )?;
         (
-            -(TryInto::<i64>::try_into(burn_amount).unwrap()),
-            (transfer_amount.checked_add(treasury_fees).unwrap())
+            -(TryInto::<i64>::try_into(burn_amount)
+                .map_err(|_| CloneError::IntTypeConversionError)?),
+            (transfer_amount + treasury_fees)
                 .try_into()
-                .unwrap(),
+                .map_err(|_| CloneError::IntTypeConversionError)?,
         )
     };
 
     pools.pools[pool_index as usize].onasset_ild = pools.pools[pool_index as usize]
         .onasset_ild
         .checked_add(onasset_ild_delta)
-        .unwrap();
+        .ok_or(error!(CloneError::CheckedMathError))?;
     pools.pools[pool_index as usize].collateral_ild = pools.pools[pool_index as usize]
         .collateral_ild
         .checked_add(collateral_ild_delta)
-        .unwrap();
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     let (input, output) = if quantity_is_input {
         return_error_if_false!(
@@ -340,7 +356,7 @@ pub fn execute(
             .liquidity_fees_paid
             .mantissa()
             .try_into()
-            .unwrap(),
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         treasury_fee: treasury_fees
     });
 
@@ -349,7 +365,7 @@ pub fn execute(
         pool_oracle
             .get_price()
             .checked_div(collateral_oracle.get_price())
-            .unwrap(),
+            .ok_or(error!(CloneError::CheckedMathError))?,
         CLONE_TOKEN_SCALE,
     );
 
@@ -359,10 +375,18 @@ pub fn execute(
         onasset_ild: pool.onasset_ild,
         collateral_ild: pool.collateral_ild,
         committed_collateral_liquidity: pool.committed_collateral_liquidity,
-        pool_price: pool_price.mantissa().try_into().unwrap(),
+        pool_price: pool_price
+            .mantissa()
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         pool_scale: pool_price.scale()
     });
-    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     Ok(())
 }

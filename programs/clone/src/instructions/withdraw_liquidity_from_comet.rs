@@ -66,62 +66,89 @@ pub fn withdraw_liquidity(
     let collateral_value_to_withdraw =
         collateral_amount.min(comet_position.committed_collateral_liquidity);
 
-    let proportional_value = collateral.to_collateral_decimal(collateral_value_to_withdraw)?
-        .checked_div(collateral.to_collateral_decimal(pool.committed_collateral_liquidity)?).unwrap();
+    let proportional_value = collateral
+        .to_collateral_decimal(collateral_value_to_withdraw)?
+        .checked_div(collateral.to_collateral_decimal(pool.committed_collateral_liquidity)?)
+        ..ok_or(error!(CloneError::CheckedMathError))?;
 
     let collateral_ild_claim = rescale_toward_zero(
         collateral
             .to_collateral_decimal(pool.collateral_ild)?
-            .checked_mul(proportional_value)
-            .unwrap(),
-        collateral.scale.try_into().unwrap(),
+            .checked_mul(proportional_value)..ok_or(error!(CloneError::CheckedMathError))?,
+        collateral
+            .scale
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
     );
     let onasset_ild_claim = rescale_toward_zero(
-        to_clone_decimal!(pool.onasset_ild)
-            .checked_mul(proportional_value)
-            .unwrap(),
+        to_clone_decimal!(pool.onasset_ild).checked_mul(proportional_value)
+            ..ok_or(error!(CloneError::CheckedMathError))?,
         CLONE_TOKEN_SCALE,
     );
 
     // Update pool values:
     pools.pools[pool_index as usize].onasset_ild = pools.pools[pool_index as usize]
         .onasset_ild
-        .checked_sub(onasset_ild_claim.mantissa().try_into().unwrap())
-        .unwrap();
+        .checked_sub(
+            onasset_ild_claim
+                .mantissa()
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?,
+        )
+        .ok_or(error!(CloneError::CheckedMathError))?;
     pools.pools[pool_index as usize].collateral_ild = pools.pools[pool_index as usize]
         .collateral_ild
-        .checked_sub(collateral_ild_claim.mantissa().try_into().unwrap())
-        .unwrap();
+        .checked_sub(
+            collateral_ild_claim
+                .mantissa()
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?,
+        )
+        .ok_or(error!(CloneError::CheckedMathError))?;
     pools.pools[pool_index as usize].committed_collateral_liquidity = pools.pools
         [pool_index as usize]
         .committed_collateral_liquidity
         .checked_sub(collateral_value_to_withdraw)
-        .unwrap();
+        .ok_or(error!(CloneError::CheckedMathError))?;
     // Update position values:
     comet.positions[comet_position_index as usize].onasset_ild_rebate = comet.positions
         [comet_position_index as usize]
         .onasset_ild_rebate
-        .checked_sub(onasset_ild_claim.mantissa().try_into().unwrap())
-        .unwrap();
+        .checked_sub(
+            onasset_ild_claim
+                .mantissa()
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?,
+        )
+        .ok_or(error!(CloneError::CheckedMathError))?;
     comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
         [comet_position_index as usize]
         .collateral_ild_rebate
-        .checked_sub(collateral_ild_claim.mantissa().try_into().unwrap())
-        .unwrap();
+        .checked_sub(
+            collateral_ild_claim
+                .mantissa()
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?,
+        )
+        .ok_or(error!(CloneError::CheckedMathError))?;
     comet.positions[comet_position_index as usize].committed_collateral_liquidity = comet.positions
         [comet_position_index as usize]
         .committed_collateral_liquidity
         .checked_sub(collateral_value_to_withdraw)
-        .unwrap();
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     emit!(LiquidityDelta {
         event_id: event_counter,
         user_address: user,
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index: pool_index
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         committed_collateral_delta: -TryInto::<i64>::try_into(collateral_value_to_withdraw)
-            .unwrap(),
-        onasset_ild_delta: -TryInto::<i64>::try_into(onasset_ild_claim.mantissa()).unwrap(),
-        collateral_ild_delta: -TryInto::<i64>::try_into(collateral_ild_claim.mantissa()).unwrap()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
+        onasset_ild_delta: -TryInto::<i64>::try_into(onasset_ild_claim.mantissa())
+            .map_err(|_| CloneError::IntTypeConversionError)?,
+        collateral_ild_delta: -TryInto::<i64>::try_into(collateral_ild_claim.mantissa())
+            .map_err(|_| CloneError::IntTypeConversionError)?
     });
 
     let pool = &pools.pools[pool_index as usize];
@@ -131,17 +158,23 @@ pub fn withdraw_liquidity(
         oracle
             .get_price()
             .checked_div(collateral_oracle.get_price())
-            .unwrap(),
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         CLONE_TOKEN_SCALE,
     );
 
     emit!(PoolState {
         event_id: event_counter,
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index: pool_index
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         onasset_ild: pool.onasset_ild,
         collateral_ild: pool.collateral_ild,
         committed_collateral_liquidity: pool.committed_collateral_liquidity,
-        pool_price: pool_price.mantissa().try_into().unwrap(),
+        pool_price: pool_price
+            .mantissa()
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         pool_scale: pool_price.scale()
     });
 

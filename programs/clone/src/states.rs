@@ -122,29 +122,28 @@ impl Pool {
         onasset_price: Decimal,
         collateral_price: Decimal,
         collateral: &Collateral,
-    ) -> (Decimal, Decimal) {
-        let committed_collateral_liquidity = collateral
-            .to_collateral_decimal(self.committed_collateral_liquidity)
-            .unwrap();
+    ) -> Result<(Decimal, Decimal)> {
+        let committed_collateral_liquidity =
+            collateral.to_collateral_decimal(self.committed_collateral_liquidity)?;
         let onasset_ild = to_clone_decimal!(self.onasset_ild);
-        let center_price = onasset_price.checked_div(collateral_price).unwrap();
-        let pool_collateral = collateral
-            .to_collateral_decimal(
-                TryInto::<i64>::try_into(self.committed_collateral_liquidity)
-                    .unwrap()
-                    .checked_sub(self.collateral_ild)
-                    .unwrap(),
-            )
-            .unwrap();
+        let center_price = onasset_price
+            .checked_div(collateral_price)
+            .ok_or(error!(CloneError::CheckedMathError))?;
+        let pool_collateral = collateral.to_collateral_decimal(
+            TryInto::<i64>::try_into(self.committed_collateral_liquidity)
+                .map_err(|_| CloneError::IntTypeConversionError)?
+                .checked_sub(self.collateral_ild)
+                .ok_or(error!(CloneError::CheckedMathError))?,
+        )?;
         let pool_onasset = rescale_toward_zero(
             (committed_collateral_liquidity
                 .checked_div(center_price)
-                .unwrap())
+                .ok_or(error!(CloneError::CheckedMathError))?)
             .checked_sub(onasset_ild)
-            .unwrap(),
+            .ok_or(error!(CloneError::CheckedMathError))?,
             CLONE_TOKEN_SCALE,
         );
-        (pool_collateral, pool_onasset)
+        Ok((pool_collateral, pool_onasset))
     }
 
     // This function calculate either the resultant amount received or
@@ -160,10 +159,12 @@ impl Pool {
         collateral: &Collateral,
         override_liquidity_trading_fee: Option<Decimal>,
         override_treasury_trading_fee: Option<Decimal>,
-    ) -> SwapSummary {
+    ) -> Result<SwapSummary> {
         let (pool_collateral, pool_onasset) =
-            self.calculate_jit_pool(onasset_price, collateral_price, collateral);
-        let invariant = pool_onasset.checked_mul(pool_collateral).unwrap();
+            self.calculate_jit_pool(onasset_price, collateral_price, collateral)?;
+        let invariant = pool_onasset
+            .checked_mul(pool_collateral)
+            .ok_or(error!(CloneError::CheckedMathError))?;
         let default_liquidity_trading_fee = to_bps_decimal!(self.liquidity_trading_fee_bps);
         let default_treasury_trading_fee = to_bps_decimal!(self.treasury_trading_fee_bps);
         let liquidity_trading_fee =
@@ -180,35 +181,43 @@ impl Pool {
                 o_pool
                     .checked_sub(
                         invariant
-                            .checked_div(i_pool.checked_add(quantity).unwrap())
-                            .unwrap(),
+                            .checked_div(
+                                i_pool
+                                    .checked_add(quantity)
+                                    .ok_or(error!(CloneError::CheckedMathError))?,
+                            )
+                            .ok_or(error!(CloneError::CheckedMathError))?,
                     )
-                    .unwrap(),
+                    .ok_or(error!(CloneError::CheckedMathError))?,
                 o_scale,
             );
             let liquidity_fees_paid = rescale_toward_zero(
                 output_before_fees
                     .checked_mul(liquidity_trading_fee)
-                    .unwrap(),
+                    .ok_or(error!(CloneError::CheckedMathError))?,
                 o_scale,
             );
             let treasury_fees_paid = rescale_toward_zero(
                 output_before_fees
                     .checked_mul(treasury_trading_fee)
-                    .unwrap(),
+                    .ok_or(error!(CloneError::CheckedMathError))?,
                 o_scale,
             );
             let result = rescale_toward_zero(
                 output_before_fees
-                    .checked_sub(liquidity_fees_paid.checked_add(treasury_fees_paid).unwrap())
-                    .unwrap(),
+                    .checked_sub(
+                        liquidity_fees_paid
+                            .checked_add(treasury_fees_paid)
+                            .ok_or(error!(CloneError::CheckedMathError))?,
+                    )
+                    .ok_or(error!(CloneError::CheckedMathError))?,
                 o_scale,
             );
-            SwapSummary {
+            Ok(SwapSummary {
                 result,
                 liquidity_fees_paid,
                 treasury_fees_paid,
-            }
+            })
         } else {
             let (o_pool, i_pool, i_scale, o_scale) = if quantity_is_collateral {
                 (
@@ -232,38 +241,66 @@ impl Pool {
                             .checked_sub(
                                 liquidity_trading_fee
                                     .checked_add(treasury_trading_fee)
-                                    .unwrap(),
+                                    .ok_or(error!(CloneError::CheckedMathError))?,
                             )
-                            .unwrap(),
+                            .ok_or(error!(CloneError::CheckedMathError))?,
                     )
-                    .unwrap(),
+                    .ok_or(error!(CloneError::CheckedMathError))?,
                 o_scale,
             );
             let result = rescale_toward_zero(
                 invariant
-                    .checked_div(o_pool.checked_sub(output_before_fees).unwrap())
-                    .unwrap()
+                    .checked_div(
+                        o_pool
+                            .checked_sub(output_before_fees)
+                            .ok_or(error!(CloneError::CheckedMathError))?,
+                    )
+                    .ok_or(error!(CloneError::CheckedMathError))?
                     .checked_sub(i_pool)
-                    .unwrap(),
+                    .ok_or(error!(CloneError::CheckedMathError))?,
                 i_scale,
             );
             let liquidity_fees_paid = rescale_toward_zero(
                 output_before_fees
                     .checked_mul(liquidity_trading_fee)
-                    .unwrap(),
+                    .ok_or(error!(CloneError::CheckedMathError))?,
                 o_scale,
             );
             let treasury_fees_paid = rescale_toward_zero(
                 output_before_fees
                     .checked_mul(treasury_trading_fee)
-                    .unwrap(),
+                    .ok_or(error!(CloneError::CheckedMathError))?,
                 o_scale,
             );
-            SwapSummary {
+            let result = rescale_toward_zero(
+                invariant
+                    .checked_div(
+                        (o_pool
+                            .checked_sub(output_before_fees)
+                            .ok_or(error!(CloneError::CheckedMathError))?)
+                        .checked_sub(i_pool)
+                        .ok_or(error!(CloneError::CheckedMathError))?,
+                    )
+                    .ok_or(error!(CloneError::CheckedMathError))?,
+                i_scale,
+            );
+            let liquidity_fees_paid = rescale_toward_zero(
+                output_before_fees
+                    .checked_mul(liquidity_trading_fee)
+                    .ok_or(error!(CloneError::CheckedMathError))?,
+                o_scale,
+            );
+            let treasury_fees_paid = rescale_toward_zero(
+                output_before_fees
+                    .checked_mul(treasury_trading_fee)
+                    .ok_or(error!(CloneError::CheckedMathError))?,
+                o_scale,
+            );
+            Ok(SwapSummary {
                 result,
                 liquidity_fees_paid,
                 treasury_fees_paid,
-            }
+            })
         }
     }
 
@@ -286,7 +323,12 @@ pub struct Collateral {
 impl Collateral {
     pub fn to_collateral_decimal<T: TryInto<i64>>(&self, value: T) -> Result<Decimal> {
         if let Ok(num) = TryInto::<i64>::try_into(value) {
-            Ok(Decimal::new(num, self.scale.try_into().unwrap()))
+            Ok(Decimal::new(
+                num,
+                self.scale
+                    .try_into()
+                    .map_err(|_| CloneError::IntTypeConversionError)?,
+            ))
         } else {
             Err(error!(CloneError::InvalidConversion))
         }
@@ -306,12 +348,17 @@ pub struct Comet {
 }
 
 impl Comet {
-    pub fn calculate_effective_collateral_value(&self, collateral: &Collateral) -> Decimal {
-        to_clone_decimal!(self
+    pub fn calculate_effective_collateral_value(&self, collateral: &Collateral) -> Result<Decimal> {
+        let collateralization_ratio = collateral
+            .collateralization_ratio
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?;
+        Ok(to_clone_decimal!(self
             .collateral_amount
-            .checked_mul(collateral.collateralization_ratio.try_into().unwrap())
-            .unwrap())
+            .checked_mul(collateralization_ratio)
+            .ok_or(error!(CloneError::CheckedMathError))?))
     }
+
     pub fn is_empty(&self) -> bool {
         self.positions.len() == 0 && self.collateral_amount == 0
     }

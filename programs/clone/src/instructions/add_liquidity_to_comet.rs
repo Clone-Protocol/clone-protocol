@@ -62,7 +62,7 @@ pub fn execute(
     let proportion_value = if committed_collateral_value > Decimal::ZERO {
         collateral_liquidity_value
             .checked_div(committed_collateral_value)
-            .unwrap()
+            .ok_or(error!(CloneError::CheckedMathError))?
     } else {
         Decimal::ZERO
     };
@@ -71,17 +71,26 @@ pub fn execute(
         collateral
             .to_collateral_decimal(pool.collateral_ild)?
             .checked_mul(proportion_value)
-            .unwrap(),
-        collateral.scale.try_into().unwrap(),
+            .ok_or(error!(CloneError::CheckedMathError))?,
+        collateral
+            .scale
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
     );
-    let collateral_ild_delta: i64 = collateral_ild.mantissa().try_into().unwrap();
+    let collateral_ild_delta: i64 = collateral_ild
+        .mantissa()
+        .try_into()
+        .map_err(|_| CloneError::IntTypeConversionError)?;
     let onasset_ild = rescale_toward_zero(
         to_clone_decimal!(pool.onasset_ild)
             .checked_mul(proportion_value)
-            .unwrap(),
+            .ok_or(error!(CloneError::CheckedMathError))?,
         CLONE_TOKEN_SCALE,
     );
-    let onasset_ild_delta: i64 = onasset_ild.mantissa().try_into().unwrap();
+    let onasset_ild_delta: i64 = onasset_ild
+        .mantissa()
+        .try_into()
+        .map_err(|_| CloneError::IntTypeConversionError)?;
 
     // find the index of the position within the comet position
     if let Some((position_index, _)) = comet
@@ -94,15 +103,15 @@ pub fn execute(
             [position_index]
             .committed_collateral_liquidity
             .checked_add(collateral_amount)
-            .unwrap();
+            .ok_or(error!(CloneError::CheckedMathError))?;
         comet.positions[position_index].collateral_ild_rebate = comet.positions[position_index]
             .collateral_ild_rebate
             .checked_add(collateral_ild_delta)
-            .unwrap();
+            .ok_or(error!(CloneError::CheckedMathError))?;
         comet.positions[position_index].onasset_ild_rebate = comet.positions[position_index]
             .onasset_ild_rebate
             .checked_add(onasset_ild_delta)
-            .unwrap();
+            .ok_or(error!(CloneError::CheckedMathError))?;
     } else {
         comet.positions.push(LiquidityPosition {
             pool_index,
@@ -117,15 +126,15 @@ pub fn execute(
         [pool_index as usize]
         .committed_collateral_liquidity
         .checked_add(collateral_amount)
-        .unwrap();
+        .ok_or(error!(CloneError::CheckedMathError))?;
     pools.pools[pool_index as usize].onasset_ild = pools.pools[pool_index as usize]
         .onasset_ild
         .checked_add(onasset_ild_delta)
-        .unwrap();
+        .ok_or(error!(CloneError::CheckedMathError))?;
     pools.pools[pool_index as usize].collateral_ild = pools.pools[pool_index as usize]
         .collateral_ild
         .checked_add(collateral_ild_delta)
-        .unwrap();
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     let health_score = calculate_health_score(comet, pools, oracles, collateral)?;
 
@@ -135,7 +144,9 @@ pub fn execute(
         event_id: ctx.accounts.clone.event_counter,
         user_address: ctx.accounts.user.key(),
         pool_index,
-        committed_collateral_delta: collateral_amount.try_into().unwrap(),
+        committed_collateral_delta: collateral_amount
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         collateral_ild_delta,
         onasset_ild_delta,
     });
@@ -147,7 +158,7 @@ pub fn execute(
         oracle
             .get_price()
             .checked_div(collateral_oracle.get_price())
-            .unwrap(),
+            .ok_or(error!(CloneError::CheckedMathError))?,
         CLONE_TOKEN_SCALE,
     );
 
@@ -157,11 +168,19 @@ pub fn execute(
         onasset_ild: pool.onasset_ild,
         collateral_ild: pool.collateral_ild,
         committed_collateral_liquidity: pool.committed_collateral_liquidity,
-        pool_price: pool_price.mantissa().try_into().unwrap(),
-        pool_scale: pool_price.scale(),
+        pool_price: pool_price
+            .mantissa()
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
+        pool_scale: pool_price.scale()
     });
 
-    ctx.accounts.clone.event_counter = ctx.accounts.clone.event_counter.checked_add(1).unwrap();
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     Ok(())
 }
