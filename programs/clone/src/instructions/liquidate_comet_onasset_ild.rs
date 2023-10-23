@@ -94,7 +94,9 @@ pub fn execute(
     let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
     let collateral_price = collateral_oracle.get_price();
     let collateral_scale = collateral.scale as u32;
-    let pool_price = onasset_price / collateral_price;
+    let pool_price = onasset_price
+        .checked_div(collateral_price)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     let is_in_liquidation_mode = pool.status == Status::Liquidation;
     let starting_health_score = calculate_health_score(comet, pools, oracles, collateral)?;

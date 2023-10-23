@@ -41,7 +41,7 @@ pub fn execute(ctx: Context<Initialize>, staking_period_slots: u64) -> Result<()
     clone_staking.bump = *ctx
         .bumps
         .get("clone_staking")
-        .ok_or_else(|| CloneStakingError::BumpNotFound)?;
+        .ok_or(error!(CloneStakingError::BumpNotFound))?;
     clone_staking.tiers = [Tier::default(); MAX_TIERS];
 
     Ok(())

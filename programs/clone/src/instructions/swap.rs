@@ -90,13 +90,13 @@ pub struct Swap<'info> {
     #[account(
         seeds = [CLONE_STAKING_SEED.as_ref()],
         bump,
-        seeds::program = clone_staking_program.clone().ok_or_else(|| CloneError::ExpectedAccountNotFound)?.key(),
+        seeds::program = clone_staking_program.clone().ok_or(error!(CloneError::ExpectedAccountNotFound))?.key(),
     )]
     pub clone_staking: Option<Account<'info, CloneStaking>>,
     #[account(
         seeds = [USER_STAKING_SEED.as_ref(), user.key.as_ref()],
         bump,
-        seeds::program = clone_staking_program.clone().ok_or_else(|| CloneError::ExpectedAccountNotFound)?.key(),
+        seeds::program = clone_staking_program.clone().ok_or(error!(CloneError::ExpectedAccountNotFound))?.key(),
     )]
     pub user_staking_account: Option<Account<'info, UserStaking>>,
     pub clone_staking_program: Option<Program<'info, CloneStakingProgram>>,
@@ -134,12 +134,12 @@ pub fn execute(
             .accounts
             .user_staking_account
             .as_ref()
-            .ok_or_else(|| CloneError::ExpectedAccountNotFound)?;
+            .ok_or(error!(CloneError::ExpectedAccountNotFound))?;
         let clone_staking = ctx
             .accounts
             .clone_staking
             .as_ref()
-            .ok_or_else(|| CloneError::ExpectedAccountNotFound)?;
+            .ok_or(error!(CloneError::ExpectedAccountNotFound))?;
         if let Some((lp_fees, treasury_fees)) =
             clone_staking.get_tier_fees(user_staking_account.staked_tokens)
         {
@@ -316,9 +316,11 @@ pub fn execute(
         (
             -(TryInto::<i64>::try_into(burn_amount)
                 .map_err(|_| CloneError::IntTypeConversionError)?),
-            (transfer_amount + treasury_fees)
+            (transfer_amount
+                .checked_add(treasury_fees)
+                .ok_or(error!(CloneError::CheckedMathError))?
                 .try_into()
-                .map_err(|_| CloneError::IntTypeConversionError)?,
+                .map_err(|_| CloneError::IntTypeConversionError)?),
         )
     };
 

@@ -54,7 +54,7 @@ pub fn execute(
     ctx.accounts.clone.bump = *ctx
         .bumps
         .get("clone")
-        .ok_or_else(|| CloneError::BumpNotFound)?;
+        .ok_or(error!(CloneError::BumpNotFound))?;
     ctx.accounts.clone.treasury_address = treasury_address;
     ctx.accounts.clone.collateral = Collateral {
         vault: ctx.accounts.collateral_vault.to_account_info().key(),
