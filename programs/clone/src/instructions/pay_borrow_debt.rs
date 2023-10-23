@@ -85,7 +85,9 @@ pub fn execute(
         collateral_supplied: borrows[borrow_index as usize].collateral_amount,
         collateral_delta: 0,
         borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
-        borrowed_delta: -(amount_value as i64)
+        borrowed_delta: -(amount_value
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?)
     });
     ctx.accounts.clone.event_counter = ctx
         .accounts

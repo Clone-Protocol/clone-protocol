@@ -68,7 +68,12 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
     let ild_share = calculate_ild_share(&comet_position, pools, &ctx.accounts.clone.collateral)?;
 
     if ild_share.collateral_ild_share < Decimal::ZERO {
-        let collateral_reward = ild_share.collateral_ild_share.abs().mantissa() as i64;
+        let collateral_reward = ild_share
+            .collateral_ild_share
+            .abs()
+            .mantissa()
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?;
 
         // Update rebate amount such that the ild_share is now zero.
         comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
@@ -100,7 +105,12 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
     }
 
     if ild_share.onasset_ild_share < Decimal::ZERO {
-        let onasset_reward = ild_share.onasset_ild_share.abs().mantissa() as i64;
+        let onasset_reward = ild_share
+            .onasset_ild_share
+            .abs()
+            .mantissa()
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?;
 
         // Update rebate amount such that the ild_share is now zero.
         comet.positions[comet_position_index as usize].onasset_ild_rebate = comet.positions

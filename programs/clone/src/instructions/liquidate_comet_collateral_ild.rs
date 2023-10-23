@@ -78,7 +78,10 @@ pub fn execute(
         pool.status == Status::Active || pool.status == Status::Liquidation,
         CloneError::StatusPreventsAction
     );
-    let collateral_scale = collateral.scale as u32;
+    let collateral_scale = collateral
+        .scale
+        .try_into()
+        .map_err(|_| CloneError::IntTypeConversionError)?;
 
     let is_in_liquidation_mode = pool.status == Status::Liquidation;
     let starting_health_score = calculate_health_score(comet, pools, oracles, collateral)?;

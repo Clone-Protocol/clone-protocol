@@ -93,7 +93,7 @@ pub struct OracleInfo {
 
 impl OracleInfo {
     pub fn get_price(&self) -> Decimal {
-        Decimal::new(self.price as i64, self.expo.into())
+        Decimal::new(self.price, self.expo.into())
     }
 }
 

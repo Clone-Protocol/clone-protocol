@@ -120,7 +120,9 @@ pub fn execute(
             .map_err(|_| CloneError::IntTypeConversionError)?,
         is_liquidation: false,
         collateral_supplied: borrow_position.collateral_amount,
-        collateral_delta: -(amount_to_withdraw as i64),
+        collateral_delta: -(amount_to_withdraw
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?),
         borrowed_amount: borrow_position.borrowed_onasset,
         borrowed_delta: 0
     });

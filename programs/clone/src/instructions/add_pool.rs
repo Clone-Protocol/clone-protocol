@@ -3,6 +3,7 @@ use crate::{error::*, return_error_if_false, states::*};
 use crate::{CLONE_PROGRAM_SEED, POOLS_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
+use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(
@@ -30,7 +31,7 @@ pub struct AddPool<'info> {
     )]
     pub pools: Box<Account<'info, Pools>>,
     #[account(
-        mint::decimals = CLONE_TOKEN_SCALE as u8,
+        mint::decimals = TryInto::<u8>::try_into(CLONE_TOKEN_SCALE).map_err(|_| CloneError::IntTypeConversionError)?,
         mint::authority = clone,
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,

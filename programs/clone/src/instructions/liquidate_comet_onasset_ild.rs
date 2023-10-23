@@ -93,7 +93,10 @@ pub fn execute(
     let onasset_price = pool_oracle.get_price();
     let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
     let collateral_price = collateral_oracle.get_price();
-    let collateral_scale = collateral.scale as u32;
+    let collateral_scale = collateral
+        .scale
+        .try_into()
+        .map_err(|_| CloneError::IntTypeConversionError)?;
     let pool_price = onasset_price
         .checked_div(collateral_price)
         .ok_or(error!(CloneError::CheckedMathError))?;
@@ -171,7 +174,12 @@ pub fn execute(
         // Remove equivalent reward from user's collateral
         comet.collateral_amount = comet
             .collateral_amount
-            .checked_sub(collateral_reward.mantissa() as u64)
+            .checked_sub(
+                collateral_reward
+                    .mantissa()
+                    .try_into()
+                    .map_err(|_| CloneError::IntTypeConversionError)?,
+            )
             .ok_or(error!(CloneError::CheckedMathError))?;
     }
 

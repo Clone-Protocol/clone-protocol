@@ -186,7 +186,12 @@ pub fn execute(
         .ok_or(error!(CloneError::CheckedMathError))?;
     borrows[borrow_index as usize].collateral_amount = borrows[borrow_index as usize]
         .collateral_amount
-        .checked_sub(collateral_reward.mantissa() as u64)
+        .checked_sub(
+            collateral_reward
+                .mantissa()
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?,
+        )
         .ok_or(error!(CloneError::CheckedMathError))?;
 
     // Remove position if empty
@@ -229,9 +234,14 @@ pub fn execute(
             .map_err(|_| CloneError::IntTypeConversionError)?,
         is_liquidation: true,
         collateral_supplied: borrows[borrow_index as usize].collateral_amount,
-        collateral_delta: -(collateral_reward.mantissa() as i64),
+        collateral_delta: -(collateral_reward
+            .mantissa()
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?),
         borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
-        borrowed_delta: -(burn_amount as i64)
+        borrowed_delta: -(burn_amount
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?)
     });
     ctx.accounts.clone.event_counter = ctx
         .accounts

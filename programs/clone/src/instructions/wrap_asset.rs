@@ -56,7 +56,12 @@ pub struct WrapAsset<'info> {
 pub fn execute(ctx: Context<WrapAsset>, amount: u64, _pool_index: u8) -> Result<()> {
     return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
 
-    let underlying_mint_scale = ctx.accounts.asset_mint.decimals as u32;
+    let underlying_mint_scale = ctx
+        .accounts
+        .asset_mint
+        .decimals
+        .try_into()
+        .map_err(|_| CloneError::IntTypeConversionError)?;
     let onasset_amount = rescale_toward_zero(
         Decimal::new(
             amount
@@ -66,7 +71,9 @@ pub fn execute(ctx: Context<WrapAsset>, amount: u64, _pool_index: u8) -> Result<
         ),
         CLONE_TOKEN_SCALE,
     )
-    .mantissa() as u64;
+    .mantissa()
+    .try_into()
+    .map_err(|_| CloneError::IntTypeConversionError)?;
 
     let seeds = &[&[
         CLONE_PROGRAM_SEED.as_ref(),
