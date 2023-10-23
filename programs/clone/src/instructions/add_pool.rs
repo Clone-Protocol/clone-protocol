@@ -1,5 +1,5 @@
 use crate::decimal::CLONE_TOKEN_SCALE;
-use crate::states::*;
+use crate::{error::*, return_error_if_false, states::*};
 use crate::{CLONE_PROGRAM_SEED, POOLS_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
@@ -68,6 +68,10 @@ pub fn execute(
         max_liquidation_overcollateral_ratio,
         ..AssetInfo::default()
     };
+    return_error_if_false!(
+        asset_info.is_valid_overcollateral_ratios(),
+        CloneError::InvalidOvercollateralizationRatios
+    );
     // append pool to list
     ctx.accounts.pools.pools.push(Pool {
         underlying_asset_token_account: ctx
