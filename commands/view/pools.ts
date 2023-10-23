@@ -56,7 +56,7 @@ exports.handler = async function () {
         backgroundColor: "#CCCCCC",
       };
 
-      let { poolCollateralZeroScale, poolOnassetZeroScale } = getPoolLiquidity(
+      let { poolCollateral, poolOnasset } = getPoolLiquidity(
         pool,
         Number(oracle.price),
         COLLATERAL_SCALE,
@@ -71,9 +71,12 @@ exports.handler = async function () {
         `onAsset Mint: ${chalk.bold(pool.assetInfo.onassetMint)}\n` +
         //this will change to called quotePrice function on sdk/utils
         `Quote Price: $${chalk.bold(
-          poolCollateralZeroScale / poolOnassetZeroScale
+          fromScale(poolCollateral, collateral.scale) /
+            fromCloneScale(poolOnasset)
         )}\n` +
-        `Collateral Pool Balance: ${chalk.bold(poolCollateralZeroScale)}\n` +
+        `Collateral Pool Balance: ${chalk.bold(
+          fromCloneScale(poolCollateral)
+        )}\n` +
         `onAsset ILD: ${chalk.bold(
           Number(fromCloneScale(Number(pool.onassetIld)))
         )}\n` +

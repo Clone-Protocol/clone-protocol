@@ -119,13 +119,15 @@ exports.handler = async function (yargs: CommandArguments) {
         );
       }
 
-      let { poolCollateralZeroScale, poolOnassetZeroScale } = getPoolLiquidity(
+      let { poolCollateral, poolOnasset } = getPoolLiquidity(
         pool,
         Number(oracle.price),
         COLLATERAL_SCALE,
         oracle.expo
       );
-      const quotePrice = poolCollateralZeroScale / poolOnassetZeroScale;
+      const quotePrice =
+        fromScale(poolCollateral, collateral.scale) /
+        fromCloneScale(poolOnasset);
 
       assetInfo += `onAsset ${i}\nBalance: ${onassetBalance}\nQuote Price: ${quotePrice}\n\n`;
       totalBalance += onassetBalance * quotePrice;

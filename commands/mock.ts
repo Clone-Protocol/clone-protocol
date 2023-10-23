@@ -1,21 +1,21 @@
 import { Argv } from "yargs";
 
-const addAsset = require("./mock/add-asset");
+const createPriceFeed = require("./mock/create-price-feed");
 const setAssetPrice = require("./mock/set-asset-price");
-const mintUSDC = require("./mock/mint-usdc");
-const mintAsset = require("./mock/mint-asset");
-const initMockCln = require("./mock/init-mock-cln");
-const mintMockCln = require("./mock/mint-mock-cln");
+const initCollateral = require("./mock/init-collateral");
+const mintCollateral = require("./mock/mint-collateral");
+const initCln = require("./mock/init-cln");
+const mintCln = require("./mock/mint-cln");
 const view = require("./mock/view");
 
 module.exports = (yargs: Argv) => {
   yargs
-    .command(addAsset)
+    .command(createPriceFeed)
     .command(setAssetPrice)
-    .command(mintUSDC)
-    .command(mintAsset)
-    .command(initMockCln)
-    .command(mintMockCln)
+    .command(mintCollateral)
+    .command(initCollateral)
+    .command(initCln)
+    .command(mintCln)
     .command(view)
     .demandCommand()
     .help();

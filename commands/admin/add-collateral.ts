@@ -1,18 +1,19 @@
 import { PublicKey } from "@solana/web3.js";
+import { CloneClient } from "../../sdk/src/clone";
 import {
   successLog,
   errorLog,
   anchorSetup,
-  getCloneData,
-  getCloneClient,
+  getCloneProgram,
 } from "../utils";
 import { Argv } from "yargs";
 
 interface CommandArguments extends Argv {
   collateralPubkey: string;
   scale: number;
+  stable: boolean;
   collateralizationRatio: number;
-  oracleInfoIndex: number;
+  poolIndex: number;
 }
 
 exports.command = "add-collateral";
@@ -28,32 +29,39 @@ exports.builder = (yargs: CommandArguments) => {
       describe: "The scale factor for the collateral token",
       type: "number",
     })
+    .option("stable", {
+      describe: "Is the collateral stable?",
+      type: "boolean",
+      default: true,
+    })
     .option("collateralization-ratio", {
       describe: "The collateralization ratio",
       type: "number",
-      default: 100,
+      default: 200,
     })
-    .option("oracle-info-index", {
-      describe: "The oracle index, unnecessary for USDC",
+    .option("pool-index", {
+      describe: "The pool index, unnecessary for non-stable",
       type: "number",
       default: 255,
     });
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
-    const provider = anchorSetup();
-    const [cloneProgramID, cloneAccountAddress] = getCloneData();
-    const cloneClient = await getCloneClient(
-      provider,
-      cloneProgramID,
-      cloneAccountAddress
-    );
+    const setup = anchorSetup();
+    const cloneProgram = getCloneProgram(setup.provider);
 
-    const collateralMint = new PublicKey(yargs.collateralPubkey);
+    let cloneClient = new CloneClient(cloneProgram.programId, setup.provider);
+    await cloneClient.loadClone();
+
+    const collateralPubkey = new PublicKey(yargs.collateralPubkey);
+
     await cloneClient.addCollateral(
-      collateralMint,
-      yargs.oracleInfoIndex,
-      yargs.collateralizationRatio
+      cloneProgram.provider.publicKey!,
+      yargs.scale,
+      yargs.stable,
+      collateralPubkey,
+      yargs.collateralizationRatio,
+      yargs.poolIndex
     );
 
     successLog("Collateral Added!");

@@ -1,36 +1,36 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Transaction, SystemProgram } from "@solana/web3.js";
-import {
-  TOKEN_PROGRAM_ID,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  getAssociatedTokenAddress,
-  createAssociatedTokenAccountInstruction,
-  MINT_SIZE,
-  getMinimumBalanceForRentExemptMint,
-  createInitializeMintInstruction,
-} from "@solana/spl-token";
 import {
   successLog,
   errorLog,
   anchorSetup,
   getCloneData,
-  getUSDC,
+  getCollateral,
   getCloneClient,
 } from "../utils";
 import { Argv } from "yargs";
-import { CloneClient, CLONE_TOKEN_SCALE } from "../../sdk/src/clone";
+import { CloneClient } from "../../sdk/src/clone";
 
 interface CommandArguments extends Argv {
-  cometLiquidatorFee: number;
+  cometCollateralLiquidatorFee: number;
+  cometOnassetLiquidatorFee: number;
   borrowLiquidatorFee: number;
+  collateralOracleIndex: number;
+  collateralizationRatio: number;
 }
 
 exports.command = "init-clone";
 exports.desc = "Initializes the Clone program with optional parameters";
 exports.builder = (yargs: CommandArguments) => {
   return yargs
-    .option("comet-liquidator-fee", {
-      describe: "The fee percentage a liquidator recieves for comet positions",
+    .option("comet-collateral-liquidator-fee", {
+      describe:
+        "The fee percentage a liquidator recieves for liquidating collateral from comet positions",
+      type: "number",
+      default: 500,
+    })
+    .option("comet-onasset-liquidator-fee", {
+      describe:
+        "The fee percentage a liquidator recieves for liquidating onasset from comet positions",
       type: "number",
       default: 500,
     })
@@ -38,71 +38,37 @@ exports.builder = (yargs: CommandArguments) => {
       describe: "The fee percentage a liquidator recieves for borrow positions",
       type: "number",
       default: 500,
+    })
+    .option("collateral-oracle-index", {
+      describe: "The oracle index of the protocol's collateral",
+      type: "number",
+      default: 0,
+    })
+    .option("collateralization-ratio", {
+      describe:
+        "The percentage of the collateral value taken into account for liquidity positions",
+      type: "number",
+      default: 95,
     });
 };
 exports.handler = async function (yargs: CommandArguments) {
   try {
     const provider = anchorSetup();
-    const [cloneProgramID, cloneAccountAddress] = getCloneData();
-    const usdc = getUSDC();
+    const [cloneProgramID, __] = getCloneData();
+    const collateral = getCollateral();
 
     const treasuryAddress = anchor.web3.Keypair.generate();
-    const onusdMint = anchor.web3.Keypair.generate();
-
-    let tx = new Transaction().add(
-      // create onusd mint account
-      SystemProgram.createAccount({
-        fromPubkey: provider.publicKey,
-        newAccountPubkey: onusdMint.publicKey,
-        space: MINT_SIZE,
-        lamports: await getMinimumBalanceForRentExemptMint(provider.connection),
-        programId: TOKEN_PROGRAM_ID,
-      }),
-      // init clone mint account
-      createInitializeMintInstruction(
-        onusdMint.publicKey,
-        CLONE_TOKEN_SCALE,
-        cloneAccountAddress,
-        null
-      )
-    );
-    await provider.sendAndConfirm(tx, [onusdMint]);
 
     await CloneClient.initializeClone(
       provider,
       cloneProgramID,
-      yargs.cometLiquidatorFee,
+      yargs.cometCollateralLiquidatorFee,
+      yargs.cometOnassetLiquidatorFee,
       yargs.borrowLiquidatorFee,
       treasuryAddress.publicKey,
-      usdc,
-      onusdMint.publicKey
-    );
-
-    const cloneClient = await getCloneClient(
-      provider,
-      cloneProgramID,
-      cloneAccountAddress
-    );
-
-    const treasuryOnusdAssociatedTokenAddress = await getAssociatedTokenAddress(
-      cloneClient.clone!.onusdMint,
-      treasuryAddress.publicKey,
-      false,
-      TOKEN_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    );
-
-    await provider.sendAndConfirm!(
-      new Transaction().add(
-        createAssociatedTokenAccountInstruction(
-          provider.publicKey!,
-          treasuryOnusdAssociatedTokenAddress,
-          treasuryAddress.publicKey,
-          cloneClient.clone!.onusdMint,
-          TOKEN_PROGRAM_ID,
-          ASSOCIATED_TOKEN_PROGRAM_ID
-        )
-      )
+      collateral,
+      yargs.collateralOracleIndex,
+      yargs.collateralizationRatio
     );
 
     successLog("Clone Initialized!");

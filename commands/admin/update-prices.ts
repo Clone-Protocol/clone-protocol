@@ -1,4 +1,4 @@
-import { Transaction } from "@solana/web3.js";
+import { Transaction, TransactionInstruction } from "@solana/web3.js";
 import {
   successLog,
   errorLog,
@@ -13,7 +13,6 @@ interface CommandArguments extends Argv {
 }
 
 exports.command = "update-prices [indices..]";
-
 exports.desc = "Updates onAsset oracle prices on Clone";
 exports.builder = {
   indices: {
@@ -31,13 +30,13 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneProgramID,
       cloneAccountAddress
     );
-    const tokenData = await cloneClient.getTokenData();
+    const oracles = await cloneClient.getOracles();
 
-    let ix;
+    let ix: TransactionInstruction;
     if (yargs.indices != undefined) {
-      ix = cloneClient.updatePricesInstruction(tokenData, yargs.indices);
+      ix = cloneClient.updatePricesInstruction(oracles, yargs.indices);
     } else {
-      ix = cloneClient.updatePricesInstruction(tokenData);
+      ix = cloneClient.updatePricesInstruction(oracles);
     }
     await provider.sendAndConfirm(new Transaction().add(ix));
 

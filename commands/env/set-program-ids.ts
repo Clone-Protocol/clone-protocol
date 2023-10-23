@@ -4,12 +4,13 @@ import { Argv } from "yargs";
 
 interface CommandArguments extends Argv {
   clone: string;
-  jup: string;
+  staking: string;
+  faucet: string;
   pyth: string;
 }
 
 exports.command = "set-program-ids";
-exports.desc = "Sets the current network";
+exports.desc = "Sets the ProgramIDs";
 exports.builder = (yargs: CommandArguments) => {
   return yargs
     .option("clone", {
@@ -17,8 +18,13 @@ exports.builder = (yargs: CommandArguments) => {
       type: "string",
       default: "",
     })
-    .option("jup", {
-      describe: "The jup program id",
+    .option("staking", {
+      describe: "The staking program id",
+      type: "string",
+      default: "",
+    })
+    .option("faucet", {
+      describe: "The faucet program id",
       type: "string",
       default: "",
     })
@@ -36,8 +42,11 @@ exports.handler = function (yargs: CommandArguments) {
     if (yargs.clone != "") {
       config.clone = yargs.clone;
     }
-    if (yargs.jup != "") {
-      config.jup = yargs.jup;
+    if (yargs.staking != "") {
+      config.staking = yargs.staking;
+    }
+    if (yargs.faucet != "") {
+      config.faucet = yargs.faucet;
     }
     if (yargs.pyth != "") {
       config.pyth = yargs.pyth;

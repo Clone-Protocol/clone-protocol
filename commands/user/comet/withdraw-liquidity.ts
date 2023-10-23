@@ -11,20 +11,20 @@ import {
 import { Argv } from "yargs";
 
 interface CommandArguments extends Argv {
-  poolIndex: number;
+  cometPositionIndex: number;
   amount: number;
 }
 
-exports.command = "withdraw-liquidity <pool-index> <amount>";
+exports.command = "withdraw-liquidity <comet-position-index> <amount>";
 exports.desc = "Withdraws liquidity from your comet";
 exports.builder = (yargs: CommandArguments) => {
   yargs
-    .positional("pool-index", {
-      describe: "The index of the pool you are providing to",
+    .positional("comet-position-index", {
+      describe: "The index of the comet position you are withdrawing from",
       type: "number",
     })
     .positional("amount", {
-      describe: "The amount of onUSD liquidity to provide to the pool",
+      describe: "The amount of collateral liquidity to provide to the pool",
       type: "number",
     });
 };
@@ -38,14 +38,14 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneAccountAddress
     );
 
-    const tokenData = await cloneClient.getTokenData();
+    const oracles = await cloneClient.getOracles();
 
-    let updatePricesIx = await cloneClient.updatePricesInstruction(tokenData);
+    let updatePricesIx = cloneClient.updatePricesInstruction(oracles);
     const amount = new BN(`${toCloneScale(yargs.amount)}`);
 
     let ix = cloneClient.withdrawLiquidityFromCometInstruction(
       amount,
-      yargs.poolIndex
+      yargs.cometPositionIndex
     );
     await provider.sendAndConfirm(
       new Transaction().add(updatePricesIx).add(ix)

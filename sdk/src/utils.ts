@@ -71,11 +71,12 @@ export const getPoolLiquidity = (
 ) => {
   const poolCollateral =
     Number(pool.committedCollateralLiquidity) - Number(pool.collateralIld);
-
-  const poolOnasset = toCloneScale(
-    fromScale(pool.committedCollateralLiquidity, collateralScale) /
-      fromScale(oraclePrice, oracleScale) -
-      fromCloneScale(Number(pool.onassetIld))
+  const poolOnasset = Number(
+    toCloneScale(
+      Number(fromScale(pool.committedCollateralLiquidity, collateralScale)) /
+        Number(fromScale(oraclePrice, oracleScale)) -
+        Number(fromCloneScale(Number(pool.onassetIld)))
+    )
   );
   return {
     poolCollateral,
@@ -89,13 +90,13 @@ export const calculateOutputFromInputFromParams = (
   treasuryFeeRate: number,
   liquidityTradingFeeRate: number,
   input: number,
-  isInputOnusd: boolean
+  isInputCollateral: boolean
 ) => {
   const totalFeeRate = liquidityTradingFeeRate + treasuryFeeRate;
   const feeAdjustment = 1 - totalFeeRate;
   const invariant = poolOnasset * poolCollateral;
 
-  const outputBeforeFees = isInputOnusd
+  const outputBeforeFees = isInputCollateral
     ? poolOnasset - invariant / (poolCollateral + input)
     : poolCollateral - invariant / (poolOnasset + input);
   const output = floortoCloneScale(feeAdjustment * outputBeforeFees);
@@ -104,7 +105,7 @@ export const calculateOutputFromInputFromParams = (
     (totalFees * treasuryFeeRate) / totalFeeRate
   );
   const [resultpoolCollateral, resultPoolOnasset] = (() => {
-    if (isInputOnusd) {
+    if (isInputCollateral) {
       return [poolCollateral + input, poolOnasset - output - treasuryFee];
     } else {
       return [poolCollateral - output - treasuryFee, poolOnasset + input];

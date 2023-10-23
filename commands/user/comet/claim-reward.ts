@@ -31,17 +31,15 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneAccountAddress
     );
 
-    const tokenData = await cloneClient.getTokenData();
+    const pools = await cloneClient.getPools();
     const user = await cloneClient.getUserAccount();
     const comet = user.comet;
     const pool =
-      tokenData.pools[
-        Number(comet.positions[yargs.cometPositionIndex].poolIndex)
-      ];
+      pools.pools[Number(comet.positions[yargs.cometPositionIndex].poolIndex)];
 
-    const onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+    const collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       provider,
-      cloneClient.clone!.onusdMint
+      cloneClient.clone.collateral.mint
     );
 
     const onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
@@ -50,9 +48,9 @@ exports.handler = async function (yargs: CommandArguments) {
     );
 
     let ix = cloneClient.collectLpRewardsInstruction(
-      tokenData,
+      pools,
       user,
-      onusdTokenAccountInfo.address,
+      collateralTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       yargs.cometPositionIndex
     );
@@ -61,6 +59,6 @@ exports.handler = async function (yargs: CommandArguments) {
 
     successLog(`Reward Claimed!`);
   } catch (error: any) {
-    errorLog(`Failed to pay ILD:\n${error.message}`);
+    errorLog(`Failed to claim reward:\n${error.message}`);
   }
 };
