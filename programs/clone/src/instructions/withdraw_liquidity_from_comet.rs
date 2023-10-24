@@ -201,7 +201,12 @@ pub fn execute(
         ctx.accounts.user.key(),
         ctx.accounts.clone.event_counter,
     )?;
-    ctx.accounts.clone.event_counter += 1;
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     Ok(())
 }
