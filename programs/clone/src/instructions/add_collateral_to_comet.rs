@@ -1,4 +1,7 @@
+use std::convert::TryInto;
+
 use crate::error::*;
+use crate::events::*;
 use crate::states::*;
 use crate::{return_error_if_false, CLONE_PROGRAM_SEED, USER_SEED};
 use anchor_lang::prelude::*;
@@ -15,6 +18,7 @@ pub struct AddCollateralToComet<'info> {
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
+        mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
     )]
@@ -54,6 +58,22 @@ pub fn execute(ctx: Context<AddCollateralToComet>, amount: u64) -> Result<()> {
     comet.collateral_amount = comet
         .collateral_amount
         .checked_add(amount)
+        .ok_or(error!(CloneError::CheckedMathError))?;
+
+    emit!(CometCollateralUpdate {
+        event_id: ctx.accounts.clone.event_counter,
+        user_address: ctx.accounts.user.key(),
+        collateral_supplied: comet.collateral_amount,
+        collateral_delta: amount
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
+    });
+
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
         .ok_or(error!(CloneError::CheckedMathError))?;
 
     Ok(())

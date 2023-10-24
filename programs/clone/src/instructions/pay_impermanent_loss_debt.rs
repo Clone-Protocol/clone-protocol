@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::math::*;
 use crate::states::*;
 use crate::{return_error_if_false, CLONE_PROGRAM_SEED, POOLS_SEED, USER_SEED};
@@ -186,6 +187,22 @@ pub fn execute(
                         .try_into()
                         .map_err(|_| CloneError::IntTypeConversionError)?,
                 )
+                .ok_or(error!(CloneError::CheckedMathError))?;
+
+            emit!(CometCollateralUpdate {
+                event_id: ctx.accounts.clone.event_counter,
+                user_address: user.key(),
+                collateral_supplied: comet.collateral_amount,
+                collateral_delta: -(from_wallet_amount
+                    .try_into()
+                    .map_err(|_| CloneError::IntTypeConversionError)?),
+            });
+
+            ctx.accounts.clone.event_counter = ctx
+                .accounts
+                .clone
+                .event_counter
+                .checked_add(1)
                 .ok_or(error!(CloneError::CheckedMathError))?;
         }
     }

@@ -1,5 +1,6 @@
 use crate::decimal::rescale_toward_zero;
 use crate::error::*;
+use crate::events::*;
 use crate::instructions::withdraw_liquidity;
 use crate::math::*;
 use crate::states::*;
@@ -146,6 +147,15 @@ pub fn execute(
             CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
             collateral_reward,
         )?;
+
+        emit!(CometCollateralUpdate {
+            event_id: ctx.accounts.clone.event_counter,
+            user_address: user.key(),
+            collateral_supplied: comet.collateral_amount,
+            collateral_delta: -(collateral_reduction
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?),
+        });
     }
 
     // Withdraw liquidity position
