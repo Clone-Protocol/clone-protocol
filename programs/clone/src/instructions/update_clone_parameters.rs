@@ -1,6 +1,6 @@
 use crate::error::*;
 use crate::states::*;
-use crate::CLONE_PROGRAM_SEED;
+use crate::{CLONE_PROGRAM_SEED, return_error_if_false};
 use anchor_lang::prelude::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]
@@ -34,6 +34,14 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
     match params {
         CloneParameters::AddAuth { address } => {
             let auth_array = clone.auth;
+
+            return_error_if_false!(
+                auth_array
+                    .iter()
+                    .find(|slot| (**slot).eq(&address))
+                    .is_none(),
+                CloneError::AuthAlreadyExists
+            );
 
             if let Some(empty_slot) = auth_array
                 .iter()
