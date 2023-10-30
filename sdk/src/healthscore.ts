@@ -1,5 +1,6 @@
 import { Pools, Comet, Collateral, Oracles } from "../generated/clone";
-import { fromCloneScale, fromScale } from "./clone";
+import { CLONE_TOKEN_SCALE, fromCloneScale, fromScale } from "./clone";
+import { floorToScale, floortoCloneScale } from "./utils";
 
 export const getEffectiveCollateralValue = (
   comet: Comet,
@@ -20,6 +21,7 @@ export const getHealthScore = (
 ): {
   healthScore: number;
   ildHealthImpact: number;
+  effectiveCollateralValue: number;
 } => {
   const totalCollateralValue = getEffectiveCollateralValue(comet, collateral);
   const positionILD = getILD(collateral, pools, oracles, comet, oraclePrices);
@@ -60,6 +62,7 @@ export const getHealthScore = (
   return {
     healthScore: 100 - loss,
     ildHealthImpact: totalIldHealthImpact / totalCollateralValue,
+    effectiveCollateralValue: totalCollateralValue,
   };
 };
 
@@ -111,12 +114,23 @@ export const getILD = (
         ? fromScale(position.committedCollateralLiquidity, collateral.scale) /
           poolCommittedOnusd
         : 0;
-    const collateralILD =
-      L * fromScale(pool.collateralIld, collateral.scale) -
-      fromScale(position.collateralIldRebate, collateral.scale);
-    const onAssetILD =
-      L * fromCloneScale(pool.onassetIld) -
-      fromCloneScale(position.onassetIldRebate);
+
+    const collateralILDClaim =
+      L * fromScale(pool.collateralIld, collateral.scale);
+
+    const collateralILD = floorToScale(
+      collateralILDClaim -
+        fromScale(position.collateralIldRebate, collateral.scale),
+      collateral.scale
+    );
+
+    const onAssetILDClaim = floortoCloneScale(
+      L * fromCloneScale(pool.onassetIld)
+    );
+    const onAssetILD = floortoCloneScale(
+      onAssetILDClaim - fromCloneScale(position.onassetIldRebate)
+    );
+
     results.push({
       onAssetILD,
       collateralILD,

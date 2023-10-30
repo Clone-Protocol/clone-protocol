@@ -82,7 +82,7 @@ exports.handler = async function (yargs: CommandArguments) {
 
     const underlyingAssetMint = new PublicKey(yargs.underlyingAssetMint);
 
-    await cloneClient.initializePool(
+    await cloneClient.addPool(
       yargs.minOvercollateralRatio,
       yargs.maxLiquidationCollateralRatio,
       yargs.liquidityTradingFeeBps,
@@ -92,9 +92,8 @@ exports.handler = async function (yargs: CommandArguments) {
       yargs.oracleIndex,
       underlyingAssetMint
     );
-
-    const tokenData = await cloneClient.getTokenData();
-    const pool = tokenData.pools[Number(tokenData.numPools) - 1];
+    const pools = (await cloneClient.getPools()).pools;
+    const pool = pools[pools.length - 1];
 
     const treasuryOnAssetAssociatedTokenAddress =
       await getAssociatedTokenAddress(

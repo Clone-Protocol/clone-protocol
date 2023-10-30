@@ -69,6 +69,11 @@ pub fn execute(
     onasset_amount: u64,
     collateral_amount: u64,
 ) -> Result<()> {
+    return_error_if_false!(
+        onasset_amount > 0 && collateral_amount > 0,
+        CloneError::InvalidTokenAmount
+    );
+
     let seeds = &[&[
         CLONE_PROGRAM_SEED.as_ref(),
         bytemuck::bytes_of(&ctx.accounts.clone.bump),
@@ -137,7 +142,9 @@ pub fn execute(
     let user_account = &mut ctx.accounts.user_account;
     user_account.borrows.push(Borrow {
         collateral_amount,
-        pool_index: pool_index.try_into().unwrap(),
+        pool_index: pool_index
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         borrowed_onasset: onasset_amount,
     });
 
@@ -147,11 +154,20 @@ pub fn execute(
         pool_index,
         is_liquidation: false,
         collateral_supplied: collateral_amount,
-        collateral_delta: collateral_amount.try_into().unwrap(),
+        collateral_delta: collateral_amount
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         borrowed_amount: onasset_amount,
-        borrowed_delta: onasset_amount.try_into().unwrap()
+        borrowed_delta: onasset_amount
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?
     });
-    ctx.accounts.clone.event_counter += 1;
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     Ok(())
 }

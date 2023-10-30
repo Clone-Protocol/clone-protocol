@@ -6,6 +6,7 @@ use crate::to_clone_decimal;
 use crate::{CLONE_PROGRAM_SEED, POOLS_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
+use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(amount: u64, pool_index: u8)]
@@ -56,10 +57,18 @@ pub fn execute(ctx: Context<UnwrapOnAsset>, amount: u64, pool_index: u8) -> Resu
         pool.status == Status::Active || pool.status == Status::Deprecation,
         CloneError::StatusPreventsAction
     );
+    return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
 
-    let underlying_mint_scale = ctx.accounts.asset_mint.decimals as u32;
-    let unwrapped_amount =
-        rescale_toward_zero(to_clone_decimal!(amount), underlying_mint_scale).mantissa() as u64;
+    let underlying_mint_scale = ctx
+        .accounts
+        .asset_mint
+        .decimals
+        .try_into()
+        .map_err(|_| CloneError::IntTypeConversionError)?;
+    let unwrapped_amount = rescale_toward_zero(to_clone_decimal!(amount), underlying_mint_scale)
+        .mantissa()
+        .try_into()
+        .map_err(|_| CloneError::IntTypeConversionError)?;
 
     let seeds = &[&[
         CLONE_PROGRAM_SEED.as_ref(),

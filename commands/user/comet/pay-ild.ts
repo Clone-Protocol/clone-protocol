@@ -1,5 +1,6 @@
 import { Transaction } from "@solana/web3.js";
 import { toCloneScale } from "../../../sdk/src/clone";
+import { PaymentType } from "../../../sdk/generated/clone";
 import { getILD } from "../../../sdk/src/healthscore";
 import {
   successLog,
@@ -13,11 +14,11 @@ import { Argv } from "yargs";
 
 interface CommandArguments extends Argv {
   cometPositionIndex: number;
-  payOnusdDebt: boolean;
+  paymentType: number;
   amount: number;
 }
 
-exports.command = "pay-ild <comet-position-index> [pay-onusd-debt] [amount]";
+exports.command = "pay-ild <comet-position-index> <amount> [payment-type]";
 exports.desc = "Pay impermanent loss debt to protect your comet";
 exports.builder = (yargs: CommandArguments) => {
   yargs
@@ -25,16 +26,15 @@ exports.builder = (yargs: CommandArguments) => {
       describe: "The index of the comet position you are paying debt for",
       type: "number",
     })
-    .positional("pay-onusd-debt", {
-      describe:
-        "True if you are paying onUSD debt, false if paying onAsset debt",
-      type: "boolean",
-      default: true,
-    })
     .positional("amount", {
       describe: "The amount of impermanent loss you would like to pay",
       type: "number",
-      default: -1,
+    })
+    .positional("payment-type", {
+      describe:
+        "0 if paying with onAsset, 1 if paying debt with collateral from comet, 2 if paying with collateral from wallet",
+      type: "number",
+      default: 0,
     });
 };
 exports.handler = async function (yargs: CommandArguments) {
@@ -47,19 +47,21 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneAccountAddress
     );
 
-    const tokenData = await cloneClient.getTokenData();
+    const pools = await cloneClient.getPools();
+    const oracles = await cloneClient.getOracles();
+    const collateral = cloneClient.clone.collateral;
     const user = await cloneClient.getUserAccount();
     const comet = user.comet;
     const pool =
-      tokenData.pools[
-        Number(comet.positions[yargs.cometPositionIndex].poolIndex)
-      ];
+      pools.pools[Number(comet.positions[yargs.cometPositionIndex].poolIndex)];
 
-    let ildInfo = getILD(tokenData, comet)[yargs.cometPositionIndex];
+    let ildInfo = getILD(collateral, pools, oracles, comet)[
+      yargs.cometPositionIndex
+    ];
 
-    const onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+    const collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       provider,
-      cloneClient.clone!.onusdMint
+      collateral.mint
     );
 
     const onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
@@ -69,10 +71,10 @@ exports.handler = async function (yargs: CommandArguments) {
 
     let amount: number;
     if (
-      yargs.payOnusdDebt &&
-      (yargs.amount < 0 || yargs.amount > ildInfo.onusdILD)
+      yargs.paymentType > PaymentType.Onasset &&
+      (yargs.amount < 0 || yargs.amount > ildInfo.collateralILD)
     ) {
-      amount = ildInfo.onusdILD;
+      amount = ildInfo.collateralILD;
     } else if (yargs.amount < 0 || yargs.amount > ildInfo.onAssetILD) {
       amount = ildInfo.onAssetILD;
     } else {
@@ -80,18 +82,18 @@ exports.handler = async function (yargs: CommandArguments) {
     }
 
     let ix = cloneClient.payCometILDInstruction(
-      tokenData,
+      pools,
       user,
       yargs.cometPositionIndex,
       toCloneScale(amount),
-      yargs.payOnusdDebt,
+      yargs.paymentType,
       onassetTokenAccountInfo.address,
-      onusdTokenAccountInfo.address
+      collateralTokenAccountInfo.address
     );
     await provider.sendAndConfirm(new Transaction().add(ix));
 
-    if (yargs.payOnusdDebt) {
-      successLog(`${yargs.amount} onUSD Debt Payed!`);
+    if (yargs.paymentType > PaymentType.Onasset) {
+      successLog(`${yargs.amount} collateral Debt Payed!`);
     } else {
       successLog(`${yargs.amount} onAsset Debt Payed!`);
     }

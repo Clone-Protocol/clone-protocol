@@ -52,7 +52,9 @@ import {
   PaymentType,
   createLiquidateCometCollateralIldInstruction,
   createLiquidateCometOnassetIldInstruction,
+  createRemoveCometPositionInstruction,
 } from "../generated/clone";
+import { floorToScale } from "./utils";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -63,7 +65,7 @@ export const USDC_COLLATERAL_INDEX = 1;
 
 export const toScale = (x: number, scale: number): BN => {
   let stringDigits = [];
-  let stringX = String(x);
+  let stringX = String(floorToScale(x, scale).toFixed(scale));
   let foundDecimal = false;
   let digitsAfterDecimal = scale;
 
@@ -930,5 +932,18 @@ export class CloneClient {
       { cometPositionIndex },
       this.programId
     );
+  }
+
+  public removeCometPositionInstruction(cometPositionIndex: number): TransactionInstruction {
+    return createRemoveCometPositionInstruction(
+      {
+        user: this.provider.publicKey!,
+        userAccount: this.getUserAccountAddress(),
+        pools: this.poolsAddress,
+      }, {
+        cometPositionIndex,
+      },
+      this.programId
+    )
   }
 }

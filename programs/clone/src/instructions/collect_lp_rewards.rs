@@ -65,13 +65,22 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
 
     let comet_position = comet.positions[comet_position_index as usize];
 
-    let ild_share = calculate_ild_share(&comet_position, pools, &ctx.accounts.clone.collateral);
+    let ild_share = calculate_ild_share(&comet_position, pools, &ctx.accounts.clone.collateral)?;
 
     if ild_share.collateral_ild_share < Decimal::ZERO {
-        let collateral_reward = ild_share.collateral_ild_share.abs().mantissa() as i64;
+        let collateral_reward = ild_share
+            .collateral_ild_share
+            .abs()
+            .mantissa()
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?;
 
         // Update rebate amount such that the ild_share is now zero.
-        comet.positions[comet_position_index as usize].collateral_ild_rebate -= collateral_reward;
+        comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
+            [comet_position_index as usize]
+            .collateral_ild_rebate
+            .checked_sub(collateral_reward)
+            .ok_or(error!(CloneError::CheckedMathError))?;
 
         // Mint reward amount to user
         let cpi_accounts = Transfer {
@@ -89,15 +98,26 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
                 cpi_accounts,
                 seeds,
             ),
-            collateral_reward.try_into().unwrap(),
+            collateral_reward
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?,
         )?;
     }
 
     if ild_share.onasset_ild_share < Decimal::ZERO {
-        let onasset_reward = ild_share.onasset_ild_share.abs().mantissa() as i64;
+        let onasset_reward = ild_share
+            .onasset_ild_share
+            .abs()
+            .mantissa()
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?;
 
         // Update rebate amount such that the ild_share is now zero.
-        comet.positions[comet_position_index as usize].onasset_ild_rebate -= onasset_reward;
+        comet.positions[comet_position_index as usize].onasset_ild_rebate = comet.positions
+            [comet_position_index as usize]
+            .onasset_ild_rebate
+            .checked_sub(onasset_reward)
+            .ok_or(error!(CloneError::CheckedMathError))?;
 
         // Mint reward amount to user
         let cpi_accounts = MintTo {
@@ -115,7 +135,9 @@ pub fn execute(ctx: Context<CollectLpRewards>, comet_position_index: u8) -> Resu
                 cpi_accounts,
                 seeds,
             ),
-            onasset_reward.try_into().unwrap(),
+            onasset_reward
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?,
         )?;
     }
 

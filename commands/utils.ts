@@ -2,8 +2,13 @@ import os from "os";
 import toml from "toml";
 import fs from "fs";
 import * as anchor from "@coral-xyz/anchor";
-import { Program } from "@coral-xyz/anchor";
-import { PublicKey, Transaction } from "@solana/web3.js";
+import {
+  PublicKey,
+  Transaction,
+  SystemProgram,
+  Keypair,
+  Signer,
+} from "@solana/web3.js";
 import {
   Account,
   getAccount,
@@ -12,14 +17,19 @@ import {
   createAssociatedTokenAccountInstruction,
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  MINT_SIZE,
+  getMinimumBalanceForRentExemptMint,
+  createInitializeMintInstruction,
+  createAssociatedTokenAccount,
 } from "@solana/spl-token";
-import { Provider, BN } from "@coral-xyz/anchor";
+import { Provider } from "@coral-xyz/anchor";
 import { CloneClient, CLONE_TOKEN_SCALE, toCloneScale } from "../sdk/src/clone";
 import { Clone as CloneAccount } from "../sdk/generated/clone";
-import { Jupiter } from "../sdk/generated/jupiter-agg-mock";
 import { CloneStaking } from "../sdk/generated/clone-staking";
 
 const chalk = require("chalk");
+
+export const COLLATERAL_SCALE = 7;
 
 export function anchorSetup() {
   // Read the network and wallet from the config file
@@ -38,8 +48,11 @@ export function anchorSetup() {
     provider = anchor.AnchorProvider.local();
   } else {
     const walletKeyPair = JSON.parse(fs.readFileSync(wallet, "utf8"));
-
-    const walletInstance = new anchor.Wallet(walletKeyPair);
+    const kp = new Keypair({
+      publicKey: walletKeyPair.slice(32),
+      secretKey: walletKeyPair.slice(0, 32),
+    });
+    const walletInstance = new anchor.Wallet(kp);
 
     provider = new anchor.AnchorProvider(
       new anchor.web3.Connection(network),
@@ -47,10 +60,36 @@ export function anchorSetup() {
       anchor.AnchorProvider.defaultOptions()
     );
   }
-
   anchor.setProvider(provider);
 
   return provider;
+}
+
+export function getUserAddress() {
+  // Read the network and wallet from the config file
+  const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
+  let wallet = config.wallet;
+  let userAddress: PublicKey;
+
+  if (!wallet) {
+    const anchorConfig = toml.parse(fs.readFileSync("./Anchor.toml", "utf-8"));
+    const homeDir = os.homedir();
+    wallet = anchorConfig.provider.wallet.replace("~", homeDir);
+    const walletKeyPair = JSON.parse(fs.readFileSync(wallet, "utf8"));
+    userAddress = new PublicKey(walletKeyPair.slice(32));
+  } else {
+    const walletKeyPair = JSON.parse(fs.readFileSync(wallet, "utf8"));
+    userAddress = new PublicKey(walletKeyPair.slice(32));
+  }
+
+  return userAddress;
+}
+
+export function getConnection() {
+  const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
+  const network = config.network;
+
+  return new anchor.web3.Connection(network);
 }
 
 export function getCloneData() {
@@ -80,24 +119,17 @@ export async function getCloneClient(
   return cloneClient;
 }
 
-export function getMockJupiterData() {
+export function getFaucetData() {
   const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
-  const mockJupProgramId = new PublicKey(config.jup);
+  const faucetProgramId = new PublicKey(config.faucet);
 
-  const [jupiterAddress, ___] = PublicKey.findProgramAddressSync(
-    [Buffer.from("jupiter")],
-    mockJupProgramId
+  let [faucetAddress, _] = PublicKey.findProgramAddressSync(
+    [Buffer.from("faucet")],
+    faucetProgramId
   );
 
-  return [mockJupProgramId, jupiterAddress];
-}
-
-export async function getJupiterAccount(
-  provider: anchor.AnchorProvider,
-  jupiterAddress: PublicKey
-) {
-  return await Jupiter.fromAccountAddress(provider.connection, jupiterAddress);
+  return [faucetProgramId, faucetAddress];
 }
 
 export function getCloneStakingData() {
@@ -125,7 +157,7 @@ export async function getCloneStakingAccount(
 export function getPythData() {
   const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
-  const pythProgramId = new PublicKey(config.jup);
+  const pythProgramId = new PublicKey(config.pyth);
 
   const [pythAddress, ___] = PublicKey.findProgramAddressSync(
     [Buffer.from("pyth")],
@@ -135,10 +167,10 @@ export function getPythData() {
   return [pythProgramId, pythAddress];
 }
 
-export function getUSDC() {
+export function getCollateral() {
   const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
 
-  return new PublicKey(config.usdc);
+  return new PublicKey(config.collateral);
 }
 
 export function getCLN() {
@@ -200,6 +232,58 @@ export const getOrCreateAssociatedTokenAccount = async (
   }
   return account;
 };
+
+export const createTokenMint = async (
+  provider: anchor.AnchorProvider,
+  opts: { mint?: anchor.web3.Keypair; scale?: number; authority?: PublicKey }
+): Promise<PublicKey> => {
+  let tokenMint = opts.mint ?? anchor.web3.Keypair.generate();
+  let tx = new Transaction().add(
+    // create cln mint account
+    SystemProgram.createAccount({
+      fromPubkey: provider.publicKey!,
+      newAccountPubkey: tokenMint.publicKey,
+      space: MINT_SIZE,
+      lamports: await getMinimumBalanceForRentExemptMint(provider.connection),
+      programId: TOKEN_PROGRAM_ID,
+    }),
+    // init clone mint account
+    createInitializeMintInstruction(
+      tokenMint.publicKey,
+      opts.scale ?? CLONE_TOKEN_SCALE,
+      opts.authority ?? provider.publicKey!,
+      null
+    )
+  );
+  await provider.sendAndConfirm(tx, [tokenMint]);
+  return tokenMint.publicKey;
+};
+
+// export async function ensureTokenAccountExists(
+//   provider: anchor.AnchorProvider,
+//   associatedTokenAddress: PublicKey,
+//   mintAddress: PublicKey,
+//   ownerAddress: PublicKey,
+// ) {
+//   try {
+//     const accountInfo = await getAccount(
+//       provider.connection,
+//       associatedTokenAddress,
+//       "recent"
+//     );
+//     if (!accountInfo) {
+//       await createAssociatedTokenAccount(
+//         provider.connection,
+//         provider.publicKey!,
+//         mintAddress,
+//         ownerAddress
+//       );
+//     }
+//   } catch (error) {
+//     console.error("Error ensuring token account exists:", error);
+//     throw error;
+//   }
+// }
 
 export const getStatus = (num: number) => {
   let status: string;

@@ -10,33 +10,33 @@ pub enum CloneError {
     #[msg("Invalid Mint Collateral Ratio")]
     InvalidMintCollateralRatio,
 
-    /// 2. Collateral Not Found
-    #[msg("Collateral Not Found")]
-    CollateralNotFound,
+    /// 2. Integer Type Conversion Error
+    #[msg("Integer Type Conversion Error")]
+    IntTypeConversionError,
 
     /// 3. Pool Not Found
     #[msg("Pool Not Found")]
     PoolNotFound,
 
-    /// 4. Invalid Collateral Type
-    #[msg("Invalid Collateral Type")]
-    InvalidCollateralType,
+    /// 4. Bump not found
+    #[msg("Bump not found")]
+    BumpNotFound,
 
     /// 5. Invalid Token Amount
     #[msg("Invalid Token Amount")]
     InvalidTokenAmount,
 
-    /// 6. Invalid Bool
-    #[msg("Invalid Bool")]
-    InvalidBool,
+    /// 6. Expected Account Not Found
+    #[msg("Expected Account Not Found")]
+    ExpectedAccountNotFound,
 
     /// 7. Outdated Oracle
     #[msg("Outdated Oracle")]
     OutdatedOracle,
 
-    /// 8. Non Stables not Supported
-    #[msg("Non-stables Not Supported")]
-    NonStablesNotSupported,
+    /// 8. Checked Math Error
+    #[msg("Checked Math Error")]
+    CheckedMathError,
 
     /// 9. Mint Position Unable To Liquidate
     #[msg("Mint Position Unable to Liquidate")]
@@ -82,9 +82,9 @@ pub enum CloneError {
     #[msg("No remaining accounts supplied")]
     NoRemainingAccountsSupplied,
 
-    /// 20. Non-zero collateralization ratio required
-    #[msg("Non-zero collateralization ratio required")]
-    NonZeroCollateralizationRatioRequired,
+    /// 20. Invalid over-collateralization ratios
+    #[msg("Invalid over-collateralization ratios")]
+    InvalidOvercollateralizationRatios,
 
     /// 21. Incorrect Oracle Address
     #[msg("Incorrect oracle address provided")]
@@ -149,6 +149,10 @@ pub enum CloneError {
     /// 36. Invalid Conversion
     #[msg("Invalid Conversion")]
     InvalidConversion,
+
+    /// 37. Auth already exists
+    #[msg("Auth Already Exists")]
+    AuthAlreadyExists,
 }
 
 impl From<CloneError> for ProgramError {

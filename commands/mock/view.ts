@@ -1,12 +1,5 @@
 import fs from "fs";
-import { getFeedData } from "../../sdk/src/oracle";
-import {
-  successLog,
-  errorLog,
-  anchorSetup,
-  getMockJupiterData,
-  getJupiterAccount,
-} from "../utils";
+import { successLog, errorLog, anchorSetup } from "../utils";
 import chalk from "chalk";
 import boxen from "boxen";
 
@@ -17,9 +10,6 @@ exports.builder = {};
 exports.handler = async function () {
   try {
     const provider = anchorSetup();
-    const [__, jupiterAddress] = getMockJupiterData();
-
-    const jupiter = await getJupiterAccount(provider, jupiterAddress);
 
     const assetBoxenOptions: boxen.Options = {
       padding: 1,
@@ -39,34 +29,16 @@ exports.handler = async function () {
 
       console.log(boxen(assetInfo, assetBoxenOptions));
     }
-
-    let underline = new Array(`USDC`.length).fill("-").join("");
-    let assetInfo =
-      `USDC\n` + `${underline}\n` + `Mint: ${chalk.bold(jupiter.usdcMint)}\n`;
-
-    console.log(boxen(assetInfo, assetBoxenOptions));
-
-    for (let i = 0; i < jupiter.nAssets; i++) {
-      const mint = jupiter.assetMints[i];
-      const priceFeed = jupiter.oracles[i];
-      const feedData = await getFeedData(provider, priceFeed);
-      const price = feedData.aggregate.price;
-      const exponent = feedData.exponent;
-
-      const title = `Asset ${i + 1}`;
-      underline = new Array(title.length).fill("-").join("");
-
-      assetInfo =
-        `${chalk.bold(title)}\n` +
+    if (config.collateral != "") {
+      let underline = new Array(`USDC`.length).fill("-").join("");
+      let assetInfo =
+        `USDC\n` +
         `${underline}\n` +
-        `Mint: ${chalk.bold(mint)}\n` +
-        `Price Feed Address: ${chalk.bold(priceFeed)}\n` +
-        `Price: ${chalk.bold(price)}\n` +
-        `Exponent: ${chalk.bold(exponent)}\n`;
+        `Mint: ${chalk.bold(config.collateral)}\n`;
       console.log(boxen(assetInfo, assetBoxenOptions));
     }
 
-    successLog(`Viewing ${jupiter.nAssets} mock assets`);
+    successLog(`Viewing mock assets`);
   } catch (error: any) {
     errorLog(`Failed to view mock assets:\n${error.message}`);
   }

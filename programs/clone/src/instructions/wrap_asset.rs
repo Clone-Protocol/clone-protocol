@@ -1,7 +1,7 @@
 use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
 use crate::error::*;
 use crate::states::*;
-use crate::{CLONE_PROGRAM_SEED, POOLS_SEED};
+use crate::{return_error_if_false, CLONE_PROGRAM_SEED, POOLS_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 use rust_decimal::prelude::*;
@@ -54,12 +54,26 @@ pub struct WrapAsset<'info> {
 }
 
 pub fn execute(ctx: Context<WrapAsset>, amount: u64, _pool_index: u8) -> Result<()> {
-    let underlying_mint_scale = ctx.accounts.asset_mint.decimals as u32;
+    return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
+
+    let underlying_mint_scale = ctx
+        .accounts
+        .asset_mint
+        .decimals
+        .try_into()
+        .map_err(|_| CloneError::IntTypeConversionError)?;
     let onasset_amount = rescale_toward_zero(
-        Decimal::new(amount.try_into().unwrap(), underlying_mint_scale),
+        Decimal::new(
+            amount
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?,
+            underlying_mint_scale,
+        ),
         CLONE_TOKEN_SCALE,
     )
-    .mantissa() as u64;
+    .mantissa()
+    .try_into()
+    .map_err(|_| CloneError::IntTypeConversionError)?;
 
     let seeds = &[&[
         CLONE_PROGRAM_SEED.as_ref(),

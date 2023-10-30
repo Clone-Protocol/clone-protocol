@@ -1,5 +1,6 @@
 use crate::decimal::rescale_toward_zero;
 use crate::error::*;
+use crate::events::*;
 use crate::instructions::withdraw_liquidity;
 use crate::math::*;
 use crate::states::*;
@@ -71,14 +72,17 @@ pub fn execute(
     let comet = &mut ctx.accounts.user_account.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
-    let ild_share = calculate_ild_share(&comet_position, pools, collateral);
+    let ild_share = calculate_ild_share(&comet_position, pools, collateral)?;
     let pool_index = comet_position.pool_index as usize;
     let pool = &pools.pools[pool_index];
     return_error_if_false!(
         pool.status == Status::Active || pool.status == Status::Liquidation,
         CloneError::StatusPreventsAction
     );
-    let collateral_scale = collateral.scale as u32;
+    let collateral_scale = collateral
+        .scale
+        .try_into()
+        .map_err(|_| CloneError::IntTypeConversionError)?;
 
     let is_in_liquidation_mode = pool.status == Status::Liquidation;
     let starting_health_score = calculate_health_score(comet, pools, oracles, collateral)?;
@@ -93,24 +97,40 @@ pub fn execute(
         let liquidator_fee =
             to_bps_decimal!(ctx.accounts.clone.comet_collateral_ild_liquidator_fee_bps);
         let collateral_reward: u64 = rescale_toward_zero(
-            liquidator_fee * ild_share.collateral_ild_share,
+            liquidator_fee
+                .checked_mul(ild_share.collateral_ild_share)
+                .ok_or(error!(CloneError::CheckedMathError))?,
             collateral_scale,
         )
+        .mantissa()
         .try_into()
-        .unwrap();
+        .map_err(|_| CloneError::IntTypeConversionError)?;
         // Remove equivalent reward from user's collateral
         let ild_share: u64 = ild_share
             .collateral_ild_share
             .mantissa()
             .try_into()
-            .unwrap();
-        let collateral_reduction: u64 = collateral_reward + ild_share;
+            .map_err(|_| CloneError::IntTypeConversionError)?;
+        let collateral_reduction = collateral_reward
+            .checked_add(ild_share)
+            .ok_or(error!(CloneError::CheckedMathError))?;
         return_error_if_false!(
             collateral_reduction <= comet.collateral_amount,
             CloneError::InvalidTokenAmount
         );
-        comet.collateral_amount -= collateral_reduction;
-        comet.positions[comet_position_index as usize].collateral_ild_rebate += ild_share as i64;
+        comet.collateral_amount = comet
+            .collateral_amount
+            .checked_sub(collateral_reduction)
+            .ok_or(error!(CloneError::CheckedMathError))?;
+        comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
+            [comet_position_index as usize]
+            .collateral_ild_rebate
+            .checked_add(
+                ild_share
+                    .try_into()
+                    .map_err(|_| CloneError::IntTypeConversionError)?,
+            )
+            .ok_or(error!(CloneError::CheckedMathError))?;
 
         // Transfer collateral to liquidator
         let cpi_accounts = Transfer {
@@ -127,6 +147,15 @@ pub fn execute(
             CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
             collateral_reward,
         )?;
+
+        emit!(CometCollateralUpdate {
+            event_id: ctx.accounts.clone.event_counter,
+            user_address: user.key(),
+            collateral_supplied: comet.collateral_amount,
+            collateral_delta: -(collateral_reduction
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?),
+        });
     }
 
     // Withdraw liquidity position
@@ -142,7 +171,12 @@ pub fn execute(
             ctx.accounts.clone.event_counter,
         )?;
     };
-    ctx.accounts.clone.event_counter += 1;
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     if comet.positions[comet_position_index as usize].is_empty() {
         comet.positions.remove(comet_position_index as usize);

@@ -75,7 +75,10 @@ pub fn execute(ctx: Context<WithdrawStake>, amount: u64) -> Result<()> {
         amount,
     )?;
     // Update user account
-    user_account.staked_tokens -= amount;
+    user_account.staked_tokens = user_account
+        .staked_tokens
+        .checked_sub(amount)
+        .ok_or(error!(CloneStakingError::CheckedMathError))?;
 
     Ok(())
 }

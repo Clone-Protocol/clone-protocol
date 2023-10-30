@@ -1,12 +1,6 @@
 import { Transaction } from "@solana/web3.js";
-import { CloneClient, toCloneScale } from "../../sdk/src/clone";
+import { fromScale, toCloneScale } from "../../sdk/src/clone";
 import { calculateSwapExecution } from "../../sdk/src/utils";
-import {
-  TOKEN_PROGRAM_ID,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  getAssociatedTokenAddress,
-  getAccount,
-} from "@solana/spl-token";
 import { BN } from "@coral-xyz/anchor";
 import {
   successLog,
@@ -23,13 +17,13 @@ interface CommandArguments extends Argv {
   poolIndex: number;
   amount: number;
   quantityIsInput: boolean;
-  quantityIsOnusd: boolean;
+  quantityIsCollateral: boolean;
   slippage: number;
 }
 
 exports.command =
-  "swap <pool-index> <amount> [quantity-is-input] [quantity-is-onusd] [slippage]";
-exports.desc = "Swaps onAsset/onUSD from a Clone pool";
+  "swap <pool-index> <amount> [quantity-is-input] [quantity-is-collateral] [slippage]";
+exports.desc = "Swaps onAsset/collateral from a Clone pool";
 exports.builder = (yargs: CommandArguments) => {
   yargs
     .positional("pool-index", {
@@ -45,8 +39,8 @@ exports.builder = (yargs: CommandArguments) => {
       type: "boolean",
       default: false,
     })
-    .positional("quantity-is-onusd", {
-      describe: "true if the amount is for the onUSD",
+    .positional("quantity-is-collateral", {
+      describe: "true if the amount is for the collateral",
       type: "boolean",
       default: false,
     })
@@ -66,61 +60,51 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneAccountAddress
     );
 
-    const tokenData = await cloneClient.getTokenData();
-    const pool = tokenData.pools[yargs.poolIndex];
-    const oracle = tokenData.oracles[Number(pool.assetInfo.oracleInfoIndex)];
+    const pools = await cloneClient.getPools();
+    const oracles = await cloneClient.getOracles();
+    const collateral = cloneClient.clone.collateral;
+
+    const pool = pools.pools[yargs.poolIndex];
+    const oracle = oracles.oracles[Number(pool.assetInfo.oracleInfoIndex)];
 
     let executionEst = calculateSwapExecution(
       yargs.amount,
       yargs.quantityIsInput,
-      yargs.quantityIsOnusd,
-      Number(pool.onusdIld),
+      yargs.quantityIsCollateral,
+      Number(pool.collateralIld),
       Number(pool.onassetIld),
-      Number(pool.committedOnusdLiquidity),
+      Number(pool.committedCollateralLiquidity),
       Number(pool.liquidityTradingFeeBps),
       Number(pool.treasuryTradingFeeBps),
-      Number(oracle.price)
+      Number(oracle.price),
+      collateral
     );
 
-    let onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+    let collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       provider,
-      cloneClient.clone!.onusdMint
+      collateral.mint
     );
-    const initialOnusdBalance = Number(onusdTokenAccountInfo.amount);
+    const initialCollateralBalance = Number(collateralTokenAccountInfo.amount);
     let onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       provider,
       pool.assetInfo.onassetMint
     );
     const initialOnassetBalance = Number(onassetTokenAccountInfo.amount);
 
-    const treasuryOnassetAssociatedTokenAddress =
-      await getAssociatedTokenAddress(
-        pool.assetInfo.onassetMint,
-        cloneClient.clone!.treasuryAddress,
-        false,
-        TOKEN_PROGRAM_ID,
-        ASSOCIATED_TOKEN_PROGRAM_ID
+    const treasuryOnassetTokenAccount = await getOrCreateAssociatedTokenAccount(
+      provider,
+      pool.assetInfo.onassetMint,
+      cloneClient.clone!.treasuryAddress
+    );
+
+    const treasuryCollateralTokenAccount =
+      await getOrCreateAssociatedTokenAccount(
+        provider,
+        collateral.mint,
+        cloneClient.clone!.treasuryAddress
       );
-    const treasuryOnassetTokenAccount = await getAccount(
-      cloneClient.provider.connection,
-      treasuryOnassetAssociatedTokenAddress,
-      "recent"
-    );
 
-    const treasuryOnusdAssociatedTokenAddress = await getAssociatedTokenAddress(
-      cloneClient.clone!.onusdMint,
-      cloneClient.clone!.treasuryAddress,
-      false,
-      TOKEN_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    );
-    const treasuryOnusdTokenAccount = await getAccount(
-      cloneClient.provider.connection,
-      treasuryOnusdAssociatedTokenAddress,
-      "recent"
-    );
-
-    const updatePricesIx = cloneClient.updatePricesInstruction(tokenData);
+    const updatePricesIx = cloneClient.updatePricesInstruction(oracles);
 
     const amount = new BN(`${toCloneScale(yargs.amount)}`);
     const difference = (yargs.quantityIsInput ? -1 : 1) * yargs.slippage;
@@ -129,12 +113,12 @@ exports.handler = async function (yargs: CommandArguments) {
       yargs.poolIndex,
       amount,
       yargs.quantityIsInput,
-      yargs.quantityIsOnusd,
+      yargs.quantityIsCollateral,
       toCloneScale(executionEst.result * (1 + difference)),
       pool.assetInfo.onassetMint,
-      onusdTokenAccountInfo.address,
+      collateralTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
-      treasuryOnusdTokenAccount.address,
+      treasuryCollateralTokenAccount.address,
       treasuryOnassetTokenAccount.address
     );
 
@@ -142,7 +126,7 @@ exports.handler = async function (yargs: CommandArguments) {
       new Transaction().add(updatePricesIx).add(ix)
     );
 
-    if (yargs.quantityIsInput && yargs.quantityIsOnusd) {
+    if (yargs.quantityIsInput && yargs.quantityIsCollateral) {
       onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
         provider,
         pool.assetInfo.onassetMint
@@ -150,25 +134,24 @@ exports.handler = async function (yargs: CommandArguments) {
       const newOnassetBalance = Number(onassetTokenAccountInfo.amount);
 
       successLog(
-        `${yargs.amount} onUSD Sold!\nBought ${fromCloneScale(
+        `${yargs.amount} collateral Sold!\nBought ${fromCloneScale(
           newOnassetBalance - initialOnassetBalance
         )} onAsset ${yargs.poolIndex}`
       );
-    } else if (yargs.quantityIsInput && !yargs.quantityIsOnusd) {
-      onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+    } else if (yargs.quantityIsInput && !yargs.quantityIsCollateral) {
+      collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
         provider,
-        cloneClient.clone!.onusdMint
+        collateral.mint
       );
-      const newOnusdBalance = Number(onusdTokenAccountInfo.amount);
+      const newCollateralBalance = Number(collateralTokenAccountInfo.amount);
 
       successLog(
-        `${yargs.amount} onAsset ${
-          yargs.poolIndex
-        } Sold!\nBought ${fromCloneScale(
-          newOnusdBalance - initialOnusdBalance
-        )} onUSD`
+        `${yargs.amount} onAsset ${yargs.poolIndex} Sold!\nBought ${fromScale(
+          newCollateralBalance - initialCollateralBalance,
+          cloneClient.clone.collateral.scale
+        )} collateral tokens`
       );
-    } else if (!yargs.quantityIsInput && yargs.quantityIsOnusd) {
+    } else if (!yargs.quantityIsInput && yargs.quantityIsCollateral) {
       onassetTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
         provider,
         pool.assetInfo.onassetMint
@@ -176,23 +159,22 @@ exports.handler = async function (yargs: CommandArguments) {
       const newOnassetBalance = Number(onassetTokenAccountInfo.amount);
 
       successLog(
-        `${yargs.amount} onUSD Bought!\nSold ${fromCloneScale(
+        `${yargs.amount} collateral Bought!\nSold ${fromCloneScale(
           initialOnassetBalance - newOnassetBalance
         )} onAsset ${yargs.poolIndex}`
       );
-    } else if (!yargs.quantityIsInput && !yargs.quantityIsOnusd) {
-      onusdTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
+    } else if (!yargs.quantityIsInput && !yargs.quantityIsCollateral) {
+      collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
         provider,
-        cloneClient.clone!.onusdMint
+        collateral.mint
       );
-      const newOnusdBalance = Number(onusdTokenAccountInfo.amount);
+      const newCollateralBalance = Number(collateralTokenAccountInfo.amount);
 
       successLog(
-        `${yargs.amount} onAsset ${
-          yargs.poolIndex
-        } Bought!\nSold ${fromCloneScale(
-          initialOnusdBalance - newOnusdBalance
-        )} onUSD`
+        `${yargs.amount} onAsset ${yargs.poolIndex} Bought!\nSold ${fromScale(
+          initialCollateralBalance - newCollateralBalance,
+          cloneClient.clone.collateral.scale
+        )} collateral tokens`
       );
     }
   } catch (error: any) {

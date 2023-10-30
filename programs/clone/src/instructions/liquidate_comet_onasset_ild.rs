@@ -80,7 +80,7 @@ pub fn execute(
     let comet = &mut ctx.accounts.user_account.comet;
     let comet_position = comet.positions[comet_position_index as usize];
     let authorized_amount = to_clone_decimal!(amount);
-    let ild_share = calculate_ild_share(&comet_position, pools, collateral);
+    let ild_share = calculate_ild_share(&comet_position, pools, collateral)?;
     let pool_index = comet_position.pool_index as usize;
     let pool = &pools.pools[pool_index];
 
@@ -93,8 +93,13 @@ pub fn execute(
     let onasset_price = pool_oracle.get_price();
     let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
     let collateral_price = collateral_oracle.get_price();
-    let collateral_scale = collateral.scale as u32;
-    let pool_price = onasset_price / collateral_price;
+    let collateral_scale = collateral
+        .scale
+        .try_into()
+        .map_err(|_| CloneError::IntTypeConversionError)?;
+    let pool_price = onasset_price
+        .checked_div(collateral_price)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     let is_in_liquidation_mode = pool.status == Status::Liquidation;
     let starting_health_score = calculate_health_score(comet, pools, oracles, collateral)?;
@@ -110,13 +115,26 @@ pub fn execute(
 
     // calculate reward for liquidator
     let collateral_reward = rescale_toward_zero(
-        (Decimal::one() + liquidator_fee) * pool_price * burn_amount,
+        Decimal::one()
+            .checked_add(liquidator_fee)
+            .ok_or(error!(CloneError::CheckedMathError))?
+            .checked_mul(pool_price)
+            .ok_or(error!(CloneError::CheckedMathError))?
+            .checked_mul(burn_amount)
+            .ok_or(error!(CloneError::CheckedMathError))?,
         collateral_scale,
     );
 
     if ild_share.onasset_ild_share > Decimal::ZERO {
-        let ild_rebate_increase: i64 = burn_amount.mantissa().try_into().unwrap();
-        comet.positions[comet_position_index as usize].onasset_ild_rebate += ild_rebate_increase;
+        let ild_rebate_increase: i64 = burn_amount
+            .mantissa()
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?;
+        comet.positions[comet_position_index as usize].onasset_ild_rebate = comet.positions
+            [comet_position_index as usize]
+            .onasset_ild_rebate
+            .checked_add(ild_rebate_increase)
+            .ok_or(error!(CloneError::CheckedMathError))?;
         let cpi_accounts = Burn {
             mint: ctx.accounts.onasset_mint.to_account_info().clone(),
             from: ctx
@@ -129,7 +147,9 @@ pub fn execute(
 
         token::burn(
             CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts),
-            ild_rebate_increase.try_into().unwrap(),
+            ild_rebate_increase
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?,
         )?;
 
         // Transfer collateral to liquidator
@@ -145,11 +165,22 @@ pub fn execute(
         let cpi_program = ctx.accounts.token_program.to_account_info();
         token::transfer(
             CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
-            collateral_reward.mantissa().try_into().unwrap(),
+            collateral_reward
+                .mantissa()
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?,
         )?;
 
         // Remove equivalent reward from user's collateral
-        comet.collateral_amount -= collateral_reward.mantissa() as u64;
+        comet.collateral_amount = comet
+            .collateral_amount
+            .checked_sub(
+                collateral_reward
+                    .mantissa()
+                    .try_into()
+                    .map_err(|_| CloneError::IntTypeConversionError)?,
+            )
+            .ok_or(error!(CloneError::CheckedMathError))?;
     }
 
     // Withdraw liquidity position
@@ -164,8 +195,13 @@ pub fn execute(
             user,
             ctx.accounts.clone.event_counter,
         )?;
-    };
-    ctx.accounts.clone.event_counter += 1;
+    }
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     if comet.positions[comet_position_index as usize].is_empty() {
         comet.positions.remove(comet_position_index as usize);

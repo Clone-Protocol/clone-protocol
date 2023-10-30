@@ -1,4 +1,3 @@
-import * as anchor from "@coral-xyz/anchor";
 import { Transaction } from "@solana/web3.js";
 import {
   successLog,

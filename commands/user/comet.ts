@@ -6,6 +6,7 @@ const addLiquidity = require('./comet/add-liquidity');
 const withdrawLiquidity = require('./comet/withdraw-liquidity');
 const payIld = require('./comet/pay-ild');
 const claimReward = require('./comet/claim-reward');
+const removePosition = require('./comet/remove-position');
 
 module.exports = (yargs: Argv) => {
   yargs
@@ -15,6 +16,7 @@ module.exports = (yargs: Argv) => {
     .command(withdrawLiquidity)
     .command(payIld)
     .command(claimReward)
+    .command(removePosition)
     .demandCommand()
     .help();
 }

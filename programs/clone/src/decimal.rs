@@ -9,8 +9,12 @@ pub static BPS_SCALE: u32 = 4;
 macro_rules! to_clone_decimal {
     ($e:expr) => {{
         use rust_decimal::Decimal;
+        use std::convert::TryInto;
         use $crate::decimal::CLONE_TOKEN_SCALE;
-        Decimal::new($e as i64, CLONE_TOKEN_SCALE)
+        Decimal::new(
+            TryInto::<i64>::try_into($e).map_err(|_| CloneError::IntTypeConversionError)?,
+            CLONE_TOKEN_SCALE,
+        )
     }};
 }
 
@@ -18,8 +22,12 @@ macro_rules! to_clone_decimal {
 macro_rules! to_pct_decimal {
     ($e:expr) => {{
         use rust_decimal::Decimal;
+        use std::convert::TryInto;
         use $crate::decimal::PERCENT_SCALE;
-        Decimal::new($e as i64, PERCENT_SCALE)
+        Decimal::new(
+            TryInto::<i64>::try_into($e).map_err(|_| CloneError::IntTypeConversionError)?,
+            PERCENT_SCALE,
+        )
     }};
 }
 
@@ -27,8 +35,12 @@ macro_rules! to_pct_decimal {
 macro_rules! to_ratio_decimal {
     ($e:expr) => {{
         use rust_decimal::Decimal;
+        use std::convert::TryInto;
         use $crate::decimal::RATIO_SCALE;
-        Decimal::new($e as i64, RATIO_SCALE)
+        Decimal::new(
+            TryInto::<i64>::try_into($e).map_err(|_| CloneError::IntTypeConversionError)?,
+            RATIO_SCALE,
+        )
     }};
 }
 
@@ -36,8 +48,12 @@ macro_rules! to_ratio_decimal {
 macro_rules! to_bps_decimal {
     ($e:expr) => {{
         use rust_decimal::Decimal;
+        use std::convert::TryInto;
         use $crate::decimal::BPS_SCALE;
-        Decimal::new($e as i64, BPS_SCALE)
+        Decimal::new(
+            TryInto::<i64>::try_into($e).map_err(|_| CloneError::IntTypeConversionError)?,
+            BPS_SCALE,
+        )
     }};
 }
 

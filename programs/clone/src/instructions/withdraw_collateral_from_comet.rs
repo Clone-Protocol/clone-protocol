@@ -1,10 +1,12 @@
 use crate::error::*;
+use crate::events::*;
 use crate::math::*;
 use crate::return_error_if_false;
 use crate::states::*;
 use crate::{CLONE_PROGRAM_SEED, ORACLES_SEED, POOLS_SEED, USER_SEED};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, *};
+use std::convert::TryInto;
 
 #[derive(Accounts)]
 #[instruction(collateral_amount: u64)]
@@ -17,6 +19,7 @@ pub struct WithdrawCollateralFromComet<'info> {
     )]
     pub user_account: Box<Account<'info, User>>,
     #[account(
+        mut,
         seeds = [CLONE_PROGRAM_SEED.as_ref()],
         bump = clone.bump,
     )]
@@ -62,7 +65,10 @@ pub fn execute(ctx: Context<WithdrawCollateralFromComet>, collateral_amount: u64
     let collateral_to_withdraw = collateral_amount.min(comet.collateral_amount);
 
     // update the collateral amount
-    comet.collateral_amount -= collateral_to_withdraw;
+    comet.collateral_amount = comet
+        .collateral_amount
+        .checked_sub(collateral_to_withdraw)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     // send collateral from vault to user
     let cpi_accounts = Transfer {
@@ -82,6 +88,22 @@ pub fn execute(ctx: Context<WithdrawCollateralFromComet>, collateral_amount: u64
     let health_score = calculate_health_score(comet, pools, oracles, collateral)?;
 
     return_error_if_false!(health_score.is_healthy(), CloneError::HealthScoreTooLow);
+
+    emit!(CometCollateralUpdate {
+        event_id: ctx.accounts.clone.event_counter,
+        user_address: *ctx.accounts.user.key,
+        collateral_supplied: comet.collateral_amount,
+        collateral_delta: -(collateral_to_withdraw
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?),
+    });
+
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
+        .ok_or(CloneError::CheckedMathError)?;
 
     Ok(())
 }

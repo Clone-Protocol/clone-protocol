@@ -1,13 +1,10 @@
 import * as anchor from "@coral-xyz/anchor";
 import { BN } from "@coral-xyz/anchor";
-import { Transaction, PublicKey, SystemProgram } from "@solana/web3.js";
+import { Transaction } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
-  MINT_SIZE,
-  getMinimumBalanceForRentExemptMint,
-  createInitializeMintInstruction,
 } from "@solana/spl-token";
 import {
   successLog,
@@ -17,7 +14,6 @@ import {
   getCLN,
 } from "../utils";
 import { Argv } from "yargs";
-import { CLONE_TOKEN_SCALE } from "../../sdk/src/clone";
 import * as CloneStaking from "../../sdk/generated/clone-staking";
 
 interface CommandArguments extends Argv {
@@ -39,34 +35,6 @@ exports.handler = async function (yargs: CommandArguments) {
     const [__, cloneStakingAddress] = getCloneStakingData();
 
     const clnTokenMint = getCLN();
-    // if (yargs.clnMint != "") {
-    //   clnMintPubkey = new PublicKey(yargs.clnMint);
-    // } else {
-    //   const clnMintKeyPair = anchor.web3.Keypair.generate();
-
-    //   let tx = new Transaction().add(
-    //     // create cln mint account
-    //     SystemProgram.createAccount({
-    //       fromPubkey: provider.publicKey,
-    //       newAccountPubkey: clnMintKeyPair.publicKey,
-    //       space: MINT_SIZE,
-    //       lamports: await getMinimumBalanceForRentExemptMint(
-    //         provider.connection
-    //       ),
-    //       programId: TOKEN_PROGRAM_ID,
-    //     }),
-    //     // init clone mint account
-    //     createInitializeMintInstruction(
-    //       clnMintKeyPair.publicKey,
-    //       CLONE_TOKEN_SCALE,
-    //       provider.publicKey,
-    //       null
-    //     )
-    //   );
-    //   await provider.sendAndConfirm(tx, [clnMintKeyPair]);
-
-    //   clnMintPubkey = clnMintKeyPair.publicKey;
-    // }
 
     const clnTokenVault = await getAssociatedTokenAddress(
       clnTokenMint,

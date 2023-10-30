@@ -69,7 +69,10 @@ pub fn execute(
     token::burn(CpiContext::new(cpi_program, cpi_accounts), amount_value)?;
 
     // update total amount of borrowed onasset
-    borrows[borrow_index as usize].borrowed_onasset -= amount_value;
+    borrows[borrow_index as usize].borrowed_onasset = borrows[borrow_index as usize]
+        .borrowed_onasset
+        .checked_sub(amount_value)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     emit!(BorrowUpdate {
         event_id: ctx.accounts.clone.event_counter,
@@ -77,14 +80,21 @@ pub fn execute(
         pool_index: borrows[borrow_index as usize]
             .pool_index
             .try_into()
-            .unwrap(),
+            .map_err(|_| CloneError::IntTypeConversionError)?,
         is_liquidation: false,
         collateral_supplied: borrows[borrow_index as usize].collateral_amount,
         collateral_delta: 0,
         borrowed_amount: borrows[borrow_index as usize].borrowed_onasset,
-        borrowed_delta: -(amount_value as i64)
+        borrowed_delta: -(amount_value
+            .try_into()
+            .map_err(|_| CloneError::IntTypeConversionError)?)
     });
-    ctx.accounts.clone.event_counter += 1;
+    ctx.accounts.clone.event_counter = ctx
+        .accounts
+        .clone
+        .event_counter
+        .checked_add(1)
+        .ok_or(error!(CloneError::CheckedMathError))?;
 
     Ok(())
 }

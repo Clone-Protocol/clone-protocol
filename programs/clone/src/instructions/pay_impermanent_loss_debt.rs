@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::math::*;
 use crate::states::*;
 use crate::{return_error_if_false, CLONE_PROGRAM_SEED, POOLS_SEED, USER_SEED};
@@ -78,7 +79,7 @@ pub fn execute(
     let comet = &mut ctx.accounts.user_account.comet;
 
     let comet_position = comet.positions[comet_position_index as usize];
-    let ild_share = calculate_ild_share(&comet_position, &pools, &ctx.accounts.clone.collateral);
+    let ild_share = calculate_ild_share(&comet_position, &pools, &ctx.accounts.clone.collateral)?;
 
     match payment_type {
         PaymentType::Onasset => {
@@ -87,10 +88,22 @@ pub fn execute(
                 CloneError::InvalidPaymentType
             );
 
-            let ild_share: u64 = ild_share.onasset_ild_share.mantissa().try_into().unwrap();
+            let ild_share: u64 = ild_share
+                .onasset_ild_share
+                .mantissa()
+                .try_into()
+                .map_err(|_| CloneError::IntTypeConversionError)?;
             let burn_amount = ild_share.min(amount);
 
-            comet.positions[comet_position_index as usize].onasset_ild_rebate += burn_amount as i64;
+            comet.positions[comet_position_index as usize].onasset_ild_rebate = comet.positions
+                [comet_position_index as usize]
+                .onasset_ild_rebate
+                .checked_add(
+                    burn_amount
+                        .try_into()
+                        .map_err(|_| CloneError::IntTypeConversionError)?,
+                )
+                .ok_or(error!(CloneError::CheckedMathError))?;
 
             let cpi_accounts = Burn {
                 mint: ctx.accounts.onasset_mint.to_account_info().clone(),
@@ -116,10 +129,18 @@ pub fn execute(
                 .collateral_ild_share
                 .mantissa()
                 .try_into()
-                .unwrap();
+                .map_err(|_| CloneError::IntTypeConversionError)?;
             let transfer_amount = ild_share.min(amount);
-            comet.positions[comet_position_index as usize].collateral_ild_rebate +=
-                transfer_amount as i64;
+
+            comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
+                [comet_position_index as usize]
+                .collateral_ild_rebate
+                .checked_add(
+                    transfer_amount
+                        .try_into()
+                        .map_err(|_| CloneError::IntTypeConversionError)?,
+                )
+                .ok_or(error!(CloneError::CheckedMathError))?;
 
             let cpi_accounts = Transfer {
                 to: ctx.accounts.collateral_vault.to_account_info().clone(),
@@ -146,12 +167,43 @@ pub fn execute(
                 .collateral_ild_share
                 .mantissa()
                 .try_into()
-                .unwrap();
+                .map_err(|_| CloneError::IntTypeConversionError)?;
             let from_wallet_amount = ild_share.min(amount).min(comet.collateral_amount);
-            comet.positions[comet_position_index as usize].collateral_ild_rebate +=
-                from_wallet_amount as i64;
 
-            comet.collateral_amount -= from_wallet_amount;
+            comet.positions[comet_position_index as usize].collateral_ild_rebate = comet.positions
+                [comet_position_index as usize]
+                .collateral_ild_rebate
+                .checked_add(
+                    from_wallet_amount
+                        .try_into()
+                        .map_err(|_| CloneError::IntTypeConversionError)?,
+                )
+                .ok_or(error!(CloneError::CheckedMathError))?;
+
+            comet.collateral_amount = comet
+                .collateral_amount
+                .checked_sub(
+                    from_wallet_amount
+                        .try_into()
+                        .map_err(|_| CloneError::IntTypeConversionError)?,
+                )
+                .ok_or(error!(CloneError::CheckedMathError))?;
+
+            emit!(CometCollateralUpdate {
+                event_id: ctx.accounts.clone.event_counter,
+                user_address: user.key(),
+                collateral_supplied: comet.collateral_amount,
+                collateral_delta: -(from_wallet_amount
+                    .try_into()
+                    .map_err(|_| CloneError::IntTypeConversionError)?),
+            });
+
+            ctx.accounts.clone.event_counter = ctx
+                .accounts
+                .clone
+                .event_counter
+                .checked_add(1)
+                .ok_or(error!(CloneError::CheckedMathError))?;
         }
     }
 

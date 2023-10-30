@@ -7,4 +7,10 @@ pub enum CloneStakingError {
 
     #[msg("Input is invalid!")]
     InvalidInput,
+
+    #[msg("Bump not found")]
+    BumpNotFound,
+
+    #[msg("Checked Math Error")]
+    CheckedMathError,
 }

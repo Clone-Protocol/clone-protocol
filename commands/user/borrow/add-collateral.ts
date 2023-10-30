@@ -39,13 +39,7 @@ exports.handler = async function (yargs: CommandArguments) {
       cloneAccountAddress
     );
 
-    const tokenData = await cloneClient.getTokenData();
-    const user = await cloneClient.getUserAccount();
-    const borrowPosition = user.borrows.positions[yargs.borrowIndex];
-
-    const collateral =
-      tokenData.collaterals[Number(borrowPosition.collateralIndex)];
-
+    const collateral = cloneClient.clone.collateral;
     const collateralTokenAccountInfo = await getOrCreateAssociatedTokenAccount(
       provider,
       collateral.mint
@@ -54,8 +48,6 @@ exports.handler = async function (yargs: CommandArguments) {
     const amount = new BN(`${toScale(yargs.amount, Number(collateral.scale))}`);
 
     let ix = cloneClient.addCollateralToBorrowInstruction(
-      tokenData,
-      user,
       yargs.borrowIndex,
       collateralTokenAccountInfo.address,
       amount
