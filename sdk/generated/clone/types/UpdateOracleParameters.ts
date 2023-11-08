@@ -20,7 +20,11 @@ import { Status, statusBeet } from './Status'
  * @private
  */
 export type UpdateOracleParametersRecord = {
-  Add: { address: web3.PublicKey; source: OracleSource }
+  Add: {
+    address: web3.PublicKey
+    source: OracleSource
+    rescaleFactor: beet.COption<number>
+  }
   Remove: { index: number }
   Modify: {
     index: number
@@ -62,10 +66,11 @@ export const updateOracleParametersBeet =
   beet.dataEnum<UpdateOracleParametersRecord>([
     [
       'Add',
-      new beet.BeetArgsStruct<UpdateOracleParametersRecord['Add']>(
+      new beet.FixableBeetArgsStruct<UpdateOracleParametersRecord['Add']>(
         [
           ['address', beetSolana.publicKey],
           ['source', oracleSourceBeet],
+          ['rescaleFactor', beet.coption(beet.u8)],
         ],
         'UpdateOracleParametersRecord["Add"]'
       ),

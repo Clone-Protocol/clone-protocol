@@ -90,9 +90,9 @@ pub fn execute(
     );
 
     let pool_oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
-    let onasset_price = pool_oracle.get_price();
+    let onasset_price = pool_oracle.get_price()?;
     let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
-    let collateral_price = collateral_oracle.get_price();
+    let collateral_price = collateral_oracle.get_price()?;
     let collateral_scale = collateral
         .scale
         .try_into()

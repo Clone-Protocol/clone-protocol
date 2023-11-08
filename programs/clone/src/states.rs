@@ -89,11 +89,18 @@ pub struct OracleInfo {
     pub expo: u8,
     pub status: Status,
     pub last_update_slot: u64,
+    pub rescale_factor: u8,
 }
 
 impl OracleInfo {
-    pub fn get_price(&self) -> Decimal {
-        Decimal::new(self.price, self.expo.into())
+    pub fn get_price(&self) -> Result<Decimal> {
+        let mut price = Decimal::new(self.price, self.expo.into());
+        if self.rescale_factor != 0 {
+            price = price
+                .checked_div(Decimal::new(1, self.rescale_factor.into()))
+                .ok_or(error!(CloneError::CheckedMathError))?;
+        }
+        return Ok(price);
     }
 }
 

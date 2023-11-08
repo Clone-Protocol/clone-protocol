@@ -17,6 +17,7 @@ export type OracleInfo = {
   expo: number
   status: Status
   lastUpdateSlot: beet.bignum
+  rescaleFactor: number
 }
 
 /**
@@ -31,6 +32,7 @@ export const oracleInfoBeet = new beet.BeetArgsStruct<OracleInfo>(
     ['expo', beet.u8],
     ['status', statusBeet],
     ['lastUpdateSlot', beet.u64],
+    ['rescaleFactor', beet.u8],
   ],
   'OracleInfo'
 )
