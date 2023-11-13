@@ -32,6 +32,7 @@ pub struct Clone {
     pub borrow_liquidator_fee_bps: u16,
     pub treasury_address: Pubkey,
     pub event_counter: u64,
+    pub non_auth_liquidations_enabled: bool,
 }
 #[account]
 pub struct Pools {

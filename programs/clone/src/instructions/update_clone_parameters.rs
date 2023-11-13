@@ -12,6 +12,7 @@ pub enum CloneParameters {
     BorrowLiquidationFee { value: u16 },
     TreasuryAddress { address: Pubkey },
     CollateralizationRatio { value: u8 },
+    NonAuthLiquidationsEnabled { value: bool },
 }
 
 #[derive(Accounts)]
@@ -80,6 +81,9 @@ pub fn execute(ctx: Context<UpdateCloneParameters>, params: CloneParameters) -> 
         }
         CloneParameters::CollateralizationRatio { value } => {
             clone.collateral.collateralization_ratio = value;
+        }
+        CloneParameters::NonAuthLiquidationsEnabled { value } => {
+            clone.non_auth_liquidations_enabled = value;
         }
     }
 

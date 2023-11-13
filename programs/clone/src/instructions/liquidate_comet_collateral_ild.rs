@@ -62,6 +62,16 @@ pub fn execute(
     user: Pubkey,
     comet_position_index: u8,
 ) -> Result<()> {
+    if !ctx.accounts.clone.non_auth_liquidations_enabled {
+        return_error_if_false!(
+            ctx.accounts
+                .clone
+                .auth
+                .contains(ctx.accounts.liquidator.key),
+            CloneError::Unauthorized
+        );
+    }
+
     let seeds = &[&[
         CLONE_PROGRAM_SEED.as_ref(),
         bytemuck::bytes_of(&ctx.accounts.clone.bump),

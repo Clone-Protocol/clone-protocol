@@ -70,6 +70,17 @@ pub fn execute(
     amount: u64,
 ) -> Result<()> {
     return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
+
+    if !ctx.accounts.clone.non_auth_liquidations_enabled {
+        return_error_if_false!(
+            ctx.accounts
+                .clone
+                .auth
+                .contains(ctx.accounts.liquidator.key),
+            CloneError::Unauthorized
+        );
+    }
+
     let seeds = &[&[
         CLONE_PROGRAM_SEED.as_ref(),
         bytemuck::bytes_of(&ctx.accounts.clone.bump),
