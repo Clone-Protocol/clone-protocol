@@ -8,6 +8,7 @@ pub enum UpdateOracleParameters {
     Add {
         address: Pubkey,
         source: OracleSource,
+        rescale_factor: Option<u8>,
     },
     Remove {
         index: u8,
@@ -49,14 +50,19 @@ pub fn execute(ctx: Context<UpdateOracles>, params: UpdateOracleParameters) -> R
     let oracles = &mut ctx.accounts.oracles.oracles;
 
     match params {
-        UpdateOracleParameters::Add { address, source } => {
+        UpdateOracleParameters::Add {
+            address,
+            source,
+            rescale_factor,
+        } => {
             return_error_if_false!(is_admin, CloneError::Unauthorized);
             oracles.push(OracleInfo {
                 source,
                 address,
                 status: Status::Active,
+                rescale_factor: rescale_factor.unwrap_or(OracleInfo::default().rescale_factor),
                 ..OracleInfo::default()
-            })
+            });
         }
         UpdateOracleParameters::Remove { index } => {
             return_error_if_false!(is_admin, CloneError::Unauthorized);

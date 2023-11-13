@@ -1,6 +1,6 @@
 use crate::error::*;
 use crate::states::*;
-use crate::{CLONE_PROGRAM_SEED, return_error_if_false};
+use crate::{return_error_if_false, CLONE_PROGRAM_SEED};
 use anchor_lang::prelude::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Copy, Debug)]

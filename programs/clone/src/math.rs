@@ -52,8 +52,8 @@ pub fn check_mint_collateral_sufficient(
     check_feed_update(pool_oracle, slot)?;
     check_feed_update(collateral_oracle, slot)?;
     let pool_price = pool_oracle
-        .get_price()
-        .checked_div(collateral_oracle.get_price())
+        .get_price()?
+        .checked_div(collateral_oracle.get_price()?)
         .ok_or(error!(CloneError::CheckedMathError))?;
 
     let numerator = collateral_amount
@@ -135,8 +135,8 @@ pub fn calculate_liquidity_position_loss(
     );
 
     let pool_price = oracle
-        .get_price()
-        .checked_div(collateral_oracle.get_price())
+        .get_price()?
+        .checked_div(collateral_oracle.get_price()?)
         .ok_or(error!(CloneError::CheckedMathError))?;
 
     let impermanent_loss = collateral_ild_share

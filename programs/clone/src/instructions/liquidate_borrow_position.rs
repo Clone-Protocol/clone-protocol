@@ -120,8 +120,8 @@ pub fn execute(
 
     let borrow_liquidation_fee_rate = to_bps_decimal!(ctx.accounts.clone.borrow_liquidator_fee_bps);
     let pool_price = pool_oracle
-        .get_price()
-        .checked_div(collateral_oracle.get_price())
+        .get_price()?
+        .checked_div(collateral_oracle.get_price()?)
         .ok_or(error!(CloneError::CheckedMathError))?;
 
     let collateral_reward = rescale_toward_zero(

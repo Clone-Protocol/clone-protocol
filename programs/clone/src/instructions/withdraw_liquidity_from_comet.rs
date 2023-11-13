@@ -158,8 +158,8 @@ pub fn withdraw_liquidity(
     let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
     let pool_price = rescale_toward_zero(
         oracle
-            .get_price()
-            .checked_div(collateral_oracle.get_price())
+            .get_price()?
+            .checked_div(collateral_oracle.get_price()?)
             .ok_or(error!(CloneError::CheckedMathError))?,
         CLONE_TOKEN_SCALE,
     );

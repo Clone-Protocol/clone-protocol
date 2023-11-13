@@ -3,6 +3,7 @@ clone = "F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v"
 pyth = "9inbbNkKUi2VwaSH7QiXcHteeHZiXWoTkgYSdX6RmtmW"
 clone_staking = "6yb6cqAvngy2do4qAFmM24Jda2FfyXcPuQxu4P3Va2F4"
 mock_asset_faucet = "7EtBBf3vKfP2m8mc6TwvQEKpBqfJgbH9VNhZ7kHeFTMP"
+depository_token = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
 
 [registry]
 url = "https://anchor.projectserum.com"
@@ -12,7 +13,7 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/clone.ts"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/tests.ts"
 test_liquidation = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/liquidation.ts"
 
 # SWITCHBOARD SETUP

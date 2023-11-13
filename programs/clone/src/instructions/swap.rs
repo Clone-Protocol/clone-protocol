@@ -162,8 +162,8 @@ pub fn execute(
     };
 
     let swap_summary = pool.calculate_swap(
-        pool_oracle.get_price(),
-        collateral_oracle.get_price(),
+        pool_oracle.get_price()?,
+        collateral_oracle.get_price()?,
         user_specified_quantity,
         quantity_is_input,
         quantity_is_collateral,
@@ -365,8 +365,8 @@ pub fn execute(
     let pool = &pools.pools[pool_index as usize];
     let pool_price = rescale_toward_zero(
         pool_oracle
-            .get_price()
-            .checked_div(collateral_oracle.get_price())
+            .get_price()?
+            .checked_div(collateral_oracle.get_price()?)
             .ok_or(error!(CloneError::CheckedMathError))?,
         CLONE_TOKEN_SCALE,
     );
