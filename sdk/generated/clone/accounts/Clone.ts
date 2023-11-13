@@ -25,6 +25,7 @@ export type CloneArgs = {
   borrowLiquidatorFeeBps: number
   treasuryAddress: web3.PublicKey
   eventCounter: beet.bignum
+  nonAuthLiquidationsEnabled: boolean
 }
 
 export const cloneDiscriminator = [20, 243, 87, 121, 2, 202, 130, 130]
@@ -45,7 +46,8 @@ export class Clone implements CloneArgs {
     readonly cometOnassetIldLiquidatorFeeBps: number,
     readonly borrowLiquidatorFeeBps: number,
     readonly treasuryAddress: web3.PublicKey,
-    readonly eventCounter: beet.bignum
+    readonly eventCounter: beet.bignum,
+    readonly nonAuthLiquidationsEnabled: boolean
   ) {}
 
   /**
@@ -61,7 +63,8 @@ export class Clone implements CloneArgs {
       args.cometOnassetIldLiquidatorFeeBps,
       args.borrowLiquidatorFeeBps,
       args.treasuryAddress,
-      args.eventCounter
+      args.eventCounter,
+      args.nonAuthLiquidationsEnabled
     )
   }
 
@@ -188,6 +191,7 @@ export class Clone implements CloneArgs {
         }
         return x
       })(),
+      nonAuthLiquidationsEnabled: this.nonAuthLiquidationsEnabled,
     }
   }
 }
@@ -213,6 +217,7 @@ export const cloneBeet = new beet.BeetStruct<
     ['borrowLiquidatorFeeBps', beet.u16],
     ['treasuryAddress', beetSolana.publicKey],
     ['eventCounter', beet.u64],
+    ['nonAuthLiquidationsEnabled', beet.bool],
   ],
   Clone.fromArgs,
   'Clone'

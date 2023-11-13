@@ -25,6 +25,7 @@ export type CloneParametersRecord = {
   BorrowLiquidationFee: { value: number }
   TreasuryAddress: { address: web3.PublicKey }
   CollateralizationRatio: { value: number }
+  NonAuthLiquidationsEnabled: { value: boolean }
 }
 
 /**
@@ -66,6 +67,10 @@ export const isCloneParametersCollateralizationRatio = (
   x: CloneParameters
 ): x is CloneParameters & { __kind: 'CollateralizationRatio' } =>
   x.__kind === 'CollateralizationRatio'
+export const isCloneParametersNonAuthLiquidationsEnabled = (
+  x: CloneParameters
+): x is CloneParameters & { __kind: 'NonAuthLiquidationsEnabled' } =>
+  x.__kind === 'NonAuthLiquidationsEnabled'
 
 /**
  * @category userTypes
@@ -129,6 +134,16 @@ export const cloneParametersBeet = beet.dataEnum<CloneParametersRecord>([
     new beet.BeetArgsStruct<CloneParametersRecord['CollateralizationRatio']>(
       [['value', beet.u8]],
       'CloneParametersRecord["CollateralizationRatio"]'
+    ),
+  ],
+
+  [
+    'NonAuthLiquidationsEnabled',
+    new beet.BeetArgsStruct<
+      CloneParametersRecord['NonAuthLiquidationsEnabled']
+    >(
+      [['value', beet.bool]],
+      'CloneParametersRecord["NonAuthLiquidationsEnabled"]'
     ),
   ],
 ]) as beet.FixableBeet<CloneParameters, CloneParameters>
