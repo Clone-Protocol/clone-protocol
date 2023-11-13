@@ -754,20 +754,36 @@ export const cloneTests = async () => {
         collateralAmount /
         (fromCloneScale(position.borrowedOnasset) * oraclePrice);
 
-      await cloneClient.provider.sendAndConfirm!(
-        new Transaction().add(
-          updatePricesIx,
-          cloneClient.liquidateBorrowPositionInstruction(
-            pools,
-            userAccount,
-            cloneClient.provider.publicKey!,
-            positionIndex,
-            toCloneScale(1),
-            collateralTokenAccountInfo.address,
-            onassetTokenAccountInfo.address
-          )
+      let tx = new Transaction().add(
+        updatePricesIx,
+        cloneClient.liquidateBorrowPositionInstruction(
+          pools,
+          userAccount,
+          cloneClient.provider.publicKey!,
+          positionIndex,
+          toCloneScale(1),
+          collateralTokenAccountInfo.address,
+          onassetTokenAccountInfo.address
         )
       );
+
+      let failedSimulation = false;
+      try {
+        await provider.simulate(tx);
+      } catch (error) {
+        failedSimulation = true;
+      }
+      assert.isTrue(failedSimulation, "simulation should have failed");
+
+      // Add auth
+      await cloneClient.updateCloneParameters({
+        params: {
+          __kind: "AddAuth",
+          address: provider.publicKey!,
+        },
+      });
+
+      await cloneClient.provider.sendAndConfirm!(tx);
       userAccount = await cloneClient.getUserAccount();
       userborrowPositions = userAccount.borrows;
       position = userborrowPositions[positionIndex];
@@ -782,6 +798,21 @@ export const cloneTests = async () => {
         initialOvercollateralRatio,
         "Liquidation did not finish!"
       );
+
+      // Remove admin from auth and allow nonauth liquidations.
+      await cloneClient.updateCloneParameters({
+        params: {
+          __kind: "RemoveAuth",
+          address: provider.publicKey!,
+        },
+      });
+
+      await cloneClient.updateCloneParameters({
+        params: {
+          __kind: "NonAuthLiquidationsEnabled",
+          value: true,
+        },
+      });
     });
 
     it("comet collateral added!", async () => {
