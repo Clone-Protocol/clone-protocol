@@ -25,6 +25,8 @@ import {
 } from "@solana/spl-token";
 import { Provider } from "@coral-xyz/anchor";
 
+export class InsufficientLiquidityError extends Error {}
+
 export const sleep = async (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
@@ -212,6 +214,9 @@ export const calculateSwapExecution = (
       outputBeforeFees - liquidityFeesPaid - treasuryFeesPaid,
       outputScale
     );
+    if (result <= 0 || liquidityFeesPaid < 0 || treasuryFeesPaid < 0) {
+      throw new InsufficientLiquidityError;
+    }
     return {
       result,
       liquidityFeesPaid,
@@ -238,6 +243,9 @@ export const calculateSwapExecution = (
       outputBeforeFees * treasuryTradingFees,
       outputScale
     );
+    if (result <= 0 || liquidityFeesPaid < 0 || treasuryFeesPaid < 0) {
+      throw new InsufficientLiquidityError;
+    }
     return {
       result,
       liquidityFeesPaid,

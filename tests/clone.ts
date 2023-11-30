@@ -41,34 +41,10 @@ import {
   createInitializeInstruction,
   createMintAssetInstruction,
 } from "../sdk/generated/mock-asset-faucet";
+import { createTokenMint } from "./utils";
 
 const COLLATERAL_SCALE = 7;
 
-const createTokenMint = async (
-  provider: anchor.AnchorProvider,
-  opts: { mint?: anchor.web3.Keypair; scale?: number; authority?: PublicKey }
-): Promise<PublicKey> => {
-  let tokenMint = opts.mint ?? anchor.web3.Keypair.generate();
-  let tx = new Transaction().add(
-    // create cln mint account
-    SystemProgram.createAccount({
-      fromPubkey: provider.publicKey!,
-      newAccountPubkey: tokenMint.publicKey,
-      space: MINT_SIZE,
-      lamports: await getMinimumBalanceForRentExemptMint(provider.connection),
-      programId: TOKEN_PROGRAM_ID,
-    }),
-    // init clone mint account
-    createInitializeMintInstruction(
-      tokenMint.publicKey,
-      opts.scale ?? CLONE_TOKEN_SCALE,
-      opts.authority ?? provider.publicKey!,
-      null
-    )
-  );
-  await provider.sendAndConfirm(tx, [tokenMint]);
-  return tokenMint.publicKey;
-};
 
 export const cloneTests = async () => {
   describe("tests", async () => {
