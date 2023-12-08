@@ -198,12 +198,17 @@ pub fn calculate_health_score(
     let score = if total_il_term.is_zero() && total_position_term.is_zero() {
         Decimal::new(100, 0)
     } else {
-        Decimal::new(100, 0)
-            .checked_sub(
-                total_il_term
-                    .checked_add(total_position_term)
-                    .ok_or(error!(CloneError::CheckedMathError))?
-                    .checked_div(effective_collateral)
+        let summed_terms = total_il_term
+            .checked_add(total_position_term)
+            .ok_or(error!(CloneError::CheckedMathError))?;
+        let inner_term = summed_terms
+            .checked_div(effective_collateral)
+            .ok_or(error!(CloneError::CheckedMathError))?;
+
+        Decimal::ONE_HUNDRED
+            .checked_mul(
+                Decimal::ONE
+                    .checked_sub(inner_term)
                     .ok_or(error!(CloneError::CheckedMathError))?,
             )
             .ok_or(error!(CloneError::CheckedMathError))?

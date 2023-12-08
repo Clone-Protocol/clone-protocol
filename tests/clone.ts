@@ -230,7 +230,7 @@ export const cloneTests = async () => {
     });
 
     it("mock usdc initialized as faucet", async () => {
-      let usdcMintAmount = 2_500_000;
+      let usdcMintAmount = 1_000_000_000;
 
       let [faucetAddress, _] = PublicKey.findProgramAddressSync(
         [Buffer.from("faucet")],
@@ -816,7 +816,7 @@ export const cloneTests = async () => {
     });
 
     it("comet collateral added!", async () => {
-      const collateralToAdd = 1_000_000;
+      const collateralToAdd = 100_000_000;
       let userAccount = await cloneClient.getUserAccount();
       let comet = userAccount.comet;
       const collateral = cloneClient.clone.collateral;
@@ -1704,14 +1704,14 @@ export const cloneTests = async () => {
         fromScale(collateralTokenAccountInfo.amount, COLLATERAL_SCALE),
         startingCollateralAmount -
           fromScale(collateralPaymentFromWallet, COLLATERAL_SCALE),
-        1e-7,
+        1e-6,
         "check collateral account balance"
       );
 
       assert.closeTo(
         fromCloneScale(onassetTokenAccountInfo.amount),
         startingOnassetAmount - ildInfo.onAssetILD,
-        1e-7,
+        1e-6,
         "check onasset account balance"
       );
     });

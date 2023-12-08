@@ -60,7 +60,7 @@ export const getHealthScore = (
       .reduce((partialSum, a) => partialSum + a, 0) / totalCollateralValue;
 
   return {
-    healthScore: 100 - loss,
+    healthScore: 100 * (1. - loss),
     ildHealthImpact: totalIldHealthImpact / totalCollateralValue,
     effectiveCollateralValue: totalCollateralValue,
   };
