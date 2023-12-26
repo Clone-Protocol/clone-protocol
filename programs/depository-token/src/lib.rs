@@ -140,6 +140,7 @@ pub struct Initialize<'info> {
     pub settings: Account<'info, Settings>,
     #[account(
         mint::authority = settings,
+        constraint = depository_token_mint.key() != depositing_token_mint @ DepositoryTokenError::MintsMustBeDifferent,
     )]
     pub depository_token_mint: Account<'info, Mint>,
     #[account(
@@ -229,4 +230,7 @@ pub enum DepositoryTokenError {
 
     #[msg("Amount must be non-zero")]
     MustBeNonZero,
+
+    #[msg("Depository and depositing token mints must be different!")]
+    MintsMustBeDifferent,
 }

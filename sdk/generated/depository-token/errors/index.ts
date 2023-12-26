@@ -55,6 +55,29 @@ createErrorFromCodeLookup.set(0x1771, () => new MustBeNonZeroError())
 createErrorFromNameLookup.set('MustBeNonZero', () => new MustBeNonZeroError())
 
 /**
+ * MintsMustBeDifferent: 'Depository and depositing token mints must be different!'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class MintsMustBeDifferentError extends Error {
+  readonly code: number = 0x1772
+  readonly name: string = 'MintsMustBeDifferent'
+  constructor() {
+    super('Depository and depositing token mints must be different!')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, MintsMustBeDifferentError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x1772, () => new MintsMustBeDifferentError())
+createErrorFromNameLookup.set(
+  'MintsMustBeDifferent',
+  () => new MintsMustBeDifferentError()
+)
+
+/**
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
  * @category generated
