@@ -58,6 +58,49 @@ createErrorFromCodeLookup.set(0x1771, () => new InvalidInputError())
 createErrorFromNameLookup.set('InvalidInput', () => new InvalidInputError())
 
 /**
+ * BumpNotFound: 'Bump not found'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class BumpNotFoundError extends Error {
+  readonly code: number = 0x1772
+  readonly name: string = 'BumpNotFound'
+  constructor() {
+    super('Bump not found')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, BumpNotFoundError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x1772, () => new BumpNotFoundError())
+createErrorFromNameLookup.set('BumpNotFound', () => new BumpNotFoundError())
+
+/**
+ * CheckedMathError: 'Checked Math Error'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class CheckedMathErrorError extends Error {
+  readonly code: number = 0x1773
+  readonly name: string = 'CheckedMathError'
+  constructor() {
+    super('Checked Math Error')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, CheckedMathErrorError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x1773, () => new CheckedMathErrorError())
+createErrorFromNameLookup.set(
+  'CheckedMathError',
+  () => new CheckedMathErrorError()
+)
+
+/**
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
  * @category generated

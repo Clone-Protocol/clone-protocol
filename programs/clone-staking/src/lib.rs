@@ -5,7 +5,7 @@ pub mod states;
 
 pub use instructions::*;
 
-declare_id!("6yb6cqAvngy2do4qAFmM24Jda2FfyXcPuQxu4P3Va2F4");
+declare_id!("42L6bfEYntcmqVcFvHywitcaHhXF9rjYq9C9p9iWQ2X2");
 
 #[program]
 pub mod clone_staking {

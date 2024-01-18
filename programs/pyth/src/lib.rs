@@ -3,7 +3,7 @@ use bytemuck::{cast_slice_mut, from_bytes_mut, try_cast_slice_mut};
 use pyth_sdk_solana::state::{AccountType, PriceAccount, PriceType, MAGIC, VERSION_2};
 use std::cell::RefMut;
 
-declare_id!("9inbbNkKUi2VwaSH7QiXcHteeHZiXWoTkgYSdX6RmtmW");
+declare_id!("CgcVKPBdW6cVDGKAKDHfN5rAoSN9m9MUuiymSrdbN27k");
 
 pub fn load_price_account<'a>(price_feed: &'a AccountInfo) -> Result<RefMut<'a, PriceAccount>> {
     let raw = price_feed.try_borrow_mut_data().unwrap();

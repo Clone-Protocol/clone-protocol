@@ -89,7 +89,7 @@ export class Settings implements SettingsArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      'Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS'
+      'CKR5jEyuHARhPN47yWS3GA6RauPbAg29hiNVC5ydV2ur'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, settingsBeet)
