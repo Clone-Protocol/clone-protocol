@@ -8,120 +8,111 @@
 import * as splToken from '@solana/spl-token'
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
+import { MetadataArgs, metadataArgsBeet } from '../types/MetadataArgs'
 
 /**
  * @category Instructions
- * @category BorrowMore
+ * @category CreateTokenMetadata
  * @category generated
  */
-export type BorrowMoreInstructionArgs = {
-  borrowIndex: number
-  amount: beet.bignum
+export type CreateTokenMetadataInstructionArgs = {
+  metadataArgs: MetadataArgs
 }
 /**
  * @category Instructions
- * @category BorrowMore
+ * @category CreateTokenMetadata
  * @category generated
  */
-export const borrowMoreStruct = new beet.BeetArgsStruct<
-  BorrowMoreInstructionArgs & {
+export const createTokenMetadataStruct = new beet.FixableBeetArgsStruct<
+  CreateTokenMetadataInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['borrowIndex', beet.u8],
-    ['amount', beet.u64],
+    ['metadataArgs', metadataArgsBeet],
   ],
-  'BorrowMoreInstructionArgs'
+  'CreateTokenMetadataInstructionArgs'
 )
 /**
- * Accounts required by the _borrowMore_ instruction
+ * Accounts required by the _createTokenMetadata_ instruction
  *
- * @property [**signer**] user
- * @property [_writable_] userAccount
- * @property [_writable_] clone
- * @property [] pools
- * @property [] oracles
- * @property [_writable_] userOnassetTokenAccount
- * @property [_writable_] onassetMint
+ * @property [_writable_, **signer**] admin
+ * @property [] clone
+ * @property [] mint
+ * @property [] metaplexProgram
+ * @property [_writable_] metadata
  * @category Instructions
- * @category BorrowMore
+ * @category CreateTokenMetadata
  * @category generated
  */
-export type BorrowMoreInstructionAccounts = {
-  user: web3.PublicKey
-  userAccount: web3.PublicKey
+export type CreateTokenMetadataInstructionAccounts = {
+  admin: web3.PublicKey
   clone: web3.PublicKey
-  pools: web3.PublicKey
-  oracles: web3.PublicKey
-  userOnassetTokenAccount: web3.PublicKey
-  onassetMint: web3.PublicKey
+  mint: web3.PublicKey
+  metaplexProgram: web3.PublicKey
+  metadata: web3.PublicKey
   tokenProgram?: web3.PublicKey
+  systemProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const borrowMoreInstructionDiscriminator = [
-  99, 191, 157, 15, 122, 190, 25, 86,
+export const createTokenMetadataInstructionDiscriminator = [
+  221, 80, 176, 37, 153, 188, 160, 68,
 ]
 
 /**
- * Creates a _BorrowMore_ instruction.
+ * Creates a _CreateTokenMetadata_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category BorrowMore
+ * @category CreateTokenMetadata
  * @category generated
  */
-export function createBorrowMoreInstruction(
-  accounts: BorrowMoreInstructionAccounts,
-  args: BorrowMoreInstructionArgs,
+export function createCreateTokenMetadataInstruction(
+  accounts: CreateTokenMetadataInstructionAccounts,
+  args: CreateTokenMetadataInstructionArgs,
   programId = new web3.PublicKey('C1onEW2kPetmHmwe74YC1ESx3LnFEpVau6g2pg4fHycr')
 ) {
-  const [data] = borrowMoreStruct.serialize({
-    instructionDiscriminator: borrowMoreInstructionDiscriminator,
+  const [data] = createTokenMetadataStruct.serialize({
+    instructionDiscriminator: createTokenMetadataInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.user,
-      isWritable: false,
+      pubkey: accounts.admin,
+      isWritable: true,
       isSigner: true,
     },
     {
-      pubkey: accounts.userAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
       pubkey: accounts.clone,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.pools,
       isWritable: false,
       isSigner: false,
     },
     {
-      pubkey: accounts.oracles,
+      pubkey: accounts.mint,
       isWritable: false,
       isSigner: false,
     },
     {
-      pubkey: accounts.userOnassetTokenAccount,
-      isWritable: true,
+      pubkey: accounts.metaplexProgram,
+      isWritable: false,
       isSigner: false,
     },
     {
-      pubkey: accounts.onassetMint,
+      pubkey: accounts.metadata,
       isWritable: true,
       isSigner: false,
     },
     {
       pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.systemProgram ?? web3.SystemProgram.programId,
       isWritable: false,
       isSigner: false,
     },

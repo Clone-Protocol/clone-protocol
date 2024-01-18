@@ -5,93 +5,90 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
+import * as splToken from '@solana/spl-token'
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
- * @category AddLiquidityToComet
+ * @category RemovePool
  * @category generated
  */
-export type AddLiquidityToCometInstructionArgs = {
+export type RemovePoolInstructionArgs = {
   poolIndex: number
-  collateralAmount: beet.bignum
 }
 /**
  * @category Instructions
- * @category AddLiquidityToComet
+ * @category RemovePool
  * @category generated
  */
-export const addLiquidityToCometStruct = new beet.BeetArgsStruct<
-  AddLiquidityToCometInstructionArgs & {
+export const removePoolStruct = new beet.BeetArgsStruct<
+  RemovePoolInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['poolIndex', beet.u8],
-    ['collateralAmount', beet.u64],
   ],
-  'AddLiquidityToCometInstructionArgs'
+  'RemovePoolInstructionArgs'
 )
 /**
- * Accounts required by the _addLiquidityToComet_ instruction
+ * Accounts required by the _removePool_ instruction
  *
- * @property [**signer**] user
- * @property [_writable_] userAccount
- * @property [_writable_] clone
+ * @property [_writable_, **signer**] admin
+ * @property [] clone
  * @property [_writable_] pools
- * @property [_writable_] oracles
+ * @property [] underlyingAssetMint
+ * @property [_writable_] underlyingAssetTokenAccount
+ * @property [_writable_] treasuryAssetTokenAccount
  * @category Instructions
- * @category AddLiquidityToComet
+ * @category RemovePool
  * @category generated
  */
-export type AddLiquidityToCometInstructionAccounts = {
-  user: web3.PublicKey
-  userAccount: web3.PublicKey
+export type RemovePoolInstructionAccounts = {
+  admin: web3.PublicKey
   clone: web3.PublicKey
   pools: web3.PublicKey
-  oracles: web3.PublicKey
+  underlyingAssetMint: web3.PublicKey
+  underlyingAssetTokenAccount: web3.PublicKey
+  treasuryAssetTokenAccount: web3.PublicKey
+  tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const addLiquidityToCometInstructionDiscriminator = [
-  25, 218, 193, 157, 185, 81, 42, 173,
+export const removePoolInstructionDiscriminator = [
+  132, 42, 53, 138, 28, 220, 170, 55,
 ]
 
 /**
- * Creates a _AddLiquidityToComet_ instruction.
+ * Creates a _RemovePool_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category AddLiquidityToComet
+ * @category RemovePool
  * @category generated
  */
-export function createAddLiquidityToCometInstruction(
-  accounts: AddLiquidityToCometInstructionAccounts,
-  args: AddLiquidityToCometInstructionArgs,
+export function createRemovePoolInstruction(
+  accounts: RemovePoolInstructionAccounts,
+  args: RemovePoolInstructionArgs,
   programId = new web3.PublicKey('C1onEW2kPetmHmwe74YC1ESx3LnFEpVau6g2pg4fHycr')
 ) {
-  const [data] = addLiquidityToCometStruct.serialize({
-    instructionDiscriminator: addLiquidityToCometInstructionDiscriminator,
+  const [data] = removePoolStruct.serialize({
+    instructionDiscriminator: removePoolInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.user,
-      isWritable: false,
+      pubkey: accounts.admin,
+      isWritable: true,
       isSigner: true,
     },
     {
-      pubkey: accounts.userAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
       pubkey: accounts.clone,
-      isWritable: true,
+      isWritable: false,
       isSigner: false,
     },
     {
@@ -100,8 +97,23 @@ export function createAddLiquidityToCometInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.oracles,
+      pubkey: accounts.underlyingAssetMint,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.underlyingAssetTokenAccount,
       isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.treasuryAssetTokenAccount,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
+      isWritable: false,
       isSigner: false,
     },
   ]
