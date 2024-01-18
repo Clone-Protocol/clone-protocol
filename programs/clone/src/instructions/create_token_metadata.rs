@@ -16,7 +16,6 @@ pub struct MetadataArgs {
     pub name: String,
     pub symbol: String,
     pub uri: String,
-    pub seller_fee_basis_points: u16,
 }
 
 #[derive(Accounts)]
@@ -63,7 +62,7 @@ pub fn execute(ctx: Context<CreateTokenMetadata>, metadata_args: MetadataArgs) -
             name: metadata_args.name,
             symbol: metadata_args.symbol,
             uri: metadata_args.uri,
-            seller_fee_basis_points: metadata_args.seller_fee_basis_points,
+            seller_fee_basis_points: 0,
             creators: None,
             collection: None,
             uses: None,

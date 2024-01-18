@@ -515,13 +515,11 @@ export const cloneTests = async () => {
         metadataArgs: {
           name: "TEST CLONE TOKEN",
           symbol: "TCT",
-          uri: "Some URI here",
-          sellerFeeBasisPoints: 0,
+          uri: "Some URI here"
         },
       } as CreateTokenMetadataInstructionArgs);
 
       await provider.sendAndConfirm(new Transaction().add(ix));
-
       // detach the validator and check the metadata account using the explorer
     });
 

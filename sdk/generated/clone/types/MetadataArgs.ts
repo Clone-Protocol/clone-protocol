@@ -10,7 +10,6 @@ export type MetadataArgs = {
   name: string
   symbol: string
   uri: string
-  sellerFeeBasisPoints: number
 }
 
 /**
@@ -22,7 +21,6 @@ export const metadataArgsBeet = new beet.FixableBeetArgsStruct<MetadataArgs>(
     ['name', beet.utf8String],
     ['symbol', beet.utf8String],
     ['uri', beet.utf8String],
-    ['sellerFeeBasisPoints', beet.u16],
   ],
   'MetadataArgs'
 )
