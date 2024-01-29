@@ -1,9 +1,9 @@
 [programs.localnet]
-clone = "F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v"
-pyth = "9inbbNkKUi2VwaSH7QiXcHteeHZiXWoTkgYSdX6RmtmW"
-clone_staking = "6yb6cqAvngy2do4qAFmM24Jda2FfyXcPuQxu4P3Va2F4"
-mock_asset_faucet = "7EtBBf3vKfP2m8mc6TwvQEKpBqfJgbH9VNhZ7kHeFTMP"
-depository_token = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+clone = "C1onEW2kPetmHmwe74YC1ESx3LnFEpVau6g2pg4fHycr"
+pyth = "CgcVKPBdW6cVDGKAKDHfN5rAoSN9m9MUuiymSrdbN27k"
+clone_staking = "42L6bfEYntcmqVcFvHywitcaHhXF9rjYq9C9p9iWQ2X2"
+mock_asset_faucet = "AebpPDV1MsHNJ7Heqbzd8hTrQXFJk3hoMcChKqMQCuKW"
+depository_token = "CKR5jEyuHARhPN47yWS3GA6RauPbAg29hiNVC5ydV2ur"
 
 [registry]
 url = "https://anchor.projectserum.com"
@@ -92,3 +92,5 @@ address = "6bQMDtuAmRgjvymdWk9w4tTc9YyuXcjMxF8MyPHXejsx"
 address = "3pyn4svBbxJ9Wnn3RVeafyLWfzie6yC5eTig2S62v9SC"
 [[test.validator.clone]] # pyth ADA/USD product info
 address = "6TZHVFzEmF1rCLAJv3gkTFk9QGniqsrSJmNnVm7mMRPK"
+[[test.validator.clone]] # Metaplex program
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"

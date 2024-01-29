@@ -9,7 +9,7 @@ pub mod states;
 
 use instructions::*;
 
-declare_id!("F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v");
+declare_id!("C1onEW2kPetmHmwe74YC1ESx3LnFEpVau6g2pg4fHycr");
 
 #[program]
 pub mod clone {
@@ -257,5 +257,16 @@ pub mod clone {
             quantity_is_collateral,
             result_threshold,
         )
+    }
+
+    pub fn create_token_metadata(
+        ctx: Context<CreateTokenMetadata>,
+        metadata_args: MetadataArgs,
+    ) -> Result<()> {
+        instructions::create_token_metadata::execute(ctx, metadata_args)
+    }
+
+    pub fn remove_pool(ctx: Context<RemovePool>, pool_index: u8) -> Result<()> {
+        instructions::remove_pool::execute(ctx, pool_index)
     }
 }

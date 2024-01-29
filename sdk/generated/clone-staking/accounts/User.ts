@@ -80,7 +80,7 @@ export class User implements UserArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      '6yb6cqAvngy2do4qAFmM24Jda2FfyXcPuQxu4P3Va2F4'
+      '42L6bfEYntcmqVcFvHywitcaHhXF9rjYq9C9p9iWQ2X2'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, userBeet)

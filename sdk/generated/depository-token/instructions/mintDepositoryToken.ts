@@ -74,7 +74,7 @@ export const mintDepositoryTokenInstructionDiscriminator = [
 export function createMintDepositoryTokenInstruction(
   accounts: MintDepositoryTokenInstructionAccounts,
   args: MintDepositoryTokenInstructionArgs,
-  programId = new web3.PublicKey('Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS')
+  programId = new web3.PublicKey('CKR5jEyuHARhPN47yWS3GA6RauPbAg29hiNVC5ydV2ur')
 ) {
   const [data] = mintDepositoryTokenStruct.serialize({
     instructionDiscriminator: mintDepositoryTokenInstructionDiscriminator,

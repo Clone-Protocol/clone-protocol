@@ -66,7 +66,7 @@ export const removeCometPositionInstructionDiscriminator = [
 export function createRemoveCometPositionInstruction(
   accounts: RemoveCometPositionInstructionAccounts,
   args: RemoveCometPositionInstructionArgs,
-  programId = new web3.PublicKey('F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v')
+  programId = new web3.PublicKey('C1onEW2kPetmHmwe74YC1ESx3LnFEpVau6g2pg4fHycr')
 ) {
   const [data] = removeCometPositionStruct.serialize({
     instructionDiscriminator: removeCometPositionInstructionDiscriminator,

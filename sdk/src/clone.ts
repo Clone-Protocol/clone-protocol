@@ -124,8 +124,8 @@ export class CloneClient {
 
   /// Admin RPC methods ///
 
-  public static async initializeClone(
-    provider: anchor.AnchorProvider,
+  public static async createInitializeCloneTransaction(
+    admin: PublicKey,
     programId: PublicKey,
     cometCollateralIldLiquidatorFeeBps: number,
     cometOnassetIldLiquidatorFeeBps: number,
@@ -155,16 +155,16 @@ export class CloneClient {
     );
 
     // Use SystemProgram to create TokenData account.
-    let tx = new Transaction().add(
+    return new Transaction().add(
       createAssociatedTokenAccountInstruction(
-        provider.publicKey!,
+        admin,
         collateralVault,
         cloneAddress,
         collateralMint
       ),
       createInitializeCloneInstruction(
         {
-          admin: provider.publicKey!,
+          admin,
           clone: cloneAddress,
           collateralMint,
           collateralVault,
@@ -184,7 +184,7 @@ export class CloneClient {
       ),
       createInitializePoolsInstruction(
         {
-          admin: provider.publicKey!,
+          admin,
           clone: cloneAddress,
           pools: poolsAddress,
           systemProgram: SYSTEM_PROGRAM_ID,
@@ -193,7 +193,7 @@ export class CloneClient {
       ),
       createInitializeOraclesInstruction(
         {
-          admin: provider.publicKey!,
+          admin,
           clone: cloneAddress,
           oracles: oraclesAddress,
           systemProgram: SYSTEM_PROGRAM_ID,
@@ -201,6 +201,30 @@ export class CloneClient {
         programId
       )
     );
+  }
+
+  public static async initializeClone(
+    provider: anchor.AnchorProvider,
+    programId: PublicKey,
+    cometCollateralIldLiquidatorFeeBps: number,
+    cometOnassetIldLiquidatorFeeBps: number,
+    borrowLiquidatorFeeBps: number,
+    treasuryAddress: PublicKey,
+    collateralMint: PublicKey,
+    collateralOracleIndex: number,
+    collateralizationRatio: number
+  ) {
+    let tx = await this.createInitializeCloneTransaction(
+      provider.publicKey!,
+      programId,
+      cometCollateralIldLiquidatorFeeBps,
+      cometOnassetIldLiquidatorFeeBps,
+      borrowLiquidatorFeeBps,
+      treasuryAddress,
+      collateralMint,
+      collateralOracleIndex,
+      collateralizationRatio
+    )
     await provider.sendAndConfirm!(tx);
   }
 

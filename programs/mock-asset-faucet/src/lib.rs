@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
 
-declare_id!("7EtBBf3vKfP2m8mc6TwvQEKpBqfJgbH9VNhZ7kHeFTMP");
+declare_id!("AebpPDV1MsHNJ7Heqbzd8hTrQXFJk3hoMcChKqMQCuKW");
 
 const MOCK_FAUCET_SEED: &str = "faucet";
 

@@ -74,7 +74,7 @@ export const redeemDepositoryTokenInstructionDiscriminator = [
 export function createRedeemDepositoryTokenInstruction(
   accounts: RedeemDepositoryTokenInstructionAccounts,
   args: RedeemDepositoryTokenInstructionArgs,
-  programId = new web3.PublicKey('Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS')
+  programId = new web3.PublicKey('CKR5jEyuHARhPN47yWS3GA6RauPbAg29hiNVC5ydV2ur')
 ) {
   const [data] = redeemDepositoryTokenStruct.serialize({
     instructionDiscriminator: redeemDepositoryTokenInstructionDiscriminator,

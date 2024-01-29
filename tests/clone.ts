@@ -35,6 +35,12 @@ import {
   OracleSource,
   PaymentType,
   Status,
+  createCreateTokenMetadataInstruction,
+  CreateTokenMetadataInstructionAccounts,
+  CreateTokenMetadataInstructionArgs,
+  createRemovePoolInstruction,
+  RemovePoolInstructionArgs,
+  RemovePoolInstructionAccounts,
 } from "../sdk/generated/clone";
 import * as CloneStaking from "../sdk/generated/clone-staking";
 import {
@@ -81,6 +87,16 @@ export const cloneTests = async () => {
     let mockAssetFaucetProgramId = anchor.workspace.MockAssetFaucet.programId;
 
     if (process.env.SKIP_TESTS === "1") return;
+
+    // let signatures: string[] = []
+
+    // const subscriptionId = provider.connection.onLogs(cloneProgramId, (logs, context) => {
+    //   // Extract transaction signature from context
+    //   signatures.push(logs.signature)
+
+    //   console.log(logs.signature)
+    //   // Now you can fetch the full transaction details using this signature
+    // }, 'recent');
 
     const mockUSDCMint = anchor.web3.Keypair.generate();
     const treasuryAddress = anchor.web3.Keypair.generate();
@@ -468,6 +484,43 @@ export const cloneTests = async () => {
       let oracles = await cloneClient.getOracles();
       let ix = cloneClient.updatePricesInstruction(oracles);
       await provider.sendAndConfirm(new Transaction().add(ix));
+    });
+
+    it("create metaplex metadata account", async () => {
+      let pools = await cloneClient.getPools();
+      let mint = pools.pools[0].assetInfo.onassetMint;
+
+      const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey(
+        "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+      );
+
+      // Create metadata PDA
+      const metadataAddress = anchor.web3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("metadata"),
+          TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+          mint.toBuffer(),
+        ],
+        TOKEN_METADATA_PROGRAM_ID
+      )[0];
+
+      let accounts: CreateTokenMetadataInstructionAccounts = {
+        admin: provider.publicKey!,
+        clone: cloneAccountAddress,
+        mint,
+        metaplexProgram: TOKEN_METADATA_PROGRAM_ID,
+        metadata: metadataAddress,
+      };
+      let ix = createCreateTokenMetadataInstruction(accounts, {
+        metadataArgs: {
+          name: "TEST CLONE TOKEN",
+          symbol: "TCT",
+          uri: "Some URI here"
+        },
+      } as CreateTokenMetadataInstructionArgs);
+
+      await provider.sendAndConfirm(new Transaction().add(ix));
+      // detach the validator and check the metadata account using the explorer
     });
 
     let mintAmount = 10;
@@ -2067,6 +2120,85 @@ export const cloneTests = async () => {
           value: Status.Active,
         },
       });
+    });
+
+    it("remove pool", async () => {
+      let poolIndex = 0;
+      let pools = await cloneClient.getPools();
+      let underlyingAssetTokenAddress =
+        pools.pools[poolIndex].underlyingAssetTokenAccount;
+      let underlyingAssetTokenAccount = await getAccount(
+        provider.connection,
+        underlyingAssetTokenAddress
+      );
+      let treasuryUnderlyingAssociatedTokenAddress =
+        await getAssociatedTokenAddress(
+          underlyingAssetTokenAccount.mint,
+          cloneClient.clone.treasuryAddress
+        );
+
+      // change status to active
+      await cloneClient.updatePoolParameters({
+        index: poolIndex,
+        params: {
+          __kind: "Status",
+          value: Status.Deprecation,
+        },
+      });
+
+      let createTreasuryIx = await createAssociatedTokenAccountInstruction(
+        provider.publicKey!,
+        treasuryUnderlyingAssociatedTokenAddress,
+        cloneClient.clone.treasuryAddress,
+        underlyingAssetTokenAccount.mint
+      );
+      let closePoolIx = createRemovePoolInstruction(
+        {
+          admin: cloneClient.provider.publicKey!,
+          clone: cloneAccountAddress,
+          pools: cloneClient.poolsAddress,
+          underlyingAssetMint: underlyingAssetTokenAccount.mint,
+          underlyingAssetTokenAccount: underlyingAssetTokenAddress,
+          treasuryAssetTokenAccount: treasuryUnderlyingAssociatedTokenAddress,
+        } as RemovePoolInstructionAccounts,
+        {
+          poolIndex,
+        } as RemovePoolInstructionArgs
+      );
+
+      let tx = new Transaction().add(createTreasuryIx, closePoolIx);
+
+      await provider.sendAndConfirm(tx);
+
+      let updatedPools = await cloneClient.getPools();
+
+      assert.equal(
+        pools.pools.length - 1,
+        updatedPools.pools.length,
+        "check pool length"
+      );
+
+      underlyingAssetTokenAccount = await getAccount(
+        provider.connection,
+        underlyingAssetTokenAddress
+      );
+
+      assert.equal(
+        Number(underlyingAssetTokenAccount.amount),
+        0,
+        "check underlying asset token account balance"
+      );
+
+      let treasuryUnderlyingAssociatedTokenAccount = await getAccount(
+        provider.connection,
+        treasuryUnderlyingAssociatedTokenAddress
+      );
+
+      assert.isAbove(
+        Number(treasuryUnderlyingAssociatedTokenAccount.amount),
+        0,
+        "check treasury underlying asset token account balance"
+      );
     });
   });
 };

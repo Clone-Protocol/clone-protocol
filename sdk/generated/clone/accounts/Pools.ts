@@ -77,7 +77,7 @@ export class Pools implements PoolsArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      'F7KEvEhxAQ5AXKRSRHruSF55jcUxVv6S45ohkHvStd5v'
+      'C1onEW2kPetmHmwe74YC1ESx3LnFEpVau6g2pg4fHycr'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, poolsBeet)

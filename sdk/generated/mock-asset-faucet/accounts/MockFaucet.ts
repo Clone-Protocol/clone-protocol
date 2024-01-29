@@ -76,7 +76,7 @@ export class MockFaucet implements MockFaucetArgs {
    */
   static gpaBuilder(
     programId: web3.PublicKey = new web3.PublicKey(
-      '7EtBBf3vKfP2m8mc6TwvQEKpBqfJgbH9VNhZ7kHeFTMP'
+      'AebpPDV1MsHNJ7Heqbzd8hTrQXFJk3hoMcChKqMQCuKW'
     )
   ) {
     return beetSolana.GpaBuilder.fromStruct(programId, mockFaucetBeet)
