@@ -20,48 +20,57 @@ export const getHealthScore = (
   oraclePrices?: number[]
 ): {
   healthScore: number;
+  loss: number;
+  ildImpact: number;
+  positionImpact: number;
   ildHealthImpact: number;
+  positionHealthImpact: number;
   effectiveCollateralValue: number;
 } => {
   const totalCollateralValue = getEffectiveCollateralValue(comet, collateral);
   const positionILD = getILD(collateral, pools, oracles, comet, oraclePrices);
-  let totalIldHealthImpact = 0;
+  let ildImpact = 0;
+  let positionImpact = 0;
 
-  const loss =
-    comet.positions
-      .map((position, index) => {
-        const positionCommitted = fromScale(
-          position.committedCollateralLiquidity,
-          collateral.scale
-        );
-        const { onAssetILD, collateralILD, poolIndex, oraclePrice } =
-          positionILD[index];
-        const pool = pools.pools[poolIndex];
+  comet.positions
+    .forEach((position, index) => {
+      const positionCommitted = fromScale(
+        position.committedCollateralLiquidity,
+        collateral.scale
+      );
+      const { onAssetILD, collateralILD, poolIndex, oraclePrice } =
+        positionILD[index];
+      const pool = pools.pools[poolIndex];
 
-        let ilHealthScoreCoefficient = fromScale(
-          pool.assetInfo.ilHealthScoreCoefficient,
-          2
-        );
-        let poolHealthScoreCoefficient = fromScale(
-          pool.assetInfo.positionHealthScoreCoefficient,
-          2
-        );
+      let ilHealthScoreCoefficient = fromScale(
+        pool.assetInfo.ilHealthScoreCoefficient,
+        2
+      );
+      let poolHealthScoreCoefficient = fromScale(
+        pool.assetInfo.positionHealthScoreCoefficient,
+        2
+      );
 
-        let ild =
-          Math.max(collateralILD, 0) + Math.max(onAssetILD * oraclePrice, 0);
-        let ilHealthImpact = ild * ilHealthScoreCoefficient;
-        let positionHealthImpact =
-          poolHealthScoreCoefficient * positionCommitted;
+      let ild =
+        Math.max(collateralILD, 0) + Math.max(onAssetILD * oraclePrice, 0);
+      let ilHealthImpact = ild * ilHealthScoreCoefficient;
+      let positionHealthImpact =
+        poolHealthScoreCoefficient * positionCommitted;
 
-        totalIldHealthImpact += ilHealthImpact;
+        ildImpact += ilHealthImpact;
+        positionImpact += positionHealthImpact;
 
-        return positionHealthImpact + ilHealthImpact;
-      })
-      .reduce((partialSum, a) => partialSum + a, 0) / totalCollateralValue;
+      return positionHealthImpact + ilHealthImpact;
+    })
+  const loss = ildImpact + positionImpact
 
   return {
-    healthScore: 100 * (1. - loss),
-    ildHealthImpact: totalIldHealthImpact / totalCollateralValue,
+    healthScore: 100 * (1. - loss / totalCollateralValue),
+    loss,
+    ildImpact,
+    positionImpact,
+    ildHealthImpact: ildImpact / totalCollateralValue,
+    positionHealthImpact: positionImpact / totalCollateralValue,
     effectiveCollateralValue: totalCollateralValue,
   };
 };
