@@ -81,7 +81,7 @@ export const fromScale = (
 ) => {
   const dec = new Decimal(String(x));
   const sDec = new Decimal(String(scale));
-  const result = dec.mul(Decimal.pow(10, -sDec))
+  const result = dec.mul(Decimal.pow(new Decimal(10), -sDec))
   return Number(result)
 };
 
