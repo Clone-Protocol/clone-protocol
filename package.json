@@ -6,23 +6,24 @@
         "@metaplex-foundation/solita": "^0.19.4",
         "@pythnetwork/client": "^2.17.0",
         "@solana/buffer-layout": "^4.0.0",
-        "@solana/spl-token": "^0.2.0"
+        "@solana/spl-token": "^0.2.0",
+        "decimal.js": "^10.4.3"
     },
     "devDependencies": {
         "@types/chai": "^4.3.0",
         "@types/mocha": "^8.0.0",
         "@types/node": "^18.14.6",
         "@types/yargs": "^17.0.24",
+        "axios": "^1.4.0",
+        "boxen": "^4.2.0",
         "chai": "^4.3.6",
+        "helius-sdk": "^1.0.8",
         "mocha": "^8.4.0",
+        "toml": "^3.0.0",
         "ts-mocha": "^8.0.0",
         "ts-node": "^10.9.1",
         "typescript": "^5.1",
-        "helius-sdk": "^1.0.8",
-        "toml": "^3.0.0",
-        "axios": "^1.4.0",
-        "yargs": "^17.7.2",
-        "boxen": "^4.2.0"
+        "yargs": "^17.7.2"
     },
     "scripts": {
         "build": "tsc"

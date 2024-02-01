@@ -55,6 +55,7 @@ import {
   createRemoveCometPositionInstruction,
 } from "../generated/clone";
 import { floorToScale } from "./utils";
+import Decimal from "decimal.js";
 
 const RENT_PUBKEY = anchor.web3.SYSVAR_RENT_PUBKEY;
 const SYSTEM_PROGRAM_ID = anchor.web3.SystemProgram.programId;
@@ -91,7 +92,10 @@ export const fromScale = (
   x: number | beet.bignum | BN | bigint,
   scale: number | beet.bignum | BN | bigint
 ) => {
-  return Number(x) * Math.pow(10, -Number(scale));
+  const dec = new Decimal(String(x));
+  const sDec = new Decimal(String(scale));
+  const result = dec.mul(Decimal.pow(10, -sDec))
+  return Number(result)
 };
 
 export const fromCloneScale = (x: number | beet.bignum | BN | bigint) => {
