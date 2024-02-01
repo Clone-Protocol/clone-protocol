@@ -67,7 +67,7 @@ export const USDC_COLLATERAL_INDEX = 1;
 export const toScale = (x: number, scale: number): BN => {
   const dec = new Decimal(String(x));
   const sDec = new Decimal(String(scale));
-  const result = dec.mul(Decimal.pow(10, sDec)).floor().toString()
+  const result = dec.mul(Decimal.pow(new Decimal(10), sDec)).floor().toString()
   return new BN(result)
 };
 
