@@ -65,23 +65,10 @@ export const ONUSD_COLLATERAL_INDEX = 0;
 export const USDC_COLLATERAL_INDEX = 1;
 
 export const toScale = (x: number, scale: number): BN => {
-  let stringDigits = [];
-  let stringX = String(floorToScale(x, scale).toFixed(scale));
-  let foundDecimal = false;
-  let digitsAfterDecimal = scale;
-
-  for (const digit of stringX) {
-    if (digitsAfterDecimal === 0) break;
-    if (digit === ".") {
-      foundDecimal = true;
-      continue;
-    }
-    stringDigits.push(digit);
-    if (foundDecimal) {
-      digitsAfterDecimal -= 1;
-    }
-  }
-  return new BN(stringDigits.join("").concat("0".repeat(digitsAfterDecimal)));
+  const dec = new Decimal(String(x));
+  const sDec = new Decimal(String(scale));
+  const result = dec.mul(Decimal.pow(10, sDec)).floor().toString()
+  return new BN(result)
 };
 
 export const toCloneScale = (x: number): BN => {
