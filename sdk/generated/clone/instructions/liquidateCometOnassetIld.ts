@@ -44,7 +44,7 @@ export const liquidateCometOnassetIldStruct = new beet.BeetArgsStruct<
  * @property [**signer**] liquidator
  * @property [_writable_] userAccount
  * @property [_writable_] clone
- * @property [] pools
+ * @property [_writable_] pools
  * @property [] oracles
  * @property [_writable_] onassetMint
  * @property [_writable_] liquidatorOnassetTokenAccount
@@ -109,7 +109,7 @@ export function createLiquidateCometOnassetIldInstruction(
     },
     {
       pubkey: accounts.pools,
-      isWritable: false,
+      isWritable: true,
       isSigner: false,
     },
     {

@@ -29,6 +29,7 @@ pub struct LiquidateCometCollateralIld<'info> {
     )]
     pub clone: Box<Account<'info, Clone>>,
     #[account(
+        mut,
         seeds = [POOLS_SEED.as_ref()],
         bump,
     )]
