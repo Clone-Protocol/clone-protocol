@@ -1873,6 +1873,11 @@ export const cloneTests = async () => {
       let userAccount = await cloneClient.getUserAccount();
       let comet = userAccount.comet;
       pools = await cloneClient.getPools();
+      pool = pools.pools[poolIndex];
+      const startingPoolLiquidity = fromScale(
+        pool.committedCollateralLiquidity,
+        COLLATERAL_SCALE
+      );
 
       let startingHealthScore = getHealthScore(
         oracles,
@@ -1904,6 +1909,12 @@ export const cloneTests = async () => {
         0,
         "committed liquidity should all be withdrawn"
       );
+      assert.isBelow(
+        fromScale(pool.committedCollateralLiquidity, COLLATERAL_SCALE),
+        startingPoolLiquidity,
+        "pool committed liquidity should be reduced "
+      );
+
       let healthScore = getHealthScore(oracles, pools, comet, collateral);
       assert.isAbove(
         healthScore.healthScore,
@@ -1945,6 +1956,13 @@ export const cloneTests = async () => {
         toCloneScale(liquidityToAdd),
         0
       );
+
+      await provider.sendAndConfirm(
+        new Transaction().add(updatePricesIx).add(addLiquidityIx)
+      );
+
+      pools = await cloneClient.getPools();
+      pool = pools.pools[poolIndex];
       let collateralValueToSell = 2000;
       // Test with user CLN stake tier 0.
       executionEst = calculateSwapExecution(
@@ -1973,7 +1991,7 @@ export const cloneTests = async () => {
         treasuryOnassetTokenAccount.address
       );
       await provider.sendAndConfirm(
-        new Transaction().add(updatePricesIx, addLiquidityIx, sellIx)
+        new Transaction().add(updatePricesIx, sellIx)
       );
     });
 
@@ -2079,6 +2097,10 @@ export const cloneTests = async () => {
       let poolIndex = 0;
       let pool = pools.pools[poolIndex];
       let userAccount = await cloneClient.getUserAccount();
+      const startingPoolLiquidity = fromScale(
+        pool.committedCollateralLiquidity,
+        COLLATERAL_SCALE
+      );
 
       // change status to liquidation
       await cloneClient.updatePoolParameters({
@@ -2106,11 +2128,18 @@ export const cloneTests = async () => {
         new Transaction().add(updatePricesIx).add(liquidationIx)
       );
       pools = await cloneClient.getPools();
+      pool = pools.pools[poolIndex];
       userAccount = await cloneClient.getUserAccount();
       let comet = userAccount.comet;
       let healthScore = getHealthScore(oracles, pools, comet, collateral);
 
       assert.closeTo(healthScore.healthScore, 100, 1, "check health score.");
+
+      assert.isBelow(
+        fromScale(pool.committedCollateralLiquidity, COLLATERAL_SCALE),
+        startingPoolLiquidity,
+        "pool committed liquidity should be reduced "
+      );
 
       // change status to active
       await cloneClient.updatePoolParameters({
