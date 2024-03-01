@@ -72,7 +72,7 @@ pub fn execute(ctx: Context<BorrowMore>, borrow_index: u8, amount: u64) -> Resul
 
     let pool_oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
     let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
-    let borrow_position = borrows[borrow_index as usize];
+    let borrow_position = borrows[borrow_index as usize].clone();
     let min_overcollateral_ratio = to_ratio_decimal!(pool.asset_info.min_overcollateral_ratio);
     let collateralization_ratio = to_ratio_decimal!(collateral.collateralization_ratio);
 

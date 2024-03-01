@@ -94,7 +94,7 @@ pub fn execute(
     let oracles = &ctx.accounts.oracles;
 
     let borrows = &mut ctx.accounts.user_account.borrows;
-    let borrow_position = borrows[borrow_index as usize];
+    let borrow_position = &borrows[borrow_index as usize];
     let pool_index = borrow_position.pool_index as usize;
     let pool = &pools.pools[pool_index];
     return_error_if_false!(

@@ -14,7 +14,7 @@ pub struct Initialize<'info> {
     pub admin: Signer<'info>,
     #[account(
         init,
-        space = 496 + 8,
+        space = 368 + 8,
         seeds = [CLONE_STAKING_SEED.as_ref()],
         bump,
         payer = admin
@@ -38,10 +38,7 @@ pub fn execute(ctx: Context<Initialize>, staking_period_slots: u64) -> Result<()
     clone_staking.cln_token_mint = ctx.accounts.cln_token_mint.key();
     clone_staking.cln_token_vault = ctx.accounts.cln_token_vault.key();
     clone_staking.staking_period_slots = staking_period_slots;
-    clone_staking.bump = *ctx
-        .bumps
-        .get("clone_staking")
-        .ok_or(error!(CloneStakingError::BumpNotFound))?;
+    clone_staking.bump = ctx.bumps.clone_staking;
     clone_staking.tiers = [Tier::default(); MAX_TIERS];
 
     Ok(())

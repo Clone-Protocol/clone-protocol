@@ -62,8 +62,8 @@ pub mod mock_asset_faucet {
     }
 
     pub fn mint_asset(ctx: Context<MintAsset>, amount: u64) -> Result<()> {
-        let bump = ctx.bumps.get("faucet").unwrap();
-        let seeds = &[&[MOCK_FAUCET_SEED.as_ref(), bytemuck::bytes_of(bump)][..]];
+        let bump = ctx.bumps.faucet;
+        let seeds = &[&[MOCK_FAUCET_SEED.as_ref(), bytemuck::bytes_of(&bump)][..]];
 
         let cpi_accounts = MintTo {
             mint: ctx.accounts.mint.to_account_info().clone(),

@@ -78,6 +78,7 @@ export function createInitializeInstruction(
     instructionDiscriminator: initializeInstructionDiscriminator,
     ...args,
   })
+  console.log("DATA SIZE:", data.byteLength)
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.admin,

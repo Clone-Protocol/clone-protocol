@@ -269,4 +269,8 @@ pub mod clone {
     pub fn remove_pool(ctx: Context<RemovePool>, pool_index: u8) -> Result<()> {
         instructions::remove_pool::execute(ctx, pool_index)
     }
+
+    pub fn initialize_single_position_comet_user(ctx: Context<InitializeSinglePositionCometUser>, authority: Pubkey) -> Result<()> {
+        instructions::initialize_single_position_comet_user::execute(ctx, authority)
+    }
 }

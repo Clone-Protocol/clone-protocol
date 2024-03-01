@@ -52,7 +52,7 @@ pub fn execute(
 ) -> Result<()> {
     return_error_if_false!(amount > 0, CloneError::InvalidTokenAmount);
     let borrows = &mut ctx.accounts.user_account.borrows;
-    let borrow_position = borrows[borrow_index as usize];
+    let borrow_position = &borrows[borrow_index as usize];
     let amount_value = amount.min(borrow_position.borrowed_onasset);
 
     // burn user onasset to pay back mint position

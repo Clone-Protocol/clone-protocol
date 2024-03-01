@@ -51,10 +51,7 @@ pub fn execute(
 
     // set manager data
     ctx.accounts.clone.admin = *ctx.accounts.admin.to_account_info().key;
-    ctx.accounts.clone.bump = *ctx
-        .bumps
-        .get("clone")
-        .ok_or(error!(CloneError::BumpNotFound))?;
+    ctx.accounts.clone.bump = ctx.bumps.clone;
     ctx.accounts.clone.treasury_address = treasury_address;
     ctx.accounts.clone.collateral = Collateral {
         vault: ctx.accounts.collateral_vault.to_account_info().key(),

@@ -377,8 +377,8 @@ impl LiquidityPosition {
     }
 }
 
-#[zero_copy]
-#[derive(PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
+// #[zero_copy] // TODO: Check that removing this is backwards compatible...
+#[derive(Clone, PartialEq, Eq, Debug, AnchorDeserialize, AnchorSerialize)]
 pub struct Borrow {
     pub pool_index: u8,
     pub borrowed_onasset: u64,
