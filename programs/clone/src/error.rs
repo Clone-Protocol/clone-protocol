@@ -153,6 +153,10 @@ pub enum CloneError {
     /// 37. Auth already exists
     #[msg("Auth Already Exists")]
     AuthAlreadyExists,
+
+    /// 37. Failed to load Switchboard
+    #[msg("Failed to load Switchboard")]
+    FailedToLoadSwitchboard,
 }
 
 impl From<CloneError> for ProgramError {

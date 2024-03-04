@@ -1,14 +1,16 @@
 use anchor_lang::prelude::*;
 use bytemuck::{cast_slice_mut, from_bytes_mut, try_cast_slice_mut};
-use pyth_sdk_solana::state::{AccountType, PriceAccount, PriceType, MAGIC, VERSION_2};
+use pyth_sdk_solana::state::{AccountType, PriceType, SolanaPriceAccount, MAGIC, VERSION_2};
 use std::cell::RefMut;
 
 declare_id!("CgcVKPBdW6cVDGKAKDHfN5rAoSN9m9MUuiymSrdbN27k");
 
-pub fn load_price_account<'a>(price_feed: &'a AccountInfo) -> Result<RefMut<'a, PriceAccount>> {
+pub fn load_price_account<'a>(
+    price_feed: &'a AccountInfo,
+) -> Result<RefMut<'a, SolanaPriceAccount>> {
     let raw = price_feed.try_borrow_mut_data().unwrap();
     let account_data: RefMut<'a, [u8]> = RefMut::map(raw, |data| *data);
-    let state: RefMut<'a, PriceAccount> = RefMut::map(account_data, |data| {
+    let state: RefMut<'a, SolanaPriceAccount> = RefMut::map(account_data, |data| {
         from_bytes_mut(cast_slice_mut::<u8, u8>(try_cast_slice_mut(data).unwrap()))
     });
     Ok(state)
