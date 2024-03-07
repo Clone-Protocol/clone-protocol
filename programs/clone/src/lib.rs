@@ -269,4 +269,11 @@ pub mod clone {
     pub fn remove_pool(ctx: Context<RemovePool>, pool_index: u8) -> Result<()> {
         instructions::remove_pool::execute(ctx, pool_index)
     }
+
+    pub fn initialize_isolated_margin_user(
+        ctx: Context<InitializeIsolatedMarginUser>,
+        authority: Pubkey,
+    ) -> Result<()> {
+        instructions::initialize_isolated_margin_user::execute(ctx, authority)
+    }
 }
