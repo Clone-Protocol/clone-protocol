@@ -2,12 +2,16 @@
     "name": "clone-protocol",
     "version": "0.1.0",
     "dependencies": {
-        "@coral-xyz/anchor": "^0.27.0",
-        "@metaplex-foundation/solita": "^0.19.4",
+        "@coral-xyz/anchor": "^0.28.0",
+        "@metaplex-foundation/solita": "^0.20.1",
         "@pythnetwork/client": "^2.17.0",
         "@solana/buffer-layout": "^4.0.0",
-        "@solana/spl-token": "^0.2.0",
-        "decimal.js": "^10.4.3"
+        "@solana/spl-token": "^0.4.1",
+        "@solana/web3.js": "^1.90.0",
+        "@solendprotocol/solend-sdk": "^0.8.7",
+        "anchor-bankrun": "^0.3.0",
+        "decimal.js": "^10.4.3",
+        "solana-bankrun": "^0.2.0"
     },
     "devDependencies": {
         "@types/chai": "^4.3.0",
@@ -18,7 +22,7 @@
         "boxen": "^4.2.0",
         "chai": "^4.3.6",
         "helius-sdk": "^1.0.8",
-        "mocha": "^8.4.0",
+        "mocha": "^10.3.0",
         "toml": "^3.0.0",
         "ts-mocha": "^8.0.0",
         "ts-node": "^10.9.1",

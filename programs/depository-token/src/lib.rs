@@ -12,6 +12,7 @@ pub mod depository_token {
 
     pub fn initialize(
         ctx: Context<Initialize>,
+        unique_seed: u8,
         ratio: u64,
         depositing_token_mint: Pubkey,
     ) -> Result<()> {
@@ -20,6 +21,7 @@ pub mod depository_token {
             depositing_token_mint,
             depositing_token_account: ctx.accounts.depositing_token_account.key(),
             depository_token_mint: ctx.accounts.depository_token_mint.key(),
+            unique_seed,
         };
 
         Ok(())
@@ -60,7 +62,11 @@ pub mod depository_token {
                     to: ctx.accounts.user_depository_token_account.to_account_info(),
                     authority: ctx.accounts.settings.to_account_info(),
                 },
-                &[&[SETTINGS_SEED.as_bytes(), &[settings_bump]]],
+                &[&[
+                    &[ctx.accounts.settings.unique_seed],
+                    SETTINGS_SEED.as_bytes(),
+                    &[settings_bump],
+                ]],
             ),
             mint_amount,
         )?;
@@ -90,7 +96,11 @@ pub mod depository_token {
                     to: ctx.accounts.user_depositing_token_account.to_account_info(),
                     authority: ctx.accounts.settings.to_account_info(),
                 },
-                &[&[SETTINGS_SEED.as_bytes(), &[settings_bump]]],
+                &[&[
+                    &[ctx.accounts.settings.unique_seed],
+                    SETTINGS_SEED.as_bytes(),
+                    &[settings_bump],
+                ]],
             ),
             depositing_token_amount,
         )?;
@@ -122,18 +132,19 @@ pub struct Settings {
     pub depositing_token_mint: Pubkey, // The token mint that is deposited to mint depository tokens.
     pub depositing_token_account: Pubkey,
     pub depository_token_mint: Pubkey, // The minted token.
+    pub unique_seed: u8,
 }
 
 /// INSTRUCTIONS
 #[derive(Accounts)]
-#[instruction(ratio: u64, depositing_token_mint: Pubkey)]
+#[instruction(unique_seed: u8, ratio: u64, depositing_token_mint: Pubkey)]
 pub struct Initialize<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
     #[account(
         init,
-        space = 32 * 3 + 8 + 8,
-        seeds = [SETTINGS_SEED.as_ref()],
+        space = 112 + 8,
+        seeds = [&[unique_seed], SETTINGS_SEED.as_bytes()],
         bump,
         payer = payer
     )]
@@ -158,7 +169,7 @@ pub struct MintDepositoryToken<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     #[account(
-        seeds = [SETTINGS_SEED.as_ref()],
+        seeds = [&[settings.unique_seed], SETTINGS_SEED.as_bytes()],
         bump,
     )]
     pub settings: Account<'info, Settings>,
@@ -194,7 +205,7 @@ pub struct RedeemDepositoryToken<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     #[account(
-        seeds = [SETTINGS_SEED.as_ref()],
+        seeds = [&[settings.unique_seed], SETTINGS_SEED.as_bytes()],
         bump,
     )]
     pub settings: Account<'info, Settings>,

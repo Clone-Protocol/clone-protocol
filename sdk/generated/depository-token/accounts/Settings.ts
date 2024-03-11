@@ -19,6 +19,7 @@ export type SettingsArgs = {
   depositingTokenMint: web3.PublicKey
   depositingTokenAccount: web3.PublicKey
   depositoryTokenMint: web3.PublicKey
+  uniqueSeed: number
 }
 
 export const settingsDiscriminator = [223, 179, 163, 190, 177, 224, 67, 173]
@@ -34,7 +35,8 @@ export class Settings implements SettingsArgs {
     readonly ratio: beet.bignum,
     readonly depositingTokenMint: web3.PublicKey,
     readonly depositingTokenAccount: web3.PublicKey,
-    readonly depositoryTokenMint: web3.PublicKey
+    readonly depositoryTokenMint: web3.PublicKey,
+    readonly uniqueSeed: number
   ) {}
 
   /**
@@ -45,7 +47,8 @@ export class Settings implements SettingsArgs {
       args.ratio,
       args.depositingTokenMint,
       args.depositingTokenAccount,
-      args.depositoryTokenMint
+      args.depositoryTokenMint,
+      args.uniqueSeed
     )
   }
 
@@ -166,6 +169,7 @@ export class Settings implements SettingsArgs {
       depositingTokenMint: this.depositingTokenMint.toBase58(),
       depositingTokenAccount: this.depositingTokenAccount.toBase58(),
       depositoryTokenMint: this.depositoryTokenMint.toBase58(),
+      uniqueSeed: this.uniqueSeed,
     }
   }
 }
@@ -186,6 +190,7 @@ export const settingsBeet = new beet.BeetStruct<
     ['depositingTokenMint', beetSolana.publicKey],
     ['depositingTokenAccount', beetSolana.publicKey],
     ['depositoryTokenMint', beetSolana.publicKey],
+    ['uniqueSeed', beet.u8],
   ],
   Settings.fromArgs,
   'Settings'

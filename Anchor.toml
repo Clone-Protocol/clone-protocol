@@ -13,8 +13,7 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/tests.ts"
-test_liquidation = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/liquidation.ts"
+test = "yarn run ts-mocha -t 1000000 tests/*.ts"
 
 # SWITCHBOARD SETUP
 [test.validator]

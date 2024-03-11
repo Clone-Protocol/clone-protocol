@@ -15,6 +15,7 @@ import * as beetSolana from '@metaplex-foundation/beet-solana'
  * @category generated
  */
 export type InitializeInstructionArgs = {
+  uniqueSeed: number
   ratio: beet.bignum
   depositingTokenMint: web3.PublicKey
 }
@@ -30,6 +31,7 @@ export const initializeStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
+    ['uniqueSeed', beet.u8],
     ['ratio', beet.u64],
     ['depositingTokenMint', beetSolana.publicKey],
   ],
