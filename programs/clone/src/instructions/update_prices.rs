@@ -3,7 +3,7 @@ use crate::return_error_if_false;
 use crate::states::*;
 use crate::ORACLES_SEED;
 use anchor_lang::prelude::*;
-use pyth_sdk_solana::load_price_feed_from_account_info;
+use pyth_sdk_solana::state::SolanaPriceAccount;
 use std::convert::TryInto;
 use switchboard_solana::AggregatorAccountData;
 
@@ -37,7 +37,9 @@ pub fn execute<'info>(
 
         let (price, expo) = match oracle.source {
             OracleSource::PYTH => {
-                if let Ok(price_info) = load_price_feed_from_account_info(supplied_oracle_address) {
+                if let Ok(price_info) =
+                    SolanaPriceAccount::account_info_to_feed(supplied_oracle_address)
+                {
                     // TODO: Consider updating this to check latest ts/conf
                     let info = price_info.get_price_unchecked();
                     if info.expo <= 0 {
@@ -69,8 +71,11 @@ pub fn execute<'info>(
             }
             OracleSource::SWITCHBOARD => {
                 let raw = supplied_oracle_address.try_borrow_data()?;
-                let data_feed = AggregatorAccountData::new_from_bytes(*raw)?;
-                let result = data_feed.get_result()?;
+                let data_feed = AggregatorAccountData::new_from_bytes(*raw)
+                    .map_err(|_| error!(CloneError::FailedToLoadSwitchboard))?;
+                let result = data_feed
+                    .get_result()
+                    .map_err(|_| error!(CloneError::FailedToLoadSwitchboard))?;
                 (
                     result
                         .mantissa
