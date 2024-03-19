@@ -3,7 +3,7 @@ use anchor_spl::token::{
     burn as burn_from, mint_to, transfer, Burn, Mint, MintTo, Token, TokenAccount, Transfer,
 };
 
-declare_id!("CKR5jEyuHARhPN47yWS3GA6RauPbAg29hiNVC5ydV2ur");
+declare_id!("DepoUcf8YXb8eqd3cpZxogSFP6DPuEnZmVex9jo2ZKA");
 
 #[program]
 pub mod depository_token {

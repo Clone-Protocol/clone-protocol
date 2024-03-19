@@ -3,7 +3,7 @@ clone = "C1onEW2kPetmHmwe74YC1ESx3LnFEpVau6g2pg4fHycr"
 pyth = "CgcVKPBdW6cVDGKAKDHfN5rAoSN9m9MUuiymSrdbN27k"
 clone_staking = "42L6bfEYntcmqVcFvHywitcaHhXF9rjYq9C9p9iWQ2X2"
 mock_asset_faucet = "AebpPDV1MsHNJ7Heqbzd8hTrQXFJk3hoMcChKqMQCuKW"
-depository_token = "CKR5jEyuHARhPN47yWS3GA6RauPbAg29hiNVC5ydV2ur"
+depository_token = "DepoUcf8YXb8eqd3cpZxogSFP6DPuEnZmVex9jo2ZKA"
 
 [registry]
 url = "https://anchor.projectserum.com"
