@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "programs/*"
-]
+, "sdk/jupiter-interface"]
 
 [profile.release]
 overflow-checks = true     # Disable integer overflow checks.

@@ -1,0 +1,26 @@
+[package]
+name = "jupiter-interface"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clone = { path = "../../programs/clone", version = "0.1.0" }
+anyhow = "1.0.81"
+anchor-lang = "0.26.0"
+solana-program = "1.16.23"
+solana-sdk = "1.16.23"
+jupiter-amm-interface = "0.3.3"
+pyth-sdk-solana = "0.10.0"
+rust_decimal = "1.25.0"
+thiserror = "1.0.58"
+spl-associated-token-account = "2.0.0"
+spl-token = "4.0.0"
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["full"] }
+tokio-test = "0.4.0"
+rand = "0.8.5"
+solana-program-test = "1.16.23"
+solana-client = "1.16.23"
