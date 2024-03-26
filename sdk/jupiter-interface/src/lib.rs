@@ -354,12 +354,33 @@ impl Amm for CloneInterface {
         let clone = self.clone.clone().ok_or::<CloneInterfaceError>(
             CloneInterfaceError::PropertyNotLoaded(String::from("clone")).into(),
         )?;
+        let pools = self.pools.clone().ok_or::<CloneInterfaceError>(
+            CloneInterfaceError::PropertyNotLoaded(String::from("pools")).into(),
+        )?;
         let input_is_collateral = clone.collateral.mint.eq(&swap_params.source_mint);
         let classet_mint = if input_is_collateral {
             swap_params.destination_mint
         } else {
             swap_params.source_mint
         };
+        let pool = pools
+            .pools
+            .iter()
+            .find(|p| {
+                let classet_mint = p.asset_info.onasset_mint;
+                if input_is_collateral {
+                    classet_mint.eq(&swap_params.destination_mint)
+                } else {
+                    classet_mint.eq(&swap_params.source_mint)
+                }
+            })
+            .ok_or::<CloneInterfaceError>(
+                CloneInterfaceError::PoolNotFound(
+                    swap_params.source_mint,
+                    swap_params.destination_mint,
+                )
+                .into(),
+            )?;
 
         let mut account_metas = Vec::new();
 
@@ -407,6 +428,16 @@ impl Amm for CloneInterface {
         account_metas.push(AccountMeta::new_readonly(CLONE_PROGRAM_ID, false));
         account_metas.push(AccountMeta::new_readonly(CLONE_PROGRAM_ID, false));
         account_metas.push(AccountMeta::new_readonly(CLONE_PROGRAM_ID, false));
+
+        // Remaining accounts, to update the oracle struct
+        account_metas.push(AccountMeta::new_readonly(
+            self.oracles.oracles[clone.collateral.oracle_info_index as usize].address,
+            false,
+        ));
+        account_metas.push(AccountMeta::new_readonly(
+            self.oracles.oracles[pool.asset_info.oracle_info_index as usize].address,
+            false,
+        ));
 
         Ok(SwapAndAccountMetas {
             swap: jupiter_amm_interface::Swap::Saber, // TODO: This should be Clone enum
