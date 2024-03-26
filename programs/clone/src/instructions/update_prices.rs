@@ -18,17 +18,16 @@ pub struct UpdatePrices<'info> {
     pub oracles: Box<Account<'info, Oracles>>,
 }
 
-pub fn execute<'info>(
-    ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
+pub fn update_oracles(
+    oracles: &mut Oracles,
     oracle_indices: Vec<u8>,
+    remaining_accounts: &[AccountInfo],
 ) -> Result<()> {
-    let oracles = &mut ctx.accounts.oracles.oracles;
-
     // generate data from pyth oracle
     for (account_index, oracle_index) in oracle_indices.iter().enumerate() {
-        let supplied_oracle_address = &ctx.remaining_accounts[account_index];
+        let supplied_oracle_address = &remaining_accounts[account_index];
         let oracle_index = *oracle_index as usize;
-        let oracle: &mut OracleInfo = &mut oracles[oracle_index];
+        let oracle: &mut OracleInfo = &mut oracles.oracles[oracle_index];
 
         return_error_if_false!(
             supplied_oracle_address.key().eq(&oracle.address),
@@ -38,7 +37,7 @@ pub fn execute<'info>(
         let (price, expo) = match oracle.source {
             OracleSource::PYTH => {
                 if let Ok(price_info) =
-                    SolanaPriceAccount::account_info_to_feed(supplied_oracle_address)
+                    SolanaPriceAccount::account_info_to_feed(&supplied_oracle_address)
                 {
                     // TODO: Consider updating this to check latest ts/conf
                     let info = price_info.get_price_unchecked();
@@ -91,12 +90,21 @@ pub fn execute<'info>(
 
         msg!("PRICE: {} {}", price, expo);
 
-        oracles[oracle_index].price = price;
-        oracles[oracle_index].expo = expo;
-        oracles[oracle_index].last_update_slot = Clock::get()?.slot;
+        oracles.oracles[oracle_index].price = price;
+        oracles.oracles[oracle_index].expo = expo;
+        oracles.oracles[oracle_index].last_update_slot = Clock::get()?.slot;
 
-        msg!("UPDATED ORACLE: {:?}", oracles[oracle_index]);
+        msg!("UPDATED ORACLE: {:?}", oracles.oracles[oracle_index]);
     }
 
     Ok(())
+}
+
+pub fn execute<'info>(
+    ctx: Context<'_, '_, '_, 'info, UpdatePrices<'info>>,
+    oracle_indices: Vec<u8>,
+) -> Result<()> {
+    let oracles = &mut ctx.accounts.oracles;
+
+    update_oracles(oracles, oracle_indices, ctx.remaining_accounts)
 }

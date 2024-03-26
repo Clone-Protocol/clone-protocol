@@ -1,9 +1,9 @@
 use crate::decimal::{rescale_toward_zero, CLONE_TOKEN_SCALE};
-use crate::error::*;
 use crate::events::*;
 use crate::math::*;
 use crate::states::*;
 use crate::to_bps_decimal;
+use crate::{error::*, update_prices};
 use crate::{
     return_error_if_false, to_clone_decimal, CLONE_PROGRAM_SEED, ORACLES_SEED, POOLS_SEED,
 };
@@ -118,10 +118,7 @@ pub fn execute(
     ][..]];
     let collateral = &ctx.accounts.clone.collateral;
     let pools = &mut ctx.accounts.pools;
-    let oracles = &ctx.accounts.oracles;
     let pool = &pools.pools[pool_index as usize];
-    let pool_oracle = &oracles.oracles[pool.asset_info.oracle_info_index as usize];
-    let collateral_oracle = &oracles.oracles[collateral.oracle_info_index as usize];
 
     let mut override_liquidity_trading_fee = None;
     let mut override_treasury_trading_fee = None;
@@ -147,6 +144,21 @@ pub fn execute(
             override_treasury_trading_fee = Some(to_bps_decimal!(treasury_fees));
         }
     }
+
+    if ctx.remaining_accounts.len() >= 2 {
+        let oracle_indices = vec![
+            collateral.oracle_info_index,
+            pool.asset_info.oracle_info_index,
+        ];
+        update_prices::update_oracles(
+            &mut ctx.accounts.oracles,
+            oracle_indices,
+            &ctx.remaining_accounts,
+        )?;
+    }
+
+    let pool_oracle = &ctx.accounts.oracles.oracles[pool.asset_info.oracle_info_index as usize];
+    let collateral_oracle = &ctx.accounts.oracles.oracles[collateral.oracle_info_index as usize];
 
     check_feed_update(&pool_oracle, Clock::get()?.slot)?;
     check_feed_update(&collateral_oracle, Clock::get()?.slot)?;
