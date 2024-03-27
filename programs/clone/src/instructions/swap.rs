@@ -65,7 +65,6 @@ pub struct Swap<'info> {
     )]
     pub onasset_mint: Box<Account<'info, Mint>>,
     #[account(
-        mut,
         address = clone.collateral.mint
     )]
     pub collateral_mint: Box<Account<'info, Mint>>,
