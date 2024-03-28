@@ -113,8 +113,8 @@ describe("tests", async () => {
   const treasuryTradingFee = 100;
   const tier0 = {
     minStakeRequirement: new BN(1000),
-    lpTradingFeeBps: 15,
-    treasuryTradingFeeBps: 10,
+    lpTradingFeeBps: 10,
+    treasuryTradingFeeBps: 5,
   };
 
   let mockUSDCTokenAccountInfo;
@@ -1811,6 +1811,7 @@ describe("tests", async () => {
       fromScale(oracle.price, oracle.expo),
       collateral
     );
+    let remainingAccounts = [oracles.oracles[collateral.oracleInfoIndex].address, oracles.oracles[pool.assetInfo.oracleInfoIndex].address]
     // Buy via specified onasset for output
     let buyIx = cloneClient.swapInstruction(
       poolIndex,
@@ -1822,10 +1823,13 @@ describe("tests", async () => {
       collateralTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       treasuryCollateralTokenAccount.address,
-      treasuryOnassetTokenAccount.address
+      treasuryOnassetTokenAccount.address,
+      undefined,
+      remainingAccounts
     );
 
-    await provider.sendAndConfirm(new Transaction().add(updatePricesIx, buyIx));
+    let tx = await provider.sendAndConfirm(new Transaction().add(buyIx));
+    console.log("TX:", tx);
 
     // Change pool parameters to allow unhealthy comet position
     await cloneClient.updatePoolParameters({
@@ -1969,7 +1973,9 @@ describe("tests", async () => {
       collateralTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       treasuryCollateralTokenAccount.address,
-      treasuryOnassetTokenAccount.address
+      treasuryOnassetTokenAccount.address,
+      undefined,
+      remainingAccounts
     );
     await provider.sendAndConfirm(
       new Transaction().add(updatePricesIx, sellIx)
@@ -2047,6 +2053,8 @@ describe("tests", async () => {
       fromScale(oracle.price, oracle.expo),
       cloneClient.clone.collateral
     );
+    let collateralOracleAddress = oracles.oracles[cloneClient.clone.collateral.oracleInfoIndex].address
+    let poolOracleAddress = oracles.oracles[pool.assetInfo.oracleInfoIndex].address
     // Buy via specified onasset for output
     let buyIx = cloneClient.swapInstruction(
       poolIndex,
@@ -2058,13 +2066,15 @@ describe("tests", async () => {
       collateralTokenAccountInfo.address,
       onassetTokenAccountInfo.address,
       treasuryCollateralTokenAccount.address,
-      treasuryOnassetTokenAccount.address
+      treasuryOnassetTokenAccount.address,
+      undefined,
+      [collateralOracleAddress, poolOracleAddress]
     );
 
     let errorOccured = false;
     try {
       await provider.sendAndConfirm(
-        new Transaction().add(updatePricesIx).add(buyIx)
+        new Transaction().add(buyIx)
       );
     } catch (error) {
       errorOccured = true;

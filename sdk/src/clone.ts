@@ -678,7 +678,8 @@ export class CloneClient {
       cloneStakingProgram: PublicKey;
       cloneStaking: PublicKey;
       userStakingAccount: PublicKey;
-    }
+    },
+    remainingAccounts?: PublicKey[],
   ): TransactionInstruction {
     const { cloneStakingProgram, cloneStaking, userStakingAccount } =
       cloneStakingConfig ?? {
@@ -686,6 +687,9 @@ export class CloneClient {
         cloneStaking: this.programId,
         userStakingAccount: this.programId,
       };
+    const anchorRemainingAccounts = remainingAccounts ? remainingAccounts.map(pubkey => {
+      return { pubkey, isSigner: false, isWritable: false };
+    }) : []
     return createSwapInstruction(
       {
         user: this.provider.publicKey!,
@@ -703,6 +707,7 @@ export class CloneClient {
         cloneStaking: cloneStaking,
         cloneStakingProgram: cloneStakingProgram,
         userStakingAccount: userStakingAccount,
+        anchorRemainingAccounts
       },
       {
         poolIndex,
