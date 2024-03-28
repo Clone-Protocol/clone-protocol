@@ -6,7 +6,7 @@
 */
 
 use anyhow::{anyhow, Result};
-use clone::decimal::CLONE_TOKEN_SCALE;
+use clone::{decimal::CLONE_TOKEN_SCALE, ID};
 use jupiter_amm_interface::{AccountMap, Amm, KeyedAccount, QuoteParams, SwapMode, SwapParams};
 use rand::prelude::*;
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -29,30 +29,33 @@ extern crate jupiter_interface;
 use jupiter_interface::*;
 
 async fn create_interface(rpc: &RpcClient) -> Result<CloneInterface> {
-    let oracles_address = get_oracles_account_address();
-    let oracles_account = rpc.get_account(&oracles_address).await?;
+    let pools_address = get_pools_account_address();
+    let pools_account = rpc.get_account(&pools_address).await?;
 
     let keyed_account = KeyedAccount {
-        key: Pubkey::default(),   // As of now this can be completely arbitrary.
-        account: oracles_account, // We required the oracles account data in order to properly run `get_accounts_to_update`
+        key: pools_address,
+        account: pools_account,
         params: None,
     };
     let mut clone_interface = CloneInterface::from_keyed_account(&keyed_account)?;
 
-    // Update accounts
-    let accounts_to_update = clone_interface.get_accounts_to_update();
-    let accounts = rpc.get_multiple_accounts(&accounts_to_update).await?;
-
     let mut accounts_map = AccountMap::new();
 
-    accounts.iter().enumerate().for_each(|(i, account)| {
-        if account.is_none() {
-            return;
-        }
-        accounts_map.insert(accounts_to_update[i], account.clone().unwrap());
-    });
+    // Need to update twice, second time will get the required oracle addresses for quoting
+    for _ in 0..2 {
+        // Update accounts
+        let accounts_to_update = clone_interface.get_accounts_to_update();
+        let accounts = rpc.get_multiple_accounts(&accounts_to_update).await?;
 
-    clone_interface.update(&accounts_map)?;
+        accounts.iter().enumerate().for_each(|(i, account)| {
+            if account.is_none() {
+                return;
+            }
+            accounts_map.insert(accounts_to_update[i], account.clone().unwrap());
+        });
+
+        clone_interface.update(&accounts_map)?;
+    }
 
     Ok(clone_interface)
 }
@@ -130,7 +133,13 @@ fn read_balance_from_token_account(account: &Account) -> Result<u64> {
 #[tokio::test]
 async fn swap_integration_test() -> Result<()> {
     // Setup Program test Context
-    let program_test = ProgramTest::default();
+    let mut program_test = ProgramTest::default();
+    let local_clone_program_loaded = if env::var("BPF_OUT_DIR").is_ok() {
+        program_test.add_program(&"clone", ID, None);
+        true
+    } else {
+        false
+    };
     let mut context = program_test.start_with_context().await;
 
     // Setup clone interface
@@ -146,10 +155,7 @@ async fn swap_integration_test() -> Result<()> {
         .clone
         .clone()
         .expect("clone should be loaded");
-    let pools = clone_interface
-        .pools
-        .clone()
-        .expect("pools should be loaded");
+    let pools = clone_interface.pools.clone();
     let mut account_pubkeys = clone_interface.get_accounts_to_update();
     account_pubkeys.extend(clone_interface.get_reserve_mints());
     // For treasury
@@ -160,11 +166,14 @@ async fn swap_integration_test() -> Result<()> {
             .map(|mint| get_associated_token_address(&clone_account.treasury_address, mint))
             .collect::<Vec<Pubkey>>(),
     );
-    account_pubkeys.extend(vec![
-        clone_account.collateral.vault,
-        clone_interface.program_id(),
-        derive_program_data_address(clone_interface.program_id()),
-    ]);
+    account_pubkeys.push(clone_account.collateral.vault);
+
+    if !local_clone_program_loaded {
+        account_pubkeys.extend(vec![
+            clone_interface.program_id(),
+            derive_program_data_address(clone_interface.program_id()),
+        ]);
+    }
 
     // Pull latest state from RPC, load into CloneInterface and Context.
     let accounts = rpc.get_multiple_accounts(&account_pubkeys).await?;
@@ -271,7 +280,7 @@ async fn swap_integration_test() -> Result<()> {
         set_mock_token_account(&mut context, swap_params.destination_token_account, 0).await?;
 
         let instructions = vec![
-            clone_interface.create_update_prices_instruction(None)?,
+            // clone_interface.create_update_prices_instruction(None)?,
             // this creates a swap with 0 slippage, a successful swap
             // means our we quoted perfectly for in/out amounts
             clone_interface.create_swap_instruction(

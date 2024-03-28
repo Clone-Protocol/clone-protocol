@@ -9,13 +9,22 @@ use jupiter_amm_interface::{
     AccountMap, Amm, AmmUserSetup, KeyedAccount, Quote, QuoteParams, SwapAndAccountMetas, SwapMode,
     SwapParams,
 };
-use pyth_sdk_solana::{state::SolanaPriceAccount, Price};
+use pyth_sdk_solana::state::{load_price_account, SolanaPriceAccount};
 use rust_decimal::prelude::*;
+use solana_sdk::account::ReadableAccount;
+use solana_sdk::clock::Clock;
 use solana_sdk::instruction::{AccountMeta, Instruction};
 use solana_sdk::pubkey::Pubkey;
+use solana_sdk::sysvar::{self};
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::ID as SPL_TOKEN_PROGRAM;
 use thiserror::Error;
+
+const USDC_MINT: Pubkey = Pubkey::new_from_array([
+    198u8, 250u8, 122u8, 243u8, 190u8, 219u8, 173u8, 58u8, 61u8, 101u8, 243u8, 106u8, 171u8, 201u8,
+    116u8, 49u8, 177u8, 187u8, 228u8, 194u8, 210u8, 246u8, 224u8, 228u8, 124u8, 166u8, 2u8, 3u8,
+    69u8, 47u8, 93u8, 97u8,
+]);
 
 pub fn get_clone_account_address() -> Pubkey {
     Pubkey::find_program_address(&[CLONE_PROGRAM_SEED.as_ref()], &CLONE_PROGRAM_ID).0
@@ -30,9 +39,11 @@ pub fn get_oracles_account_address() -> Pubkey {
 #[derive(Clone)]
 pub struct CloneInterface {
     pub clone: Option<Clone>,
-    pub pools: Option<Pools>,
-    pub oracles: Oracles,
-    pub pyth_prices: Option<Vec<Price>>,
+    pub pools: Pools,
+    pub oracles: Option<Oracles>,
+    pub pyth_prices: Option<Vec<SolanaPriceAccount>>,
+    pub key: Pubkey,
+    pub clock: Option<Clock>,
 }
 
 impl CloneInterface {
@@ -41,12 +52,14 @@ impl CloneInterface {
         oracle_indices: Option<Vec<usize>>,
     ) -> Result<Instruction> {
         let mut account_metas = vec![AccountMeta::new(get_oracles_account_address(), false)];
+        let oracles = self.oracles.as_ref().ok_or::<CloneInterfaceError>(
+            CloneInterfaceError::PropertyNotLoaded(String::from("oracles")).into(),
+        )?;
 
-        let indices_to_update =
-            oracle_indices.unwrap_or((0usize..self.oracles.oracles.len()).collect());
+        let indices_to_update = oracle_indices.unwrap_or((0usize..oracles.oracles.len()).collect());
 
         indices_to_update.iter().for_each(|index| {
-            let address = self.oracles.oracles[*index].address;
+            let address = oracles.oracles[*index].address;
             account_metas.push(AccountMeta::new_readonly(address, false))
         });
 
@@ -86,15 +99,13 @@ impl CloneInterface {
         })?);
 
         // Create args
-        let clone = self.clone.clone().ok_or::<CloneInterfaceError>(
+        let clone = self.clone.as_ref().ok_or::<CloneInterfaceError>(
             CloneInterfaceError::PropertyNotLoaded(String::from("clone")).into(),
-        )?;
-        let pools = self.pools.clone().ok_or::<CloneInterfaceError>(
-            CloneInterfaceError::PropertyNotLoaded(String::from("pools")).into(),
         )?;
 
         let input_is_collateral = clone.collateral.mint.eq(&swap_params.source_mint);
-        let (pool_index, _) = pools
+        let (pool_index, _) = self
+            .pools
             .pools
             .iter()
             .enumerate()
@@ -152,6 +163,14 @@ impl CloneInterface {
             accounts: account_metas,
         })
     }
+
+    fn collateral_mint(&self) -> Pubkey {
+        USDC_MINT
+    }
+
+    fn oracle_slot_threshold(&self) -> u64 {
+        20
+    }
 }
 
 impl Amm for CloneInterface {
@@ -159,13 +178,15 @@ impl Amm for CloneInterface {
     fn from_keyed_account(keyed_account: &KeyedAccount) -> Result<Self> {
         // Key account should correspond to the oracle info
         let mut v = keyed_account.account.data.as_slice();
-        let oracles = Oracles::try_deserialize(&mut v)?;
+        let pools = Pools::try_deserialize(&mut v)?;
 
         Ok(CloneInterface {
             clone: None,
-            pools: None,
-            oracles,
+            pools,
+            oracles: None,
             pyth_prices: None,
+            key: keyed_account.key,
+            clock: None,
         })
     }
     /// A human readable label of the underlying DEX
@@ -181,11 +202,8 @@ impl Amm for CloneInterface {
     }
     /// The mints that can be traded
     fn get_reserve_mints(&self) -> Vec<Pubkey> {
-        let clone = &self.clone.clone().expect("Missing clone property");
-        let pools = &self.pools.clone().expect("Missing pools property");
-
-        let mut reserve_mints = vec![clone.collateral.mint];
-        pools
+        let mut reserve_mints = vec![self.collateral_mint()];
+        self.pools
             .pools
             .iter()
             .for_each(|pool| reserve_mints.push(pool.asset_info.onasset_mint));
@@ -197,11 +215,14 @@ impl Amm for CloneInterface {
             get_clone_account_address(),
             get_pools_account_address(),
             get_oracles_account_address(),
+            sysvar::clock::ID,
         ];
-        self.oracles
-            .oracles
-            .iter()
-            .for_each(|oracle| accounts.push(oracle.address));
+        if let Some(oracles) = &self.oracles {
+            oracles
+                .oracles
+                .iter()
+                .for_each(|oracle| accounts.push(oracle.address));
+        }
         accounts
     }
 
@@ -220,37 +241,38 @@ impl Amm for CloneInterface {
             .get(&pools_address)
             .ok_or::<CloneInterfaceError>(CloneInterfaceError::MissingAddress(pools_address))?;
         let mut v = pools_account.data.as_slice();
-        self.pools = Some(Pools::try_deserialize(&mut v)?);
+        self.pools = Pools::try_deserialize(&mut v)?;
 
         let oracles_address = get_oracles_account_address();
         let oracles_account = account_map
             .get(&oracles_address)
             .ok_or::<CloneInterfaceError>(CloneInterfaceError::MissingAddress(oracles_address))?;
         let mut v = oracles_account.data.as_slice();
-        self.oracles = Oracles::try_deserialize(&mut v)?;
+        let oracles = Oracles::try_deserialize(&mut v)?;
 
         let mut pyth_prices = Vec::new();
-
-        for info in self.oracles.oracles.iter() {
-            let price_account = account_map
-                .get(&info.address)
-                .ok_or::<CloneInterfaceError>(CloneInterfaceError::MissingAddress(info.address))?;
-            pyth_prices.push(
-                SolanaPriceAccount::account_to_feed(&info.address, &mut price_account.clone())?
-                    .get_price_unchecked(),
-            )
+        for info in oracles.oracles.iter() {
+            if let Some(price_account) = account_map.get(&info.address) {
+                let price_account: SolanaPriceAccount = *load_price_account(price_account.data())?;
+                pyth_prices.push(price_account)
+            }
         }
+
+        self.oracles = Some(oracles);
         self.pyth_prices = Some(pyth_prices);
+
+        let clock_account = account_map
+            .get(&sysvar::clock::ID)
+            .ok_or::<CloneInterfaceError>(CloneInterfaceError::MissingAddress(sysvar::clock::ID))?;
+        let clock: Clock = clock_account.deserialize_data()?;
+        self.clock = Some(clock);
 
         Ok(())
     }
 
     fn quote(&self, quote_params: &QuoteParams) -> Result<Quote> {
-        let clone = self.clone.clone().ok_or::<CloneInterfaceError>(
+        let clone = self.clone.as_ref().ok_or::<CloneInterfaceError>(
             CloneInterfaceError::PropertyNotLoaded(String::from("clone")).into(),
-        )?;
-        let pools = self.pools.clone().ok_or::<CloneInterfaceError>(
-            CloneInterfaceError::PropertyNotLoaded(String::from("pools")).into(),
         )?;
         let pyth_prices = self.pyth_prices.clone().ok_or::<CloneInterfaceError>(
             CloneInterfaceError::PropertyNotLoaded(String::from("pyth_prices")).into(),
@@ -260,7 +282,8 @@ impl Amm for CloneInterface {
 
         let input_is_collateral = collateral_mint.eq(&quote_params.input_mint);
 
-        let pool = pools
+        let pool = self
+            .pools
             .pools
             .iter()
             .find(|p| {
@@ -279,16 +302,39 @@ impl Amm for CloneInterface {
                 .into(),
             )?;
 
-        let collateral_price_data = pyth_prices[clone.collateral.oracle_info_index as usize];
+        let current_clock_slot = self
+            .clock
+            .as_ref()
+            .ok_or::<CloneInterfaceError>(
+                CloneInterfaceError::PropertyNotLoaded(String::from("clock")).into(),
+            )?
+            .slot;
+        let threshold_clock_slot = current_clock_slot - self.oracle_slot_threshold();
+
+        let collateral_price_account = pyth_prices[clone.collateral.oracle_info_index as usize];
+        if collateral_price_account.last_slot < threshold_clock_slot {
+            return Err(CloneInterfaceError::OracleOutdated(
+                collateral_price_account.last_slot,
+                threshold_clock_slot,
+            )
+            .into());
+        }
         let collateral_price = Decimal::new(
-            collateral_price_data.price,
-            collateral_price_data.expo.abs() as u32,
+            collateral_price_account.agg.price,
+            collateral_price_account.expo.abs() as u32,
         );
 
-        let classet_price_data = pyth_prices[pool.asset_info.oracle_info_index as usize];
+        let classet_price_account = pyth_prices[pool.asset_info.oracle_info_index as usize];
+        if classet_price_account.last_slot < threshold_clock_slot {
+            return Err(CloneInterfaceError::OracleOutdated(
+                classet_price_account.last_slot,
+                threshold_clock_slot,
+            )
+            .into());
+        }
         let classet_price = Decimal::new(
-            classet_price_data.price,
-            classet_price_data.expo.abs() as u32,
+            classet_price_account.agg.price,
+            classet_price_account.expo.abs() as u32,
         );
 
         let quantity_is_input = quote_params.swap_mode == SwapMode::ExactIn;
@@ -351,11 +397,11 @@ impl Amm for CloneInterface {
 
     /// Indicates which Swap has to be performed along with all the necessary account metas
     fn get_swap_and_account_metas(&self, swap_params: &SwapParams) -> Result<SwapAndAccountMetas> {
-        let clone = self.clone.clone().ok_or::<CloneInterfaceError>(
+        let clone = self.clone.as_ref().ok_or::<CloneInterfaceError>(
             CloneInterfaceError::PropertyNotLoaded(String::from("clone")).into(),
         )?;
-        let pools = self.pools.clone().ok_or::<CloneInterfaceError>(
-            CloneInterfaceError::PropertyNotLoaded(String::from("pools")).into(),
+        let oracles = self.oracles.as_ref().ok_or::<CloneInterfaceError>(
+            CloneInterfaceError::PropertyNotLoaded(String::from("oracles")).into(),
         )?;
         let input_is_collateral = clone.collateral.mint.eq(&swap_params.source_mint);
         let classet_mint = if input_is_collateral {
@@ -363,7 +409,8 @@ impl Amm for CloneInterface {
         } else {
             swap_params.source_mint
         };
-        let pool = pools
+        let pool = self
+            .pools
             .pools
             .iter()
             .find(|p| {
@@ -408,7 +455,7 @@ impl Amm for CloneInterface {
         // classet mint
         account_metas.push(AccountMeta::new(classet_mint, false));
         // collateral mint
-        account_metas.push(AccountMeta::new(clone.collateral.mint, false));
+        account_metas.push(AccountMeta::new_readonly(clone.collateral.mint, false));
         // collateral vault
         account_metas.push(AccountMeta::new(clone.collateral.vault, false));
         // treasury classet token account
@@ -431,11 +478,11 @@ impl Amm for CloneInterface {
 
         // Remaining accounts, to update the oracle struct
         account_metas.push(AccountMeta::new_readonly(
-            self.oracles.oracles[clone.collateral.oracle_info_index as usize].address,
+            oracles.oracles[clone.collateral.oracle_info_index as usize].address,
             false,
         ));
         account_metas.push(AccountMeta::new_readonly(
-            self.oracles.oracles[pool.asset_info.oracle_info_index as usize].address,
+            oracles.oracles[pool.asset_info.oracle_info_index as usize].address,
             false,
         ));
 
@@ -471,6 +518,10 @@ impl Amm for CloneInterface {
     fn get_accounts_len(&self) -> usize {
         32 // Default to a near whole legacy transaction to penalize no implementation
     }
+
+    fn requires_update_for_reserve_mints(&self) -> bool {
+        true
+    }
 }
 
 #[derive(Debug, Error)]
@@ -486,4 +537,7 @@ pub enum CloneInterfaceError {
 
     #[error("Type conversion failed for {0}")]
     TypeConversionFailed(String),
+
+    #[error("Oracle is outdated, {0} vs {1}")]
+    OracleOutdated(u64, u64),
 }
