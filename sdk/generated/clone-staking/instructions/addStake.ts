@@ -6,8 +6,9 @@
  */
 
 import * as splToken from '@solana/spl-token'
-import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
+import * as beet from '@metaplex-foundation/beet'
+import * as beetSolana from '@metaplex-foundation/beet-solana'
 
 /**
  * @category Instructions
@@ -15,6 +16,7 @@ import * as web3 from '@solana/web3.js'
  * @category generated
  */
 export type AddStakeInstructionArgs = {
+  user: web3.PublicKey
   amount: beet.bignum
 }
 /**
@@ -29,6 +31,7 @@ export const addStakeStruct = new beet.BeetArgsStruct<
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
+    ['user', beetSolana.publicKey],
     ['amount', beet.u64],
   ],
   'AddStakeInstructionArgs'
@@ -36,23 +39,23 @@ export const addStakeStruct = new beet.BeetArgsStruct<
 /**
  * Accounts required by the _addStake_ instruction
  *
- * @property [_writable_, **signer**] user
+ * @property [_writable_, **signer**] payer
  * @property [_writable_] userAccount
  * @property [] cloneStaking
  * @property [] clnTokenMint
  * @property [_writable_] clnTokenVault
- * @property [_writable_] userClnTokenAccount
+ * @property [_writable_] payerClnTokenAccount
  * @category Instructions
  * @category AddStake
  * @category generated
  */
 export type AddStakeInstructionAccounts = {
-  user: web3.PublicKey
+  payer: web3.PublicKey
   userAccount: web3.PublicKey
   cloneStaking: web3.PublicKey
   clnTokenMint: web3.PublicKey
   clnTokenVault: web3.PublicKey
-  userClnTokenAccount: web3.PublicKey
+  payerClnTokenAccount: web3.PublicKey
   rent?: web3.PublicKey
   tokenProgram?: web3.PublicKey
   systemProgram?: web3.PublicKey
@@ -84,7 +87,7 @@ export function createAddStakeInstruction(
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.user,
+      pubkey: accounts.payer,
       isWritable: true,
       isSigner: true,
     },
@@ -109,7 +112,7 @@ export function createAddStakeInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.userClnTokenAccount,
+      pubkey: accounts.payerClnTokenAccount,
       isWritable: true,
       isSigner: false,
     },

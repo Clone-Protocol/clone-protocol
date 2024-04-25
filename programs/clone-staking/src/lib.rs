@@ -15,8 +15,8 @@ pub mod clone_staking {
         instructions::initialize::execute(ctx, staking_period_slots)
     }
 
-    pub fn add_stake(ctx: Context<AddStake>, amount: u64) -> Result<()> {
-        instructions::add_stake::execute(ctx, amount)
+    pub fn add_stake(ctx: Context<AddStake>, user: Pubkey, amount: u64) -> Result<()> {
+        instructions::add_stake::execute(ctx, user, amount)
     }
 
     pub fn withdraw_stake(ctx: Context<WithdrawStake>, amount: u64) -> Result<()> {

@@ -11,6 +11,7 @@ import {
   createInitializeMintInstruction,
   createMintToCheckedInstruction,
   Account,
+  getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 import { PublicKey, Transaction, SystemProgram } from "@solana/web3.js";
 import { assert } from "chai";
@@ -131,12 +132,12 @@ describe("tests", async () => {
     [Buffer.from("clone-staking")],
     cloneStakingProgramId
   );
-  const clnTokenVault = await getAssociatedTokenAddress(
+  const clnTokenVault = getAssociatedTokenAddressSync(
     clnTokenMint.publicKey,
     cloneStakingAddress,
     true
   );
-  const userClnTokenAddress = await getAssociatedTokenAddress(
+  const userClnTokenAddress = getAssociatedTokenAddressSync(
     clnTokenMint.publicKey,
     walletPubkey
   );
@@ -214,18 +215,18 @@ describe("tests", async () => {
       ),
       CloneStaking.createAddStakeInstruction(
         {
-          user: provider.publicKey!,
+          payer: provider.publicKey!,
           userAccount: userStakingAddress,
           cloneStaking: cloneStakingAddress,
           clnTokenMint: clnTokenMint.publicKey,
           clnTokenVault: clnTokenVault,
-          userClnTokenAccount: userClnTokenAddress,
+          payerClnTokenAccount: userClnTokenAddress,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: anchor.web3.SystemProgram.programId,
         },
         {
-          amount: tier0.minStakeRequirement,
+          user: provider.publicKey!, amount: tier0.minStakeRequirement,
         }
       )
     );
@@ -1829,7 +1830,6 @@ describe("tests", async () => {
     );
 
     let tx = await provider.sendAndConfirm(new Transaction().add(buyIx));
-    console.log("TX:", tx);
 
     // Change pool parameters to allow unhealthy comet position
     await cloneClient.updatePoolParameters({
