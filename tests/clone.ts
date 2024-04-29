@@ -226,7 +226,8 @@ describe("tests", async () => {
           systemProgram: anchor.web3.SystemProgram.programId,
         },
         {
-          user: provider.publicKey!, amount: tier0.minStakeRequirement,
+          user: provider.publicKey!,
+          amount: tier0.minStakeRequirement,
         }
       )
     );
@@ -1497,6 +1498,11 @@ describe("tests", async () => {
   });
 
   it("withdraw all staked CLN", async () => {
+    let startingUserClnBalance = await getAccount(
+      provider.connection,
+      userClnTokenAddress
+    );
+
     let userStakingAccount = await CloneStaking.User.fromAccountAddress(
       provider.connection,
       userStakingAddress
@@ -1529,12 +1535,60 @@ describe("tests", async () => {
         )
       )
     );
+    let userClnBalance = await getAccount(
+      provider.connection,
+      userClnTokenAddress
+    );
 
-    userStakingAccount = await CloneStaking.User.fromAccountAddress(
+    assert.equal(
+      Number(startingUserClnBalance.amount) +
+        Number(userStakingAccount.stakedTokens),
+      Number(userClnBalance.amount),
+      "withdrawal failed"
+    );
+
+    let accountExists = true;
+    try {
+      await CloneStaking.User.fromAccountAddress(
+        provider.connection,
+        userStakingAddress
+      );
+    } catch {
+      accountExists = false;
+    }
+    assert.isFalse(accountExists, "account should not exist.");
+
+    // Reinitialize staked account:
+    await provider.sendAndConfirm(
+      new Transaction().add(
+        CloneStaking.createAddStakeInstruction(
+          {
+            payer: provider.publicKey!,
+            userAccount: userStakingAddress,
+            cloneStaking: cloneStakingAddress,
+            clnTokenMint: clnTokenMint.publicKey,
+            clnTokenVault: clnTokenVault,
+            payerClnTokenAccount: userClnTokenAddress,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: anchor.web3.SystemProgram.programId,
+          },
+          {
+            user: provider.publicKey!,
+            amount: userStakingAccount.stakedTokens,
+          }
+        )
+      )
+    );
+
+    const reInitUserStakingAccount = await CloneStaking.User.fromAccountAddress(
       provider.connection,
       userStakingAddress
     );
-    assert.equal(Number(userStakingAccount.stakedTokens), 0);
+
+    assert.equal(
+      reInitUserStakingAccount.stakedTokens.toString(),
+      userStakingAccount.stakedTokens.toString()
+    );
   });
 
   it("wrap assets and unwrap onassets", async () => {
@@ -1812,7 +1866,10 @@ describe("tests", async () => {
       fromScale(oracle.price, oracle.expo),
       collateral
     );
-    let remainingAccounts = [oracles.oracles[collateral.oracleInfoIndex].address, oracles.oracles[pool.assetInfo.oracleInfoIndex].address]
+    let remainingAccounts = [
+      oracles.oracles[collateral.oracleInfoIndex].address,
+      oracles.oracles[pool.assetInfo.oracleInfoIndex].address,
+    ];
     // Buy via specified onasset for output
     let buyIx = cloneClient.swapInstruction(
       poolIndex,
@@ -2053,8 +2110,10 @@ describe("tests", async () => {
       fromScale(oracle.price, oracle.expo),
       cloneClient.clone.collateral
     );
-    let collateralOracleAddress = oracles.oracles[cloneClient.clone.collateral.oracleInfoIndex].address
-    let poolOracleAddress = oracles.oracles[pool.assetInfo.oracleInfoIndex].address
+    let collateralOracleAddress =
+      oracles.oracles[cloneClient.clone.collateral.oracleInfoIndex].address;
+    let poolOracleAddress =
+      oracles.oracles[pool.assetInfo.oracleInfoIndex].address;
     // Buy via specified onasset for output
     let buyIx = cloneClient.swapInstruction(
       poolIndex,
@@ -2073,9 +2132,7 @@ describe("tests", async () => {
 
     let errorOccured = false;
     try {
-      await provider.sendAndConfirm(
-        new Transaction().add(buyIx)
-      );
+      await provider.sendAndConfirm(new Transaction().add(buyIx));
     } catch (error) {
       errorOccured = true;
     }
