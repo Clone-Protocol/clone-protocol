@@ -80,5 +80,9 @@ pub fn execute(ctx: Context<WithdrawStake>, amount: u64) -> Result<()> {
         .checked_sub(amount)
         .ok_or(error!(CloneStakingError::CheckedMathError))?;
 
+    if user_account.staked_tokens == 0 {
+        user_account.close(ctx.accounts.user.to_account_info().clone())?;
+    }
+
     Ok(())
 }
