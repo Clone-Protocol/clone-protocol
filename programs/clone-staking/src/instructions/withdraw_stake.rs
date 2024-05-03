@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::states::*;
 use crate::{CLONE_STAKING_SEED, USER_SEED};
 use anchor_lang::prelude::*;
@@ -44,6 +45,7 @@ pub fn execute(ctx: Context<WithdrawStake>, amount: u64) -> Result<()> {
     let current_slot = Clock::get()?.slot;
     let user_account = &mut ctx.accounts.user_account;
     let clone_staking = &ctx.accounts.clone_staking;
+    let previous_amount = user_account.staked_tokens;
 
     require!(
         current_slot >= user_account.min_slot_withdrawal,
@@ -79,6 +81,14 @@ pub fn execute(ctx: Context<WithdrawStake>, amount: u64) -> Result<()> {
         .staked_tokens
         .checked_sub(amount)
         .ok_or(error!(CloneStakingError::CheckedMathError))?;
+
+    emit!(StakingEvent {
+        user_address: ctx.accounts.user.key(),
+        amount: user_account.staked_tokens,
+        previous_amount,
+        slot: current_slot,
+        min_slot_withdrawal: user_account.min_slot_withdrawal
+    });
 
     if user_account.staked_tokens == 0 {
         user_account.close(ctx.accounts.user.to_account_info().clone())?;

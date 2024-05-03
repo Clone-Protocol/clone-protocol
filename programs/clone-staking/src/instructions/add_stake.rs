@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::events::*;
 use crate::states::*;
 use crate::CLONE_STAKING_SEED;
 use anchor_lang::prelude::*;
@@ -44,10 +45,13 @@ pub struct AddStake<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<AddStake>, _user: Pubkey, amount: u64) -> Result<()> {
+pub fn execute(ctx: Context<AddStake>, user: Pubkey, amount: u64) -> Result<()> {
     // Initialize user account if needed.
     let user_account = &mut ctx.accounts.user_account;
     let clone_staking = &ctx.accounts.clone_staking;
+
+    let current_slot = Clock::get()?.slot;
+    let previous_amount = user_account.staked_tokens;
 
     if amount > 0 {
         // Transfer cln from payer to vault
@@ -70,11 +74,18 @@ pub fn execute(ctx: Context<AddStake>, _user: Pubkey, amount: u64) -> Result<()>
             .checked_add(amount)
             .ok_or(error!(CloneStakingError::CheckedMathError))?;
 
-        let current_slot = Clock::get()?.slot;
         user_account.min_slot_withdrawal = current_slot
             .checked_add(clone_staking.staking_period_slots)
             .ok_or(error!(CloneStakingError::CheckedMathError))?;
     }
+
+    emit!(StakingEvent {
+        user_address: user,
+        amount: user_account.staked_tokens,
+        previous_amount,
+        slot: current_slot,
+        min_slot_withdrawal: user_account.min_slot_withdrawal
+    });
 
     Ok(())
 }
