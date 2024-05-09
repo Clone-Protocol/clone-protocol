@@ -26,7 +26,7 @@ pub struct UpdateStakingParams<'info> {
     #[account(
         mut,
         seeds = [CLONE_STAKING_SEED.as_ref()],
-        bump,
+        bump = clone_staking.bump,
         has_one = admin
     )]
     pub clone_staking: Account<'info, CloneStaking>,

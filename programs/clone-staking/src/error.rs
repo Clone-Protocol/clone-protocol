@@ -2,6 +2,9 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum CloneStakingError {
+    #[msg("Cannot withdraw before the vesting period starts!")]
+    CannotWithdrawBeforeVestingStarts,
+
     #[msg("Cannot withdraw before the staking period ends!")]
     CannotWithdrawBeforeStakingPeriod,
 

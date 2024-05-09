@@ -8,4 +8,6 @@ pub struct StakingEvent {
     pub previous_amount: u64,
     pub slot: u64,
     pub min_slot_withdrawal: u64,
+    pub vesting_allocation_amount: u64,
+    pub vesting_amount_withdrawn: u64,
 }

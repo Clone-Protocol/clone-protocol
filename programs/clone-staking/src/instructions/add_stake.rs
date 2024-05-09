@@ -22,7 +22,7 @@ pub struct AddStake<'info> {
     pub user_account: Account<'info, User>,
     #[account(
         seeds = [CLONE_STAKING_SEED.as_ref()],
-        bump,
+        bump = clone_staking.bump,
         has_one = cln_token_mint,
         has_one = cln_token_vault,
     )]
@@ -45,11 +45,27 @@ pub struct AddStake<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<AddStake>, user: Pubkey, amount: u64) -> Result<()> {
+pub fn execute(
+    ctx: Context<AddStake>,
+    user: Pubkey,
+    amount: u64,
+    vesting_meta: Option<VestingMeta>,
+) -> Result<()> {
     // Initialize user account if needed.
     let user_account = &mut ctx.accounts.user_account;
-    let clone_staking = &ctx.accounts.clone_staking;
+    let is_admin_signer = ctx
+        .accounts
+        .payer
+        .key()
+        .eq(&ctx.accounts.clone_staking.admin);
 
+    if is_admin_signer {
+        if let Some(meta) = vesting_meta {
+            user_account.vesting = meta;
+        }
+    }
+
+    let clone_staking = &ctx.accounts.clone_staking;
     let current_slot = Clock::get()?.slot;
     let previous_amount = user_account.staked_tokens;
 
@@ -84,7 +100,9 @@ pub fn execute(ctx: Context<AddStake>, user: Pubkey, amount: u64) -> Result<()> 
         amount: user_account.staked_tokens,
         previous_amount,
         slot: current_slot,
-        min_slot_withdrawal: user_account.min_slot_withdrawal
+        min_slot_withdrawal: user_account.min_slot_withdrawal,
+        vesting_allocation_amount: user_account.vesting.allocation_amount,
+        vesting_amount_withdrawn: user_account.vesting.amount_withdrawn
     });
 
     Ok(())

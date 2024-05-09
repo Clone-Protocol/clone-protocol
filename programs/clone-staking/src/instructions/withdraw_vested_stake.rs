@@ -7,7 +7,7 @@ use anchor_spl::token::*;
 
 #[derive(Accounts)]
 #[instruction(amount: u64)]
-pub struct WithdrawStake<'info> {
+pub struct WithdrawVestedStake<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     #[account(
@@ -41,7 +41,7 @@ pub struct WithdrawStake<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(ctx: Context<WithdrawStake>, amount: u64) -> Result<()> {
+pub fn execute(ctx: Context<WithdrawVestedStake>, amount: u64) -> Result<()> {
     let current_slot = Clock::get()?.slot;
     let user_account = &mut ctx.accounts.user_account;
     let clone_staking = &ctx.accounts.clone_staking;
@@ -52,20 +52,11 @@ pub fn execute(ctx: Context<WithdrawStake>, amount: u64) -> Result<()> {
         CloneStakingError::CannotWithdrawBeforeVestingStarts
     );
 
-    require!(
-        current_slot >= user_account.min_slot_withdrawal,
-        CloneStakingError::CannotWithdrawBeforeStakingPeriod
-    );
-
-    let amount_left_to_vest = user_account
-        .vesting
-        .allocation_amount
-        .checked_sub(user_account.vesting.amount_withdrawn)
-        .ok_or(error!(CloneStakingError::CheckedMathError))?;
-
-    let max_withdrawable_amount = user_account.staked_tokens
-        .checked_sub(amount_left_to_vest)
-        .ok_or(error!(CloneStakingError::CheckedMathError))?;
+    let max_withdrawable_amount = clone_staking.calculate_withdrawable_stake_from_vesting(
+        &user_account,
+        current_slot,
+        ctx.accounts.cln_token_mint.decimals.into(),
+    )?;
 
     require!(
         amount > 0 && amount <= max_withdrawable_amount,
@@ -92,10 +83,17 @@ pub fn execute(ctx: Context<WithdrawStake>, amount: u64) -> Result<()> {
         CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds),
         amount,
     )?;
+
     // Update user account
     user_account.staked_tokens = user_account
         .staked_tokens
         .checked_sub(amount)
+        .ok_or(error!(CloneStakingError::CheckedMathError))?;
+
+    user_account.vesting.amount_withdrawn = user_account
+        .vesting
+        .amount_withdrawn
+        .checked_add(amount)
         .ok_or(error!(CloneStakingError::CheckedMathError))?;
 
     emit!(StakingEvent {
