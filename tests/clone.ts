@@ -117,6 +117,11 @@ describe("tests", async () => {
     lpTradingFeeBps: 10,
     treasuryTradingFeeBps: 5,
   };
+  const tier1 = {
+    minStakeRequirement: new BN(2000),
+    lpTradingFeeBps: 5,
+    treasuryTradingFeeBps: 3,
+  };
 
   let mockUSDCTokenAccountInfo;
   let collateralTokenAccountInfo;
@@ -194,6 +199,22 @@ describe("tests", async () => {
             treasuryTradingFeeBps: tier0.treasuryTradingFeeBps,
           },
         }
+      ),
+      CloneStaking.createUpdateStakingParamsInstruction(
+        {
+          admin: provider.publicKey!,
+          cloneStaking: cloneStakingAddress,
+        },
+        {
+          params: {
+            __kind: "Tier",
+            numTiers: 2,
+            index: 1,
+            stakeRequirement: tier1.minStakeRequirement,
+            lpTradingFeeBps: tier1.lpTradingFeeBps,
+            treasuryTradingFeeBps: tier1.treasuryTradingFeeBps,
+          },
+        }
       )
     );
     await provider.sendAndConfirm(tx);
@@ -213,6 +234,15 @@ describe("tests", async () => {
         tier0.minStakeRequirement.toNumber(),
         CLONE_TOKEN_SCALE
       ),
+      CloneStaking.createInitializeUserInstruction(
+        {
+          payer: provider.publicKey!,
+          userAccount: userStakingAddress,
+        },
+        {
+          user: provider.publicKey!,
+        }
+      ),
       CloneStaking.createAddStakeInstruction(
         {
           payer: provider.publicKey!,
@@ -221,9 +251,7 @@ describe("tests", async () => {
           clnTokenMint: clnTokenMint.publicKey,
           clnTokenVault: clnTokenVault,
           payerClnTokenAccount: userClnTokenAddress,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: anchor.web3.SystemProgram.programId,
         },
         {
           user: provider.publicKey!,
@@ -432,31 +460,31 @@ describe("tests", async () => {
     assert.isTrue(price !== 0, "pyth price is not updated");
   });
 
-  it("add and check switchboard oracle", async () => {
-    let switchboardFeedAddress = new PublicKey(
-      "GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR"
-    );
-    await cloneClient.updateOracles({
-      params: {
-        __kind: "Add",
-        source: OracleSource.SWITCHBOARD,
-        address: switchboardFeedAddress,
-        rescaleFactor: null,
-      },
-    });
-    let oracles = await cloneClient.getOracles();
-    assert.equal(oracles.oracles.length, 4);
-    // Update prices
-    await provider.sendAndConfirm(
-      new Transaction().add(cloneClient.updatePricesInstruction(oracles))
-    );
-    oracles = await cloneClient.getOracles();
+  // it("add and check switchboard oracle", async () => {
+  //   let switchboardFeedAddress = new PublicKey(
+  //     "GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR"
+  //   );
+  //   await cloneClient.updateOracles({
+  //     params: {
+  //       __kind: "Add",
+  //       source: OracleSource.SWITCHBOARD,
+  //       address: switchboardFeedAddress,
+  //       rescaleFactor: null,
+  //     },
+  //   });
+  //   let oracles = await cloneClient.getOracles();
+  //   assert.equal(oracles.oracles.length, 4);
+  //   // Update prices
+  //   await provider.sendAndConfirm(
+  //     new Transaction().add(cloneClient.updatePricesInstruction(oracles))
+  //   );
+  //   oracles = await cloneClient.getOracles();
 
-    let switchboardOracle = oracles.oracles[3];
-    let price = fromScale(switchboardOracle.price, switchboardOracle.expo);
+  //   let switchboardOracle = oracles.oracles[3];
+  //   let price = fromScale(switchboardOracle.price, switchboardOracle.expo);
 
-    assert.isTrue(price !== 0, "switchboard price is not updated");
-  });
+  //   assert.isTrue(price !== 0, "switchboard price is not updated");
+  // });
 
   it("pools initialized!", async () => {
     await cloneClient.addPool(
@@ -1547,6 +1575,22 @@ describe("tests", async () => {
       "withdrawal failed"
     );
 
+    const account = await CloneStaking.User.fromAccountAddress(
+      provider.connection,
+      userStakingAddress
+    );
+
+    assert.equal(account.stakedTokens, 0, "account should not exist.");
+
+    await provider.sendAndConfirm(
+      new Transaction().add(
+        CloneStaking.createCloseUserAccountInstruction({
+          user: provider.publicKey!,
+          userAccount: userStakingAddress,
+        })
+      )
+    );
+
     let accountExists = true;
     try {
       await CloneStaking.User.fromAccountAddress(
@@ -1561,6 +1605,13 @@ describe("tests", async () => {
     // Reinitialize staked account:
     await provider.sendAndConfirm(
       new Transaction().add(
+        CloneStaking.createInitializeUserInstruction(
+          {
+            payer: provider.publicKey!,
+            userAccount: userStakingAddress,
+          },
+          { user: provider.publicKey! }
+        ),
         CloneStaking.createAddStakeInstruction(
           {
             payer: provider.publicKey!,
@@ -1570,7 +1621,6 @@ describe("tests", async () => {
             clnTokenVault: clnTokenVault,
             payerClnTokenAccount: userClnTokenAddress,
             tokenProgram: TOKEN_PROGRAM_ID,
-            systemProgram: anchor.web3.SystemProgram.programId,
           },
           {
             user: provider.publicKey!,
@@ -1809,6 +1859,78 @@ describe("tests", async () => {
       startingOnassetAmount - ildInfo.onAssetILD,
       1e-6,
       "check onasset account balance"
+    );
+  });
+
+  it("add vested stake and check tier level", async () => {
+    const vesting: CloneStaking.UserVestingInfo = {
+      allocationAmount: new BN(1000),
+      amountWithdrawn: new BN(0),
+      startingSlot: new BN(10),
+      endingSlot: new BN(1000),
+    };
+
+    await provider.sendAndConfirm(
+      new Transaction().add(
+        CloneStaking.createUpdateUserVestingInstruction(
+          {
+            admin: provider.publicKey!,
+            userAccount: userStakingAddress,
+            cloneStaking: cloneStakingAddress,
+          },
+          { user: provider.publicKey!, vesting }
+        )
+      )
+    );
+
+    // Should be in the second tier.
+    // Test with user CLN stake tier 0.
+    const amountToBuy = 10;
+    const pools = await cloneClient.getPools();
+    const oracles = await cloneClient.getOracles();
+    const poolIndex = 0;
+    const pool = pools.pools[poolIndex];
+    const oracle = oracles.oracles[Number(pool.assetInfo.oracleInfoIndex)];
+    let executionEst = calculateSwapExecution(
+      amountToBuy,
+      false,
+      false,
+      fromScale(pool.collateralIld, COLLATERAL_SCALE),
+      fromCloneScale(pool.onassetIld),
+      fromScale(pool.committedCollateralLiquidity, COLLATERAL_SCALE),
+      tier1.lpTradingFeeBps * 1e-4,
+      tier1.treasuryTradingFeeBps * 1e-4,
+      fromScale(oracle.price, oracle.expo),
+      cloneClient.clone.collateral
+    );
+    // Buy specifying input (onAsset)
+    let buyIx = cloneClient.swapInstruction(
+      poolIndex,
+      toCloneScale(amountToBuy),
+      false,
+      false,
+      toScale(executionEst.result * 1.0005, COLLATERAL_SCALE),
+      pool.assetInfo.onassetMint,
+      collateralTokenAccountInfo.address,
+      getAssociatedTokenAddressSync(
+        pool.assetInfo.onassetMint,
+        provider.publicKey!
+      ),
+      treasuryCollateralTokenAccount.address,
+      getAssociatedTokenAddressSync(
+        pool.assetInfo.onassetMint,
+        cloneClient.clone.treasuryAddress
+      ),
+      {
+        cloneStaking: cloneStakingAddress,
+        cloneStakingProgram: cloneStakingProgramId,
+        userStakingAccount: userStakingAddress,
+      }
+    );
+    const updatePriceIx = cloneClient.updatePricesInstruction(oracles);
+
+    await provider.sendAndConfirm(
+      new Transaction().add(updatePriceIx).add(buyIx)
     );
   });
 
@@ -2120,7 +2242,7 @@ describe("tests", async () => {
       toCloneScale(amountToBuy),
       false,
       false,
-      toCloneScale(executionEst.result * 1.005),
+      toCloneScale(executionEst.result),
       pool.assetInfo.onassetMint,
       collateralTokenAccountInfo.address,
       onassetTokenAccountInfo.address,

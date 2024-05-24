@@ -137,7 +137,7 @@ pub fn execute(
             .as_ref()
             .ok_or(error!(CloneError::ExpectedAccountNotFound))?;
         if let Some((lp_fees, treasury_fees)) =
-            clone_staking.get_tier_fees(user_staking_account.staked_tokens)
+            clone_staking.get_tier_fees(&user_staking_account)?
         {
             override_liquidity_trading_fee = Some(to_bps_decimal!(lp_fees));
             override_treasury_trading_fee = Some(to_bps_decimal!(treasury_fees));

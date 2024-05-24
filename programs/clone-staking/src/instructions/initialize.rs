@@ -32,11 +32,7 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn execute(
-    ctx: Context<Initialize>,
-    staking_period_slots: u64,
-    vesting_info: VestingInfo,
-) -> Result<()> {
+pub fn execute(ctx: Context<Initialize>, staking_period_slots: u64) -> Result<()> {
     let clone_staking = &mut ctx.accounts.clone_staking;
     clone_staking.admin = ctx.accounts.admin.key();
     clone_staking.cln_token_mint = ctx.accounts.cln_token_mint.key();
@@ -47,7 +43,6 @@ pub fn execute(
         .get("clone_staking")
         .ok_or(error!(CloneStakingError::BumpNotFound))?;
     clone_staking.tiers = [Tier::default(); MAX_TIERS];
-    clone_staking.vesting_info = vesting_info;
 
     Ok(())
 }

@@ -6,86 +6,84 @@
  */
 
 import * as splToken from '@solana/spl-token'
-import * as web3 from '@solana/web3.js'
 import * as beet from '@metaplex-foundation/beet'
-import * as beetSolana from '@metaplex-foundation/beet-solana'
+import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
- * @category AddStake
+ * @category WithdrawVestedStake
  * @category generated
  */
-export type AddStakeInstructionArgs = {
-  user: web3.PublicKey
+export type WithdrawVestedStakeInstructionArgs = {
   amount: beet.bignum
 }
 /**
  * @category Instructions
- * @category AddStake
+ * @category WithdrawVestedStake
  * @category generated
  */
-export const addStakeStruct = new beet.BeetArgsStruct<
-  AddStakeInstructionArgs & {
+export const withdrawVestedStakeStruct = new beet.BeetArgsStruct<
+  WithdrawVestedStakeInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
-    ['user', beetSolana.publicKey],
     ['amount', beet.u64],
   ],
-  'AddStakeInstructionArgs'
+  'WithdrawVestedStakeInstructionArgs'
 )
 /**
- * Accounts required by the _addStake_ instruction
+ * Accounts required by the _withdrawVestedStake_ instruction
  *
- * @property [_writable_, **signer**] payer
+ * @property [_writable_, **signer**] user
  * @property [_writable_] userAccount
  * @property [] cloneStaking
  * @property [] clnTokenMint
  * @property [_writable_] clnTokenVault
- * @property [_writable_] payerClnTokenAccount
+ * @property [_writable_] userClnTokenAccount
  * @category Instructions
- * @category AddStake
+ * @category WithdrawVestedStake
  * @category generated
  */
-export type AddStakeInstructionAccounts = {
-  payer: web3.PublicKey
+export type WithdrawVestedStakeInstructionAccounts = {
+  user: web3.PublicKey
   userAccount: web3.PublicKey
   cloneStaking: web3.PublicKey
   clnTokenMint: web3.PublicKey
   clnTokenVault: web3.PublicKey
-  payerClnTokenAccount: web3.PublicKey
+  userClnTokenAccount: web3.PublicKey
   tokenProgram?: web3.PublicKey
+  systemProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const addStakeInstructionDiscriminator = [
-  58, 135, 189, 105, 160, 120, 165, 224,
+export const withdrawVestedStakeInstructionDiscriminator = [
+  224, 1, 32, 55, 116, 2, 116, 78,
 ]
 
 /**
- * Creates a _AddStake_ instruction.
+ * Creates a _WithdrawVestedStake_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category AddStake
+ * @category WithdrawVestedStake
  * @category generated
  */
-export function createAddStakeInstruction(
-  accounts: AddStakeInstructionAccounts,
-  args: AddStakeInstructionArgs,
+export function createWithdrawVestedStakeInstruction(
+  accounts: WithdrawVestedStakeInstructionAccounts,
+  args: WithdrawVestedStakeInstructionArgs,
   programId = new web3.PublicKey('42L6bfEYntcmqVcFvHywitcaHhXF9rjYq9C9p9iWQ2X2')
 ) {
-  const [data] = addStakeStruct.serialize({
-    instructionDiscriminator: addStakeInstructionDiscriminator,
+  const [data] = withdrawVestedStakeStruct.serialize({
+    instructionDiscriminator: withdrawVestedStakeInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.payer,
+      pubkey: accounts.user,
       isWritable: true,
       isSigner: true,
     },
@@ -110,12 +108,17 @@ export function createAddStakeInstruction(
       isSigner: false,
     },
     {
-      pubkey: accounts.payerClnTokenAccount,
+      pubkey: accounts.userClnTokenAccount,
       isWritable: true,
       isSigner: false,
     },
     {
       pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.systemProgram ?? web3.SystemProgram.programId,
       isWritable: false,
       isSigner: false,
     },

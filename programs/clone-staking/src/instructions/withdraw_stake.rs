@@ -13,12 +13,12 @@ pub struct WithdrawStake<'info> {
     #[account(
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
-        bump = clone_staking.bump,
+        bump,
     )]
     pub user_account: Account<'info, User>,
     #[account(
         seeds = [CLONE_STAKING_SEED.as_ref()],
-        bump,
+        bump = clone_staking.bump,
         has_one = cln_token_mint,
         has_one = cln_token_vault,
 
@@ -48,27 +48,12 @@ pub fn execute(ctx: Context<WithdrawStake>, amount: u64) -> Result<()> {
     let previous_amount = user_account.staked_tokens;
 
     require!(
-        current_slot >= clone_staking.vesting_info.starting_slot,
-        CloneStakingError::CannotWithdrawBeforeVestingStarts
-    );
-
-    require!(
         current_slot >= user_account.min_slot_withdrawal,
         CloneStakingError::CannotWithdrawBeforeStakingPeriod
     );
 
-    let amount_left_to_vest = user_account
-        .vesting
-        .allocation_amount
-        .checked_sub(user_account.vesting.amount_withdrawn)
-        .ok_or(error!(CloneStakingError::CheckedMathError))?;
-
-    let max_withdrawable_amount = user_account.staked_tokens
-        .checked_sub(amount_left_to_vest)
-        .ok_or(error!(CloneStakingError::CheckedMathError))?;
-
     require!(
-        amount > 0 && amount <= max_withdrawable_amount,
+        amount > 0 && amount <= user_account.staked_tokens,
         CloneStakingError::InvalidInput
     );
 
@@ -105,12 +90,10 @@ pub fn execute(ctx: Context<WithdrawStake>, amount: u64) -> Result<()> {
         slot: current_slot,
         min_slot_withdrawal: user_account.min_slot_withdrawal,
         vesting_allocation_amount: user_account.vesting.allocation_amount,
-        vesting_amount_withdrawn: user_account.vesting.amount_withdrawn
+        vesting_amount_withdrawn: user_account.vesting.amount_withdrawn,
+        vesting_start_slot: user_account.vesting.starting_slot,
+        vesting_end_slot: user_account.vesting.ending_slot,
     });
-
-    if user_account.staked_tokens == 0 {
-        user_account.close(ctx.accounts.user.to_account_info().clone())?;
-    }
 
     Ok(())
 }

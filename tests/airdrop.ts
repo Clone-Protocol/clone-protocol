@@ -14,6 +14,7 @@ import {
   AddressLookupTableState,
 } from "@solana/web3.js";
 import {
+  createAssociatedTokenAccountIdempotentInstruction,
   createAssociatedTokenAccountInstruction,
   createInitializeMintInstruction,
   createMintToInstruction,
@@ -29,11 +30,14 @@ import {
 } from "solana-bankrun";
 import { BankrunProvider } from "anchor-bankrun";
 import * as Squads from "@sqds/multisig";
-import { Receiver, runAirdrop } from "../scripts/airdrop";
+import { AirdropParams, Receiver, runAirdrop } from "../scripts/airdrop";
 import {
   PROGRAM_ID as CloneStakingProgramId,
   createInitializeInstruction,
+  createInitializeUserInstruction,
   User as ClnStakingUser,
+  CloneStaking,
+  createWithdrawVestedStakeInstruction,
 } from "../sdk/generated/clone-staking";
 import { assert } from "chai";
 
@@ -62,6 +66,15 @@ export const pullAccounts = async (
 describe("airdrop simulation", async () => {
   let context: ProgramTestContext;
   let connection: Connection;
+  let provider: BankrunProvider;
+  let airdropParams: AirdropParams;
+  const solanaRpcUrl =
+    process.env.SOLANA_ENDPOINT_URL ?? "https://api.mainnet-beta.solana.com";
+
+  const cloneStakingAddress = PublicKey.findProgramAddressSync(
+    [Buffer.from("clone-staking")],
+    CloneStakingProgramId
+  )[0];
 
   // Multisig
   const multisigPda = new PublicKey(
@@ -77,25 +90,31 @@ describe("airdrop simulation", async () => {
   // CLN token
   const clnTokenMintKp = Keypair.generate();
   const clnDecimal = 8;
+  const clnStakingVault = getAssociatedTokenAddressSync(
+    clnTokenMintKp.publicKey,
+    cloneStakingAddress,
+    true
+  );
 
   // Airdrop receivers
   const numReceivers = 100;
   const dropValues = [100, 1000, 5000];
+  let airdropReceiversKp: Keypair[] = [];
   const airdropReceivers: Receiver[] = [...Array(numReceivers)].map((_) => {
     const randomIndex = Math.floor(Math.random() * dropValues.length);
+    const kp = Keypair.generate();
+    airdropReceiversKp.push(kp);
     return {
-      address: Keypair.generate().publicKey,
+      address: kp.publicKey,
       amount: Math.floor(dropValues[randomIndex] * Math.pow(10, clnDecimal)),
     };
   });
-  // const airdropReceivers: Receiver[] = [{ address: Keypair.generate().publicKey, amount: 100_00000000}]
 
   // Nonce account keypair
   const nonceAccountAddressKp = Keypair.generate();
-  let addressLookupTableAccount: AddressLookupTableAccount;
 
   before("setup", async function () {
-    connection = new Connection(process.env.SOLANA_ENDPOINT_URL!, "confirmed");
+    connection = new Connection(solanaRpcUrl, "confirmed");
     const accounts = await pullAccounts(
       [
         "SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf",
@@ -108,6 +127,7 @@ describe("airdrop simulation", async () => {
     );
     // Setup bankrun
     context = await startAnchor(".", [], accounts);
+    provider = new BankrunProvider(context);
 
     // Pull squads multisig account and add payer as a member.
     let multisigRaw = (await connection.getAccountInfo(multisigPda))!;
@@ -160,41 +180,7 @@ describe("airdrop simulation", async () => {
     );
     tx.add(createMintAccountIx, createMintIx);
 
-    // Create Multisig CLN vault (its the CLN distributor) and
-    // mint enough CLN for airdrops to the vault
-    const vaultAta = getAssociatedTokenAddressSync(
-      clnTokenMintKp.publicKey,
-      multisigVault,
-      true
-    );
-    const createVaultClnAtaIx = createAssociatedTokenAccountInstruction(
-      context.payer.publicKey,
-      vaultAta,
-      multisigVault,
-      clnTokenMintKp.publicKey
-    );
-    let mintAmount = 0;
-    airdropReceivers.forEach((r) => {
-      mintAmount += r.amount;
-    });
-    const mintClntoVaulIx = createMintToInstruction(
-      clnTokenMintKp.publicKey,
-      vaultAta,
-      context.payer.publicKey,
-      mintAmount
-    );
-    tx.add(createVaultClnAtaIx, mintClntoVaulIx);
-
     // Clone staking vault and initialize the staking program.
-    const cloneStakingAddress = PublicKey.findProgramAddressSync(
-      [Buffer.from("clone-staking")],
-      CloneStakingProgramId
-    )[0];
-    const clnStakingVault = getAssociatedTokenAddressSync(
-      clnTokenMintKp.publicKey,
-      cloneStakingAddress,
-      true
-    );
     const createClnStakingVaultIx = createAssociatedTokenAccountInstruction(
       context.payer.publicKey,
       clnStakingVault,
@@ -212,6 +198,20 @@ describe("airdrop simulation", async () => {
     );
     tx.add(createClnStakingVaultIx, initializeClnStakingIx);
 
+    // Mint CLN tokens directly to the clone staking vault.
+    // IRL we would do this via the multisig.
+    let mintAmount = 0;
+    airdropReceivers.forEach((r) => {
+      mintAmount += r.amount;
+    });
+    const mintClntoVaultIx = createMintToInstruction(
+      clnTokenMintKp.publicKey,
+      clnStakingVault,
+      context.payer.publicKey,
+      mintAmount
+    );
+    tx.add(mintClntoVaultIx);
+
     // Execute setup tx
     let blockhash = (await context.banksClient.getLatestBlockhash(
       "finalized"
@@ -224,72 +224,49 @@ describe("airdrop simulation", async () => {
     await context.banksClient.processTransaction(tx);
 
     let slot = await context.banksClient.getSlot("finalized");
-    // Setup lookup table
-    let [lookupTableInstIx, lookupTableAddress] =
-      AddressLookupTableProgram.createLookupTable({
-        authority: context.payer.publicKey,
-        payer: context.payer.publicKey,
-        recentSlot: slot - BigInt(1),
-      });
+    // Create staking accounts for each user.
+    for (let reciever of airdropReceivers) {
+      const userAccountAddress = PublicKey.findProgramAddressSync(
+        [Buffer.from("user"), reciever.address.toBuffer()],
+        CloneStakingProgramId
+      )[0];
+      let createStakeAccountIx = createInitializeUserInstruction(
+        {
+          payer: context.payer.publicKey,
+          userAccount: userAccountAddress,
+        },
+        { user: reciever.address }
+      );
+      tx = new Transaction().add(createStakeAccountIx);
+      tx.recentBlockhash = (await context.banksClient.getLatestBlockhash(
+        "finalized"
+      ))![0];
+      tx.sign(context.payer);
+      await context.banksClient.processTransaction(tx);
+    }
 
-    tx = new Transaction().add(
-      lookupTableInstIx,
-      AddressLookupTableProgram.extendLookupTable({
-        payer: context.payer.publicKey,
-        authority: context.payer.publicKey,
-        lookupTable: lookupTableAddress,
-        addresses: [
-          context.payer.publicKey,
-          multisigPda,
-          multisigVault,
-          clnTokenMintKp.publicKey,
-          vaultAta,
-          cloneStakingAddress,
-          CloneStakingProgramId,
-          clnStakingVault,
-          nonceAccountAddressKp.publicKey,
-        ],
-      })
-    );
-
-    tx.recentBlockhash = (await context.banksClient.getLatestBlockhash(
-      "finalized"
-    ))![0];
-    tx.sign(context.payer);
-
-    await context.banksClient.processTransaction(tx);
-
-    addressLookupTableAccount = new AddressLookupTableAccount({
-      key: lookupTableAddress,
-      state: AddressLookupTableAccount.deserialize(
-        (await context.banksClient.getAccount(lookupTableAddress))!.data
-      ),
-    });
-    console.log(addressLookupTableAccount);
     context.warpToSlot(slot + BigInt(1));
-  });
 
-  it("run airdrop", async function () {
-    // Run the airdrop script
-    const provider = new BankrunProvider(context);
-    await runAirdrop({
+    airdropParams = {
       provider,
       wallet: provider.wallet,
-      batchSize: 4,
+      batchSize: 6,
       squadsMultisigPda: multisigPda,
       receivers: airdropReceivers,
       cloneStakingProgramId: CloneStakingProgramId,
       clnTokenMint: clnTokenMintKp.publicKey,
       nonceAccountAddress: nonceAccountAddressKp.publicKey,
       vault: multisigVault,
-      //lookupTableAccount: addressLookupTableAccount, // NOTE: Not really worth it, 4 -> 6.
       priorityFeeMicroLamports: 200,
       banksClient: context.banksClient,
-    });
+      startingSlot: 10,
+      endingSlot: 1000,
+    };
   });
 
-  it("execute multisig transactions", async function () {
-    const provider = new BankrunProvider(context);
+  it("run airdrop and execute multisig transactions", async function () {
+    const provider = airdropParams.provider;
+    await runAirdrop(airdropParams);
 
     const multisigAccount = await Squads.accounts.Multisig.fromAccountAddress(
       provider.connection,
@@ -346,10 +323,143 @@ describe("airdrop simulation", async () => {
         provider.connection,
         userAccountAddress
       );
+      assert.equal(userAccount.stakedTokens.toString(), "0");
       assert.equal(
-        userAccount.stakedTokens.toString(),
+        userAccount.vesting.allocationAmount.toString(),
         receiver.amount.toString()
       );
+    }
+  });
+
+  it("create some fuzz test", async () => {
+    // Generate
+    const runTest = async (receiverKp: Keypair, slot: number) => {
+      const userAccountAddress = PublicKey.findProgramAddressSync(
+        [Buffer.from("user"), receiverKp.publicKey.toBuffer()],
+        CloneStakingProgramId
+      )[0];
+      const userStakingAccount = await ClnStakingUser.fromAccountAddress(
+        provider.connection,
+        userAccountAddress
+      );
+
+      const ratio = Math.min(
+        1,
+        (slot - airdropParams.startingSlot) /
+          (airdropParams.endingSlot - airdropParams.startingSlot)
+      );
+      const amountToWithdraw =
+        Math.floor(
+          Number(userStakingAccount.vesting.allocationAmount) * ratio
+        ) - Number(userStakingAccount.vesting.amountWithdrawn);
+      console.log("SLOT:", slot, "WITHDRAW:", amountToWithdraw);
+      console.log(
+        "VESTING amount, withdrawn:",
+        userStakingAccount.vesting.allocationAmount.toString(),
+        userStakingAccount.vesting.amountWithdrawn.toString()
+      );
+
+      const userClnTokenAccount = getAssociatedTokenAddressSync(
+        clnTokenMintKp.publicKey,
+        receiverKp.publicKey,
+        true
+      );
+
+      const tx = new Transaction().add(
+        createAssociatedTokenAccountIdempotentInstruction(
+          provider.wallet.publicKey,
+          userClnTokenAccount,
+          receiverKp.publicKey,
+          clnTokenMintKp.publicKey
+        ),
+        createWithdrawVestedStakeInstruction(
+          {
+            user: receiverKp.publicKey,
+            userAccount: userAccountAddress,
+            cloneStaking: cloneStakingAddress,
+            clnTokenMint: clnTokenMintKp.publicKey,
+            clnTokenVault: clnStakingVault,
+            userClnTokenAccount,
+          },
+          {
+            amount: amountToWithdraw,
+          },
+          CloneStakingProgramId
+        )
+      );
+
+      const simSlot = await context.banksClient.getSlot("finalized");
+      if (simSlot < slot) {
+        console.log(`Warping from ${simSlot} -> ${slot}`);
+        for (let i = Number(simSlot) + 1; i <= slot; i++) {
+          context.warpToSlot(BigInt(i));
+        }
+      }
+
+      let blockhash = (await context.banksClient.getLatestBlockhash(
+        "finalized"
+      ))![0];
+      tx.recentBlockhash = blockhash;
+      tx.sign(context.payer);
+      tx.partialSign(receiverKp);
+
+      let transactionSucceeded = false;
+      try {
+        await context.banksClient.processTransaction(tx);
+        transactionSucceeded = true;
+      } catch (e) {
+        console.log(e);
+      }
+
+      const updatedUserStakingAccount = await ClnStakingUser.fromAccountAddress(
+        provider.connection,
+        userAccountAddress
+      );
+
+      if (slot < airdropParams.startingSlot || amountToWithdraw === 0) {
+        assert.isFalse(transactionSucceeded);
+        return;
+      } else {
+        assert.isTrue(transactionSucceeded);
+      }
+
+      assert.equal(
+        Number(updatedUserStakingAccount.vesting.amountWithdrawn) -
+          Number(userStakingAccount.vesting.amountWithdrawn),
+        amountToWithdraw
+      );
+
+      // Should read and check account balance here.
+    };
+
+    const nTests = 1024;
+    const randomIndex = (N: number, start: number = 0) => {
+      return start + Math.floor(Math.random() * N);
+    };
+    const randomChoice = (arr: any[]) => {
+      return arr[randomIndex(arr.length)];
+    };
+
+    let slots = [...Array(nTests)].map(() =>
+      randomIndex(
+        airdropParams.endingSlot - airdropParams.startingSlot,
+        airdropParams.startingSlot
+      )
+    );
+    slots.push(
+      ...[
+        airdropParams.startingSlot,
+        airdropParams.endingSlot,
+        airdropParams.startingSlot - 1,
+        airdropParams.endingSlot + 1,
+      ]
+    );
+    slots.sort((a, b) => a - b);
+    console.log("SLOTS:", slots);
+
+    for (const slot of slots) {
+      const receiverKp = randomChoice(airdropReceiversKp);
+      await runTest(receiverKp, slot);
     }
   });
 });

@@ -5,87 +5,80 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
 import * as web3 from '@solana/web3.js'
-import * as beet from '@metaplex-foundation/beet'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
+import * as beet from '@metaplex-foundation/beet'
+import { UserVestingInfo, userVestingInfoBeet } from '../types/UserVestingInfo'
 
 /**
  * @category Instructions
- * @category AddStake
+ * @category UpdateUserVesting
  * @category generated
  */
-export type AddStakeInstructionArgs = {
+export type UpdateUserVestingInstructionArgs = {
   user: web3.PublicKey
-  amount: beet.bignum
+  vesting: UserVestingInfo
 }
 /**
  * @category Instructions
- * @category AddStake
+ * @category UpdateUserVesting
  * @category generated
  */
-export const addStakeStruct = new beet.BeetArgsStruct<
-  AddStakeInstructionArgs & {
+export const updateUserVestingStruct = new beet.BeetArgsStruct<
+  UpdateUserVestingInstructionArgs & {
     instructionDiscriminator: number[] /* size: 8 */
   }
 >(
   [
     ['instructionDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['user', beetSolana.publicKey],
-    ['amount', beet.u64],
+    ['vesting', userVestingInfoBeet],
   ],
-  'AddStakeInstructionArgs'
+  'UpdateUserVestingInstructionArgs'
 )
 /**
- * Accounts required by the _addStake_ instruction
+ * Accounts required by the _updateUserVesting_ instruction
  *
- * @property [_writable_, **signer**] payer
+ * @property [_writable_, **signer**] admin
  * @property [_writable_] userAccount
  * @property [] cloneStaking
- * @property [] clnTokenMint
- * @property [_writable_] clnTokenVault
- * @property [_writable_] payerClnTokenAccount
  * @category Instructions
- * @category AddStake
+ * @category UpdateUserVesting
  * @category generated
  */
-export type AddStakeInstructionAccounts = {
-  payer: web3.PublicKey
+export type UpdateUserVestingInstructionAccounts = {
+  admin: web3.PublicKey
   userAccount: web3.PublicKey
   cloneStaking: web3.PublicKey
-  clnTokenMint: web3.PublicKey
-  clnTokenVault: web3.PublicKey
-  payerClnTokenAccount: web3.PublicKey
-  tokenProgram?: web3.PublicKey
   anchorRemainingAccounts?: web3.AccountMeta[]
 }
 
-export const addStakeInstructionDiscriminator = [
-  58, 135, 189, 105, 160, 120, 165, 224,
+export const updateUserVestingInstructionDiscriminator = [
+  39, 154, 97, 82, 195, 144, 226, 114,
 ]
 
 /**
- * Creates a _AddStake_ instruction.
+ * Creates a _UpdateUserVesting_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
  *
  * @category Instructions
- * @category AddStake
+ * @category UpdateUserVesting
  * @category generated
  */
-export function createAddStakeInstruction(
-  accounts: AddStakeInstructionAccounts,
-  args: AddStakeInstructionArgs,
+export function createUpdateUserVestingInstruction(
+  accounts: UpdateUserVestingInstructionAccounts,
+  args: UpdateUserVestingInstructionArgs,
   programId = new web3.PublicKey('42L6bfEYntcmqVcFvHywitcaHhXF9rjYq9C9p9iWQ2X2')
 ) {
-  const [data] = addStakeStruct.serialize({
-    instructionDiscriminator: addStakeInstructionDiscriminator,
+  const [data] = updateUserVestingStruct.serialize({
+    instructionDiscriminator: updateUserVestingInstructionDiscriminator,
     ...args,
   })
   const keys: web3.AccountMeta[] = [
     {
-      pubkey: accounts.payer,
+      pubkey: accounts.admin,
       isWritable: true,
       isSigner: true,
     },
@@ -96,26 +89,6 @@ export function createAddStakeInstruction(
     },
     {
       pubkey: accounts.cloneStaking,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.clnTokenMint,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.clnTokenVault,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.payerClnTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
       isWritable: false,
       isSigner: false,
     },

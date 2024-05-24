@@ -12,13 +12,39 @@ const createErrorFromCodeLookup: Map<number, () => ErrorWithCode> = new Map()
 const createErrorFromNameLookup: Map<string, () => ErrorWithCode> = new Map()
 
 /**
+ * CannotWithdrawBeforeVestingStarts: 'Cannot withdraw before the vesting period starts!'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class CannotWithdrawBeforeVestingStartsError extends Error {
+  readonly code: number = 0x1770
+  readonly name: string = 'CannotWithdrawBeforeVestingStarts'
+  constructor() {
+    super('Cannot withdraw before the vesting period starts!')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, CannotWithdrawBeforeVestingStartsError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(
+  0x1770,
+  () => new CannotWithdrawBeforeVestingStartsError()
+)
+createErrorFromNameLookup.set(
+  'CannotWithdrawBeforeVestingStarts',
+  () => new CannotWithdrawBeforeVestingStartsError()
+)
+
+/**
  * CannotWithdrawBeforeStakingPeriod: 'Cannot withdraw before the staking period ends!'
  *
  * @category Errors
  * @category generated
  */
 export class CannotWithdrawBeforeStakingPeriodError extends Error {
-  readonly code: number = 0x1770
+  readonly code: number = 0x1771
   readonly name: string = 'CannotWithdrawBeforeStakingPeriod'
   constructor() {
     super('Cannot withdraw before the staking period ends!')
@@ -29,7 +55,7 @@ export class CannotWithdrawBeforeStakingPeriodError extends Error {
 }
 
 createErrorFromCodeLookup.set(
-  0x1770,
+  0x1771,
   () => new CannotWithdrawBeforeStakingPeriodError()
 )
 createErrorFromNameLookup.set(
@@ -44,7 +70,7 @@ createErrorFromNameLookup.set(
  * @category generated
  */
 export class InvalidInputError extends Error {
-  readonly code: number = 0x1771
+  readonly code: number = 0x1772
   readonly name: string = 'InvalidInput'
   constructor() {
     super('Input is invalid!')
@@ -54,7 +80,7 @@ export class InvalidInputError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1771, () => new InvalidInputError())
+createErrorFromCodeLookup.set(0x1772, () => new InvalidInputError())
 createErrorFromNameLookup.set('InvalidInput', () => new InvalidInputError())
 
 /**
@@ -64,7 +90,7 @@ createErrorFromNameLookup.set('InvalidInput', () => new InvalidInputError())
  * @category generated
  */
 export class BumpNotFoundError extends Error {
-  readonly code: number = 0x1772
+  readonly code: number = 0x1773
   readonly name: string = 'BumpNotFound'
   constructor() {
     super('Bump not found')
@@ -74,7 +100,7 @@ export class BumpNotFoundError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1772, () => new BumpNotFoundError())
+createErrorFromCodeLookup.set(0x1773, () => new BumpNotFoundError())
 createErrorFromNameLookup.set('BumpNotFound', () => new BumpNotFoundError())
 
 /**
@@ -84,7 +110,7 @@ createErrorFromNameLookup.set('BumpNotFound', () => new BumpNotFoundError())
  * @category generated
  */
 export class CheckedMathErrorError extends Error {
-  readonly code: number = 0x1773
+  readonly code: number = 0x1774
   readonly name: string = 'CheckedMathError'
   constructor() {
     super('Checked Math Error')
@@ -94,10 +120,33 @@ export class CheckedMathErrorError extends Error {
   }
 }
 
-createErrorFromCodeLookup.set(0x1773, () => new CheckedMathErrorError())
+createErrorFromCodeLookup.set(0x1774, () => new CheckedMathErrorError())
 createErrorFromNameLookup.set(
   'CheckedMathError',
   () => new CheckedMathErrorError()
+)
+
+/**
+ * UserAccountNotEmpty: 'User account not empty'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class UserAccountNotEmptyError extends Error {
+  readonly code: number = 0x1775
+  readonly name: string = 'UserAccountNotEmpty'
+  constructor() {
+    super('User account not empty')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, UserAccountNotEmptyError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x1775, () => new UserAccountNotEmptyError())
+createErrorFromNameLookup.set(
+  'UserAccountNotEmpty',
+  () => new UserAccountNotEmptyError()
 )
 
 /**

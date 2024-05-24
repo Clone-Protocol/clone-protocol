@@ -8,6 +8,7 @@
 import * as beet from '@metaplex-foundation/beet'
 import * as web3 from '@solana/web3.js'
 import * as beetSolana from '@metaplex-foundation/beet-solana'
+import { UserVestingInfo, userVestingInfoBeet } from '../types/UserVestingInfo'
 
 /**
  * Arguments used to create {@link User}
@@ -17,6 +18,8 @@ import * as beetSolana from '@metaplex-foundation/beet-solana'
 export type UserArgs = {
   stakedTokens: beet.bignum
   minSlotWithdrawal: beet.bignum
+  vesting: UserVestingInfo
+  bump: number
 }
 
 export const userDiscriminator = [159, 117, 95, 227, 239, 151, 58, 236]
@@ -30,14 +33,21 @@ export const userDiscriminator = [159, 117, 95, 227, 239, 151, 58, 236]
 export class User implements UserArgs {
   private constructor(
     readonly stakedTokens: beet.bignum,
-    readonly minSlotWithdrawal: beet.bignum
+    readonly minSlotWithdrawal: beet.bignum,
+    readonly vesting: UserVestingInfo,
+    readonly bump: number
   ) {}
 
   /**
    * Creates a {@link User} instance from the provided args.
    */
   static fromArgs(args: UserArgs) {
-    return new User(args.stakedTokens, args.minSlotWithdrawal)
+    return new User(
+      args.stakedTokens,
+      args.minSlotWithdrawal,
+      args.vesting,
+      args.bump
+    )
   }
 
   /**
@@ -165,6 +175,8 @@ export class User implements UserArgs {
         }
         return x
       })(),
+      vesting: this.vesting,
+      bump: this.bump,
     }
   }
 }
@@ -183,6 +195,8 @@ export const userBeet = new beet.BeetStruct<
     ['accountDiscriminator', beet.uniformFixedSizeArray(beet.u8, 8)],
     ['stakedTokens', beet.u64],
     ['minSlotWithdrawal', beet.u64],
+    ['vesting', userVestingInfoBeet],
+    ['bump', beet.u8],
   ],
   User.fromArgs,
   'User'

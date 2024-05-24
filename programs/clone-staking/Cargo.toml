@@ -19,3 +19,5 @@ default = []
 anchor-lang = {version = "0.26.0", features = ["init-if-needed"]}
 anchor-spl = "0.26.0"
 bytemuck = { version = "1.4.0", features = ["derive", "min_const_generics"]}
+rust_decimal = "1.25.0"
+rust_decimal_macros = "1.25.0"

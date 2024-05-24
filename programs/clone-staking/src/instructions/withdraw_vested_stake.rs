@@ -13,12 +13,12 @@ pub struct WithdrawVestedStake<'info> {
     #[account(
         mut,
         seeds = [USER_SEED.as_ref(), user.key.as_ref()],
-        bump = clone_staking.bump,
+        bump = user_account.bump,
     )]
     pub user_account: Account<'info, User>,
     #[account(
         seeds = [CLONE_STAKING_SEED.as_ref()],
-        bump,
+        bump = clone_staking.bump,
         has_one = cln_token_mint,
         has_one = cln_token_vault,
 
@@ -48,16 +48,13 @@ pub fn execute(ctx: Context<WithdrawVestedStake>, amount: u64) -> Result<()> {
     let previous_amount = user_account.staked_tokens;
 
     require!(
-        current_slot >= clone_staking.vesting_info.starting_slot,
+        current_slot >= user_account.vesting.starting_slot,
         CloneStakingError::CannotWithdrawBeforeVestingStarts
     );
 
-    let max_withdrawable_amount = clone_staking.calculate_withdrawable_stake_from_vesting(
-        &user_account,
-        current_slot,
-        ctx.accounts.cln_token_mint.decimals.into(),
-    )?;
-
+    let max_withdrawable_amount = user_account
+        .vesting
+        .withdrawable_stake(current_slot, ctx.accounts.cln_token_mint.decimals.into())?;
     require!(
         amount > 0 && amount <= max_withdrawable_amount,
         CloneStakingError::InvalidInput
@@ -84,12 +81,6 @@ pub fn execute(ctx: Context<WithdrawVestedStake>, amount: u64) -> Result<()> {
         amount,
     )?;
 
-    // Update user account
-    user_account.staked_tokens = user_account
-        .staked_tokens
-        .checked_sub(amount)
-        .ok_or(error!(CloneStakingError::CheckedMathError))?;
-
     user_account.vesting.amount_withdrawn = user_account
         .vesting
         .amount_withdrawn
@@ -103,12 +94,10 @@ pub fn execute(ctx: Context<WithdrawVestedStake>, amount: u64) -> Result<()> {
         slot: current_slot,
         min_slot_withdrawal: user_account.min_slot_withdrawal,
         vesting_allocation_amount: user_account.vesting.allocation_amount,
-        vesting_amount_withdrawn: user_account.vesting.amount_withdrawn
+        vesting_amount_withdrawn: user_account.vesting.amount_withdrawn,
+        vesting_start_slot: user_account.vesting.starting_slot,
+        vesting_end_slot: user_account.vesting.ending_slot,
     });
-
-    if user_account.staked_tokens == 0 {
-        user_account.close(ctx.accounts.user.to_account_info().clone())?;
-    }
 
     Ok(())
 }

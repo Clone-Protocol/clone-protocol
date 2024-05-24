@@ -16,4 +16,7 @@ pub enum CloneStakingError {
 
     #[msg("Checked Math Error")]
     CheckedMathError,
+
+    #[msg("User account not empty")]
+    UserAccountNotEmpty,
 }
