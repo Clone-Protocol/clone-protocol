@@ -21,10 +21,11 @@ import { BanksClient } from "solana-bankrun";
 export type Receiver = { address: PublicKey; amount: number };
 
 const createAddStakeAccountIx = (
-  payer: PublicKey,
+  admin: PublicKey,
   receiver: Receiver,
-  clnTokenMint: PublicKey,
-  cloneStakingProgramId: PublicKey
+  cloneStakingProgramId: PublicKey,
+  startingSlot: number,
+  endingSlot: number,
 ): TransactionInstruction => {
   const userAccount = PublicKey.findProgramAddressSync(
     [Buffer.from("user"), receiver.address.toBuffer()],
@@ -36,30 +37,20 @@ const createAddStakeAccountIx = (
     cloneStakingProgramId
   )[0];
 
-  const clnTokenVault = getAssociatedTokenAddressSync(
-    clnTokenMint,
-    cloneStaking,
-    true
-  );
-
-  const payerClnTokenAccount = getAssociatedTokenAddressSync(
-    clnTokenMint,
-    payer,
-    true
-  );
-
-  return CloneStaking.createAddStakeInstruction(
+  return CloneStaking.createUpdateUserVestingInstruction(
     {
-      payer,
+      admin,
       userAccount,
       cloneStaking,
-      clnTokenMint,
-      clnTokenVault,
-      payerClnTokenAccount,
     },
     {
       user: receiver.address,
-      amount: receiver.amount,
+      vesting: {
+        amountWithdrawn: 0,
+        allocationAmount: receiver.amount,
+        startingSlot,
+        endingSlot
+      } as CloneStaking.UserVestingInfo,
     },
     cloneStakingProgramId
   );
@@ -75,6 +66,8 @@ export type AirdropParams = {
   clnTokenMint: PublicKey;
   nonceAccountAddress: PublicKey;
   vault: PublicKey;
+  startingSlot: number;
+  endingSlot: number;
   lookupTableAccount?: AddressLookupTableAccount;
   priorityFeeMicroLamports?: number;
   banksClient?: BanksClient;
@@ -83,6 +76,15 @@ export type AirdropParams = {
 export const runAirdrop = async (params: AirdropParams) => {
   let provider = params.provider;
   let wallet = params.wallet;
+
+  const cloneStakingAccountAddress = PublicKey.findProgramAddressSync(
+    [Buffer.from("clone-staking")],
+    params.cloneStakingProgramId
+  )[0];
+
+  let cloneStakingAccount = await CloneStaking.CloneStaking.fromAccountAddress(
+    provider.connection, cloneStakingAccountAddress
+  )
 
   for (let i = 0; i < params.receivers.length; i += params.batchSize) {
     const batch = params.receivers.slice(i, i + params.batchSize);
@@ -95,10 +97,11 @@ export const runAirdrop = async (params: AirdropParams) => {
       payerKey: wallet.publicKey,
       instructions: batch.map((r) => {
         return createAddStakeAccountIx(
-          params.vault,
+          cloneStakingAccount.admin,
           r,
-          params.clnTokenMint,
-          params.cloneStakingProgramId
+          params.cloneStakingProgramId,
+          params.startingSlot,
+          params.endingSlot
         );
       }),
     });
