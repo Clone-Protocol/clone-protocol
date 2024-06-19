@@ -106,4 +106,5 @@ address = "6GujNybsWYw5uWfP9LvWTkjEkT8rMr35XGzYQv1BCvb4"
 address = "Jvg1x164Kx8UGfWt82HPxeydieZRoYCwXRQb6r5rWLQ"
 [[test.validator.clone]] # Pyth V2 BNB/USD feed
 address = "4BfpDD8WdPqjSiosGNtiFdDVYdmjWnf6n7DmvAVz8yka"
-
+[[test.validator.clone]] # Pyth V2 PEPE/USD feed
+address = "BgtDdtLnB7oRvPWeyBCXGPsiX4LZbQdSJYKZq9TvKNvk"

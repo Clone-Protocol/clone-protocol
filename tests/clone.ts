@@ -458,14 +458,14 @@ describe("tests", async () => {
 
   it("add and check Pyth V2 oracle", async () => {
     let pythV2FeedAddress = new PublicKey(
-      "Fm8a8nif7Ls9MzBonTm1MoqGpYG5sELyA2SyQseQjKcB"
+      "BgtDdtLnB7oRvPWeyBCXGPsiX4LZbQdSJYKZq9TvKNvk"
     );
     await cloneClient.updateOracles({
       params: {
         __kind: "Add",
         source: OracleSource.PYTHV2,
         address: pythV2FeedAddress,
-        rescaleFactor: null,
+        rescaleFactor: 6,
       },
     });
     let oracles = await cloneClient.getOracles();
@@ -477,7 +477,7 @@ describe("tests", async () => {
     oracles = await cloneClient.getOracles();
 
     let pythV2Oracle = oracles.oracles[4];
-    let price = fromScale(pythV2Oracle.price, pythV2Oracle.expo);
+    let price = fromScale(pythV2Oracle.price, pythV2Oracle.expo) / Math.pow(10, -pythV2Oracle.rescaleFactor);
     assert.isTrue(price !== 0, "pythV2 price is not updated");
   });
 
