@@ -3,21 +3,23 @@ use anyhow::Result;
 use clone::decimal::{BPS_SCALE, CLONE_TOKEN_SCALE};
 use clone::instruction::{Swap as CloneSwapArgs, UpdatePrices};
 use clone::instructions::{CLONE_PROGRAM_SEED, ORACLES_SEED, POOLS_SEED};
-use clone::states::{Clone, Oracles, Pools, Status};
+use clone::states::{Clone, OracleSource, Oracles, Pools, Status};
 use clone::ID as CLONE_PROGRAM_ID;
 use jupiter_amm_interface::{
     AccountMap, Amm, AmmUserSetup, KeyedAccount, Quote, QuoteParams, SwapAndAccountMetas, SwapMode,
     SwapParams,
 };
 use pyth_sdk_solana::state::{load_price_account, SolanaPriceAccount};
+use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 use rust_decimal::prelude::*;
 use solana_sdk::account::ReadableAccount;
-use solana_sdk::clock::Clock;
 use solana_sdk::instruction::{AccountMeta, Instruction};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::sysvar::{self};
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::ID as SPL_TOKEN_PROGRAM;
+use switchboard_solana::prelude::AccountDeserialize as SBAccountDeserialize;
+use switchboard_solana::AggregatorAccountData;
 use thiserror::Error;
 
 const USDC_MINT: Pubkey = Pubkey::new_from_array([
@@ -41,7 +43,7 @@ pub struct CloneInterface {
     pub clone: Option<Clone>,
     pub pools: Pools,
     pub oracles: Option<Oracles>,
-    pub pyth_prices: Option<Vec<SolanaPriceAccount>>,
+    pub oracle_prices: Option<Vec<Decimal>>,
     pub key: Pubkey,
 }
 
@@ -182,7 +184,7 @@ impl Amm for CloneInterface {
             clone: None,
             pools,
             oracles: None,
-            pyth_prices: None,
+            oracle_prices: None,
             key: keyed_account.key,
         })
     }
@@ -246,16 +248,50 @@ impl Amm for CloneInterface {
         let mut v = oracles_account.data.as_slice();
         let oracles = Oracles::try_deserialize(&mut v)?;
 
-        let mut pyth_prices = Vec::new();
+        let num_oracles = oracles.oracles.len();
+
+        let mut oracle_prices = Vec::new();
         for info in oracles.oracles.iter() {
-            if let Some(price_account) = account_map.get(&info.address) {
-                let price_account: SolanaPriceAccount = *load_price_account(price_account.data())?;
-                pyth_prices.push(price_account)
+            if let Ok(price_account) = account_map
+                .get(&info.address)
+                .ok_or::<CloneInterfaceError>(CloneInterfaceError::MissingAddress(info.address))
+            {
+                let mut oracle_price = match info.source {
+                    OracleSource::PYTH => {
+                        let price_account: SolanaPriceAccount =
+                            *load_price_account(price_account.data())?;
+                        Decimal::new(
+                            price_account.agg.price,
+                            price_account.expo.abs().try_into()?,
+                        )
+                    }
+                    OracleSource::SWITCHBOARD => {
+                        let data_feed =
+                            AggregatorAccountData::new_from_bytes(price_account.data())?
+                                .get_result()?;
+                        Decimal::from_i128_with_scale(data_feed.mantissa, data_feed.scale)
+                    }
+                    OracleSource::PYTHV2 => {
+                        let mut buf = price_account.data();
+                        let price_info = PriceUpdateV2::try_deserialize(&mut buf)?;
+                        Decimal::new(
+                            price_info.price_message.price,
+                            price_info.price_message.exponent.abs().try_into()?,
+                        )
+                    }
+                };
+                if info.rescale_factor != 0 {
+                    oracle_price = oracle_price / Decimal::new(1, info.rescale_factor.into());
+                }
+
+                oracle_prices.push(oracle_price)
             }
         }
-
         self.oracles = Some(oracles);
-        self.pyth_prices = Some(pyth_prices);
+
+        if oracle_prices.len() == num_oracles {
+            self.oracle_prices = Some(oracle_prices);
+        }
 
         Ok(())
     }
@@ -264,8 +300,8 @@ impl Amm for CloneInterface {
         let clone = self.clone.as_ref().ok_or::<CloneInterfaceError>(
             CloneInterfaceError::PropertyNotLoaded(String::from("clone")).into(),
         )?;
-        let pyth_prices = self.pyth_prices.clone().ok_or::<CloneInterfaceError>(
-            CloneInterfaceError::PropertyNotLoaded(String::from("pyth_prices")).into(),
+        let oracle_prices = self.oracle_prices.clone().ok_or::<CloneInterfaceError>(
+            CloneInterfaceError::PropertyNotLoaded(String::from("oracle_prices")).into(),
         )?;
 
         let collateral_mint = clone.collateral.mint;
@@ -304,19 +340,8 @@ impl Amm for CloneInterface {
             return Err(CloneInterfaceError::PoolIsNotTradeable(pool.status).into());
         }
 
-        let collateral_price_account = pyth_prices[clone.collateral.oracle_info_index as usize];
-
-        let collateral_price = Decimal::new(
-            collateral_price_account.agg.price,
-            collateral_price_account.expo.abs() as u32,
-        );
-
-        let classet_price_account = pyth_prices[pool.asset_info.oracle_info_index as usize];
-
-        let classet_price = Decimal::new(
-            classet_price_account.agg.price,
-            classet_price_account.expo.abs() as u32,
-        );
+        let collateral_price = oracle_prices[clone.collateral.oracle_info_index as usize];
+        let classet_price = oracle_prices[pool.asset_info.oracle_info_index as usize];
 
         let quantity_is_input = quote_params.swap_mode == SwapMode::ExactIn;
         let quantity_is_collateral = (input_is_collateral && quantity_is_input)

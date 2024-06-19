@@ -17,6 +17,9 @@ rust_decimal = "1.25.0"
 thiserror = "1.0.58"
 spl-associated-token-account = "2.0.0"
 spl-token = "4.0.0"
+switchboard-solana = "0.6.0"
+pyth-solana-receiver-sdk = "0.2.0"
+
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["full"] }

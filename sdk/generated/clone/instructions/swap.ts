@@ -51,7 +51,7 @@ export const swapStruct = new beet.BeetArgsStruct<
  * @property [_writable_] userCollateralTokenAccount
  * @property [_writable_] userOnassetTokenAccount
  * @property [_writable_] onassetMint
- * @property [_writable_] collateralMint
+ * @property [] collateralMint
  * @property [_writable_] collateralVault
  * @property [_writable_] treasuryOnassetTokenAccount
  * @property [_writable_] treasuryCollateralTokenAccount
@@ -88,10 +88,8 @@ export const swapInstructionDiscriminator = [
 /**
  * Creates a _Swap_ instruction.
  *
- * Optional accounts that are not provided will be omitted from the accounts
- * array passed with the instruction.
- * An optional account that is set cannot follow an optional account that is unset.
- * Otherwise an Error is raised.
+ * Optional accounts that are not provided default to the program ID since
+ * this was indicated in the IDL from which this instruction was generated.
  *
  * @param accounts that will be accessed while the instruction is processed
  * @param args to provide as instruction data to the program
@@ -147,7 +145,7 @@ export function createSwapInstruction(
     },
     {
       pubkey: accounts.collateralMint,
-      isWritable: true,
+      isWritable: false,
       isSigner: false,
     },
     {
@@ -170,39 +168,22 @@ export function createSwapInstruction(
       isWritable: false,
       isSigner: false,
     },
+    {
+      pubkey: accounts.cloneStaking ?? programId,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.userStakingAccount ?? programId,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.cloneStakingProgram ?? programId,
+      isWritable: false,
+      isSigner: false,
+    },
   ]
-
-  if (accounts.cloneStaking != null) {
-    keys.push({
-      pubkey: accounts.cloneStaking,
-      isWritable: false,
-      isSigner: false,
-    })
-  }
-  if (accounts.userStakingAccount != null) {
-    if (accounts.cloneStaking == null) {
-      throw new Error(
-        "When providing 'userStakingAccount' then 'accounts.cloneStaking' need(s) to be provided as well."
-      )
-    }
-    keys.push({
-      pubkey: accounts.userStakingAccount,
-      isWritable: false,
-      isSigner: false,
-    })
-  }
-  if (accounts.cloneStakingProgram != null) {
-    if (accounts.cloneStaking == null || accounts.userStakingAccount == null) {
-      throw new Error(
-        "When providing 'cloneStakingProgram' then 'accounts.cloneStaking', 'accounts.userStakingAccount' need(s) to be provided as well."
-      )
-    }
-    keys.push({
-      pubkey: accounts.cloneStakingProgram,
-      isWritable: false,
-      isSigner: false,
-    })
-  }
 
   if (accounts.anchorRemainingAccounts != null) {
     for (const acc of accounts.anchorRemainingAccounts) {

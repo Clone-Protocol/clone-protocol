@@ -13,6 +13,7 @@ import * as beet from '@metaplex-foundation/beet'
 export enum OracleSource {
   PYTH,
   SWITCHBOARD,
+  PYTHV2,
 }
 
 /**
