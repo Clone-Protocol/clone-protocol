@@ -80,6 +80,7 @@ pub enum OracleSource {
     #[default]
     PYTH,
     SWITCHBOARD,
+    PYTHV2,
 }
 
 #[derive(Clone, PartialEq, Eq, Default, Debug, AnchorDeserialize, AnchorSerialize)]

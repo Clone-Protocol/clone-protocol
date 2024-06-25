@@ -93,3 +93,18 @@ address = "3pyn4svBbxJ9Wnn3RVeafyLWfzie6yC5eTig2S62v9SC"
 address = "6TZHVFzEmF1rCLAJv3gkTFk9QGniqsrSJmNnVm7mMRPK"
 [[test.validator.clone]] # Metaplex program
 address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+
+[[test.validator.clone]] # Pyth V2 USDC/USD feed
+address = "91LF2K1yGkwpePM43yctMX1BGwf6atSFgjcPnNYG8czx"
+[[test.validator.clone]] # Pyth V2 ARB/USD feed
+address = "Fm8a8nif7Ls9MzBonTm1MoqGpYG5sELyA2SyQseQjKcB"
+[[test.validator.clone]] # Pyth V2 OP/USD feed
+address = "AZTG45CfCVrfc6DdWRsJZT5rt5Nh3ck8SwF7pWd2FVCq"
+[[test.validator.clone]] # Pyth V2 SUI/USD feed
+address = "6GujNybsWYw5uWfP9LvWTkjEkT8rMr35XGzYQv1BCvb4"
+[[test.validator.clone]] # Pyth V2 DOGE/USD feed
+address = "Jvg1x164Kx8UGfWt82HPxeydieZRoYCwXRQb6r5rWLQ"
+[[test.validator.clone]] # Pyth V2 BNB/USD feed
+address = "4BfpDD8WdPqjSiosGNtiFdDVYdmjWnf6n7DmvAVz8yka"
+[[test.validator.clone]] # Pyth V2 PEPE/USD feed
+address = "BgtDdtLnB7oRvPWeyBCXGPsiX4LZbQdSJYKZq9TvKNvk"
