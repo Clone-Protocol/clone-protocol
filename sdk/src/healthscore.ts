@@ -110,9 +110,10 @@ export const getILD = (
         );
       } else {
         const assetOracle = oracles.oracles[assetOracleIndex];
+        const rescaleFactor = Math.pow(10, assetOracle.rescaleFactor);
         const collateralOracle = oracles.oracles[collateralOracleIndex];
         return (
-          fromScale(assetOracle.price, assetOracle.expo) /
+          rescaleFactor * fromScale(assetOracle.price, assetOracle.expo) /
           fromScale(collateralOracle.price, collateralOracle.expo)
         );
       }
