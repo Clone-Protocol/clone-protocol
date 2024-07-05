@@ -898,6 +898,29 @@ createErrorFromNameLookup.set(
 )
 
 /**
+ * FailedToLoadSwitchboard: 'Failed to load switchboard'
+ *
+ * @category Errors
+ * @category generated
+ */
+export class FailedToLoadSwitchboardError extends Error {
+  readonly code: number = 0x1796
+  readonly name: string = 'FailedToLoadSwitchboard'
+  constructor() {
+    super('Failed to load switchboard')
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, FailedToLoadSwitchboardError)
+    }
+  }
+}
+
+createErrorFromCodeLookup.set(0x1796, () => new FailedToLoadSwitchboardError())
+createErrorFromNameLookup.set(
+  'FailedToLoadSwitchboard',
+  () => new FailedToLoadSwitchboardError()
+)
+
+/**
  * Attempts to resolve a custom program error from the provided error code.
  * @category Errors
  * @category generated

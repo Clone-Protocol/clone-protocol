@@ -486,6 +486,31 @@ describe("tests", async () => {
   //   assert.isTrue(price !== 0, "switchboard price is not updated");
   // });
 
+  it("add and check Pyth V2 oracle", async () => {
+    let pythV2FeedAddress = new PublicKey(
+      "BgtDdtLnB7oRvPWeyBCXGPsiX4LZbQdSJYKZq9TvKNvk"
+    );
+    await cloneClient.updateOracles({
+      params: {
+        __kind: "Add",
+        source: OracleSource.PYTHV2,
+        address: pythV2FeedAddress,
+        rescaleFactor: 6,
+      },
+    });
+    let oracles = await cloneClient.getOracles();
+    assert.equal(oracles.oracles.length, 5);
+    // Update prices
+    await provider.sendAndConfirm(
+      new Transaction().add(cloneClient.updatePricesInstruction(oracles))
+    );
+    oracles = await cloneClient.getOracles();
+
+    let pythV2Oracle = oracles.oracles[4];
+    let price = fromScale(pythV2Oracle.price, pythV2Oracle.expo) / Math.pow(10, -pythV2Oracle.rescaleFactor);
+    assert.isTrue(price !== 0, "pythV2 price is not updated");
+  });
+
   it("pools initialized!", async () => {
     await cloneClient.addPool(
       150,

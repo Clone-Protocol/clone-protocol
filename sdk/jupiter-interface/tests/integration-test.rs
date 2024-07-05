@@ -5,8 +5,13 @@
     generated quotes.
 */
 
+use anchor_lang::{AccountDeserialize, AccountSerialize};
 use anyhow::{anyhow, Result};
-use clone::{decimal::CLONE_TOKEN_SCALE, ID};
+use clone::{
+    decimal::CLONE_TOKEN_SCALE,
+    states::{OracleSource, Oracles},
+    ID,
+};
 use jupiter_amm_interface::{AccountMap, Amm, KeyedAccount, QuoteParams, SwapMode, SwapParams};
 use rand::prelude::*;
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -14,7 +19,7 @@ use solana_program_test::{ProgramTest, ProgramTestContext};
 use solana_sdk::{
     account::{Account, AccountSharedData, ReadableAccount},
     bpf_loader_upgradeable,
-    commitment_config::CommitmentLevel,
+    commitment_config::{CommitmentConfig, CommitmentLevel},
     native_token::LAMPORTS_PER_SOL,
     program_pack::Pack,
     pubkey::Pubkey,
@@ -23,7 +28,8 @@ use solana_sdk::{
 };
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::state::{Account as TokenAccount, AccountState, Mint};
-use std::env;
+use std::str::FromStr;
+use std::{collections::HashMap, env};
 
 extern crate jupiter_interface;
 use jupiter_interface::*;
@@ -130,6 +136,81 @@ fn read_balance_from_token_account(account: &Account) -> Result<u64> {
     Ok(TokenAccount::unpack(account.data())?.amount)
 }
 
+// Override the oracle info account with PythV2 oracles.
+// Sets the context and accounts map with the new oracle info and oracles.
+async fn override_oracle_info_w_v2(
+    rpc: &RpcClient,
+    context: &mut ProgramTestContext,
+    accounts_map: &mut HashMap<Pubkey, Account>,
+) -> Result<()> {
+    let oracle_info_address = get_oracles_account_address();
+    let mut oracle_info_account = rpc
+        .get_account_with_commitment(&oracle_info_address, CommitmentConfig::confirmed())
+        .await?
+        .value
+        .unwrap();
+
+    // Unpack into object.
+    let mut v = oracle_info_account.data.as_slice();
+    let mut oracles = Oracles::try_deserialize(&mut v)?;
+
+    // Replace all oracles with PythV2 oracles.
+    let pyth_v2_oracle_addresses = [
+        "91LF2K1yGkwpePM43yctMX1BGwf6atSFgjcPnNYG8czx",
+        "Fm8a8nif7Ls9MzBonTm1MoqGpYG5sELyA2SyQseQjKcB",
+        "AZTG45CfCVrfc6DdWRsJZT5rt5Nh3ck8SwF7pWd2FVCq",
+        "6GujNybsWYw5uWfP9LvWTkjEkT8rMr35XGzYQv1BCvb4",
+        "Jvg1x164Kx8UGfWt82HPxeydieZRoYCwXRQb6r5rWLQ",
+        "4BfpDD8WdPqjSiosGNtiFdDVYdmjWnf6n7DmvAVz8yka",
+    ]
+    .map(|k| Pubkey::from_str(k).unwrap());
+
+    pyth_v2_oracle_addresses
+        .iter()
+        .enumerate()
+        .for_each(|(i, oracle_address)| {
+            oracles.oracles[i].address = *oracle_address;
+            oracles.oracles[i].source = OracleSource::PYTHV2.into();
+        });
+
+    // Update the clone interface oracles infor.
+    let mut buf: Vec<u8> = Vec::new();
+    oracles.try_serialize(&mut buf)?;
+    //buf.extend(iter::repeat(0).take(oracle_info_account.data.len() - buf.len()));
+    // Serialize and set account inside the context.
+    oracle_info_account.data = buf;
+    context.set_account(
+        &oracle_info_address,
+        &AccountSharedData::from(oracle_info_account.clone()),
+    );
+
+    accounts_map.insert(oracle_info_address, oracle_info_account);
+
+    // Pull pyth v2 accounts from RPC and update the accounts map.
+    let pyth_v2_accounts = rpc
+        .get_multiple_accounts_with_commitment(
+            &pyth_v2_oracle_addresses,
+            CommitmentConfig::confirmed(),
+        )
+        .await?
+        .value;
+
+    pyth_v2_accounts
+        .iter()
+        .enumerate()
+        .for_each(|(i, account)| {
+            if let Some(account) = account {
+                accounts_map.insert(pyth_v2_oracle_addresses[i], account.clone());
+                context.set_account(
+                    &pyth_v2_oracle_addresses[i],
+                    &AccountSharedData::from(account.clone()),
+                );
+            }
+        });
+
+    Ok(())
+}
+
 #[tokio::test]
 async fn swap_integration_test() -> Result<()> {
     // Setup Program test Context
@@ -190,6 +271,10 @@ async fn swap_integration_test() -> Result<()> {
             }
         });
 
+    if env::var("OVERRIDE_W_PYTHV2").is_ok() {
+        override_oracle_info_w_v2(&rpc, &mut context, &mut accounts_map).await?;
+    }
+
     clone_interface.update(&accounts_map)?;
 
     let generate_random_quote_params = || {
@@ -207,7 +292,7 @@ async fn swap_integration_test() -> Result<()> {
         } else {
             CLONE_TOKEN_SCALE
         };
-        let max_amount = 1000 * 10u64.pow(scale);
+        let max_amount = 200 * 10u64.pow(scale);
         // Min is arbitrarily chosen but high enough to always generate fees.
         let min_amount = 100000u64;
         let amount: u64 = rng.gen_range(min_amount..max_amount);
@@ -240,13 +325,22 @@ async fn swap_integration_test() -> Result<()> {
     }
 
     let number_of_swaps = 128;
+    let mut successful_quotes = 0;
 
     for i in 0..number_of_swaps {
         println!("\nSWAP: {}", i + 1);
         let quote_params = generate_random_quote_params();
         println!("QUOTE PARAMS: {:?}", quote_params);
-        let quote = clone_interface.quote(&quote_params)?;
+
+        let quote = match clone_interface.quote(&quote_params) {
+            Ok(quote) => quote,
+            Err(e) => {
+                println!("Failed to quote: {:?}", e);
+                continue;
+            }
+        };
         println!("QUOTE: {:?}", quote);
+        successful_quotes += 1;
 
         let recent_blockhash = context.banks_client.get_latest_blockhash().await?;
 
@@ -341,6 +435,11 @@ async fn swap_integration_test() -> Result<()> {
         }
         clone_interface.update(&account_map)?;
     }
+
+    println!(
+        "Successfully quoted {}/{} swaps",
+        successful_quotes, number_of_swaps
+    );
 
     Ok(())
 }

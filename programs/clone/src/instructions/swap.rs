@@ -49,14 +49,14 @@ pub struct Swap<'info> {
     pub oracles: Box<Account<'info, Oracles>>,
     #[account(
         mut,
-        associated_token::mint = collateral_mint,
-        associated_token::authority = user
+        token::mint = collateral_mint,
+        token::authority = user
     )]
     pub user_collateral_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        associated_token::mint = onasset_mint,
-        associated_token::authority = user
+        token::mint = onasset_mint,
+        token::authority = user
     )]
     pub user_onasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -75,14 +75,14 @@ pub struct Swap<'info> {
     pub collateral_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        associated_token::mint = onasset_mint,
-        associated_token::authority = clone.treasury_address
+        token::mint = onasset_mint,
+        token::authority = clone.treasury_address
     )]
     pub treasury_onasset_token_account: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
-        associated_token::mint = collateral_mint,
-        associated_token::authority = clone.treasury_address
+        token::mint = collateral_mint,
+        token::authority = clone.treasury_address
     )]
     pub treasury_collateral_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
